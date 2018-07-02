@@ -5,4 +5,5 @@ set -x
 
 docker-compose up -d
 
-docker run filebeat:wzh setup --dashboards
+# docker exec -it filebeat
+# ./filebeat setup --dashboards
