@@ -1,4 +1,4 @@
-FROM docker.elastic.co/beats/filebeat-oss:6.2.4
+FROM docker.elastic.co/beats/filebeat:6.2.4
 
 COPY filebeat.yml /usr/share/filebeat/filebeat.yml
 
