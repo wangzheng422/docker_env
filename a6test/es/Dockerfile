@@ -10,8 +10,8 @@ RUN cd /tmp \
     && chmod +x /usr/bin/jq \
     && yum install -y net-tools bind-utils
 
-ADD elasticsearch.yml /usr/share/elasticsearch/config/
-RUN chown elasticsearch:elasticsearch /usr/share/elasticsearch/config/elasticsearch.yml
+# ADD elasticsearch.yml /usr/share/elasticsearch/config/
+# RUN chown elasticsearch:elasticsearch /usr/share/elasticsearch/config/elasticsearch.yml
 
 USER elasticsearch
 
