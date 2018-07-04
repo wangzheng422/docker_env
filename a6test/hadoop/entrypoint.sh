@@ -195,7 +195,10 @@ if [ "$SERVER_ROLE" = "nn" ]; then
     hdfs dfs -chmod +w /usr/hive/log  
     hdfs dfs -chmod g+w /usr/hive/warehouse  
     hdfs dfs -chmod g+w /usr/hive/tmp  
-    hdfs dfs -chmod g+w /usr/hive/log  
+    hdfs dfs -chmod g+w /usr/hive/log 
+
+    echo $PREFIX"Init hive..."
+    schematool -dbType mysql -initSchema 
 
 
     echo $PREFIX"Starting supervisor..."
