@@ -197,6 +197,13 @@ if [ "$SERVER_ROLE" = "nn" ]; then
     hdfs dfs -chmod g+w /usr/hive/tmp  
     hdfs dfs -chmod g+w /usr/hive/log 
 
+    hdfs dfs -mkdir -p /topics
+    hdfs dfs -mkdir -p /logs
+    hdfs dfs -chmod +w /topics
+    hdfs dfs -chmod +w /logs
+    hdfs dfs -chmod g+w /topics
+    hdfs dfs -chmod g+w /logs
+
     echo $PREFIX"Init hive..."
     schematool -dbType mysql -initSchema 
 
