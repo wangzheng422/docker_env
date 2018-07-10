@@ -6,4 +6,8 @@ docker exec kafka-connect curl -X POST -H "Content-Type: application/json" \
     http://kafka-connect:8083/connectors
 
 
- curl -s -X GET http://kafka-connect:8083/connectors/hdfs-sink/status
+docker-compose exec kafka-connect curl -X POST -H "Content-Type: application/json" \
+    --data '{     "name": "hdfs-sink",     "config": {         "connector.class": "io.confluent.connect.hdfs.HdfsSinkConnector",         "tasks.max": "1",         "topics": "wzh_filebeat",         "hdfs.url": "hdfs://namenode:9000",         "flush.size": "3",         "name": "hdfs-sink",         "key.converter": "org.apache.kafka.connect.json.JsonConverter",         "key.converter.schemas.enable": "false",         "value.converter": "org.apache.kafka.connect.json.JsonConverter",         "value.converter.schemas.enable": "false"     } }' \
+    http://kafka-connect:8083/connectors
+
+ docker-compose exec kafka-connect curl -s -X GET http://kafka-connect:8083/connectors/hdfs-sink/status
