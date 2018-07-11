@@ -19,6 +19,13 @@ docker-compose exec kafka-connect curl -X POST -H "Content-Type: application/jso
     --data '{"name":"local-file-source","config":{"connector.class":"FileStreamSource","tasks.max":"1","topic":"wzh_file_log","name":"local-file-source","file":"/mnt/auth.log"}}' \
     http://kafka-connect:8083/connectors
 
+mysql source
+
+docker-compose exec kafka-connect curl -X POST -H "Content-Type: application/json" \
+    --data '{"name":"mysql-source","config":{"connector.class":"io.confluent.connect.jdbc.JdbcSourceConnector","tasks.max":"1","connection.url":"jdbc:mysql://mysqldb:3306/wzh_db?verifyServerCertificate=false&useSSL=true&requireSSL=true","connection.user":"root","connection.password":"root","flush.size":"1","name":"mysql-source","table.whitelist":"wzh_tb","mode":"incrementing","incrementing.column.name":"id","topic.prefix":"wzh-mysql-"}}' \
+    http://kafka-connect:8083/connectors
+
+
 hdfs sink
 
 docker-compose exec kafka-connect curl -X POST -H "Content-Type: application/json" \
