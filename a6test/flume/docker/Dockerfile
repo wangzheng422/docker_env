@@ -7,5 +7,6 @@ RUN yum -y install java-1.8.0-openjdk wget && mkdir /opt/flume && wget -qO- http
 ENV PATH /opt/flume/bin:$PATH
 
 ADD start-flume.sh /opt/flume/bin/start-flume
+ADD flume.conf /opt/flume-config/
 
 ENTRYPOINT [ "start-flume" ]
