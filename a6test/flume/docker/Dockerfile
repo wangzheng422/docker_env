@@ -12,4 +12,4 @@ ADD morphline.conf /opt/flume-config/
 
 RUN chmod +x /opt/flume/bin/start-flume
 
-ENTRYPOINT [ "/opt/flume/bin/start-flume/start-flume" ]
+ENTRYPOINT [ "/opt/flume/bin/start-flume" ]
