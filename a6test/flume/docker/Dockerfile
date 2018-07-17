@@ -10,4 +10,6 @@ ADD start-flume.sh /opt/flume/bin/start-flume
 ADD flume.conf /opt/flume-config/
 ADD morphline.conf /opt/flume-config/
 
-ENTRYPOINT [ "start-flume" ]
+RUN chmod +x /opt/flume/bin/start-flume
+
+ENTRYPOINT [ "/opt/flume/bin/start-flume/start-flume" ]
