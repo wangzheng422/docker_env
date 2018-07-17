@@ -8,7 +8,7 @@
 
 用kafka/mysql.sql来导入一点数据
 
-![alt text](https://github.com/wangzheng422/docker_env/raw/master/a6test/docs/image2018-7-16 17_39_21.png)
+![alt text](https://github.com/wangzheng422/docker_env/raw/master/a6test/docs/image2018-7-16-17_39_21.png)
 
 启动以后，使用命令创建kafka-connect, mysql source，读取数据库
 
@@ -28,19 +28,19 @@ http://kafka-connect:8083/connectors
 
 可以看到kafka上面，已经读取到了mysql的数据
 
-![alt text](https://github.com/wangzheng422/docker_env/raw/master/a6test/docs/image2018-7-16 17_36_43.png)
+![alt text](https://github.com/wangzheng422/docker_env/raw/master/a6test/docs/image2018-7-16-17_36_43.png)
 
 系统也读取到了数据表的结构信息
 
-![alt text](https://github.com/wangzheng422/docker_env/raw/master/a6test/docs/image2018-7-16 17_37_10.png)
+![alt text](https://github.com/wangzheng422/docker_env/raw/master/a6test/docs/image2018-7-16-17_37_10.png)
 
 查看kafka-connect状态，都正常
 
-![alt text](https://github.com/wangzheng422/docker_env/raw/master/a6test/docs/image2018-7-16 17_37_44.png)
+![alt text](https://github.com/wangzheng422/docker_env/raw/master/a6test/docs/image2018-7-16-17_37_44.png)
 
 可以在hdfs上面，查看到落地文件
 
-![alt text](https://github.com/wangzheng422/docker_env/raw/master/a6test/docs/image2018-7-16 17_38_26.png)
+![alt text](https://github.com/wangzheng422/docker_env/raw/master/a6test/docs/image2018-7-16-17_38_26.png)
 
 在hive中可以查询到这个数据表
 
@@ -48,4 +48,4 @@ http://kafka-connect:8083/connectors
 
 hue中，可以直接进行查询
 
-![alt text](https://github.com/wangzheng422/docker_env/raw/master/a6test/docs/image2018-7-16 17_36_2.png)
+![alt text](https://github.com/wangzheng422/docker_env/raw/master/a6test/docs/image2018-7-16-17_36_2.png)
