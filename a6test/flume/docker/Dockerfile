@@ -6,9 +6,10 @@ RUN yum -y install java-1.8.0-openjdk wget && mkdir /opt/flume && wget -qO- http
 # ENV JAVA_HOME /opt/java
 ENV PATH /opt/flume/bin:$PATH
 
-ADD start-flume.sh /opt/flume/bin/start-flume
-ADD flume.conf /opt/flume-config/
-ADD morphline.conf /opt/flume-config/
+COPY start-flume.sh /opt/flume/bin/start-flume
+COPY flume.conf /opt/flume-config/
+COPY morphline.conf /opt/flume-config/
+COPY log4j.properties /opt/flume-config/
 
 RUN chmod +x /opt/flume/bin/start-flume
 
