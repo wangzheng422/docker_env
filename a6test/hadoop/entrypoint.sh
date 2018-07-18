@@ -31,6 +31,7 @@ RESOURCEMANAGER_ADMINPORT=8033
 NAMENODE_ADDRESS=0.0.0.0
 NAMENODE_PORT=9000
 NAMENODE_WEBPORT=50070
+SECOND_NAMENODE_WEBPORT=50090
 
 # ALB_ADDR=0.0.0.0
 
@@ -72,25 +73,25 @@ if [ "$DATA_DIR" != "" ]; then
 fi
 
 # replacing the ports
-if [ "$SERVER_ROLE" = "dn" ]; then
-  # DATA NODE
-  echo $PREFIX"Datanode configuration"
+# if [ "$SERVER_ROLE" = "dn" ]; then
+#   # DATA NODE
+#   echo $PREFIX"Datanode configuration"
 
-  cp /opt/hadoop/etc/hadoop/data-node-core-site.xml /opt/hadoop/etc/hadoop/core-site.xml
-  cp /opt/hadoop/etc/hadoop/data-node-hdfs-site.xml /opt/hadoop/etc/hadoop/hdfs-site.xml
-  cp /opt/hadoop/etc/hadoop/data-node-yarn-site.xml /opt/hadoop/etc/hadoop/yarn-site.xml
-  cp /opt/hadoop/etc/hadoop/data-node-mapred-site.xml /opt/hadoop/etc/hadoop/mapred-site.xml
-else
+#   cp /opt/hadoop/etc/hadoop/data-node-core-site.xml /opt/hadoop/etc/hadoop/core-site.xml
+#   cp /opt/hadoop/etc/hadoop/data-node-hdfs-site.xml /opt/hadoop/etc/hadoop/hdfs-site.xml
+#   cp /opt/hadoop/etc/hadoop/data-node-yarn-site.xml /opt/hadoop/etc/hadoop/yarn-site.xml
+#   cp /opt/hadoop/etc/hadoop/data-node-mapred-site.xml /opt/hadoop/etc/hadoop/mapred-site.xml
+# else
   # NAME NODE
   echo $PREFIX"Namenode configuration"
 
-  cp /opt/hadoop/etc/hadoop/name-node-core-site.xml /opt/hadoop/etc/hadoop/core-site.xml
-  cp /opt/hadoop/etc/hadoop/name-node-hdfs-site.xml /opt/hadoop/etc/hadoop/hdfs-site.xml
-  cp /opt/hadoop/etc/hadoop/name-node-yarn-site.xml /opt/hadoop/etc/hadoop/yarn-site.xml
-  cp /opt/hadoop/etc/hadoop/name-node-mapred-site.xml /opt/hadoop/etc/hadoop/mapred-site.xml
+  # cp /opt/hadoop/etc/hadoop/name-node-core-site.xml /opt/hadoop/etc/hadoop/core-site.xml
+  # cp /opt/hadoop/etc/hadoop/name-node-hdfs-site.xml /opt/hadoop/etc/hadoop/hdfs-site.xml
+  # cp /opt/hadoop/etc/hadoop/name-node-yarn-site.xml /opt/hadoop/etc/hadoop/yarn-site.xml
+  # cp /opt/hadoop/etc/hadoop/name-node-mapred-site.xml /opt/hadoop/etc/hadoop/mapred-site.xml
 
-  cp /opt/hive/conf/hive-node-hive-site.xml /opt/hive/conf/hive-site.xml
-fi
+  # cp /opt/hive/conf/hive-node-hive-site.xml /opt/hive/conf/hive-site.xml
+# fi
 
 if [ "$NAME_NODE_ADDR" != "" ]; then
   RESOURCEMANAGER_ADDRESS=$NAME_NODE_ADDR
@@ -124,6 +125,9 @@ sed -i "s|{{node.name.ip}}|$NAMENODE_ADDRESS|g" $CONFIG_DIR/yarn-site.xml
 sed -i "s|{{node.name.port}}|$NAMENODE_PORT|g" $CONFIG_DIR/hdfs-site.xml
 sed -i "s|{{node.name.port}}|$NAMENODE_PORT|g" $CONFIG_DIR/core-site.xml
 
+sed -i "s|{{secondary.node.name.ip}}|$SECOND_NAMENODE_ADDRESS|g" $CONFIG_DIR/hdfs-site.xml
+sed -i "s|{{secondary.node.name.webport}}|$SECOND_NAMENODE_WEBPORT|g" $CONFIG_DIR/hdfs-site.xml
+
 sed -i "s|{{node.name.webport}}|$NAMENODE_WEBPORT|g" $CONFIG_DIR/hdfs-site.xml
 sed -i "s|{{hdfs.data}}|$DEFAULT_DATA_DIR|g" $CONFIG_DIR/hdfs-site.xml
 
@@ -133,6 +137,16 @@ sed -i "s|{{NAME_NODE_ADDR}}|$NAMENODE_ADDRESS|g" /opt/hive/conf/hive-site.xml
 # debuging configuration
 if [ "$DEBUG" != "" ]; then
   cat $CONFIG_DIR/yarn-site.xml
+fi
+
+echo "" > $CONFIG_DIR/slaves
+
+if [ "$SECOND_NAMENODE_ADDRESS" != "" ]; then
+  # echo "" > $CONFIG_DIR/slaves
+  echo $PREFIX"Got secondary name nodes address as "$SECOND_NAMENODE_ADDRESS
+  echo "Host "$SECOND_NAMENODE_ADDRESS >> ~/.ssh/config
+  echo "  StrictHostKeyChecking no" >> ~/.ssh/config
+  echo "" >> ~/.ssh/config
 fi
 
 # Setup ssh for slaves
@@ -148,7 +162,7 @@ if [ "$NODE_IPS" != "" ]; then
     #Single node
     nodes=$NODE_IPS
   fi
-  echo "" > $CONFIG_DIR/slaves
+  # echo "" > $CONFIG_DIR/slaves
   for addr in $nodes
   do
     echo $PREFIX"Setup for node "$addr
@@ -203,6 +217,10 @@ if [ "$SERVER_ROLE" = "nn" ]; then
     hdfs dfs -chmod +w /logs
     hdfs dfs -chmod g+w /topics
     hdfs dfs -chmod g+w /logs
+
+    hdfs dfs -mkdir -p /flume
+    hdfs dfs -chmod +w /flume
+    hdfs dfs -chmod g+w /flume
 
     echo $PREFIX"Init hive..."
     schematool -dbType mysql -initSchema 
