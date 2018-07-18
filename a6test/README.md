@@ -1,5 +1,9 @@
 # 效果
 
+for elastic search
+
+sysctl -w vm.max_map_count=262144
+
 ## 整体验证流程
 
 ![alt text](https://github.com/wangzheng422/docker_env/raw/master/a6test/docs/image2018-7-16_9-53-14.png)
