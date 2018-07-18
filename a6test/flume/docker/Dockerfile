@@ -25,6 +25,9 @@ COPY morphline.conf /opt/flume-config/
 COPY log4j.properties /opt/flume-config/
 COPY flume-env.sh /opt/flume-config/
 
+COPY core-site.xml /opt/flume-config/
+COPY hdfs-site.xml /opt/flume-config/
+
 RUN chmod +x /opt/flume/bin/start-flume && mkdir -p /opt/schema
 
 ENTRYPOINT [ "/opt/flume/bin/start-flume" ]
