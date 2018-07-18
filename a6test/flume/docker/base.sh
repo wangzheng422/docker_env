@@ -3,4 +3,4 @@
 set -e
 set -x
 
-docker build -t flume:build -f build.base.Dockerfile ./
+docker build -t flume:build -f build.Dockerfile ./
