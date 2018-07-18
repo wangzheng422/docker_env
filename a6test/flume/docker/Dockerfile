@@ -24,6 +24,7 @@ COPY start-flume.sh /opt/flume/bin/start-flume
 COPY flume.conf /opt/flume-config/
 COPY morphline.conf /opt/flume-config/
 COPY log4j.properties /opt/flume-config/
+COPY flume-env.sh /opt/flume-config/
 
 RUN chmod +x /opt/flume/bin/start-flume
 
