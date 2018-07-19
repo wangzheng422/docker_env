@@ -3,4 +3,6 @@
 set -e
 set -x
 
-docker build -t elasticsearch:wzh ./
+PWD=$(pwd)
+
+docker build -t elasticsearch:wzh $PWD/
