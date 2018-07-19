@@ -5,4 +5,4 @@ set -x
 
 PWD=$(pwd)
 
-docker build -t elasticsearch:wzh $PWD/
+docker build -t elasticsearch:wzh ${PWD}/
