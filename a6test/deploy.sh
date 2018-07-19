@@ -3,7 +3,7 @@
 set -e
 set -x
 
-mkdir tmp
+mkdir -p tmp
 
 # es
 source ./es/deploy.sh
