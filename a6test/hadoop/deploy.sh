@@ -5,6 +5,8 @@ set -x
 
 source config.sh
 
+SCRIPT=$(readlink -f "$0")
+SCRIPTPATH=$(dirname "$SCRIPT")
 
 # cat k8s.yml | \
 # sed "s/{{ALB_IP}}/${ALB_IP}/g" | \
@@ -18,7 +20,7 @@ source config.sh
 
 # echo "use k8s-tmp.yaml to deploy the app"
 
-docker build -t hadoop:wzh ./
+docker build -t hadoop:wzh ${SCRIPTPATH}/
 # docker push ${REGISTRY}/hadoop
 
 # docker pull mysql:5.7

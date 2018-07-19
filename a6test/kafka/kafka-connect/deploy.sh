@@ -3,4 +3,7 @@
 set -e
 set -x
 
-docker build -t cp-kafka-connect:wzh ./
+SCRIPT=$(readlink -f "$0")
+SCRIPTPATH=$(dirname "$SCRIPT")
+
+docker build -t cp-kafka-connect:wzh ${SCRIPTPATH}/

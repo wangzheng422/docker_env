@@ -3,4 +3,7 @@
 set -e
 set -x
 
-docker build -t flume:build -f build.Dockerfile ./
+SCRIPT=$(readlink -f "$0")
+SCRIPTPATH=$(dirname "$SCRIPT")
+
+docker build -t flume:build -f ${SCRIPTPATH}/build.Dockerfile ${SCRIPTPATH}/

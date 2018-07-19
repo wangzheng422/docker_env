@@ -3,5 +3,8 @@
 set -e
 set -x
 
-docker build -f ./base.Dockerfile -t centos:wzh ./
+SCRIPT=$(readlink -f "$0")
+SCRIPTPATH=$(dirname "$SCRIPT")
+
+docker build -f ${SCRIPTPATH}/base.Dockerfile -t centos:wzh ${SCRIPTPATH}/
 

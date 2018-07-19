@@ -3,4 +3,7 @@
 set -e
 set -x
 
-docker build -t hue:wzh ./
+SCRIPT=$(readlink -f "$0")
+SCRIPTPATH=$(dirname "$SCRIPT")
+
+docker build -t hue:wzh ${SCRIPTPATH}/
