@@ -3,8 +3,10 @@
 set -e
 set -x
 
-SCRIPT=$(readlink -f "$0")
-SCRIPTPATH=$(dirname "$SCRIPT")
+# SCRIPT=$(readlink -f "$0")
+# SCRIPTPATH=$(dirname "$SCRIPT")
 
-docker build -f ${SCRIPTPATH}/base.Dockerfile -t centos:wzh ${SCRIPTPATH}/
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+docker build -f ${DIR}/base.Dockerfile -t centos:wzh ${DIR}/
 

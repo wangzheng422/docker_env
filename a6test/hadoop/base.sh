@@ -3,10 +3,12 @@
 set -e
 set -x
 
-SCRIPT=$(readlink -f "$0")
-SCRIPTPATH=$(dirname "$SCRIPT")
+# SCRIPT=$(readlink -f "$0")
+# SCRIPTPATH=$(dirname "$SCRIPT")
 
-docker build -f ${SCRIPTPATH}/base.Dockerfile -t hadoop:base ${SCRIPTPATH}/
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+docker build -f ${DIR}/base.Dockerfile -t hadoop:base ${DIR}/
 
 # docker save hadoop:base | gzip -c > tmp/hadoop.base.tgz
 

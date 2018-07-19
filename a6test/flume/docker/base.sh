@@ -3,7 +3,9 @@
 set -e
 set -x
 
-SCRIPT=$(readlink -f "$0")
-SCRIPTPATH=$(dirname "$SCRIPT")
+# SCRIPT=$(readlink -f "$0")
+# SCRIPTPATH=$(dirname "$SCRIPT")
 
-docker build -t flume:build -f ${SCRIPTPATH}/build.Dockerfile ${SCRIPTPATH}/
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+docker build -t flume:build -f ${DIR}/build.Dockerfile ${DIR}/
