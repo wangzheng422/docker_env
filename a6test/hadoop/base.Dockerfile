@@ -8,9 +8,14 @@ RUN mkdir -p /opt
 WORKDIR /opt
 
 # Install Hadoop
-RUN curl -L http://apache.mirrors.ionfish.org/hadoop/common/hadoop-2.9.1/hadoop-2.9.1.tar.gz -s -o - | tar -xzf - && mv hadoop-2.* hadoop
+# RUN curl -L http://apache.mirrors.ionfish.org/hadoop/common/hadoop-2.9.1/hadoop-2.9.1.tar.gz -s -o - | tar -xzf - && mv hadoop-2.* hadoop
 
-RUN curl -L http://apache.mirrors.ionfish.org/hive/hive-2.3.3/apache-hive-2.3.3-bin.tar.gz -s -o - | tar -xzf - && mv apache-hive* hive
+RUN curl -L http://apache.communilink.net/hadoop/common/hadoop-2.9.1/hadoop-2.9.1.tar.gz -s -o - | tar -xzf - && mv hadoop-2.* hadoop
+
+# RUN curl -L http://apache.mirrors.ionfish.org/hive/hive-2.3.3/apache-hive-2.3.3-bin.tar.gz -s -o - | tar -xzf - && mv apache-hive* hive
+
+RUN curl -L http://apache.communilink.net/hive/hive-2.3.3/apache-hive-2.3.3-bin.tar.gz -s -o - | tar -xzf - && mv apache-hive* hive
+
 # RUN mv hadoop-2.* hadoop
 ENV HADOOP_HOME /opt/hadoop
 ENV HIVE_HOME=/opt/hive
