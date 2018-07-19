@@ -3,6 +3,7 @@
 set -e
 set -x
 
-PWD=$(pwd)
+SCRIPT=$(readlink -f "$0")
+SCRIPTPATH=$(dirname "$SCRIPT")
 
-docker build -t elasticsearch:wzh ${PWD}/
+docker build -t elasticsearch:wzh ${SCRIPTPATH}/
