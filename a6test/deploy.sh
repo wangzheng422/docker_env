@@ -5,14 +5,16 @@ set -x
 
 mkdir -p tmp
 
+# cenos
+source ../centos/base.sh
+
+# ubuntu
+source ../ubuntu/base.sh
 # es
 source ./es/deploy.sh
 
 # filebeat
 source ./filebeat/deploy.sh
-
-# cenos
-source ../centos/base.sh
 
 # hadoop
 source ./hadoop/base.sh
