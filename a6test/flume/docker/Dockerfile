@@ -20,7 +20,7 @@ RUN yum -y install java-1.8.0-openjdk wget && mkdir /opt/flume &&  tar zxvf /opt
 
 COPY --from=hadooper /opt/hadoop/share/hadoop/common/*.jar /opt/flume/lib/
 COPY --from=hadooper /opt/hadoop/share/hadoop/common/lib/*.jar /opt/flume/lib/
-COPY woodstox-core-5.1.0.jar /opt/flume/lib/
+# COPY woodstox-core-5.1.0.jar /opt/flume/lib/
 
 COPY start-flume.sh /opt/flume/bin/start-flume
 COPY flume.conf /opt/flume-config/

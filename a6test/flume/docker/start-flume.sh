@@ -12,4 +12,6 @@ flume-ng agent \
   -f ${FLUME_CONF_DIR}/flume.conf \
   -n ${FLUME_AGENT_NAME} \
   -Dflume.root.logger=DEBUG,console \
+  -Dflume.monitoring.type=http \
+  -Dflume.monitoring.port=8080
   $*
