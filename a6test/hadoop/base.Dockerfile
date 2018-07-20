@@ -1,4 +1,4 @@
-FROM ubuntu:16.04
+FROM ubuntu:wzh
 
 
 RUN apt-get update && apt-get install -y openjdk-8-jdk curl ssh iproute2 net-tools dnsutils vim supervisor
@@ -41,7 +41,7 @@ EXPOSE 9000 8088 50070 9999
 # ENV NOTVISIBLE "in users profile"
 # RUN echo "export VISIBLE=now" >> /etc/profile
 
-VOLUME /data/
+# VOLUME /data/
 
 
 
