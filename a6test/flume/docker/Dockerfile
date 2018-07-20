@@ -16,10 +16,11 @@ ENV PATH /opt/flume/bin:$PATH
 
 COPY --from=builder /app/flume-ng-dist/target/apache-flume-1.8.0-bin.tar.gz /opt/
 
-RUN yum -y install java-1.8.0-openjdk wget && mkdir /opt/flume &&  tar zxvf /opt/apache-flume-1.8.0-bin.tar.gz -C /opt/flume --strip 1 && rm -f /opt/apache-flume-1.8.0-bin.tar.gz
+RUN yum -y install java-1.8.0-openjdk wget && mkdir /opt/flume &&  tar zxvf /opt/apache-flume-1.8.0-bin.tar.gz -C /opt/flume --strip 1 && rm -f /opt/apache-flume-1.8.0-bin.tar.gz && mkdir -p /opt/flume/plugins.d/hdfs-sink/conf && mkdir -p /opt/flume/plugins.d/hdfs-sink/lib && mkdir -p /opt/flume/plugins.d/hdfs-sink/libext && mkdir -p /opt/flume/plugins.d/hdfs-sink/native
 
-COPY --from=hadooper /opt/hadoop/share/hadoop/common/*.jar /opt/flume/lib/
-COPY --from=hadooper /opt/hadoop/share/hadoop/common/lib/*.jar /opt/flume/lib/
+COPY --from=hadooper /opt/hadoop/share/hadoop/common/*.jar /opt/flume/plugins.d/hdfs-sink/libext/
+COPY --from=hadooper /opt/hadoop/share/hadoop/common/lib/*.jar /opt/flume/plugins.d/hdfs-sink/libext/
+COPY --from=hadooper /opt/hadoop/lib/native/* /opt/flume/plugins.d/hdfs-sink/native/
 # COPY woodstox-core-5.1.0.jar /opt/flume/lib/
 
 COPY start-flume.sh /opt/flume/bin/start-flume
