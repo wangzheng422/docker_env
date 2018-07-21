@@ -15,3 +15,4 @@ export JAVA_OPTS="$JAVA_OPTS -Dorg.apache.flume.log.rawdata=true -Dorg.apache.fl
 
 # Note that the Flume conf directory is always included in the classpath.
 #FLUME_CLASSPATH=""
+
