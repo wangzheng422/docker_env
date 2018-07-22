@@ -26,14 +26,14 @@ COPY --from=hadooper /opt/hadoop/share/hadoop/common/lib/*.jar /opt/flume/plugin
 COPY --from=hadooper /opt/hadoop/share/hadoop/hdfs/*.jar /opt/flume/plugins.d/hdfs-sink/libext/
 COPY --from=hadooper /opt/hadoop/share/hadoop/hdfs/lib/*.jar /opt/flume/plugins.d/hdfs-sink/libext/
 COPY --from=hadooper /opt/hadoop/lib/native/* /opt/flume/plugins.d/hdfs-sink/native/
-COPY woodstox-core-5.1.0.jar /opt/flume/lib/
+# COPY woodstox-core-5.1.0.jar /opt/flume/lib/
 
 COPY start-flume.sh /opt/flume/bin/start-flume
 COPY flume.conf /opt/flume-config/
 COPY morphline.conf /opt/flume-config/
 COPY log4j.properties /opt/flume-config/
 COPY flume-env.sh /opt/flume-config/
-COPY schema.avsc /opt/flume/schema/
+COPY schema/* /opt/flume/schema/
 
 COPY core-site.xml /opt/flume-config/
 COPY hdfs-site.xml /opt/flume-config/

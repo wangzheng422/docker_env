@@ -25,6 +25,8 @@ COPY conf/namenode/hdfs-site.xml etc/hadoop/
 COPY conf/namenode/yarn-site.xml etc/hadoop/
 COPY conf/namenode/mapred-site.xml etc/hadoop/
 
+COPY schema/* /opt/schema/
+
 
 COPY entrypoint.sh /
 COPY run-wordcount.sh /
