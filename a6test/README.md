@@ -53,3 +53,18 @@ docker-compose exec kafka-connect curl -X POST -H "Content-Type: application/jso
 hue中，可以直接进行查询
 
 ![alt text](https://github.com/wangzheng422/docker_env/raw/master/a6test/docs/image2018-7-16-17_36_2.png)
+
+flume
+
+```bash
+hadoop fs -copyFromLocal schema.avsc /flume/.schema/
+```
+
+```sql
+create external table log00 partitioned by (day string)
+row format serde 'org.apache.hadoop.hive.serde2.avro.AvroSerDe'
+with serdeproperties ( 'avro.schema.url' = '/flume/.schema/schema.avsc')
+stored as inputformat 'org.apache.hadoop.hive.ql.io.avro.AvroContainerInputFormat'
+outputformat 'org.apache.hadoop.hive.ql.io.avro.AvroContainerOutputFormat'
+location '/flume/record_ymdh=2018072108';
+```
