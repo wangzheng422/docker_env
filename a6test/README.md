@@ -57,7 +57,8 @@ hue中，可以直接进行查询
 flume
 
 ```bash
-hadoop fs -copyFromLocal schema.avsc /flume/.schema/
+hadoop fs -mkdir /flume/.schema/
+hadoop fs -copyFromLocal /opt/schema/schema.avsc /flume/.schema/
 ```
 
 ```sql
@@ -67,4 +68,8 @@ with serdeproperties ( 'avro.schema.url' = '/flume/.schema/schema.avsc' )
 stored as inputformat 'org.apache.hadoop.hive.ql.io.avro.AvroContainerInputFormat'
 outputformat 'org.apache.hadoop.hive.ql.io.avro.AvroContainerOutputFormat'
 location '/flume/log00' ;
+```
+
+```sql
+alter table log00 add partition ( day = )
 ```
