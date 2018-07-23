@@ -199,7 +199,7 @@ if [ "$SERVER_ROLE" = "nn" ]; then
     start-dfs.sh
     mr-jobhistory-daemon.sh start historyserver
 
-    sleep 60
+    sleep 10
 
     hdfs dfs -mkdir -p /usr/hive/warehouse  
     hdfs dfs -mkdir -p /usr/hive/tmp  
