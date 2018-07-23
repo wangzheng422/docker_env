@@ -7,5 +7,7 @@ docker-compose down -v
 
 docker volume prune -f
 
+docker image prune -f
+
 # docker exec -it filebeat
 # ./filebeat setup --dashboards
