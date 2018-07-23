@@ -66,5 +66,5 @@ row format serde 'org.apache.hadoop.hive.serde2.avro.AvroSerDe'
 with serdeproperties ( 'avro.schema.url' = '/flume/.schema/schema.avsc' )
 stored as inputformat 'org.apache.hadoop.hive.ql.io.avro.AvroContainerInputFormat'
 outputformat 'org.apache.hadoop.hive.ql.io.avro.AvroContainerOutputFormat'
-location '/flume/record_ymdh=2018072108' ;
+location '/flume/log00' ;
 ```
