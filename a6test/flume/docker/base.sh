@@ -9,3 +9,5 @@ set -x
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 docker build -t flume:build -f ${DIR}/build.Dockerfile ${DIR}/
+
+docker build -t kite:build -f ${DIR}/kite.Dockerfile ${DIR}/
