@@ -10,6 +10,7 @@ source ../centos/base.sh
 
 # ubuntu
 source ../ubuntu/base.sh
+
 # es
 source ./es/deploy.sh
 
