@@ -24,7 +24,6 @@ COPY --from=builder /app/flume-ng-dist/target/apache-flume-1.8.0-bin.tar.gz /opt
 COPY --from=hadooper /opt/hadoop /opt/hadoop
 ENV HADOOP_HOME /opt/hadoop
 ENV PATH /opt/hadoop/bin:/opt/hadoop/sbin:/opt/hive/bin:$PATH
-ENV JAVA_HOME /usr/lib/jvm/java-8-openjdk-amd64
 
 RUN yum -y install java-1.8.0-openjdk wget && mkdir -p /opt/flume && mkdir -p /opt/schema &&  tar zxvf /opt/apache-flume-1.8.0-bin.tar.gz -C /opt/flume --strip 1 && rm -f /opt/apache-flume-1.8.0-bin.tar.gz && mkdir -p /opt/flume/plugins.d/hdfs-sink/conf && mkdir -p /opt/flume/plugins.d/hdfs-sink/lib && mkdir -p /opt/flume/plugins.d/hdfs-sink/libext && mkdir -p /opt/flume/plugins.d/hdfs-sink/native && mkdir -p /opt/flume/plugins.d/morphline/conf && mkdir -p /opt/flume/plugins.d/morphline/lib && mkdir -p /opt/flume/plugins.d/morphline/libext && mkdir -p /opt/flume/plugins.d/morphline/native
 
