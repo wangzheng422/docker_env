@@ -73,7 +73,7 @@ location '/flume/log00' ;
 ```sql
 create external table log00 
 row format serde 'org.apache.hadoop.hive.serde2.avro.AvroSerDe'
-with serdeproperties ( 'avro.schema.url' = 'file://opt/schema/schema.avsc' )
+with serdeproperties ( 'avro.schema.url' = '/flume/.schema/schema.avsc' )
 stored as inputformat 'org.apache.hadoop.hive.ql.io.avro.AvroContainerInputFormat'
 outputformat 'org.apache.hadoop.hive.ql.io.avro.AvroContainerOutputFormat'
 location '/flume/log00/201807/' ;
