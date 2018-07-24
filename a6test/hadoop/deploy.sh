@@ -10,6 +10,8 @@ set -x
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
+cp -f ${DIR}/../flume/schema/* ${DIR}/schema
+
 # cat k8s.yml | \
 # sed "s/{{ALB_IP}}/${ALB_IP}/g" | \
 # sed "s/{{GIT_HOST}}/${GIT_HOST}/g" | \
