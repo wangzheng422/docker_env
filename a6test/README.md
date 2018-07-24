@@ -71,5 +71,5 @@ location '/flume/log00' ;
 ```
 
 ```sql
-alter table log00 add partition ( day = '2018072307' );
+alter table log00 add partition ( day = '2018072307' ) location '/flume/log00/2018072307' ;
 ```
