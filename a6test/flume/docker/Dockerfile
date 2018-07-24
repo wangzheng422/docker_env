@@ -14,7 +14,9 @@ FROM kite:build as kite
 
 FROM hadoop:wzh as hadooper
 
-FROM centos:wzh
+# FROM centos:wzh
+
+FROM hadoop:wzh
 
 # ENV JAVA_HOME /opt/java
 ENV PATH /opt/flume/bin:$PATH
