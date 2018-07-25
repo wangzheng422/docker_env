@@ -222,6 +222,11 @@ if [ "$SERVER_ROLE" = "nn" ]; then
     hdfs dfs -chmod +w /flume
     hdfs dfs -chmod g+w /flume
 
+    hdfs dfs -mkdir -p /flume/.schema
+    hdfs dfs -chmod +w /flume/.schema
+    hdfs dfs -chmod g+w /flume/.schema
+    hdfs dfs -copyFromLocal /opt/schema/schema.avsc /flume/.schema/
+
     echo $PREFIX"Init hive..."
     schematool -dbType mysql -initSchema 
 
