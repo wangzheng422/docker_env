@@ -115,7 +115,7 @@ public class AvroEventSerializer implements EventSerializer, Configurable {
         schemaCache.put(staticSchemaURL, schema);
       }
     } else { // no other options so giving up
-      throw new FlumeException("Could not find schema for event " + event);
+      throw new FlumeException("Could not find schema for event ");
     }
 
     writer = new GenericDatumWriter<Object>(schema);
