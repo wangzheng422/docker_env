@@ -6,12 +6,12 @@ FROM flume:build as builder
 
 # COPY pom.xml /app/pom.xml
 
-COPY src/AvroEventSerializer.java /app/flume-ng-sinks/flume-hdfs-sink/src/main/java/org/apache/flume/sink/hdfs/
+# COPY src/AvroEventSerializer.java /app/flume-ng-sinks/flume-hdfs-sink/src/main/java/org/apache/flume/sink/hdfs/
 
-COPY src/checkstyle-suppressions.xml /app/flume-checkstyle/src/main/resources/flume/checkstyle-suppressions.xml
+# COPY src/checkstyle-suppressions.xml /app/flume-checkstyle/src/main/resources/flume/checkstyle-suppressions.xml
 
-WORKDIR /app
-RUN mvn clean install -DskipTests
+# WORKDIR /app
+# RUN mvn clean install -DskipTests
 
 FROM kite:build as kite
 
@@ -23,7 +23,10 @@ FROM centos:wzh
 # ENV JAVA_HOME /opt/java
 ENV PATH /opt/flume/bin:$PATH
 
-COPY --from=builder /app/flume-ng-dist/target/apache-flume-1.8.0-bin.tar.gz /opt/
+# COPY --from=builder /app/flume-ng-dist/target/apache-flume-1.8.0-bin.tar.gz /opt/
+
+COPY --from=builder /app/flume-ng-dist/target/apache-flume-1.7.0-bin.tar.gz /opt/
+
 
 # COPY --from=hadooper /opt/hadoop /opt/hadoop
 # ENV HADOOP_HOME /opt/hadoop
@@ -31,7 +34,9 @@ COPY --from=builder /app/flume-ng-dist/target/apache-flume-1.8.0-bin.tar.gz /opt
 # ENV WZH_JAVA_HOME /usr/lib/jvm/java-1.8.0-openjdk-1.8.0.171-8.b10.el7_5.x86_64/
 # RUN sed --in-place='.ori' -e "s/\${WZH_JAVA_HOME}/\/usr\/lib\/jvm\/java-8-openjdk-amd64/" /opt/hadoop/etc/hadoop/hadoop-env.sh
 
-RUN yum -y install java-1.8.0-openjdk wget && mkdir -p /opt/flume && mkdir -p /opt/schema &&  tar zxvf /opt/apache-flume-1.8.0-bin.tar.gz -C /opt/flume --strip 1 && rm -f /opt/apache-flume-1.8.0-bin.tar.gz && mkdir -p /opt/flume/plugins.d/hdfs-sink/conf && mkdir -p /opt/flume/plugins.d/hdfs-sink/lib && mkdir -p /opt/flume/plugins.d/hdfs-sink/libext && mkdir -p /opt/flume/plugins.d/hdfs-sink/native && mkdir -p /opt/flume/plugins.d/morphline/conf && mkdir -p /opt/flume/plugins.d/morphline/lib && mkdir -p /opt/flume/plugins.d/morphline/libext && mkdir -p /opt/flume/plugins.d/morphline/native
+# RUN yum -y install java-1.8.0-openjdk wget && mkdir -p /opt/flume && mkdir -p /opt/schema &&  tar zxvf /opt/apache-flume-1.8.0-bin.tar.gz -C /opt/flume --strip 1 && rm -f /opt/apache-flume-1.8.0-bin.tar.gz && mkdir -p /opt/flume/plugins.d/hdfs-sink/conf && mkdir -p /opt/flume/plugins.d/hdfs-sink/lib && mkdir -p /opt/flume/plugins.d/hdfs-sink/libext && mkdir -p /opt/flume/plugins.d/hdfs-sink/native && mkdir -p /opt/flume/plugins.d/morphline/conf && mkdir -p /opt/flume/plugins.d/morphline/lib && mkdir -p /opt/flume/plugins.d/morphline/libext && mkdir -p /opt/flume/plugins.d/morphline/native
+
+RUN yum -y install java-1.8.0-openjdk wget && mkdir -p /opt/flume && mkdir -p /opt/schema &&  tar zxvf /opt/apache-flume-1.7.0-bin.tar.gz -C /opt/flume --strip 1 && rm -f /opt/apache-flume-1.7.0-bin.tar.gz && mkdir -p /opt/flume/plugins.d/hdfs-sink/conf && mkdir -p /opt/flume/plugins.d/hdfs-sink/lib && mkdir -p /opt/flume/plugins.d/hdfs-sink/libext && mkdir -p /opt/flume/plugins.d/hdfs-sink/native && mkdir -p /opt/flume/plugins.d/morphline/conf && mkdir -p /opt/flume/plugins.d/morphline/lib && mkdir -p /opt/flume/plugins.d/morphline/libext && mkdir -p /opt/flume/plugins.d/morphline/native
 
 COPY --from=hadooper /opt/hadoop/share/hadoop/common/*.jar /opt/flume/plugins.d/hdfs-sink/lib/
 COPY --from=hadooper /opt/hadoop/share/hadoop/common/lib/*.jar /opt/flume/plugins.d/hdfs-sink/libext/
