@@ -98,13 +98,7 @@ public class AvroEventSerializer implements EventSerializer, Configurable {
 
     // begin changed by wangzheng
     if (dataFileWriter == null) {
-      try {
-        initialize();
-      }
-      catch(Exception e) {
-        logger.warn("wzhexception: ", e);
-      }
-      
+        initialize();    
     }
     // end changed
     
@@ -121,7 +115,7 @@ public class AvroEventSerializer implements EventSerializer, Configurable {
         schemaCache.put(staticSchemaURL, schema);
       }
     } else { // no other options so giving up
-      throw new FlumeException("Could not find schema for event ");
+      logger.warn(("Could not find schema for event ");
     }
 
     writer = new GenericDatumWriter<Object>(schema);
