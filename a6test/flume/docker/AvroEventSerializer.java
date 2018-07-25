@@ -96,10 +96,42 @@ public class AvroEventSerializer implements EventSerializer, Configurable {
         context.getString(COMPRESSION_CODEC, DEFAULT_COMPRESSION_CODEC);
     staticSchemaURL = context.getString(STATIC_SCHEMA_URL, DEFAULT_STATIC_SCHEMA_URL);
 
+    // begin changed by wangzheng
     if (dataFileWriter == null) {
-      initialize(event);
+      initialize();
     }
+    // end changed
     
+  }
+
+  private void initialize() throws IOException {
+    Schema schema = null;
+    String schemaUrl = staticSchemaURL;
+
+    if (staticSchemaURL != null) {   // fallback to static url if it was there
+      schema = schemaCache.get(staticSchemaURL);
+      if (schema == null) {
+        schema = loadFromUrl(staticSchemaURL);
+        schemaCache.put(staticSchemaURL, schema);
+      }
+    } else { // no other options so giving up
+      throw new FlumeException("Could not find schema for event " + event);
+    }
+
+    writer = new GenericDatumWriter<Object>(schema);
+    dataFileWriter = new DataFileWriter<Object>(writer);
+
+    dataFileWriter.setSyncInterval(syncIntervalBytes);
+
+    try {
+      CodecFactory codecFactory = CodecFactory.fromString(compressionCodec);
+      dataFileWriter.setCodec(codecFactory);
+    } catch (AvroRuntimeException e) {
+      logger.warn("Unable to instantiate avro codec with name (" +
+          compressionCodec + "). Compression disabled. Exception follows.", e);
+    }
+
+    dataFileWriter.create(schema, out);
   }
 
   @Override
