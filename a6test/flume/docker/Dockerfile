@@ -6,8 +6,10 @@ FROM flume:build as builder
 
 # COPY pom.xml /app/pom.xml
 
-# WORKDIR /app
-# RUN mvn clean install -DskipTests
+COPY AvroEventSerializer.java /app/flume-ng-sinks/flume-hdfs-sink/src/main/java/org/apache/flume/sink/hdfs/
+
+WORKDIR /app
+RUN mvn clean install -DskipTests
 
 FROM kite:build as kite
 
