@@ -98,7 +98,13 @@ public class AvroEventSerializer implements EventSerializer, Configurable {
 
     // begin changed by wangzheng
     if (dataFileWriter == null) {
-        initialize();    
+        try {
+          initialize();    
+        }
+        catch(IOException e){
+          logger.warn("wzhIOException", e);
+        }
+        
     }
     // end changed
     
