@@ -229,12 +229,14 @@ public class AvroEventSerializer implements EventSerializer, Configurable {
   public void flush() throws IOException {
     // begin changed by wangzheng
     if (dataFileWriter == null) {
-      try {
-        initialize();    
-      }
-      catch(IOException e){
-        logger.warn("wzhIOException", e);
-      }
+      // try {
+      //   initialize();    
+      // }
+      // catch(IOException e){
+      //   logger.warn("wzhIOException", e);
+      // }
+
+      return;
       
     }
   // end changed
