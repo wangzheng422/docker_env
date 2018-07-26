@@ -84,7 +84,7 @@ alter table log00 add partition ( day = '2018072321' ) location '/flume/log00/20
 ```
 
 ```sql
-create table jsonfy( 
+create table jsonfy(
 'wzh_message' string,
 'wzh_timestamp' string,
 'wzh_source'   string)
