@@ -110,35 +110,35 @@ public class AvroEventSerializer implements EventSerializer, Configurable {
     
   }
 
-  private void initialize() throws IOException {
-    Schema schema = null;
-    String schemaUrl = staticSchemaURL;
+  // private void initialize() throws IOException {
+  //   Schema schema = null;
+  //   String schemaUrl = staticSchemaURL;
 
-    if (staticSchemaURL != null) {   // fallback to static url if it was there
-      schema = schemaCache.get(staticSchemaURL);
-      if (schema == null) {
-        schema = loadFromUrl(staticSchemaURL);
-        schemaCache.put(staticSchemaURL, schema);
-      }
-    } else { // no other options so giving up
-      logger.warn("Could not find schema for event ");
-    }
+  //   if (staticSchemaURL != null) {   // fallback to static url if it was there
+  //     schema = schemaCache.get(staticSchemaURL);
+  //     if (schema == null) {
+  //       schema = loadFromUrl(staticSchemaURL);
+  //       schemaCache.put(staticSchemaURL, schema);
+  //     }
+  //   } else { // no other options so giving up
+  //     logger.warn("Could not find schema for event ");
+  //   }
 
-    writer = new GenericDatumWriter<Object>(schema);
-    dataFileWriter = new DataFileWriter<Object>(writer);
+  //   writer = new GenericDatumWriter<Object>(schema);
+  //   dataFileWriter = new DataFileWriter<Object>(writer);
 
-    dataFileWriter.setSyncInterval(syncIntervalBytes);
+  //   dataFileWriter.setSyncInterval(syncIntervalBytes);
 
-    try {
-      CodecFactory codecFactory = CodecFactory.fromString(compressionCodec);
-      dataFileWriter.setCodec(codecFactory);
-    } catch (AvroRuntimeException e) {
-      logger.warn("Unable to instantiate avro codec with name (" +
-          compressionCodec + "). Compression disabled. Exception follows.", e);
-    }
+  //   try {
+  //     CodecFactory codecFactory = CodecFactory.fromString(compressionCodec);
+  //     dataFileWriter.setCodec(codecFactory);
+  //   } catch (AvroRuntimeException e) {
+  //     logger.warn("Unable to instantiate avro codec with name (" +
+  //         compressionCodec + "). Compression disabled. Exception follows.", e);
+  //   }
 
-    dataFileWriter.create(schema, out);
-  }
+  //   dataFileWriter.create(schema, out);
+  // }
 
   @Override
   public void afterCreate() throws IOException {

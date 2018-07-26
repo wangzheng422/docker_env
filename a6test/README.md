@@ -82,3 +82,13 @@ location '/flume/log00/201807/' ;
 ```sql
 alter table log00 add partition ( day = '2018072321' ) location '/flume/log00/2018072321' ;
 ```
+
+```sql
+create table jsonfy( 
+'wzh_message' string,
+'wzh_timestamp' string,
+'wzh_source'   string)
+ROW FORMAT SERDE 'org.apache.hive.hcatalog.data.JsonSerDe'
+STORED AS TEXTFILE
+location '/flume/log00/201807/';
+```
