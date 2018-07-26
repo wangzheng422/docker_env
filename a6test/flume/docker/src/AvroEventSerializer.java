@@ -97,15 +97,15 @@ public class AvroEventSerializer implements EventSerializer, Configurable {
     staticSchemaURL = context.getString(STATIC_SCHEMA_URL, DEFAULT_STATIC_SCHEMA_URL);
 
     // begin changed by wangzheng
-    if (dataFileWriter == null) {
-        try {
-          initialize();    
-        }
-        catch(IOException e){
-          logger.warn("wzhIOException", e);
-        }
+    // if (dataFileWriter == null) {
+    //     try {
+    //       initialize();    
+    //     }
+    //     catch(IOException e){
+    //       logger.warn("wzhIOException", e);
+    //     }
         
-    }
+    // }
     // end changed
     
   }
@@ -227,6 +227,17 @@ public class AvroEventSerializer implements EventSerializer, Configurable {
 
   @Override
   public void flush() throws IOException {
+    // begin changed by wangzheng
+    if (dataFileWriter == null) {
+      try {
+        initialize();    
+      }
+      catch(IOException e){
+        logger.warn("wzhIOException", e);
+      }
+      
+    }
+  // end changed
     dataFileWriter.flush();
   }
 
