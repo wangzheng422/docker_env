@@ -8,7 +8,7 @@ FROM flume:build as builder
 
 COPY src/AvroEventSerializer.java /app/flume-ng-sinks/flume-hdfs-sink/src/main/java/org/apache/flume/sink/hdfs/
 
-COPY src/checkstyle-suppressions.xml /app/flume-checkstyle/src/main/resources/flume/checkstyle-suppressions.xml
+# COPY src/checkstyle-suppressions.xml /app/flume-checkstyle/src/main/resources/flume/checkstyle-suppressions.xml
 
 WORKDIR /app
 RUN mvn clean install -DskipTests

@@ -94,51 +94,8 @@ public class AvroEventSerializer implements EventSerializer, Configurable {
         context.getInteger(SYNC_INTERVAL_BYTES, DEFAULT_SYNC_INTERVAL_BYTES);
     compressionCodec =
         context.getString(COMPRESSION_CODEC, DEFAULT_COMPRESSION_CODEC);
-    staticSchemaURL = context.getString(STATIC_SCHEMA_URL, DEFAULT_STATIC_SCHEMA_URL);
-
-    // begin changed by wangzheng
-    // if (dataFileWriter == null) {
-    //     try {
-    //       initialize();    
-    //     }
-    //     catch(IOException e){
-    //       logger.warn("wzhIOException", e);
-    //     }
-        
-    // }
-    // end changed
-    
+    staticSchemaURL = context.getString(STATIC_SCHEMA_URL, DEFAULT_STATIC_SCHEMA_URL);  
   }
-
-  // private void initialize() throws IOException {
-  //   Schema schema = null;
-  //   String schemaUrl = staticSchemaURL;
-
-  //   if (staticSchemaURL != null) {   // fallback to static url if it was there
-  //     schema = schemaCache.get(staticSchemaURL);
-  //     if (schema == null) {
-  //       schema = loadFromUrl(staticSchemaURL);
-  //       schemaCache.put(staticSchemaURL, schema);
-  //     }
-  //   } else { // no other options so giving up
-  //     logger.warn("Could not find schema for event ");
-  //   }
-
-  //   writer = new GenericDatumWriter<Object>(schema);
-  //   dataFileWriter = new DataFileWriter<Object>(writer);
-
-  //   dataFileWriter.setSyncInterval(syncIntervalBytes);
-
-  //   try {
-  //     CodecFactory codecFactory = CodecFactory.fromString(compressionCodec);
-  //     dataFileWriter.setCodec(codecFactory);
-  //   } catch (AvroRuntimeException e) {
-  //     logger.warn("Unable to instantiate avro codec with name (" +
-  //         compressionCodec + "). Compression disabled. Exception follows.", e);
-  //   }
-
-  //   dataFileWriter.create(schema, out);
-  // }
 
   @Override
   public void afterCreate() throws IOException {
@@ -227,19 +184,11 @@ public class AvroEventSerializer implements EventSerializer, Configurable {
 
   @Override
   public void flush() throws IOException {
-    // begin changed by wangzheng
+    // in case flume start faster that hdfs
     if (dataFileWriter == null) {
-      // try {
-      //   initialize();    
-      // }
-      // catch(IOException e){
-      //   logger.warn("wzhIOException", e);
-      // }
-
       return;
-      
     }
-  // end changed
+
     dataFileWriter.flush();
   }
 
