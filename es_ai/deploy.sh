@@ -13,6 +13,7 @@ source ../ubuntu/base.sh
 
 # es
 source ./es/deploy.sh
+source ./es.a6/deploy.sh
 
 # ai
 source ./ai/deploy.sh
