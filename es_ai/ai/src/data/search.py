@@ -4,20 +4,19 @@ baseQuery = {
           "query": "test",
           "fields": ["REMARKS", "LITHOLOGY_OILNESS_DESC"]
        }
+   },
+  "rescore": {
+      "query": {
+        "rescore_query": {
+            "sltr": {
+                "params": {
+                    "keywords": ""
+                },
+                "model": "",
+            }
+         }
+      }
    }
-#    ,
-#   "rescore": {
-#       "query": {
-#         "rescore_query": {
-#             "sltr": {
-#                 "params": {
-#                     "keywords": ""
-#                 },
-#                 "model": "",
-#             }
-#          }
-#       }
-#    }
 }
 
 def ltrQuery(keywords, modelName):
