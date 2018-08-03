@@ -221,7 +221,7 @@ POST _search
 
 会发现，有remarks的条目，消失了。
 
-## ES AI search
+## ES AI search commands
 
 python3 indexMlTmdb.py
 
