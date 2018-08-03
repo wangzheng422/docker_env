@@ -1,5 +1,9 @@
 # ES人工智能搜索验证
 
+## 参考项目
+
+<https://github.com/o19s/elasticsearch-learning-to-rank>
+
 ## 中文分词
 
 ES必须配置中文分词，才能搜索中文，首先要装中文分词插件，我们就用官方的smartcn好了。
