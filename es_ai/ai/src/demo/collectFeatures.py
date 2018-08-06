@@ -62,6 +62,7 @@ def logFeatures(es, judgmentsByQid):
             docId = doc['_id']
             features = doc['fields']['_ltrlog'][0]['main']
             featuresPerDoc[docId] = featureDictToList(features)
+            break
 
         # Append features from ES back to ranklib judgment list
         for judgment in judgments:
@@ -76,7 +77,7 @@ def buildFeaturesJudgmentsFile(judgmentsWithFeatures, filename):
     with open(filename, 'w',encoding="utf-8") as judgmentFile:
         for qid, judgmentList in judgmentsWithFeatures.items():
             for judgment in judgmentList:
-                judgmentFile.write(judgment.toRanklibFormat().encode('utf-8') + "\n")
+                judgmentFile.write(judgment.toRanklibFormat() + "\n")
 
 
 if __name__ == "__main__":
