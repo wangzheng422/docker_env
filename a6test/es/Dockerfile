@@ -15,7 +15,7 @@ RUN cd /tmp \
 
 USER elasticsearch
 
-RUN bin/elasticsearch-plugin install repository-hdfs
+RUN bin/elasticsearch-plugin install -b repository-hdfs
 RUN bin/elasticsearch-plugin install -b http://es-learn-to-rank.labs.o19s.com/ltr-1.1.0-es6.3.1.zip
 
-RUN bin/elasticsearch-plugin install analysis-smartcn
+RUN bin/elasticsearch-plugin install -b analysis-smartcn
