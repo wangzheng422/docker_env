@@ -56,7 +56,7 @@ spec:
             type: Directory
           name: "hive-mysql"
       nodeSelector:
-        hadoopmysql: "mysql"
+        ip: "11.11.157.145"
 ---
 apiVersion: apps/v1beta1
 kind: Deployment
@@ -82,18 +82,20 @@ spec:
           value: "{{NODE_IPS}}"
         - name: NAME_NODE_ADDR
           value: "{{NAME_NODE_ADDR}}"
+        - name: SECOND_NAME_NODE_ADDR
+          value: "{{SECOND_NAME_NODE_ADDR}}"
         - name: NAME_NODE_PORT
           value: "9000"
         - name: SERVER_ROLE
           value: "nn"
         - name: FORMAT_NAMENODE
-          value: "true"
+          value: "false"
         - name: START_YARN
           value: "true"
         - name: ALB_ADDR
           value: "{{ALB_IP}}"
         name: namenode
-        image: {{REGISTRY}}/hadoop:latest
+        image: {{REGISTRY}}/hadoop:wzh
         imagePullPolicy: Always
         resources:
           requests:
@@ -110,7 +112,63 @@ spec:
           name: "hadoop-data"
       hostNetwork: true
       nodeSelector:
-        hadoop: "nn1"
+        ip: "11.11.157.145"
+---
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: secondnamenode
+  namespace: {{REGION}}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      component: secondnamenode
+  strategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        service.alauda.io/name: secondnamenode
+        component: secondnamenode
+    spec:
+      containers:
+      - env:
+        - name: NODE_IPS
+          value: "{{NODE_IPS}}"
+        - name: NAME_NODE_ADDR
+          value: "{{NAME_NODE_ADDR}}"
+        - name: SECOND_NAME_NODE_ADDR
+          value: "{{SECOND_NAME_NODE_ADDR}}"
+        - name: NAME_NODE_PORT
+          value: "9000"
+        - name: SERVER_ROLE
+          value: "sn"
+        - name: FORMAT_NAMENODE
+          value: "false"
+        - name: START_YARN
+          value: "true"
+        - name: ALB_ADDR
+          value: "{{ALB_IP}}"
+        name: namenode
+        image: {{REGISTRY}}/hadoop:wzh
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: "2"
+            memory: "4G"
+        volumeMounts:
+          - mountPath: "/data"
+            name: "hadoop-data"
+            readOnly: false
+      volumes:
+        - hostPath:
+            path: /alauda_data/hadoop_data
+            type: Directory
+          name: "hadoop-data"
+      hostNetwork: true
+      nodeSelector:
+        ip: "11.11.157.146"
 ---
 apiVersion: apps/v1beta1
 kind: Deployment
@@ -143,7 +201,7 @@ spec:
         - name: START_YARN
           value: "true"
         name: datanode
-        image: {{REGISTRY}}/hadoop:latest
+        image: {{REGISTRY}}/hadoop:wzh
         imagePullPolicy: Always
         resources:
           requests:
@@ -160,7 +218,7 @@ spec:
           name: "hadoop-data"
       hostNetwork: true
       nodeSelector:
-        hadoop: "dn1"
+        ip: "11.11.157.147"
 ---
 apiVersion: apps/v1beta1
 kind: Deployment
@@ -193,7 +251,7 @@ spec:
         - name: START_YARN
           value: "true"
         name: datanode
-        image: {{REGISTRY}}/hadoop:latest
+        image: {{REGISTRY}}/hadoop:wzh
         imagePullPolicy: Always
         resources:
           requests:
@@ -210,54 +268,5 @@ spec:
           name: "hadoop-data"
       hostNetwork: true
       nodeSelector:
-        hadoop: "dn2"
+        ip: "11.11.157.148"
 ---
-apiVersion: apps/v1beta1
-kind: Deployment
-metadata:
-  name: datanode3
-  namespace: {{REGION}}
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      component: datanode3
-  strategy:
-    type: RollingUpdate
-  template:
-    metadata:
-      labels:
-        service.alauda.io/name: datanode3
-        component: datanode3
-    spec:
-      containers:
-      - env:
-        - name: NODE_IPS
-          value: "{{NODE_IPS}}"
-        - name: NAME_NODE_ADDR
-          value: "{{NAME_NODE_ADDR}}"
-        - name: NAME_NODE_PORT
-          value: "9000"
-        - name: SERVER_ROLE
-          value: "dn"
-        - name: START_YARN
-          value: "true"
-        name: datanode
-        image: {{REGISTRY}}/hadoop:latest
-        imagePullPolicy: Always
-        resources:
-          requests:
-            cpu: "2"
-            memory: 4G
-        volumeMounts:
-          - mountPath: "/data"
-            name: "hadoop-data"
-            readOnly: false
-      volumes:
-        - hostPath:
-            path: /alauda_data/hadoop_data
-            type: Directory
-          name: "hadoop-data"
-      hostNetwork: true
-      nodeSelector:
-        hadoop: "dn3"

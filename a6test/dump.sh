@@ -15,5 +15,6 @@ docker save hue:wzh | gzip -c > tmp/hue.wzh.tgz
 docker save flume:build | gzip -c > tmp/flume.build.tgz
 docker save flume:wzh | gzip -c > tmp/flume.wzh.tgz
 docker save kite:build | gzip -c > tmp/kite.build.tgz
+docker save mysql:5.7 | gzip -c > tmp/mysql.5.7.tgz
 
 docker image prune -f
