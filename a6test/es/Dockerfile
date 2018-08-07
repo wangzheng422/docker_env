@@ -1,4 +1,4 @@
-FROM docker.elastic.co/elasticsearch/elasticsearch-oss:6.2.4
+FROM docker.elastic.co/elasticsearch/elasticsearch-oss:6.3.1
 
 USER root
 
@@ -16,3 +16,6 @@ RUN cd /tmp \
 USER elasticsearch
 
 RUN bin/elasticsearch-plugin install repository-hdfs
+RUN bin/elasticsearch-plugin install -b http://es-learn-to-rank.labs.o19s.com/ltr-1.1.0-es6.3.1.zip
+
+RUN bin/elasticsearch-plugin install analysis-smartcn
