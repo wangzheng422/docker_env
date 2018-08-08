@@ -44,6 +44,8 @@ YARN_VCORES=4
 
 DEFAULT_DATA_DIR=/data/hdfs/
 
+#
+
 if [ "$YARN_MIN_ALLOC" != "" ]; then
   YARN_MIN_MB = $YARN_MIN_ALLOC
 fi
@@ -71,6 +73,10 @@ fi
 if [ "$DATA_DIR" != "" ]; then
   DEFAULT_DATA_DIR=$DATA_DIR
 fi
+
+echo $PREFIX"prepare dir"
+mkdir -p $DEFAULT_DATA_DIR
+mkdir -p /data/tmp
 
 # replacing the ports
 # if [ "$SERVER_ROLE" = "dn" ]; then
