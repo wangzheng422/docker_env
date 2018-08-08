@@ -4,60 +4,61 @@ set -e
 set -x
 
 # mkdir -p tmp
-# export REGISTRY=11.11.157.144:5000
-source config.sh
+export REGISTRY=11.11.157.144:5000
+export DIR=./
+# source config.sh
 
-zcat tmp/elasticsearch.wzh.tgz | docker load
+zcat ${DIR}/elasticsearch.wzh.tgz | docker load
 docker tag elasticsearch:wzh ${REGISTRY}/elasticsearch:wzh
 docker push ${REGISTRY}/elasticsearch:wzh
 
-# docker save filebeat:wzh | gzip -c > tmp/filebeat.wzh.tgz
-zcat tmp/filebeat.wzh.tgz | docker load
+# docker save filebeat:wzh | gzip -c > ${DIR}/filebeat.wzh.tgz
+zcat ${DIR}/filebeat.wzh.tgz | docker load
 docker tag filebeat:wzh ${REGISTRY}/filebeat:wzh
 docker push ${REGISTRY}/filebeat:wzh
 
-# docker save centos:wzh | gzip -c > tmp/centos.wzh.tgz
-zcat tmp/centos.wzh.tgz | docker load
+# docker save centos:wzh | gzip -c > ${DIR}/centos.wzh.tgz
+zcat ${DIR}/centos.wzh.tgz | docker load
 docker tag centos:wzh ${REGISTRY}/centos:wzh
 docker push ${REGISTRY}/centos:wzh
 
-# docker save hadoop:base | gzip -c > tmp/hadoop.bases.tgz
-zcat tmp/hadoop.bases.tgz | docker load
+# docker save hadoop:base | gzip -c > ${DIR}/hadoop.bases.tgz
+zcat ${DIR}/hadoop.bases.tgz | docker load
 docker tag hadoop:base ${REGISTRY}/hadoop:base
 docker push ${REGISTRY}/hadoop:base
 
-# docker save hadoop:wzh | gzip -c > tmp/hadoop.wzh.tgz
-zcat tmp/hadoop.wzh.tgz | docker load
+# docker save hadoop:wzh | gzip -c > ${DIR}/hadoop.wzh.tgz
+zcat ${DIR}/hadoop.wzh.tgz | docker load
 docker tag hadoop:wzh ${REGISTRY}/hadoop:wzh
 docker push ${REGISTRY}/hadoop:wzh
 
-# docker save cp-kafka-connect:wzh | gzip -c > tmp/cp-kafka-connect.wzh.tgz
-zcat tmp/cp-kafka-connect.wzh.tgz | docker load
+# docker save cp-kafka-connect:wzh | gzip -c > ${DIR}/cp-kafka-connect.wzh.tgz
+zcat ${DIR}/cp-kafka-connect.wzh.tgz | docker load
 docker tag cp-kafka-connect:wzh ${REGISTRY}/cp-kafka-connect:wzh
 docker push ${REGISTRY}/cp-kafka-connect:wzh
 
-# docker save hue:wzh | gzip -c > tmp/hue.wzh.tgz
-zcat tmp/hue.wzh.tgz | docker load
+# docker save hue:wzh | gzip -c > ${DIR}/hue.wzh.tgz
+zcat ${DIR}/hue.wzh.tgz | docker load
 docker tag hue:wzh ${REGISTRY}/hue:wzh
 docker push ${REGISTRY}/hue:wzh
 
-# docker save flume:build | gzip -c > tmp/flume.build.tgz
-zcat tmp/flume.build.tgz | docker load
+# docker save flume:build | gzip -c > ${DIR}/flume.build.tgz
+zcat ${DIR}/flume.build.tgz | docker load
 docker tag flume:build ${REGISTRY}/flume:build
 docker push ${REGISTRY}/flume:build
 
-# docker save flume:wzh | gzip -c > tmp/flume.wzh.tgz
-zcat tmp/flume.wzh.tgz | docker load
+# docker save flume:wzh | gzip -c > ${DIR}/flume.wzh.tgz
+zcat ${DIR}/flume.wzh.tgz | docker load
 docker tag flume:wzh ${REGISTRY}/flume:wzh
 docker push ${REGISTRY}/flume:wzh
 
-# docker save kite:build | gzip -c > tmp/kite.build.tgz
-zcat tmp/kite.build.tgz | docker load
+# docker save kite:build | gzip -c > ${DIR}/kite.build.tgz
+zcat ${DIR}/kite.build.tgz | docker load
 docker tag kite:build ${REGISTRY}/kite:build
 docker push ${REGISTRY}/kite:build
 
-# docker save mysql:5.7 | gzip -c > tmp/mysql.5.7.tgz
-zcat tmp/mysql.5.7.tgz | docker load
+# docker save mysql:5.7 | gzip -c > ${DIR}/mysql.5.7.tgz
+zcat ${DIR}/mysql.5.7.tgz | docker load
 docker tag mysql:5.7 ${REGISTRY}/mysql:5.7
 docker push ${REGISTRY}/mysql:5.7
 
