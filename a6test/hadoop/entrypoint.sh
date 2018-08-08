@@ -132,6 +132,7 @@ sed -i "s|{{node.name.webport}}|$NAMENODE_WEBPORT|g" $CONFIG_DIR/hdfs-site.xml
 sed -i "s|{{hdfs.data}}|$DEFAULT_DATA_DIR|g" $CONFIG_DIR/hdfs-site.xml
 
 sed -i "s|{{HIVE_MYSQL_ADDR}}|$HIVE_MYSQL_ADDR|g" /opt/hive/conf/hive-site.xml
+sed -i "s|{{HIVE_MYSQL_PORT}}|$HIVE_MYSQL_PORT|g" /opt/hive/conf/hive-site.xml
 sed -i "s|{{NAME_NODE_ADDR}}|$NAMENODE_ADDRESS|g" /opt/hive/conf/hive-site.xml
 
 # debuging configuration
