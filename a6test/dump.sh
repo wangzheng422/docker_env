@@ -8,7 +8,7 @@ mkdir -p tmp
 docker save elasticsearch:wzh | gzip -c > tmp/elasticsearch.wzh.tgz
 docker save filebeat:wzh | gzip -c > tmp/filebeat.wzh.tgz
 docker save centos:wzh | gzip -c > tmp/centos.wzh.tgz
-docker save hadoop:base | gzip -c > tmp/hadoop.bases.tgz
+docker save hadoop:base | gzip -c > tmp/hadoop.base.tgz
 docker save hadoop:wzh | gzip -c > tmp/hadoop.wzh.tgz
 docker save cp-kafka-connect:wzh | gzip -c > tmp/cp-kafka-connect.wzh.tgz
 docker save hue:wzh | gzip -c > tmp/hue.wzh.tgz

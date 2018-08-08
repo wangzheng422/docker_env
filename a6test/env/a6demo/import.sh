@@ -23,7 +23,7 @@ docker tag centos:wzh ${REGISTRY}/centos:wzh
 docker push ${REGISTRY}/centos:wzh
 
 # docker save hadoop:base | gzip -c > ${DIR}/hadoop.bases.tgz
-zcat ${DIR}/hadoop.bases.tgz | docker load
+zcat ${DIR}/hadoop.base.tgz | docker load
 docker tag hadoop:base ${REGISTRY}/hadoop:base
 docker push ${REGISTRY}/hadoop:base
 
