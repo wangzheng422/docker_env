@@ -54,7 +54,6 @@ hue中，可以直接进行查询
 
 ![alt text](https://github.com/wangzheng422/docker_env/raw/master/a6test/docs/image2018-7-16-17_36_2.png)
 
-
 ```bash
 docker exec kafka-connect curl -X POST -H "Content-Type: application/json" \
     --data '{  "name": "hdfs-sink",  "config": {    "connector.class": "io.confluent.connect.hdfs.HdfsSinkConnector",    "tasks.max": "1",    "topics": "wzh_filebeat",    "hdfs.url": "hdfs://namenode:9000",    "flush.size": "3",    "name": "hdfs-sink",    "hive.integration": "true",    "hive.metastore.uris": "thrift://namenode:9083",    "schema.compatibility": "BACKWARD"  } }' \
