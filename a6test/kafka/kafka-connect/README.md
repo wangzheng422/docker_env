@@ -103,3 +103,11 @@ docker-compose exec kafka-connect curl -X POST -H "Content-Type: application/jso
     --data '{"name":"hdfs-sink","config":{"connector.class":"io.confluent.connect.hdfs.HdfsSinkConnector","tasks.max":"1","topics":"wzh-mysql-wzh_tb","hdfs.url":"hdfs://namenode:9000","flush.size":"1","name":"hdfs-sink","hive.integration":"true","hive.metastore.uris":"thrift://namenode:9083","schema.compatibility":"BACKWARD"}}' \
     http://kafka-connect:8083/connectors
 ```
+
+oracle source
+
+```bash
+docker-compose exec kafka-connect curl -X POST -H "Content-Type: application/json" \
+    --data '{ "name": "inventory-connector", "config": { "connector.class": "io.debezium.connector.oracle.OracleConnector", "tasks.max": "1", "database.server.name": "server1", "database.hostname": "oracledb", "database.port": "1521", "database.user": "c##xstrm", "database.password": "xsa", "database.dbname": "ORCLCDB", "database.pdb.name": "ORCLPDB1", "database.out.server.name": "dbzxout", "database.history.kafka.bootstrap.servers": "kafka:9092", "database.history.kafka.topic": "schema-changes.inventory" } }' \
+    http://kafka-connect:8083/connectors
+```

@@ -14,3 +14,4 @@ zcat tmp/hue.wzh.tgz | docker load
 zcat tmp/flume.build.tgz | docker load
 zcat tmp/flume.wzh.tgz | docker load
 zcat tmp/kite.build.tgz | docker load
+zcat tmp/dbz.wzh.tgz | docker load

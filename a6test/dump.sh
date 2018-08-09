@@ -16,5 +16,6 @@ docker save flume:build | gzip -c > tmp/flume.build.tgz
 docker save flume:wzh | gzip -c > tmp/flume.wzh.tgz
 docker save kite:build | gzip -c > tmp/kite.build.tgz
 docker save mysql:5.7 | gzip -c > tmp/mysql.5.7.tgz
+docker save dbz:wzh | gzip -c > tmp/dbz.wzh.tgz
 
 docker image prune -f
