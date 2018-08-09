@@ -107,7 +107,7 @@ docker-compose exec kafka-connect curl -X POST -H "Content-Type: application/jso
 oracle source
 
 ```bash
-docker-compose exec kafka-connect curl -X POST -H "Content-Type: application/json" \
-    --data '{ "name": "inventory-connector", "config": { "connector.class": "io.debezium.connector.oracle.OracleConnector", "tasks.max": "1", "database.server.name": "server1", "database.hostname": "oracledb", "database.port": "1521", "database.user": "c##xstrm", "database.password": "xsa", "database.dbname": "ORCLCDB", "database.pdb.name": "ORCLPDB1", "database.out.server.name": "dbzxout", "database.history.kafka.bootstrap.servers": "kafka:9092", "database.history.kafka.topic": "schema-changes.inventory" } }' \
-    http://kafka-connect:8083/connectors
+docker-compose exec dbz-connect curl -X POST -H "Content-Type: application/json" \
+    --data '{ "name": "inventory-connector", "config": { "connector.class": "io.debezium.connector.oracle.OracleConnector", "tasks.max": "1", "database.server.name": "server1", "database.hostname": "oracledb", "database.port": "1521", "database.user": "c##xstrm", "database.password": "xsa", "database.dbname": "ORCLCDB", "database.pdb.name": "ORCLPDB1", "database.out.server.name": "dbzxout", "database.history.kafka.bootstrap.servers": "kafka1:9092", "database.history.kafka.topic": "schema-changes.inventory" } }' \
+    http://dbz-connect:8083/connectors
 ```
