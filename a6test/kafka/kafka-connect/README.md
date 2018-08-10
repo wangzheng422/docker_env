@@ -108,8 +108,12 @@ oracle source
 
 ```bash
 docker-compose exec dbz-connect curl -X POST -H "Content-Type: application/json" \
-    --data '{ "name": "inventory-connector", "config": { "connector.class": "io.debezium.connector.oracle.OracleConnector", "tasks.max": "1", "database.server.name": "oracledb", "database.hostname": "oracledb", "database.port": "1521", "database.user": "c##xstrm", "database.password": "xsa", "database.dbname": "ORCLCDB", "database.pdb.name": "ORCLPDB1", "database.out.server.name": "dbz-connect", "database.history.kafka.bootstrap.servers": "kafka1:9092", "database.history.kafka.topic": "schema-changes.inventory" } }' \
+    --data '{ "name": "inventory-connector", "config": { "connector.class": "io.debezium.connector.oracle.OracleConnector", "tasks.max": "1", "database.server.name": "oracledb", "database.hostname": "oracledb", "database.port": "1521", "database.user": "c##xstrm", "database.password": "xs", "database.dbname": "ORCLCDB", "database.pdb.name": "ORCLPDB1", "database.out.server.name": "dbzxout", "database.history.kafka.bootstrap.servers": "kafka1:9092", "database.history.kafka.topic": "schema-changes.inventory" } }' \
     http://dbz-connect:8083/connectors
+
+docker-compose exec dbz-connect curl http://dbz-connect:8083/connectors/inventory-connector
+
+docker-compose exec dbz-connect curl -X DELETE http://dbz-connect:8083/connectors/inventory-connector
 ```
 
 ```bash
