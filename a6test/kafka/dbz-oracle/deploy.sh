@@ -8,4 +8,4 @@ set -x
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-docker build -t dbz:wzh ${DIR}/
+docker build -f 12.2.Dockerfile -t dbz:wzh ${DIR}/

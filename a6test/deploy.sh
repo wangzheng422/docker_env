@@ -24,12 +24,16 @@ source ./hadoop/deploy.sh
 # kafka
 source ./kafka/kafka-connect/deploy.sh
 
+# dbz
+source ./kafka/dbz-oracle/deploy.sh
+
 # hue
 source ./hue/deploy.sh
 
 # flume
 source ./flume/docker/base.sh
 source ./flume/deploy.sh
+
 
 
 # docker save elasticsearch:wzh | gzip -c > tmp/elasticsearch.wzh.tgz
