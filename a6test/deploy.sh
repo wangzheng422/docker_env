@@ -25,7 +25,7 @@ source ./hadoop/deploy.sh
 source ./kafka/kafka-connect/deploy.sh
 
 # dbz
-source ./kafka/dbz-oracle/deploy.sh
+# source ./kafka/dbz-oracle/deploy.sh
 
 # hue
 source ./hue/deploy.sh

@@ -9,3 +9,4 @@ set -x
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 docker build -f 12.2.Dockerfile -t dbz-oracle-12-2:wzh ${DIR}/
+docker build -f 11.2.Dockerfile -t dbz-oracle-11-2:wzh ${DIR}/
