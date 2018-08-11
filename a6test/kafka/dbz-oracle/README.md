@@ -22,7 +22,6 @@ docker-compose exec dbz-connect curl -X POST -H "Content-Type: application/json"
     http://dbz-connect:8083/connectors
 ```
 
-
 ## feed some data
 
 follow <https://github.com/debezium/debezium-examples/blob/master/tutorial/debezium-with-oracle-jdbc/init/inventory.sql>
