@@ -1,7 +1,8 @@
 FROM debezium/connect:0.9
 
 # -------- testing ---------
-COPY tmp/debezium-connector-oracle-0.9.0-SNAPSHOT.jar $KAFKA_CONNECT_PLUGINS_DIR/
+RUN rm -f /kafka/connect/debezium-connector-oracle/debezium-connector-oracle-0.9.0.Alpha1.jar
+COPY tmp/debezium-connector-oracle-0.9.0-SNAPSHOT.jar $KAFKA_CONNECT_PLUGINS_DIR/debezium-connector-oracle/
 
 ENV KAFKA_CONNECT_JDBC_DIR=$KAFKA_CONNECT_PLUGINS_DIR/kafka-connect-jdbc
 ENV INSTANT_CLIENT_DIR=/instant_client/
