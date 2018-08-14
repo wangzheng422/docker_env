@@ -37,3 +37,32 @@ sqlplus debezium/dbz@//localhost:1521/orcl
 now you can see the result in kafka console
 
 ![alt text](https://github.com/wangzheng422/docker_env/raw/master/a6test/docs/oracle-dbz.png)
+
+## some url
+
+<http://oradb-srv.wlv.ac.uk/E50529_01/XSTRM/xstrm_xout_man.htm#XSTRM72831>
+
+## other command
+
+```sql
+CREATE TABLE products (
+  id NUMBER(4)   NOT NULL PRIMARY KEY,
+  name VARCHAR2(255) NOT NULL,
+  description VARCHAR2(512),
+  weight FLOAT
+);
+GRANT SELECT ON products to c##xstrm;
+ALTER TABLE products ADD SUPPLEMENTAL LOG DATA (ALL) COLUMNS;
+
+
+INSERT INTO products
+  VALUES (3,'scooter','Small 2-wheel scooter',3.14);
+
+SELECT (TIMESTAMP_TO_SCN(max(last_ddl_time))) from all_objects;
+
+select supplemental_log_data_min from v$database;
+
+SELECT SERVER_NAME, 
+       CAPTURE_NAME
+  FROM ALL_XSTREAM_OUTBOUND;
+```
