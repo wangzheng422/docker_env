@@ -1,11 +1,4 @@
-
-# as root
-su -
-mkdir -p /opt/oracle/oradata/recovery_area
-mkdir -p /opt/oracle/oradata/ORCLCDB
-chown -R oracle:dba /opt/oracle
-
-su - oracle
+#!/bin/sh
 
 sqlplus /nolog <<- EOF
 	CONNECT sys/oracle AS SYSDBA

@@ -44,6 +44,16 @@ now you can see the result in kafka console
 
 ## other command
 
+```bash
+# as root
+su -
+mkdir -p /opt/oracle/oradata/recovery_area
+mkdir -p /opt/oracle/oradata/ORCLCDB
+chown -R oracle:dba /opt/oracle
+
+su - oracle
+```
+
 ```sql
 CREATE TABLE products (
   id NUMBER(4)   NOT NULL PRIMARY KEY,
