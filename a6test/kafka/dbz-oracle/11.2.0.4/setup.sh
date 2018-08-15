@@ -61,7 +61,7 @@ sqlplus sys/oracle@//localhost:1521/orcl as sysdba <<- EOF
 	  QUOTA UNLIMITED ON xstream_tbs;
 
     GRANT CREATE SESSION TO c##xstrm;
-    GRANT SELECT ON V_$DATABASE to c##xstrm ;
+    GRANT SELECT ON V_\$DATABASE to c##xstrm ;
     GRANT FLASHBACK ANY TABLE TO c##xstrm;
 
 	exit;

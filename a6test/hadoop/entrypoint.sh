@@ -44,6 +44,8 @@ YARN_VCORES=4
 
 DEFAULT_DATA_DIR=/data/hdfs/
 
+# data dir should be "/data/hdfs,/data1/hdfs,/data2/hdfs" and so on.
+
 #
 
 if [ "$YARN_MIN_ALLOC" != "" ]; then
@@ -75,8 +77,28 @@ if [ "$DATA_DIR" != "" ]; then
 fi
 
 echo $PREFIX"prepare dir"
-mkdir -p $DEFAULT_DATA_DIR
+# mkdir -p $DEFAULT_DATA_DIR
 mkdir -p /data/tmp
+
+# Setup ssh for slaves
+if [ "$DEFAULT_DATA_DIR" != "" ]; then
+  echo $PREFIX"Got data dir as "$DEFAULT_DATA_DIR
+
+  data_dir=""
+  if echo $DEFAULT_DATA_DIR | grep -q ","
+  then
+    #Multiple nodes
+    data_dir=$(echo $DEFAULT_DATA_DIR | tr "," "\n")
+  else
+    #Single node
+    data_dir=$DEFAULT_DATA_DIR
+  fi
+
+  for dir in $data_dir
+  do
+    mkdir -p $dir
+  done
+fi
 
 # replacing the ports
 # if [ "$SERVER_ROLE" = "dn" ]; then
