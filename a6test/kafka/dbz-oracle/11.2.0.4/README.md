@@ -74,7 +74,7 @@ SELECT (TIMESTAMP_TO_SCN(max(last_ddl_time))) from all_objects;
 
 select supplemental_log_data_min from v$database;
 
-SELECT SERVER_NAME, 
+SELECT SERVER_NAME,
        CAPTURE_NAME
   FROM ALL_XSTREAM_OUTBOUND;
 ```
