@@ -24,6 +24,7 @@ COPY conf/namenode/core-site.xml etc/hadoop/
 COPY conf/namenode/hdfs-site.xml etc/hadoop/
 COPY conf/namenode/yarn-site.xml etc/hadoop/
 COPY conf/namenode/mapred-site.xml etc/hadoop/
+COPY conf/namenode/hadoop-env.sh etc/hadoop/
 
 COPY schema/* /opt/schema/
 
