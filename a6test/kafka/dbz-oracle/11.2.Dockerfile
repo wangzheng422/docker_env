@@ -14,5 +14,3 @@ COPY tmp/instantclient_11_2/xstreams.jar /kafka/libs
 COPY tmp/instantclient_11_2/ojdbc*.jar /kafka/libs/
 
 # COPY driver/ojdbc/* /kafka/libs/
-
-COPY /log4j.properties /kafka/config/
