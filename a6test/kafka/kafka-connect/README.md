@@ -48,6 +48,12 @@ docker-compose exec kafka-connect curl -X POST -H "Content-Type: application/jso
 
 在hive中可以查询到这个数据表
 
+```sql
+show databases;
+show tables;
+select * from wzh_mysql_wzh_tb;
+```
+
 ![alt text](https://github.com/wangzheng422/docker_env/raw/master/a6test/docs/worddav1b2e6c7f7640f96aa933b8edb45a35f2.png)
 
 hue中，可以直接进行查询
