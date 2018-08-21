@@ -18,5 +18,5 @@ cp /root/work/debezium/debezium-ddl-parser/target/debezium-ddl-parser-0.9.0-SNAP
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 # docker build -f 12.2.Dockerfile -t dbz-oracle-12-2:wzh ${DIR}/
-docker build -f 11.2.Dockerfile -t dbz-oracle-11-2:wzh ${DIR}/
-# docker build -t dbz-oracle:wzh ${DIR}/
+# docker build -f 11.2.Dockerfile -t dbz-oracle-11-2:wzh ${DIR}/
+docker build -t dbz-oracle:wzh ${DIR}/
