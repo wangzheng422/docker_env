@@ -11,6 +11,7 @@ sqlplus /nolog <<- EOF
 	alter database open;
         -- Should show "Database log mode: Archive Mode"
 	archive log list
+	alter tablespace undotbs1 retention guarantee;
 	exit;
 EOF
 
