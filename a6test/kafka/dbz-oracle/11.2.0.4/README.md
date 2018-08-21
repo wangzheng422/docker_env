@@ -22,6 +22,8 @@ docker-compose exec dbz-connect curl -X POST -H "Content-Type: application/json"
     http://dbz-connect:8083/connectors
 
 docker-compose exec dbz-connect curl -X DELETE http://dbz-connect:8083/connectors/inventory-connector
+
+docker-compose logs --no-color dbz-connect > logs
 ```
 
 ## feed some data
@@ -48,12 +50,15 @@ now you can see the result in kafka console
 
 ```bash
 # as root
-su -
+docker-compose exec oracledb bash
+
 mkdir -p /opt/oracle/oradata/recovery_area
 mkdir -p /opt/oracle/oradata/ORCLCDB
 chown -R oracle:dba /opt/oracle
 
 su - oracle
+
+vi setup.sh
 ```
 
 ```sql
@@ -68,7 +73,7 @@ ALTER TABLE products ADD SUPPLEMENTAL LOG DATA (ALL) COLUMNS;
 
 
 INSERT INTO products
-  VALUES (3,'scooter','Small 2-wheel scooter',3.14);
+  VALUES (1,'scooter','Small 2-wheel scooter',3.14);
 
 SELECT (TIMESTAMP_TO_SCN(max(last_ddl_time))) from all_objects;
 

@@ -9,11 +9,7 @@ sqlplus /nolog <<- EOF
 	startup mount
 	alter database archivelog;
 	
-	alter system set db_flashback_retention_target=2880;
-	alter database flashback on;
 	alter database open;
-
-	alter tablespace undotbs1 retention guarantee;
 
         -- Should show "Database log mode: Archive Mode"
 	archive log list
