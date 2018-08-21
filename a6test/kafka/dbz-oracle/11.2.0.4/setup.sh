@@ -8,10 +8,16 @@ sqlplus /nolog <<- EOF
 	shutdown immediate
 	startup mount
 	alter database archivelog;
+	
+	alter system set db_flashback_retention_target=2880;
+	alter database flashback on;
 	alter database open;
+
+	alter tablespace undotbs1 retention guarantee;
+
         -- Should show "Database log mode: Archive Mode"
 	archive log list
-	alter tablespace undotbs1 retention guarantee;
+	
 	exit;
 EOF
 
@@ -75,7 +81,7 @@ sqlplus c##xstrmadmin/xsa@//localhost:1521/orcl <<- EOF
 	  schemas DBMS_UTILITY.UNCL_ARRAY;
 	BEGIN
 	    tables(1)  := NULL;
-	    schemas(1) := 'debezium';
+	    schemas(1) := NULL;
 	  DBMS_XSTREAM_ADM.CREATE_OUTBOUND(
 	    server_name     =>  'dbzxout',
 	    table_names     =>  tables,
