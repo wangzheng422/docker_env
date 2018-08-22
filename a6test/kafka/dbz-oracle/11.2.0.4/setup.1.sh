@@ -76,7 +76,7 @@ sqlplus c##xstrmadmin/xsa@//localhost:1521/orcl <<- EOF
 	  tables  DBMS_UTILITY.UNCL_ARRAY;
 	  schemas DBMS_UTILITY.UNCL_ARRAY;
 	BEGIN
-	    tables(1)  := NULL;
+	    tables(1)  := 'product'';
 	    schemas(1) := 'debezium';
 	  DBMS_XSTREAM_ADM.CREATE_OUTBOUND(
 	    server_name     =>  'dbzxout',
