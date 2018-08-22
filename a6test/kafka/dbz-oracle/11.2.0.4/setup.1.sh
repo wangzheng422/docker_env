@@ -29,11 +29,14 @@ sqlplus sys/oracle@//localhost:1521/orcl as sysdba <<- EOF
 	  QUOTA UNLIMITED ON xstream_adm_tbs;
 
     GRANT CREATE SESSION TO c##xstrmadmin ;
+	grant select_catalog_role to c##xstrmadmin;
+    GRANT SELECT ON V_\$DATABASE to c##xstrmadmin ;
+    GRANT FLASHBACK ANY TABLE TO c##xstrmadmin;
 
     BEGIN
 	   DBMS_XSTREAM_AUTH.GRANT_ADMIN_PRIVILEGE(
 	      grantee                 => 'c##xstrmadmin',
-	      privilege_type          => 'CAPTURE',
+	      privilege_type          => '*',
 	      grant_select_privileges => TRUE
 	   );
 	END;
@@ -64,6 +67,7 @@ sqlplus sys/oracle@//localhost:1521/orcl as sysdba <<- EOF
 	  QUOTA UNLIMITED ON xstream_tbs;
 
     GRANT CREATE SESSION TO c##xstrm;
+	grant select_catalog_role to c##xstrm;
     GRANT SELECT ON V_\$DATABASE to c##xstrm ;
     GRANT FLASHBACK ANY TABLE TO c##xstrm;
 
@@ -76,8 +80,8 @@ sqlplus c##xstrmadmin/xsa@//localhost:1521/orcl <<- EOF
 	  tables  DBMS_UTILITY.UNCL_ARRAY;
 	  schemas DBMS_UTILITY.UNCL_ARRAY;
 	BEGIN
-	    tables(1)  := 'product'';
-	    schemas(1) := 'debezium';
+	    tables(1)  := NULL;
+	    schemas(1) := NULL;
 	  DBMS_XSTREAM_ADM.CREATE_OUTBOUND(
 	    server_name     =>  'dbzxout',
 	    table_names     =>  tables,
