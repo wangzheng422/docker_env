@@ -9,11 +9,7 @@ sqlplus /nolog <<- EOF
 	startup mount
 	alter database archivelog;
 	
-	alter system set db_flashback_retention_target=2880;
-	alter database flashback on;
 	alter database open;
-
-	alter tablespace undotbs1 retention guarantee;
 
         -- Should show "Database log mode: Archive Mode"
 	archive log list
@@ -37,7 +33,7 @@ sqlplus sys/oracle@//localhost:1521/orcl as sysdba <<- EOF
     BEGIN
 	   DBMS_XSTREAM_AUTH.GRANT_ADMIN_PRIVILEGE(
 	      grantee                 => 'c##xstrmadmin',
-	      privilege_type          => 'CAPTURE',
+	      privilege_type          => '*',
 	      grant_select_privileges => TRUE
 	   );
 	END;
@@ -68,6 +64,7 @@ sqlplus sys/oracle@//localhost:1521/orcl as sysdba <<- EOF
 	  QUOTA UNLIMITED ON xstream_tbs;
 
     GRANT CREATE SESSION TO c##xstrm;
+	grant select_catalog_role to c##xstrm;
     GRANT SELECT ON V_\$DATABASE to c##xstrm ;
     GRANT FLASHBACK ANY TABLE TO c##xstrm;
 
@@ -81,7 +78,7 @@ sqlplus c##xstrmadmin/xsa@//localhost:1521/orcl <<- EOF
 	  schemas DBMS_UTILITY.UNCL_ARRAY;
 	BEGIN
 	    tables(1)  := NULL;
-	    schemas(1) := 'debezium';
+	    schemas(1) := NULL;
 	  DBMS_XSTREAM_ADM.CREATE_OUTBOUND(
 	    server_name     =>  'dbzxout',
 	    table_names     =>  tables,
