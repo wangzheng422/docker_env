@@ -62,6 +62,17 @@ INSERT INTO products
   VALUES (1,'scooter','Small 2-wheel scooter',3.14);
 commit;
 
+
+INSERT INTO products
+  VALUES (2,'scooter','Small 2-wheel scooter',3.14);
+commit;
+
+
+INSERT INTO products
+  VALUES (3,'scooter','Small 2-wheel scooter',3.14);
+commit;
+
+
 ```
 
 ## result
