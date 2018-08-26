@@ -54,7 +54,6 @@ CREATE TABLE products (
   weight FLOAT
 );
 GRANT SELECT ON products to c##xstrm;
-GRANT SELECT ON products to c##xstrmadmin;
 ALTER TABLE products ADD SUPPLEMENTAL LOG DATA (ALL) COLUMNS;
 
 

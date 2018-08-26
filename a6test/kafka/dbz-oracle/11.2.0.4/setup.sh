@@ -29,14 +29,11 @@ sqlplus sys/oracle@//localhost:1521/orcl as sysdba <<- EOF
 	  QUOTA UNLIMITED ON xstream_adm_tbs;
 
     GRANT CREATE SESSION TO c##xstrmadmin ;
-	grant select_catalog_role to c##xstrmadmin;
-    GRANT SELECT ON V_\$DATABASE to c##xstrmadmin ;
-    GRANT FLASHBACK ANY TABLE TO c##xstrmadmin;
 
     BEGIN
 	   DBMS_XSTREAM_AUTH.GRANT_ADMIN_PRIVILEGE(
 	      grantee                 => 'c##xstrmadmin',
-	      privilege_type          => '*',
+	      privilege_type          => 'CAPTURE',
 	      grant_select_privileges => TRUE
 	   );
 	END;
