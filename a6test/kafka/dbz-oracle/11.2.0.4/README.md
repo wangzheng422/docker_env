@@ -66,6 +66,12 @@ INSERT INTO products
   VALUES (2,'scooter','Small 2-wheel scooter',3.14);
 commit;
 
+update products set id=3 where id=2;
+commit
+
+delete from products where id=3;
+commit
+
 
 INSERT INTO products
   VALUES (3,'scooter','Small 2-wheel scooter',3.14);
