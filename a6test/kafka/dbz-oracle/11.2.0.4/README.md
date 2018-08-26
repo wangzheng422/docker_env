@@ -67,10 +67,10 @@ INSERT INTO products
 commit;
 
 update products set id=3 where id=2;
-commit
+commit;
 
 delete from products where id=3;
-commit
+commit;
 
 
 INSERT INTO products
