@@ -12,6 +12,7 @@ export REGISTRY=11.11.157.191:5000/a6-pro
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 docker build -t ${REGISTRY}/flume:a6 ${DIR}/
+docker push ${REGISTRY}/flume:a6
 
 
 
