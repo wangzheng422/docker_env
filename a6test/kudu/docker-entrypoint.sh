@@ -6,7 +6,6 @@ function do_help {
   echo "Supported commands:"
   echo "   master              - Start a Kudu Master"
   echo "   tserver             - Start a Kudu TServer"
-  echo "   single              - Start a Kudu Master+TServer in one container"
   echo "   kudu                - Run the Kudu CLI"
   echo "   help                - print useful information and exit"
   echo ""
@@ -19,31 +18,16 @@ function do_help {
 }
 
 DEFAULT_KUDU_OPTS="-logtostderr \
- -fs_wal_dir=/var/lib/kudu/$1 \
- -fs_data_dirs=/var/lib/kudu/$1 \
+ -fs_data_dirs=/var/lib/kudu/data \
  -use_hybrid_clock=false"
 
 KUDU_OPTS=${KUDU_OPTS:-${DEFAULT_KUDU_OPTS}}
 
 if [ "$1" = 'master' ]; then
-  exec kudu-master -fs_wal_dir /var/lib/kudu/master ${KUDU_OPTS}
+  exec kudu-master --master_addresses ${KUDU_MASTER} -fs_wal_dir /var/lib/kudu/master ${KUDU_OPTS}
 elif [ "$1" = 'tserver' ]; then
   exec kudu-tserver -fs_wal_dir /var/lib/kudu/tserver \
   -tserver_master_addrs ${KUDU_MASTER} ${KUDU_OPTS}
-elif [ "$1" = 'single' ]; then
-  KUDU_MASTER=boot2docker
-  KUDU_MASTER_OPTS="-logtostderr \
-   -fs_wal_dir=/var/lib/kudu/master \
-   -fs_data_dirs=/var/lib/kudu/master \
-   -use_hybrid_clock=false"
-  KUDU_TSERVER_OPTS="-logtostderr \
-   -fs_wal_dir=/var/lib/kudu/tserver \
-   -fs_data_dirs=/var/lib/kudu/tserver \
-   -use_hybrid_clock=false"
-  exec kudu-master -fs_wal_dir /var/lib/kudu/master ${KUDU_MASTER_OPTS} &
-  sleep 5
-  exec kudu-tserver -fs_wal_dir /var/lib/kudu/tserver \
-  -tserver_master_addrs ${KUDU_MASTER} ${KUDU_TSERVER_OPTS}
 elif [ "$1" = 'kudu' ]; then
   shift; # Remove first arg and pass remainder to kudu cli
   exec kudu "$@"
