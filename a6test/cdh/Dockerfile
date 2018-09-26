@@ -1,0 +1,3 @@
+FROM ubuntu:wzh
+
+RUN apt-get update && apt-get -y install wget curl && wget https://archive.cloudera.com/cdh5/ubuntu/xenial/amd64/cdh/archive.key -O archive.key $ sudo apt-key add archive.key && wget 'https://archive.cloudera.com/cdh5/ubuntu/precise/amd64/cdh/cloudera.list' -O /etc/apt/sources.list.d/cloudera.list && wget 'https://archive.cloudera.com/gplextras5/ubuntu/precise/amd64/gplextras/cloudera.list' -O /etc/apt/sources.list.d/gplextras.list && apt-get update -y &&  apt-get install hadoop-yarn-resourcemanager hadoop-hdfs-namenode hadoop-hdfs-secondarynamenode hadoop-yarn-nodemanager hadoop-hdfs-datanode hadoop-mapreduce hadoop-mapreduce-historyserver hadoop-yarn-proxyserver hadoop-client -y
