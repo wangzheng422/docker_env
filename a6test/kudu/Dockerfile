@@ -10,7 +10,7 @@ apt-get -y install kudu kudu-master kudu-tserver libkuduclient0 libkuduclient-de
 VOLUME /var/lib/kudu/master /var/lib/kudu/tserver
 
 COPY docker-entrypoint.sh /
-RUN chmod +x ./docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
 ENTRYPOINT ["/docker-entrypoint.sh"]
 EXPOSE 8050 8051 7050 7051
 CMD ["help"]

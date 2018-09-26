@@ -9,5 +9,3 @@ docker volume prune -f
 
 docker image prune -f
 
-# docker exec -it filebeat
-# ./filebeat setup --dashboards
