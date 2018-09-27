@@ -8,7 +8,7 @@ set -x
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-docker build -f ${DIR}/base.Dockerfile -t ubuntu:wzh ${DIR}/
+docker build --no-cache -f ${DIR}/base.Dockerfile -t ubuntu:wzh ${DIR}/
 
 # docker save hadoop:base | gzip -c > tmp/hadoop.base.tgz
 

@@ -8,5 +8,5 @@ set -x
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-docker build -f ${DIR}/base.Dockerfile -t centos:wzh ${DIR}/
+docker build --no-cache -f ${DIR}/base.Dockerfile -t centos:wzh ${DIR}/
 
