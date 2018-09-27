@@ -7,4 +7,4 @@ set -x
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-docker build -t cdh:wzh ${DIR}/
+docker build -f base.Dockerfile -t cdh:base ${DIR}/

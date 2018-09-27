@@ -34,6 +34,12 @@ source ./hue/deploy.sh
 source ./flume/docker/base.sh
 source ./flume/deploy.sh
 
+# kudu
+source ./kudu/deploy.sh
+
+# cdh
+source ./cdh/base.sh
+
 
 
 # docker save elasticsearch:wzh | gzip -c > tmp/elasticsearch.wzh.tgz
