@@ -1,6 +1,6 @@
 FROM ubuntu:wzh
 
-RUN apt-get update -y && apt-get upgrade -y && apt-get -y install wget curl multitail
+RUN apt-get update -y && apt-get upgrade -y && apt-get -y install wget curl multitail man
 
 COPY driver/mysql-connector-java_8.0.12-1ubuntu16.04_all.deb /root/
 
