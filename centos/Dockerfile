@@ -1,3 +1,3 @@
 FROM centos:wzh
 
-RUN yum -y update 
+RUN yum -y update && yum -y clean
