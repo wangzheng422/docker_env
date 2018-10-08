@@ -14,7 +14,8 @@ echo $PREFIX"Updating ssh port to "$SSH_NEW_PORT
 sed -i "s|Port 22|Port $SSH_NEW_PORT|g" /etc/ssh/sshd_config
 
 #cat /etc/ssh/sshd_config
-CONFIG_DIR=/etc/hadoop
+CONFIG_DIR=/etc/hadoop/conf
+CONFIG_HIVE_DIR=/etc/hive/conf
 export HADOOP_SSH_OPTS="-p $SSH_NEW_PORT"
 
 echo $PREFIX"Starting ssh..."
@@ -161,9 +162,9 @@ sed -i "s|{{HADOOP_HEAPSIZE}}|$HADOOP_HEAPSIZE|g" $CONFIG_DIR/hadoop-env.sh
 sed -i "s|{{node.name.webport}}|$NAMENODE_WEBPORT|g" $CONFIG_DIR/hdfs-site.xml
 sed -i "s|{{hdfs.data}}|$DEFAULT_DATA_DIR|g" $CONFIG_DIR/hdfs-site.xml
 
-sed -i "s|{{HIVE_MYSQL_ADDR}}|$HIVE_MYSQL_ADDR|g" /opt/hive/conf/hive-site.xml
-sed -i "s|{{HIVE_MYSQL_PORT}}|$HIVE_MYSQL_PORT|g" /opt/hive/conf/hive-site.xml
-sed -i "s|{{NAME_NODE_ADDR}}|$NAMENODE_ADDRESS|g" /opt/hive/conf/hive-site.xml
+sed -i "s|{{HIVE_MYSQL_ADDR}}|$HIVE_MYSQL_ADDR|g" $CONFIG_HIVE_DIR/hive-site.xml
+sed -i "s|{{HIVE_MYSQL_PORT}}|$HIVE_MYSQL_PORT|g" $CONFIG_HIVE_DIR/hive-site.xml
+sed -i "s|{{NAME_NODE_ADDR}}|$NAMENODE_ADDRESS|g" $CONFIG_HIVE_DIR/hive-site.xml
 
 
 
@@ -218,7 +219,7 @@ if [ "$SERVER_ROLE" = "nn" ]; then
         echo $PREFIX" Data dir will be verified by "$VERSION_LOCATION
         if [ ! -f $VERSION_LOCATION ]; then
           echo $PREFIX"Will format namenode"
-          /opt/hadoop/bin/hdfs namenode -format -nonInteractive
+          hdfs namenode -format -nonInteractive
         else
           echo $PREFIX"Namenode is already formatted"
         fi
@@ -228,44 +229,49 @@ if [ "$SERVER_ROLE" = "nn" ]; then
     # /opt/hadoop/bin/hdfs namenode &
 
     sleep 5
-
-    start-dfs.sh
-    mr-jobhistory-daemon.sh start historyserver
+    echo $PREFIX"Will start namenode hdfs in the background"
+    for x in `ls /etc/init.d/|grep  hadoop-hdfs` ; do service $x start ; done
 
     sleep 60
 
-    hdfs dfs -mkdir -p /usr/hive/warehouse  
-    hdfs dfs -mkdir -p /usr/hive/tmp  
-    hdfs dfs -mkdir -p /usr/hive/log  
-    hdfs dfs -chmod +w /usr/hive/warehouse  
-    hdfs dfs -chmod +w /usr/hive/tmp  
-    hdfs dfs -chmod +w /usr/hive/log  
-    hdfs dfs -chmod g+w /usr/hive/warehouse  
-    hdfs dfs -chmod g+w /usr/hive/tmp  
-    hdfs dfs -chmod g+w /usr/hive/log 
+    echo $PREFIX"Will start namenode yarn in the background"
+    for x in `ls /etc/init.d/|grep hadoop-yarn` ; do service $x start ; done
 
-    hdfs dfs -mkdir -p /topics
-    hdfs dfs -mkdir -p /logs
-    hdfs dfs -chmod +w /topics
-    hdfs dfs -chmod +w /logs
-    hdfs dfs -chmod g+w /topics
-    hdfs dfs -chmod g+w /logs
+    echo $PREFIX"Will start namenode yarn historyserver in the background"
+    /etc/init.d/hadoop-mapreduce-historyserver start
 
-    hdfs dfs -mkdir -p /flume
-    hdfs dfs -chmod +w /flume
-    hdfs dfs -chmod g+w /flume
+    # hdfs dfs -mkdir -p /usr/hive/warehouse  
+    # hdfs dfs -mkdir -p /usr/hive/tmp  
+    # hdfs dfs -mkdir -p /usr/hive/log  
+    # hdfs dfs -chmod +w /usr/hive/warehouse  
+    # hdfs dfs -chmod +w /usr/hive/tmp  
+    # hdfs dfs -chmod +w /usr/hive/log  
+    # hdfs dfs -chmod g+w /usr/hive/warehouse  
+    # hdfs dfs -chmod g+w /usr/hive/tmp  
+    # hdfs dfs -chmod g+w /usr/hive/log 
 
-    hdfs dfs -mkdir -p /flume/.schema
-    hdfs dfs -chmod +w /flume/.schema
-    hdfs dfs -chmod g+w /flume/.schema
-    hdfs dfs -copyFromLocal /opt/schema/schema.avsc /flume/.schema/
+    # hdfs dfs -mkdir -p /topics
+    # hdfs dfs -mkdir -p /logs
+    # hdfs dfs -chmod +w /topics
+    # hdfs dfs -chmod +w /logs
+    # hdfs dfs -chmod g+w /topics
+    # hdfs dfs -chmod g+w /logs
 
-    echo $PREFIX"Init hive..."
-    schematool -dbType mysql -initSchema 
+    # hdfs dfs -mkdir -p /flume
+    # hdfs dfs -chmod +w /flume
+    # hdfs dfs -chmod g+w /flume
+
+    # hdfs dfs -mkdir -p /flume/.schema
+    # hdfs dfs -chmod +w /flume/.schema
+    # hdfs dfs -chmod g+w /flume/.schema
+    # hdfs dfs -copyFromLocal /opt/schema/schema.avsc /flume/.schema/
+
+    # echo $PREFIX"Init hive..."
+    # schematool -dbType mysql -initSchema 
 
 
-    echo $PREFIX"Starting supervisor..."
-    service supervisor start;
+    # echo $PREFIX"Starting supervisor..."
+    # service supervisor start;
 
     # Needs additional configuration !!!!
     # echo $PREFIX"Will start quorum journal in the background"
@@ -273,34 +279,52 @@ if [ "$SERVER_ROLE" = "nn" ]; then
     #
     # sleep 5
 
-    if [ "$START_YARN" != "" ]; then
+    # if [ "$START_YARN" != "" ]; then
 
-      echo $PREFIX"Will start YARN services..."
-      echo $PREFIX"Starting resource manager..."
+    #   echo $PREFIX"Will start YARN services..."
+    #   echo $PREFIX"Starting resource manager..."
       # /opt/hadoop/sbin/yarn-daemon.sh --config $CONFIG_DIR start resourcemanager
 
-      start-yarn.sh
-      yarn-daemon.sh start proxyserver
+      # start-yarn.sh
+      # yarn-daemon.sh start proxyserver
 
-    fi
+    # fi
 
-    if [ "$TEST" = "true" ]; then
-      echo $PREFIX"Will run wordcount test..."
-      /run-wordcount.sh
-    fi
+    # if [ "$TEST" = "true" ]; then
+    #   echo $PREFIX"Will run wordcount test..."
+    #   /run-wordcount.sh
+    # fi
+elif [ "$SERVER_ROLE" = "sn" ]; then
+  echo $PREFIX"Will start as second namenode"
+  sleep 10
+  echo $PREFIX"Will start second namenode hdfs in the background"
+  for x in `ls /etc/init.d/|grep  hadoop-hdfs` ; do service $x start ; done
+
+  sleep 60
+  echo $PREFIX"Will start second namenode yarn in the background"
+  for x in `ls /etc/init.d/|grep hadoop-yarn` ; do service $x start ; done
 else
-    echo $PREFIX"Will start as data node"
+  echo $PREFIX"Will start as data node"
+
+  sleep 10
+  echo $PREFIX"Will start second namenode hdfs in the background"
+  for x in `ls /etc/init.d/|grep  hadoop-hdfs` ; do service $x start ; done
+
+  sleep 60
+  echo $PREFIX"Will start second namenode yarn in the background"
+  for x in `ls /etc/init.d/|grep hadoop-yarn` ; do service $x start ; done
+
     # /opt/hadoop/bin/hdfs datanode &
 
     # sleep 5
 
-    if [ "$START_YARN" != "" ]; then
+    # if [ "$START_YARN" != "" ]; then
 
-      echo $PREFIX"Will start YARN services..."
+    #   echo $PREFIX"Will start YARN services..."
 
-      echo $PREFIX"Starting node manager..."
-      # /opt/hadoop/sbin/yarn-daemons.sh --config $CONFIG_DIR start nodemanager
-    fi
+    #   echo $PREFIX"Starting node manager..."
+    #   # /opt/hadoop/sbin/yarn-daemons.sh --config $CONFIG_DIR start nodemanager
+    # fi
 fi
 
 
