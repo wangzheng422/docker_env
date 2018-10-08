@@ -2,10 +2,12 @@ FROM cdh:base
 
 ENV JAVA_HOME /usr/lib/jvm/java-8-openjdk-amd64
 
+COPY conf/namenode/core-site.xml /etc/hadoop/
+COPY conf/namenode/hdfs-site.xml /etc/hadoop/
+COPY conf/namenode/yarn-site.xml /etc/hadoop/
+COPY conf/namenode/mapred-site.xml /etc/hadoop/
+COPY conf/namenode/hadoop-env.sh /etc/hadoop/
 
-
-RUN ssh-keygen -t rsa -f ~/.ssh/id_rsa -P '' && \
-    cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
 
 EXPOSE 9000 8088 50070 9999
 
