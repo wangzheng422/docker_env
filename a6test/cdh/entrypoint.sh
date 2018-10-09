@@ -231,12 +231,14 @@ if [ "$SERVER_ROLE" = "nn" ]; then
 
     sleep 5
     echo $PREFIX"Will start namenode hdfs in the background"
-    for x in `ls /etc/init.d/|grep  hadoop-hdfs` ; do service $x start ; done
+    # for x in `ls /etc/init.d/|grep  hadoop-hdfs` ; do service $x start ; done
+    service hadoop-hdfs-namenode start
 
     sleep 60
 
     echo $PREFIX"Will start namenode yarn in the background"
-    for x in `ls /etc/init.d/|grep hadoop-yarn` ; do service $x start ; done
+    # for x in `ls /etc/init.d/|grep hadoop-yarn` ; do service $x start ; done
+    service hadoop-yarn-resourcemanager start
 
     echo $PREFIX"Will start namenode yarn historyserver in the background"
     /etc/init.d/hadoop-mapreduce-historyserver start
@@ -299,21 +301,25 @@ elif [ "$SERVER_ROLE" = "sn" ]; then
   echo $PREFIX"Will start as second namenode"
   sleep 10
   echo $PREFIX"Will start second namenode hdfs in the background"
-  for x in `ls /etc/init.d/|grep  hadoop-hdfs` ; do service $x start ; done
+  # for x in `ls /etc/init.d/|grep  hadoop-hdfs` ; do service $x start ; done
+  service hadoop-hdfs-secondarynamenode start
 
   sleep 60
   echo $PREFIX"Will start second namenode yarn in the background"
-  for x in `ls /etc/init.d/|grep hadoop-yarn` ; do service $x start ; done
+  # for x in `ls /etc/init.d/|grep hadoop-yarn` ; do service $x start ; done
+  service hadoop-yarn-proxyserver start
 else
   echo $PREFIX"Will start as data node"
 
   sleep 10
   echo $PREFIX"Will start second namenode hdfs in the background"
-  for x in `ls /etc/init.d/|grep  hadoop-hdfs` ; do service $x start ; done
+  # for x in `ls /etc/init.d/|grep  hadoop-hdfs` ; do service $x start ; done
+  service hadoop-hdfs-datanode start
 
   sleep 60
   echo $PREFIX"Will start second namenode yarn in the background"
-  for x in `ls /etc/init.d/|grep hadoop-yarn` ; do service $x start ; done
+  # for x in `ls /etc/init.d/|grep hadoop-yarn` ; do service $x start ; done
+  service hadoop-yarn-nodemanager start
 
     # /opt/hadoop/bin/hdfs datanode &
 
@@ -330,10 +336,8 @@ fi
 
 
 echo $PREFIX"Tailing logs..."
-# mkdir -p /opt/hadoop/logs/
-# echo "first line" > /opt/hadoop/logs/first
-# tail -f /opt/hadoop/logs/* 
-
-multitail -C- --mergeall -D --mark-change -Q 2 /var/log
+mkdir -p /opt/hadoop/logs/
+echo "first line" > /opt/hadoop/logs/first
+tail -f /opt/hadoop/logs/* 
 
 wait || :
