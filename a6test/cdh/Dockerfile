@@ -2,10 +2,10 @@ FROM cdh:base
 
 ENV JAVA_HOME /usr/lib/jvm/java-8-openjdk-amd64
 
-COPY conf/namenode/core-site.xml /etc/hadoop/
-COPY conf/namenode/hdfs-site.xml /etc/hadoop/
-COPY conf/namenode/yarn-site.xml /etc/hadoop/
-COPY conf/namenode/mapred-site.xml /etc/hadoop/
+COPY conf/namenode/core-site.xml /etc/hadoop/conf/
+COPY conf/namenode/hdfs-site.xml /etc/hadoop/conf/
+COPY conf/namenode/yarn-site.xml /etc/hadoop/conf/
+COPY conf/namenode/mapred-site.xml /etc/hadoop/conf/
 # COPY conf/namenode/hadoop-env.sh /etc/hadoop/
 
 
