@@ -98,6 +98,7 @@ if [ "$DEFAULT_DATA_DIR" != "" ]; then
   for dir in $data_dir
   do
     mkdir -p $dir
+    chown -R hdfs:hdfs $dir
   done
 fi
 
@@ -219,7 +220,7 @@ if [ "$SERVER_ROLE" = "nn" ]; then
         echo $PREFIX" Data dir will be verified by "$VERSION_LOCATION
         if [ ! -f $VERSION_LOCATION ]; then
           echo $PREFIX"Will format namenode"
-          hdfs namenode -format -nonInteractive
+          sudo -u hdfs hadoop namenode -format -nonInteractive
         else
           echo $PREFIX"Namenode is already formatted"
         fi
@@ -329,7 +330,10 @@ fi
 
 
 echo $PREFIX"Tailing logs..."
-mkdir -p /opt/hadoop/logs/
-echo "first line" > /opt/hadoop/logs/first
-tail -f /opt/hadoop/logs/* 
+# mkdir -p /opt/hadoop/logs/
+# echo "first line" > /opt/hadoop/logs/first
+# tail -f /opt/hadoop/logs/* 
+
+multitail -C- --mergeall -D --mark-change -Q 2 /var/log
+
 wait || :
