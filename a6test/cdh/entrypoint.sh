@@ -102,6 +102,20 @@ if [ "$DEFAULT_DATA_DIR" != "" ]; then
   done
 fi
 
+yarn_dir=""
+if echo $YARN_DIR | grep -q ","
+then
+  yarn_dir=$(echo $YARN_DIR | tr "," "\n")
+else
+  yarn_dir=$YARN_DIR
+fi
+
+for dir in $yarn_dir
+do
+  mkdir -p $dir/{local,logs}
+  chown -R yarn:yarn $dir
+done
+
 
 echo $PREFIX"Namenode configuration"
 
@@ -209,10 +223,7 @@ if [ "$SERVER_ROLE" = "nn" ]; then
         fi
     fi
 
-    echo $PREFIX"Will start namenode in the background"
-    # /opt/hadoop/bin/hdfs namenode &
-
-    sleep 5
+    # sleep 5
     echo $PREFIX"Will start namenode hdfs in the background"
     # for x in `ls /etc/init.d/|grep  hadoop-hdfs` ; do service $x start ; done
     service hadoop-hdfs-namenode start
@@ -221,7 +232,7 @@ if [ "$SERVER_ROLE" = "nn" ]; then
 
     echo $PREFIX"Will start namenode yarn in the background"
     # for x in `ls /etc/init.d/|grep hadoop-yarn` ; do service $x start ; done
-    # service hadoop-yarn-resourcemanager start
+    service hadoop-yarn-resourcemanager start
 
     echo $PREFIX"Will start namenode yarn historyserver in the background"
     # /etc/init.d/hadoop-mapreduce-historyserver start
