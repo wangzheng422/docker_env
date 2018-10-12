@@ -7,4 +7,8 @@ set -x
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
+git pull
+
 docker build -t cdh:wzh ${DIR}/
+
+docker image prune -f
