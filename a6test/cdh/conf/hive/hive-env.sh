@@ -51,4 +51,4 @@
 # export HIVE_CONF_DIR=
 
 # Folder containing extra ibraries required for hive compilation/execution can be controlled by:
-# export HIVE_AUX_JARS_PATH=
+export HIVE_AUX_JARS_PATH=/usr/share/java/

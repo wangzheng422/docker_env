@@ -251,7 +251,6 @@ if [ "$SERVER_ROLE" = "nn" ]; then
 
     echo $PREFIX"Will start hive components"
     service hive-metastore start
-    service hive-server start
     service hive-server2 start
 
 
