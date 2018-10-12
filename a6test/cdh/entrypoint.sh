@@ -235,7 +235,7 @@ if [ "$SERVER_ROLE" = "nn" ]; then
     service hadoop-yarn-resourcemanager start
 
     echo $PREFIX"Will start namenode yarn historyserver in the background"
-    # /etc/init.d/hadoop-mapreduce-historyserver start
+    /etc/init.d/hadoop-mapreduce-historyserver start
 
 elif [ "$SERVER_ROLE" = "sn" ]; then
   echo $PREFIX"Will start as second namenode"
@@ -245,8 +245,8 @@ elif [ "$SERVER_ROLE" = "sn" ]; then
 
   sleep 60
   echo $PREFIX"Will start second namenode yarn in the background"
-  service hadoop-yarn-proxyserver start
-  
+  # service hadoop-yarn-proxyserver start
+
 else
   echo $PREFIX"Will start as data node"
 
@@ -256,7 +256,7 @@ else
 
   sleep 60
   echo $PREFIX"Will start second namenode yarn in the background"
-  service hadoop-yarn-nodemanager start
+  # service hadoop-yarn-nodemanager start
 
 fi
 
