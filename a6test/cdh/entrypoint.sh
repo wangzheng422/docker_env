@@ -233,10 +233,6 @@ if [ "$SERVER_ROLE" = "nn" ]; then
         else
           echo $PREFIX"Namenode is already formatted"
         fi   
-
-        echo $PREFIX"init hive"
-        /usr/lib/hive/bin/schematool --dbType mysql --initSchema
-        
     fi
 
     # sleep 5
@@ -245,6 +241,11 @@ if [ "$SERVER_ROLE" = "nn" ]; then
     service hadoop-hdfs-namenode start
 
     sleep 60
+
+    if [ "$FORMAT_NAMENODE" = "true" ]; then
+      echo $PREFIX"init hive"
+      /usr/lib/hive/bin/schematool --dbType mysql --initSchema
+    fi
 
     echo $PREFIX"Will start namenode yarn in the background"
     # for x in `ls /etc/init.d/|grep hadoop-yarn` ; do service $x start ; done
