@@ -249,6 +249,12 @@ if [ "$SERVER_ROLE" = "nn" ]; then
     echo $PREFIX"Will start namenode yarn historyserver in the background"
     /etc/init.d/hadoop-mapreduce-historyserver start
 
+    echo $PREFIX"Will start hive components"
+    service hive-metastore start
+    service hive-server start
+    service hive-server2 start
+
+
 elif [ "$SERVER_ROLE" = "sn" ]; then
   echo $PREFIX"Will start as second namenode"
   sleep 10
