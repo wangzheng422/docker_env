@@ -102,6 +102,15 @@ if [ "$DEFAULT_DATA_DIR" != "" ]; then
   done
 fi
 
+mkdir -p $NAME_DIR
+chown -R hdfs:hdfs $NAME_DIR
+
+mkdir -p $DATA_DIR
+chown -R hdfs:hdfs $DATA_DIR
+
+mkdir -p $TMP_DIR
+chown -R hdfs:hdfs $TMP_DIR
+
 yarn_dir=""
 if echo $YARN_DIR | grep -q ","
 then
@@ -158,7 +167,10 @@ sed -i "s|{{secondary.node.name.webport}}|$SECOND_NAMENODE_WEBPORT|g" $CONFIG_DI
 sed -i "s|{{HADOOP_HEAPSIZE}}|$HADOOP_HEAPSIZE|g" $CONFIG_DIR/hadoop-env.sh
 
 sed -i "s|{{node.name.webport}}|$NAMENODE_WEBPORT|g" $CONFIG_DIR/hdfs-site.xml
-sed -i "s|{{hdfs.data}}|$DEFAULT_DATA_DIR|g" $CONFIG_DIR/hdfs-site.xml
+
+sed -i "s|{{hdfs.data.dir}}|$DEFAULT_DATA_DIR|g" $CONFIG_DIR/hdfs-site.xml
+sed -i "s|{{hdfs.name.dir}}|$NAME_DIR|g" $CONFIG_DIR/hdfs-site.xml
+sed -i "s|{{hdfs.tmp.data}}|$NAME_DIR|g" $CONFIG_DIR/core-site.xml
 
 sed -i "s|{{HIVE_MYSQL_ADDR}}|$HIVE_MYSQL_ADDR|g" $CONFIG_HIVE_DIR/hive-site.xml
 sed -i "s|{{HIVE_MYSQL_PORT}}|$HIVE_MYSQL_PORT|g" $CONFIG_HIVE_DIR/hive-site.xml
