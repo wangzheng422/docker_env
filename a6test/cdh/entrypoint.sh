@@ -232,10 +232,11 @@ if [ "$SERVER_ROLE" = "nn" ]; then
           sudo -u hdfs hadoop namenode -format -nonInteractive
         else
           echo $PREFIX"Namenode is already formatted"
-        fi
+        fi   
 
         echo $PREFIX"init hive"
-        schematool --dbType mysql --initSchema
+        /usr/lib/hive/bin/schematool --dbType mysql --initSchema
+        
     fi
 
     # sleep 5
