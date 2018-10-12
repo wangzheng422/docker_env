@@ -233,6 +233,9 @@ if [ "$SERVER_ROLE" = "nn" ]; then
         else
           echo $PREFIX"Namenode is already formatted"
         fi
+
+        echo $PREFIX"init hive"
+        schematool --dbType mysql --initSchema
     fi
 
     # sleep 5
