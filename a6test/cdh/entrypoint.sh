@@ -257,7 +257,7 @@ elif [ "$SERVER_ROLE" = "sn" ]; then
 
   sleep 60
   echo $PREFIX"Will start second namenode yarn in the background"
-  # service hadoop-yarn-proxyserver start
+  service hadoop-yarn-proxyserver start
 
 else
   echo $PREFIX"Will start as data node"
@@ -268,7 +268,7 @@ else
 
   sleep 60
   echo $PREFIX"Will start second namenode yarn in the background"
-  # service hadoop-yarn-nodemanager start
+  service hadoop-yarn-nodemanager start
 
 fi
 
