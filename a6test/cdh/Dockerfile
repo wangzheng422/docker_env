@@ -9,7 +9,7 @@ COPY conf/namenode/mapred-site.xml /etc/hadoop/conf/
 # COPY conf/namenode/hadoop-env.sh /etc/hadoop/
 
 COPY conf/hive/ /etc/hive/conf/
-COPY default/ /etc/default/
+COPY conf/default/ /etc/default/
 
 
 EXPOSE 9000 8088 50070 9999
