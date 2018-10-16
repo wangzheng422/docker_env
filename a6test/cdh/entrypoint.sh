@@ -176,7 +176,8 @@ sed -i "s|{{HIVE_MYSQL_ADDR}}|$HIVE_MYSQL_ADDR|g" $CONFIG_HIVE_DIR/hive-site.xml
 sed -i "s|{{HIVE_MYSQL_PORT}}|$HIVE_MYSQL_PORT|g" $CONFIG_HIVE_DIR/hive-site.xml
 sed -i "s|{{NAME_NODE_ADDR}}|$NAMENODE_ADDRESS|g" $CONFIG_HIVE_DIR/hive-site.xml
 
-
+sed -i "s|{{IMPALA_CATALOG_SERVICE_HOST}}|$IMPALA_CATALOG_SERVICE_HOST|g" /etc/default/impala
+sed -i "s|{{IMPALA_STATE_STORE_HOST}}|$IMPALA_STATE_STORE_HOST|g" /etc/default/impala
 
 # debuging configuration
 if [ "$DEBUG" != "" ]; then
@@ -269,6 +270,11 @@ elif [ "$SERVER_ROLE" = "sn" ]; then
   service hive-metastore start
   service hive-server2 start
 
+  sleep 30
+  echo $PREFIX"Will start impala components"
+  service impala-catalog start
+  service impala-state-store start
+
 else
   echo $PREFIX"Will start as data node"
 
@@ -279,6 +285,10 @@ else
   sleep 60
   echo $PREFIX"Will start second namenode yarn in the background"
   service hadoop-yarn-nodemanager start
+
+  sleep 30
+  echo $PREFIX"Will start impala components"
+  service impala-server start
 
 fi
 
