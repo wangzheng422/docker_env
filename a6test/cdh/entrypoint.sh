@@ -178,6 +178,7 @@ sed -i "s|{{NAME_NODE_ADDR}}|$NAMENODE_ADDRESS|g" $CONFIG_HIVE_DIR/hive-site.xml
 
 sed -i "s|{{IMPALA_CATALOG_SERVICE_HOST}}|$IMPALA_CATALOG_SERVICE_HOST|g" /etc/default/impala
 sed -i "s|{{IMPALA_STATE_STORE_HOST}}|$IMPALA_STATE_STORE_HOST|g" /etc/default/impala
+sed -i "s|{{KUDU_MASTER_HOST}}|$KUDU_MASTER_HOST|g" /etc/default/impala
 
 # debuging configuration
 if [ "$DEBUG" != "" ]; then
