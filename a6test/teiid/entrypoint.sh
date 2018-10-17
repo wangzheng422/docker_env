@@ -16,7 +16,7 @@ if [ "$SERVER_ROLE" = "master" ]; then
 else
   echo $PREFIX"Will start as slave"
 
-  cp -f /opt/jboss/wildfly/domain/configuration/host-slave.xml /opt/jboss/wildfly/domain/configuration/host.xml
+  cp -f /opt/jboss/wildfly/domain/configuration/host-slave-changed.xml /opt/jboss/wildfly/domain/configuration/host.xml
 
   sleep 60
 
