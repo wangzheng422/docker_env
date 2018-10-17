@@ -9,14 +9,14 @@ echo $PREFIX"Bootstraping teiid..."
 if [ "$SERVER_ROLE" = "master" ]; then
     echo $PREFIX"Will start as master"
 
-    cp -f /opt/jboss/wildfly/domain/configuration/host-master.xml /opt/jboss/wildfly/domain/configuration/host.xml
+    cp -f /opt/jboss/wildfly/domain/configuration/host-master.1.xml /opt/jboss/wildfly/domain/configuration/host.xml
 
     /opt/jboss/wildfly/bin/domain.sh -b 0.0.0.0 -bmanagement 0.0.0.0
 
 else
   echo $PREFIX"Will start as slave"
 
-  cp -f /opt/jboss/wildfly/domain/configuration/host-slave-changed.xml /opt/jboss/wildfly/domain/configuration/host.xml
+  cp -f /opt/jboss/wildfly/domain/configuration/host-slave.1.xml /opt/jboss/wildfly/domain/configuration/host.xml
 
   sleep 60
 
