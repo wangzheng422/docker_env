@@ -5,29 +5,51 @@ set -x
 
 mkdir -p tmp
 
-declare -A images=(
-    [elasticsearch:wzh]=elasticsearch.wzh.tgz
-    [filebeat:wzh]=filebeat.wzh.tgz
-    [centos:wzh]=centos.wzh.tgz
-    [hadoop:base]=hadoop.base.tgz
-    [hadoop:wzh]=hadoop.wzh.tgz
-    [cp-kafka-connect:wzh]=cp-kafka-connect.wzh.tgz
-    [hue:wzh]=hue.wzh.tgz
-    [flume:build]=flume.build.tgz
-    [flume:wzh]=flume.wzh.tgz
-    [kite:build]=kite.build.tgz
-    [mysql:5.7]=mysql.5.7.tgz
-    [dbz:wzh]=dbz.wzh.tgz
-    [kudu:wzh]=kudu.wzh.tgz
-    [teiid:wzh]=teiid.wzh.tgz
-    [adminer]=adminer.tgz
-    [docker.elastic.co/kibana/kibana-oss:6.3.1]=kibana.tgz
-    [elastichq/elasticsearch-hq]=elasticsearch-hq.tgz
+images=(
+    elasticsearch:wzh
+    filebeat:wzh
+    centos:wzh
+    hadoop:base
+    hadoop:wzh
+    cp-kafka-connect:wzh
+    hue:wzh
+    flume:build
+    flume:wzh
+    kite:build
+    mysql:5.7
+    dbz:wzh
+    kudu:wzh
+    teiid:wzh
+    adminer
+    docker.elastic.co/kibana/kibana-oss:6.3.1
+    elastichq/elasticsearch-hq]=elasticsearch-hq.tgz
 )
 
-for image in "${!images[@]}"; do
-  docker save $image | gzip -c > tmp/${size[$image]}
+files=(
+    elasticsearch.wzh.tgz
+    filebeat.wzh.tgz
+    centos.wzh.tgz
+    hadoop.bases.tgz
+    hadoop.wzh.tgz
+    cp-kafka-connect.wzh.tgz
+    hue.wzh.tgz
+    flume.build.tgz
+    flume.wzh.tgz
+    kite.build.tgz
+    mysql.5.7.tgz
+    dbz.wzh.tgz
+    kudu.wzh.tgz
+    teiid.wzh.tgz
+    adminer.tgz
+    kibana.tgz
+    elasticsearch-hq.tgz
+)
+
+for i in "${!images[@]}"; do
+    docker save ${images[$i]} | gzip -c > tmp/${files[$i]}
 done
+
+docker image prune -f
 
 # docker save elasticsearch:wzh | gzip -c > tmp/elasticsearch.wzh.tgz
 # docker save filebeat:wzh | gzip -c > tmp/filebeat.wzh.tgz
@@ -48,4 +70,3 @@ done
 # docker save docker.elastic.co/kibana/kibana-oss:6.3.1 | gzip -c > tmp/kibana.tgz
 # docker save elastichq/elasticsearch-hq | gzip -c > tmp/elasticsearch-hq.tgz
 
-docker image prune -f
