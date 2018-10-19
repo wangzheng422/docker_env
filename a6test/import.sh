@@ -7,6 +7,7 @@ set -x
 
 files=(
     elasticsearch.wzh.tgz
+    filebeat.wzh.tgz
     centos.wzh.tgz
     hadoop.bases.tgz
     hadoop.wzh.tgz
@@ -15,8 +16,23 @@ files=(
     flume.build.tgz
     flume.wzh.tgz
     kite.build.tgz
-    dbz.wzh.tgz
+    mysql.5.7.tgz
     kudu.wzh.tgz
+    teiid.wzh.tgz
+    adminer.tgz
+    kibana.tgz
+    elasticsearch-hq.tgz
+    zookeeper.3.4.12.tgz
+    cp-kafka.4.1.1.tgz
+    cp-schema-registry.4.1.1.tgz
+    schema-registry-ui.0.9.4.tgz
+    cp-kafka-rest.4.1.1.tgz
+    kafka-topics-ui.0.9.3.tgz
+    kafka-connect-ui.0.9.4.tgz
+    zoonavigator-web.0.5.0.tgz
+    zoonavigator-api.0.5.0.tgz
+    oracle-11g.wzh.11.2.0.4.tgz
+    dbz-oracle.wzh.tgz
 )
 
 for i in "${files[@]}"; do
