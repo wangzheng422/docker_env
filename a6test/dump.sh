@@ -46,6 +46,7 @@ files=(
 )
 
 for i in "${!images[@]}"; do
+    echo "docker save ${images[$i]} | gzip -c > tmp/${files[$i]}"
     docker save ${images[$i]} | gzip -c > tmp/${files[$i]}
 done
 
