@@ -39,6 +39,10 @@ source ./kudu/deploy.sh
 
 # cdh
 source ./cdh/base.sh
+source ./cdh/deploy.sh
+
+# teiid
+source ./teiid/deploy.sh
 
 
 
