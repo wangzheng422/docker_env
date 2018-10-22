@@ -6,11 +6,17 @@ ENV JBOSS_HOME /opt/jboss/wildfly
 ENV TEIID_VERSION 9.3.7
 
 # Download and unzip Teiid server
+# RUN cd $JBOSS_HOME \
+#     && curl -O https://oss.sonatype.org/service/local/repositories/releases/content/org/teiid/teiid/$TEIID_VERSION/teiid-$TEIID_VERSION-wildfly-dist.zip \
+#     && bsdtar -xf teiid-$TEIID_VERSION-wildfly-dist.zip \
+#     && chmod +x $JBOSS_HOME/bin/*.sh \
+#     && rm teiid-$TEIID_VERSION-wildfly-dist.zip
+
 RUN cd $JBOSS_HOME \
-    && curl -O https://oss.sonatype.org/service/local/repositories/releases/content/org/teiid/teiid/$TEIID_VERSION/teiid-$TEIID_VERSION-wildfly-dist.zip \
-    && bsdtar -xf teiid-$TEIID_VERSION-wildfly-dist.zip \
+    && curl -O https://repository.jboss.org/nexus/service/local/repositories/releases/content/org/jboss/teiid/teiid/9.3.7/teiid-9.3.7-wildfly-server.zip \
+    && bsdtar -xf teiid-9.3.7-wildfly-server.zip \
     && chmod +x $JBOSS_HOME/bin/*.sh \
-    && rm teiid-$TEIID_VERSION-wildfly-dist.zip
+    && rm teiid-9.3.7-wildfly-server.zip
 
 RUN cd $JBOSS_HOME \
     && curl -O https://repository.jboss.org/nexus/service/local/repositories/releases/content/org/jboss/teiid/hal/dist/3.0.1/dist-3.0.1-overlay.zip \
