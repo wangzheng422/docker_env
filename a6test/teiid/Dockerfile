@@ -13,7 +13,7 @@ ENV TEIID_VERSION 10.2.1
 #     && rm teiid-$TEIID_VERSION-wildfly-dist.zip
 
 RUN cd $JBOSS_HOME \
-    && curl -O https://repository.jboss.org/nexus/service/local/repositories/releases/content/org/jboss/teiid/teiid/$TEIID_VERSION/teiid-$TEIID_VERSION-wildfly-server.zip \
+    && curl -O https://oss.sonatype.org/service/local/repositories/releases/content/org/teiid/teiid/$TEIID_VERSION/teiid-$TEIID_VERSION-wildfly-server.zip \
     && bsdtar -xf teiid-$TEIID_VERSION-wildfly-server.zip \
     && chmod +x $JBOSS_HOME/bin/*.sh \
     && rm teiid-$TEIID_VERSION-wildfly-server.zip
