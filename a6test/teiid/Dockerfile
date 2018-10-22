@@ -12,7 +12,8 @@ RUN cd $JBOSS_HOME \
     && chmod +x $JBOSS_HOME/bin/*.sh \
     && rm teiid-$TEIID_VERSION-wildfly-dist.zip
 
-RUN curl -O https://repository.jboss.org/nexus/service/local/repositories/releases/content/org/jboss/teiid/hal/dist/3.0.1/dist-3.0.1-overlay.zip \
+RUN cd $JBOSS_HOME \
+    && curl -O https://repository.jboss.org/nexus/service/local/repositories/releases/content/org/jboss/teiid/hal/dist/3.0.1/dist-3.0.1-overlay.zip \
     && bsdtar -xf dist-3.0.1-overlay.zip \
     && chmod +x $JBOSS_HOME/bin/*.sh \
     && rm dist-3.0.1-overlay.zip
