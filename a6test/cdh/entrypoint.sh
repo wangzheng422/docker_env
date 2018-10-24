@@ -269,13 +269,13 @@ elif [ "$SERVER_ROLE" = "sn" ]; then
   sleep 120
   echo $PREFIX"Will start hive components"
   service hive-metastore start
-  sleep 60
+  sleep 5
   service hive-server2 start
 
   sleep 30
   echo $PREFIX"Will start impala components"
   service impala-state-store start
-  sleep 60
+  sleep 5
   service impala-catalog start
 
 else
@@ -289,7 +289,7 @@ else
   echo $PREFIX"Will start second namenode yarn in the background"
   service hadoop-yarn-nodemanager start
 
-  sleep 240
+  sleep 180
   echo $PREFIX"Will start impala components"
   service impala-server start
 
