@@ -25,7 +25,11 @@ CREATE TABLE my_first_table
   name STRING,
   PRIMARY KEY(id)
 )
+PARTITION BY HASH PARTITIONS 16
 STORED AS KUDU;
 
+insert into my_first_table values( 1, '1');
+
+select * from my_first_table;
 
 ```
