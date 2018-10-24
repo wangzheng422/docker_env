@@ -269,11 +269,13 @@ elif [ "$SERVER_ROLE" = "sn" ]; then
   sleep 120
   echo $PREFIX"Will start hive components"
   service hive-metastore start
+  sleep 60
   service hive-server2 start
 
   sleep 30
   echo $PREFIX"Will start impala components"
   service impala-catalog start
+  sleep 60
   service impala-state-store start
 
 else
