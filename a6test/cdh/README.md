@@ -17,6 +17,8 @@ impala-shell
 ```sql
 show databases;
 
+use default;
+
 CREATE TABLE my_first_table
 (
   id BIGINT,

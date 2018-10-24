@@ -289,7 +289,7 @@ else
   echo $PREFIX"Will start second namenode yarn in the background"
   service hadoop-yarn-nodemanager start
 
-  sleep 180
+  sleep 240
   echo $PREFIX"Will start impala components"
   service impala-server start
 
