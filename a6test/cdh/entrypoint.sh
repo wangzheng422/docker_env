@@ -274,9 +274,9 @@ elif [ "$SERVER_ROLE" = "sn" ]; then
 
   sleep 30
   echo $PREFIX"Will start impala components"
-  service impala-catalog start
-  sleep 60
   service impala-state-store start
+  sleep 60
+  service impala-catalog start
 
 else
   echo $PREFIX"Will start as data node"
