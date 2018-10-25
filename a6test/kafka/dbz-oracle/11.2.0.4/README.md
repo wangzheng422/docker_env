@@ -14,6 +14,21 @@ follow <https://github.com/debezium/oracle-vagrant-box/blob/master/setup.sh>
 
 run this setup.sh in oracledb
 
+```bash
+# as root
+docker-compose exec oracledb bash
+
+mkdir -p /opt/oracle/oradata/recovery_area
+mkdir -p /opt/oracle/oradata/ORCLCDB
+chown -R oracle:dba /opt/oracle
+
+su - oracle
+
+vi setup.sh
+
+bash setup.sh
+```
+
 ## create kafka connector
 
 ```bash
@@ -69,6 +84,9 @@ commit;
 update products set id=3 where id=2;
 commit;
 
+update products set name='wzh' where id=3;
+commit;
+
 delete from products where id=3;
 commit;
 
@@ -91,19 +109,6 @@ now you can see the result in kafka console
 <http://oradb-srv.wlv.ac.uk/E50529_01/XSTRM/xstrm_xout_man.htm#XSTRM72831>
 
 ## other command
-
-```bash
-# as root
-docker-compose exec oracledb bash
-
-mkdir -p /opt/oracle/oradata/recovery_area
-mkdir -p /opt/oracle/oradata/ORCLCDB
-chown -R oracle:dba /opt/oracle
-
-su - oracle
-
-vi setup.sh
-```
 
 ```sql
 CREATE TABLE products (
