@@ -84,6 +84,9 @@ commit;
 update products set id=3 where id=2;
 commit;
 
+update products set id=3 where id=3;
+commit;
+
 update products set name='wzh' where id=3;
 commit;
 
