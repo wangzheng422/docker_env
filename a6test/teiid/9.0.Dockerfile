@@ -8,9 +8,9 @@ ENV TEIID_VERSION 9.0.6
 # Download and unzip Teiid server
 RUN cd $JBOSS_HOME \
     && curl -O https://repository.jboss.org/nexus/service/local/repositories/releases/content/org/jboss/teiid/teiid/$TEIID_VERSION/teiid-$TEIID_VERSION-wildfly-server.zip \
-    && bsdtar -xf teiid-$TEIID_VERSION-wildfly-dist.zip \
+    && bsdtar -xf teiid-$TEIID_VERSION-wildfly-server.zip \
     && chmod +x $JBOSS_HOME/bin/*.sh \
-    && rm teiid-$TEIID_VERSION-wildfly-dist.zip
+    && rm teiid-$TEIID_VERSION-wildfly-server.zip
     
     
 
