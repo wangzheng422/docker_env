@@ -7,11 +7,13 @@ ENV TEIID_VERSION 9.0.6
 
 # Download and unzip Teiid server
 RUN cd $JBOSS_HOME \
-    && curl -O https://oss.sonatype.org/service/local/repositories/releases/content/org/teiid/teiid/$TEIID_VERSION/teiid-$TEIID_VERSION-wildfly-dist.zip \
+    && curl -O https://repository.jboss.org/nexus/service/local/repositories/releases/content/org/jboss/teiid/teiid/$TEIID_VERSION/teiid-$TEIID_VERSION-wildfly-server.zip \
     && bsdtar -xf teiid-$TEIID_VERSION-wildfly-dist.zip \
     && chmod +x $JBOSS_HOME/bin/*.sh \
     && rm teiid-$TEIID_VERSION-wildfly-dist.zip
     
+    
+
 # VOLUME ["$JBOSS_HOME/standalone", "$JBOSS_HOME/domain"]
 
 USER jboss
