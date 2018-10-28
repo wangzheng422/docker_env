@@ -14,6 +14,11 @@ follow <https://github.com/debezium/oracle-vagrant-box/blob/master/setup.sh>
 
 run this setup.sh in oracledb
 
+```bash
+# as root
+docker-compose exec oracledb bash
+```
+
 ## create kafka connector
 
 ```bash
