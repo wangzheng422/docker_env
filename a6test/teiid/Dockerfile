@@ -41,4 +41,5 @@ RUN chmod a+x /opt/jboss/entrypoint.sh
 
 USER jboss
 
-ENTRYPOINT "/opt/jboss/entrypoint.sh"
+# ENTRYPOINT "/opt/jboss/entrypoint.sh"
+CMD ["/bin/sh", "-c", "$JBOSS_HOME/bin/standalone.sh -b 0.0.0.0 -bmanagement 0.0.0.0"]
