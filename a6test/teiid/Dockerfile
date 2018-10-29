@@ -33,7 +33,7 @@ ENV LAUNCH_JBOSS_IN_BACKGROUND true
 # Expose Teiid server  ports 
 EXPOSE 8080 9990 31000 35432 
 
-COPY conf/ /opt/jboss/wildfly/domain/configuration/
+# COPY conf/ /opt/jboss/wildfly/domain/configuration/
 COPY entrypoint.sh /opt/jboss/
 
 USER root
