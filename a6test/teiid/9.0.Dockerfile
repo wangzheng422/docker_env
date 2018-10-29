@@ -24,4 +24,4 @@ ENV LAUNCH_JBOSS_IN_BACKGROUND true
 EXPOSE 8080 9990 31000 35432 
 
 # Run Teiid server and bind to all interface
-CMD ["/bin/sh", "-c", "$JBOSS_HOME/bin/standalone.sh -c standalone-teiid.xml -b 0.0.0.0 -bmanagement 0.0.0.0"]
+CMD ["/bin/sh", "-c", "$JBOSS_HOME/bin/standalone.sh -b 0.0.0.0 -bmanagement 0.0.0.0"]

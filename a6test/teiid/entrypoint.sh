@@ -13,6 +13,10 @@ if [ "$SERVER_ROLE" = "master" ]; then
 
     /opt/jboss/wildfly/bin/domain.sh -b 0.0.0.0 -bmanagement 0.0.0.0
 
+    sleep 60
+
+    /opt/jboss/wildfly/bin/jboss-cli.sh --connect --file=scripts/teiid-domain-mode-install.cli
+
 else
   echo $PREFIX"Will start as slave"
 
@@ -20,12 +24,9 @@ else
 
   sed -i "s|{{slave_name}}|${SLAVE_NAME}|g" /opt/jboss/wildfly/domain/configuration/host.xml
 
-  sleep 60
+  sleep 30
 
   /opt/jboss/wildfly/bin/domain.sh --master-address=${MASTER_ADDR} -b 0.0.0.0 -bmanagement 0.0.0.0
-
-  # sleep 60
-  # /opt/jboss/wildfly/bin/jboss-cli.sh --file=/opt/jboss/wildfly/bin/scripts/teiid-domain-mode-install.cli
 
 fi
 
