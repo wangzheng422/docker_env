@@ -4,6 +4,8 @@ USER root
 
 RUN yum -y update && yum -y install epel-release && yum -y update && yum -y install supervisor
 
+COPY conf/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
 USER jboss
 
 RUN $JBOSS_HOME/bin/add-user.sh -u root -p root -e
