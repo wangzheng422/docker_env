@@ -1,3 +1,17 @@
+# FROM jboss/wildfly:9.0.2.Final
+
+# ENV JBOSS_HOME /opt/jboss/wildfly
+
+# # Set the TEIID_VERSION env variable
+# ENV TEIID_VERSION 9.0.0.Final
+
+# # Download and unzip Teiid server
+# RUN cd $JBOSS_HOME \
+#     && curl -O https://repository.jboss.org/nexus/service/local/repositories/releases/content/org/jboss/teiid/teiid/$TEIID_VERSION/teiid-$TEIID_VERSION-wildfly-dist.zip \
+#     && bsdtar -xf teiid-$TEIID_VERSION-wildfly-dist.zip \
+#     && chmod +x $JBOSS_HOME/bin/*.sh \
+#     && rm teiid-$TEIID_VERSION-wildfly-dist.zip
+
 FROM jboss/base-jdk:8
 
 ENV JBOSS_HOME /opt/jboss/wildfly
@@ -9,7 +23,7 @@ USER root
 
 # Download and unzip Teiid server
 RUN cd $HOME \
-    && curl -O https://oss.sonatype.org/service/local/repositories/releases/content/org/teiid/teiid/$TEIID_VERSION/teiid-$TEIID_VERSION-wildfly-server.zip \
+    && curl -O https://repository.jboss.org/nexus/service/local/repositories/releases/content/org/teiid/teiid/$TEIID_VERSION/teiid-$TEIID_VERSION-wildfly-server.zip \
     && bsdtar -xf teiid-$TEIID_VERSION-wildfly-server.zip \
     && mv $HOME/teiid-$TEIID_VERSION $JBOSS_HOME \
     && chmod +x $JBOSS_HOME/bin/*.sh \
