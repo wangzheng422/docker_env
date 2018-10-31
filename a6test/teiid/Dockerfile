@@ -1,5 +1,7 @@
 FROM jboss/base-jdk:8
 
+USER root
+
 RUN yum -y update && yum -y install epel-release && yum -y update && yum -y install supervisor
 
 COPY conf/supervisord.ini /etc/supervisord.d/app.ini
