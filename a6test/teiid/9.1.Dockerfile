@@ -15,4 +15,4 @@ COPY vdb.xml $JBOSS_HOME/
 USER root
 
 # Run Teiid server and bind to all interface
-CMD ["/bin/sh","-c","tail -f /etc/supervisor/conf.d/app.ini"]
+CMD ["/bin/sh","-c","tail -f /etc/supervisord/app.ini"]
