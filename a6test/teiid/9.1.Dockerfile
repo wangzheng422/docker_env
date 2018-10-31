@@ -2,7 +2,7 @@ FROM teiid:wzh
 
 USER root
 
-RUN yum -y install supervisor
+RUN yum -y update && yum -y install supervisor
 
 USER jboss
 
