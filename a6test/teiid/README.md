@@ -1,6 +1,10 @@
 # teiid docker env
 
 ```bash
+chsh -s /bin/bash jboss
+
+su - jboss
+
 /opt/jboss/wildfly/bin/add-user.sh -u root -p root -e
 
 /opt/jboss/wildfly/bin/add-user.sh -a -u app -p app -e
@@ -13,5 +17,4 @@
 
 jdbc:teiid:vdb1@mm://127.0.0.1:31000
 
-chsh -s /bin/bash jboss
 ```

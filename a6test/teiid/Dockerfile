@@ -55,7 +55,7 @@ USER jboss
 # ENTRYPOINT "/opt/jboss/entrypoint.sh"
 # CMD ["/bin/sh", "-c", "$JBOSS_HOME/bin/standalone.sh -c standalone-teiid.xml -b 0.0.0.0 -bmanagement 0.0.0.0"]
 
-COPY vdb.xml $JBOSS_HOME/
+COPY vdb1-vdb.xml $JBOSS_HOME/
 
 USER root
 
