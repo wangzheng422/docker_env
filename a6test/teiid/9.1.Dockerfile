@@ -8,7 +8,7 @@ COPY conf/supervisord.ini /etc/supervisord.d/app.ini
 
 USER jboss
 
-RUN $JBOSS_HOME/bin/add-user.sh -u root -p root -e
+# RUN $JBOSS_HOME/bin/add-user.sh -u root -p root -e
 
 COPY vdb.xml $JBOSS_HOME/
 
