@@ -13,4 +13,5 @@
 
 jdbc:teiid:vdb1@mm://127.0.0.1:31000
 
+chsh -s /bin/bash jboss
 ```

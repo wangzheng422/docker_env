@@ -1,5 +1,9 @@
 FROM jboss/base-jdk:8
 
+RUN yum -y update && yum -y install epel-release && yum -y update && yum -y install supervisor
+
+COPY conf/supervisord.ini /etc/supervisord.d/app.ini
+
 ENV JBOSS_HOME /opt/jboss/wildfly
 
 # Set the TEIID_VERSION env variable
@@ -47,4 +51,11 @@ EXPOSE 8080 9990 31000 35432
 USER jboss
 
 # ENTRYPOINT "/opt/jboss/entrypoint.sh"
-CMD ["/bin/sh", "-c", "$JBOSS_HOME/bin/standalone.sh -c standalone-teiid.xml -b 0.0.0.0 -bmanagement 0.0.0.0"]
+# CMD ["/bin/sh", "-c", "$JBOSS_HOME/bin/standalone.sh -c standalone-teiid.xml -b 0.0.0.0 -bmanagement 0.0.0.0"]
+
+COPY vdb.xml $JBOSS_HOME/
+
+USER root
+
+# Run Teiid server and bind to all interface
+CMD ["/usr/bin/supervisord","-n"]
