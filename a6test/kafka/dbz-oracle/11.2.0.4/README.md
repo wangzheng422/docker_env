@@ -33,7 +33,7 @@ bash setup.sh
 
 ```bash
 docker-compose exec dbz-connect curl -X POST -H "Content-Type: application/json" \
-    --data '{ "name": "inventory-connector", "config": { "connector.class": "io.debezium.connector.oracle.OracleConnector", "tasks.max": "1", "database.server.name": "oracledb", "database.hostname": "oracledb", "database.port": "1521", "database.user": "c##xstrm", "database.password": "xs", "database.dbname": "orcl", "database.out.server.name": "dbzxout", "database.history.kafka.bootstrap.servers": "kafka1:9092",  "database.history.kafka.topic": "schema-changes.inventory" , "table.whitelist":"orcl.debezium.products", "database.tablename.case.insensitive": "true", "database.position.version": "v1" } }' \
+    --data '{ "name": "inventory-connector", "config": { "connector.class": "io.debezium.connector.oracle.OracleConnector", "tasks.max": "1", "database.server.name": "oracledb", "database.hostname": "oracledb", "database.port": "1521", "database.user": "c##xstrm", "database.password": "xs", "database.dbname": "orcl", "database.out.server.name": "dbzxout", "database.history.kafka.bootstrap.servers": "kafka1:9092",  "database.history.kafka.topic": "schema-changes.inventory" , "table.whitelist":"orcl.debezium.products,orcl.debezium.test_blob", "database.tablename.case.insensitive": "true", "database.position.version": "v1" } }' \
     http://dbz-connect:8083/connectors
 
 docker-compose exec dbz-connect curl -X POST -H "Content-Type: application/json" \
@@ -93,11 +93,9 @@ commit;
 delete from products where id=3;
 commit;
 
-
 INSERT INTO products
   VALUES (3,'scooter','Small 2-wheel scooter',3.14);
 commit;
-
 
 ```
 
@@ -137,3 +135,19 @@ SELECT SERVER_NAME,
 ```
 
 ## blob
+
+```sql
+
+CREATE TABLE test_blob (
+  id NUMBER(4)   NOT NULL PRIMARY KEY,
+  clob_col  CLOB,
+  blob_col  BLOB
+);
+GRANT SELECT ON test_blob to c##xstrm;
+ALTER TABLE test_blob ADD SUPPLEMENTAL LOG DATA (ALL) COLUMNS;
+
+INSERT INTO test_blob
+  VALUES (1,to_clob('12345690'),to_blob('12345690'));
+commit;
+
+```
