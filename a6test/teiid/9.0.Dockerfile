@@ -23,7 +23,7 @@ USER root
 
 # Download and unzip Teiid server
 RUN cd $HOME \
-    && curl -O https://repository.jboss.org/nexus/service/local/repositories/releases/content/org/teiid/teiid/$TEIID_VERSION/teiid-$TEIID_VERSION-wildfly-server.zip \
+    && curl -O https://repository.jboss.org/nexus/service/local/repositories/releases/content/org/jboss/teiid/teiid/$TEIID_VERSION/teiid-$TEIID_VERSION-wildfly-server.zip \
     && bsdtar -xf teiid-$TEIID_VERSION-wildfly-server.zip \
     && mv $HOME/teiid-$TEIID_VERSION $JBOSS_HOME \
     && chmod +x $JBOSS_HOME/bin/*.sh \
@@ -31,7 +31,6 @@ RUN cd $HOME \
     && chmod -R g+rw ${JBOSS_HOME} \
     && rm teiid-$TEIID_VERSION-wildfly-server.zip
     
-
 # VOLUME ["$JBOSS_HOME/standalone", "$JBOSS_HOME/domain"]
 
 USER jboss
