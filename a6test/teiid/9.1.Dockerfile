@@ -13,4 +13,4 @@ COPY vdb.xml $JBOSS_HOME/
 USER root
 
 # Run Teiid server and bind to all interface
-CMD ["/bin/sh", "-c", "systemctl start supervisor; tail -f /opt/jboss/wildfly/README.txt"]
+CMD ["/usr/bin/supervisord"]
