@@ -11,6 +11,20 @@ su - jboss
 
 /opt/jboss/wildfly/bin/jboss-cli.sh --connect --file=/opt/jboss/wildfly/bin/scripts/teiid-standalone-mode-install.cli
 
+/opt/jboss/wildfly/bin/jboss-cli.sh --connect
+
+CREATE SERVER pg1 TYPE 'postgresql-9.4-1201.jdbc41.jar'
+    VERSION 'one' FOREIGN DATA WRAPPER postgresql
+    OPTIONS (
+        "jndi-name" 'java:/pg1-ds'
+    );
+
+
+
+
+
+
+
 
 /opt/jboss/wildfly/bin/jboss-cli.sh --connect --file=/opt/jboss/wildfly/bin/scripts/teiid-domain-mode-install.cli
 
