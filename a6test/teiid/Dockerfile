@@ -59,7 +59,7 @@ USER jboss
 
 COPY vdb1-vdb.xml $JBOSS_HOME/
 
-USER root
+# USER root
 
 # Run Teiid server and bind to all interface
 # CMD ["/usr/bin/supervisord","-n"]
