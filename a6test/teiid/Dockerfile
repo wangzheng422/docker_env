@@ -62,4 +62,5 @@ COPY vdb1-vdb.xml $JBOSS_HOME/
 USER root
 
 # Run Teiid server and bind to all interface
-CMD ["/usr/bin/supervisord","-n"]
+# CMD ["/usr/bin/supervisord","-n"]
+CMD ["/bin/sh", "-c", "$JBOSS_HOME/bin/standalone.sh -c standalone-teiid.xml -b 0.0.0.0 -bmanagement 0.0.0.0"]
