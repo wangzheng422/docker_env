@@ -59,6 +59,8 @@ COPY postgresql/modules/org/postgresql/main $JBOSS_HOME//modules/org/postgresql/
 
 COPY vdb1-vdb.xml $JBOSS_HOME/
 
+COPY conf/standalone-teiid.xml $JBOSS_HOME/standalone/configuration/
+
 # USER root
 
 # Run Teiid server and bind to all interface
