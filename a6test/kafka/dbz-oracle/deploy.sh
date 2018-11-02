@@ -10,7 +10,8 @@ set -x
 # mvn clean install -pl debezium-connector-oracle -am -Poracle -DskipITs  -Dinstantclient.dir=/root/work/docker_env/a6test/kafka/dbz-oracle/tmp/instantclient_12_2
 # mvn clean install -pl debezium-connector-oracle -am -Poracle -DskipITs  -Dinstantclient.dir=/root/work/docker_env/a6test/kafka/dbz-oracle/tmp/instantclient_11_2
 
-cp /root/work/debezium/debezium-core/target/debezium-core-0.9.0-SNAPSHOT.jar tmp/
+# cp /root/work/debezium/debezium-core/target/debezium-core-0.9.0-SNAPSHOT.jar tmp/
+cp /root/work/debezium/debezium-core/target/debezium-core-0.9.0.Alpha2.jar tmp/
 cp /root/work/debezium-incubator/debezium-connector-oracle/target/debezium-connector-oracle-0.9.0-SNAPSHOT.jar tmp/
 cp /root/work/debezium/debezium-ddl-parser/target/debezium-ddl-parser-0.9.0-SNAPSHOT.jar tmp/
 
