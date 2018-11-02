@@ -33,7 +33,7 @@ bash setup.sh
 
 ```bash
 docker-compose exec dbz-connect curl -X POST -H "Content-Type: application/json" \
-    --data '{ "name": "inventory-connector", "config": { "connector.class": "io.debezium.connector.oracle.OracleConnector", "tasks.max": "1", "database.server.name": "oracledb", "database.hostname": "oracledb", "database.port": "1521", "database.user": "c##xstrm", "database.password": "xs", "database.dbname": "orcl", "database.out.server.name": "dbzxout", "database.history.kafka.bootstrap.servers": "kafka1:9092",  "database.history.kafka.topic": "schema-changes.inventory" , "table.whitelist":"orcl.debezium.products,orcl.debezium.test_blob", "database.tablename.case.insensitive": "true", "database.position.version": "v1" } }' \
+    --data '{ "name": "inventory-connector", "config": { "connector.class": "io.debezium.connector.oracle.OracleConnector", "tasks.max": "1", "database.server.name": "oracledb", "database.hostname": "oracledb", "database.port": "1521", "database.user": "c##xstrm", "database.password": "xs", "database.dbname": "orcl", "database.out.server.name": "dbzxout", "database.history.kafka.bootstrap.servers": "kafka1:9092",  "database.history.kafka.topic": "schema-changes.inventory" , "table.whitelist":"orcl.debezium.products,orcl.debezium.cola_markets", "database.tablename.case.insensitive": "true", "database.position.version": "v1" } }' \
     http://dbz-connect:8083/connectors
 
 docker-compose exec dbz-connect curl -X POST -H "Content-Type: application/json" \
@@ -96,6 +96,42 @@ commit;
 INSERT INTO products
   VALUES (3,'scooter','Small 2-wheel scooter',3.14);
 commit;
+
+
+CREATE TABLE cola_markets (
+  mkt_id NUMBER PRIMARY KEY,
+  name VARCHAR2(32),
+  shape SDO_GEOMETRY);
+GRANT SELECT ON cola_markets to c##xstrm;
+ALTER TABLE cola_markets ADD SUPPLEMENTAL LOG DATA (ALL) COLUMNS;
+
+
+INSERT INTO cola_markets VALUES(
+  1,
+  'cola_a',
+  SDO_GEOMETRY(
+    2003,  -- two-dimensional polygon
+    NULL,
+    NULL,
+    SDO_ELEM_INFO_ARRAY(1,1003,3), -- one rectangle (1003 = exterior)
+    SDO_ORDINATE_ARRAY(1,1, 5,7) -- only 2 points needed to
+          -- define rectangle (lower left and upper right) with
+          -- Cartesian-coordinate data
+  )
+);
+
+INSERT INTO cola_markets VALUES(
+  2,
+  'cola_b',
+  SDO_GEOMETRY(
+    2003,  -- two-dimensional polygon
+    NULL,
+    NULL,
+    SDO_ELEM_INFO_ARRAY(1,1003,1), -- one polygon (exterior polygon ring)
+    SDO_ORDINATE_ARRAY(5,1, 8,1, 8,6, 5,7, 5,1)
+  )
+);
+
 
 ```
 
