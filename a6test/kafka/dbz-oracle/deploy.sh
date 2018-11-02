@@ -12,8 +12,10 @@ set -x
 
 # cp /root/work/debezium/debezium-core/target/debezium-core-0.9.0-SNAPSHOT.jar tmp/
 cp /root/work/debezium/debezium-core/target/debezium-core-0.9.0.Alpha2.jar tmp/
+# cp /root/work/debezium/debezium-ddl-parser/target/debezium-ddl-parser-0.9.0-SNAPSHOT.jar tmp/
+cp /root/work/debezium/debezium-ddl-parser/target/debezium-ddl-parser-0.9.0.Alpha2.jar tmp/
 cp /root/work/debezium-incubator/debezium-connector-oracle/target/debezium-connector-oracle-0.9.0-SNAPSHOT.jar tmp/
-cp /root/work/debezium/debezium-ddl-parser/target/debezium-ddl-parser-0.9.0-SNAPSHOT.jar tmp/
+
 
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
