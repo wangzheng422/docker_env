@@ -62,38 +62,38 @@ sqlplus debezium/dbz@//localhost:1521/orcl
 ```
 
 ```sql
-CREATE TABLE products (
+CREATE TABLE PRODUCTS (
   id NUMBER(4)   NOT NULL PRIMARY KEY,
   name VARCHAR2(255) NOT NULL,
   description VARCHAR2(512),
   weight FLOAT
 );
-GRANT SELECT ON products to c##xstrm;
-ALTER TABLE products ADD SUPPLEMENTAL LOG DATA (ALL) COLUMNS;
+GRANT SELECT ON PRODUCTS to c##xstrm;
+ALTER TABLE PRODUCTS ADD SUPPLEMENTAL LOG DATA (ALL) COLUMNS;
 
 
-INSERT INTO products
+INSERT INTO PRODUCTS
   VALUES (1,'scooter','Small 2-wheel scooter',3.14);
 commit;
 
 
-INSERT INTO products
+INSERT INTO PRODUCTS
   VALUES (2,'scooter','Small 2-wheel scooter',3.14);
 commit;
 
-update products set name='wzh' where id=2;
+update PRODUCTS set name='wzh' where id=2;
 commit;
 
-update products set id=3 where id=2;
+update PRODUCTS set id=3 where id=2;
 commit;
 
-update products set id=3 where id=3;
+update PRODUCTS set id=3 where id=3;
 commit;
 
-delete from products where id=3;
+delete from PRODUCTS where id=3;
 commit;
 
-INSERT INTO products
+INSERT INTO PRODUCTS
   VALUES (3,'scooter','Small 2-wheel scooter',3.14);
 commit;
 

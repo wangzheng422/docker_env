@@ -187,3 +187,93 @@ INSERT INTO test_blob
 commit;
 
 ```
+
+## null point
+
+```sql
+
+create table EPDM.CD_LOCATION
+(
+  location_id          VARCHAR2(32) not null,
+  coordinate_system_id VARCHAR2(32) not null,
+  entity_id            VARCHAR2(32) not null,
+  entity_type          NVARCHAR2(32) not null,
+  entity_location_type NVARCHAR2(32) not null,
+  phase                NVARCHAR2(32) not null,
+  geo_offset_east      NUMBER(12,3),
+  geo_offset_north     NUMBER(12,3),
+  elevation            NUMBER(7,2),
+  org_id               VARCHAR2(32),
+  measure_date         DATE,
+  remarks              NVARCHAR2(2000),
+  create_date          DATE,
+  create_user_id       NVARCHAR2(64),
+  create_app_id        NVARCHAR2(64),
+  update_date          DATE,
+  update_user_id       NVARCHAR2(64),
+  check_date           DATE,
+  check_user_id        NVARCHAR2(64),
+  bsflag               NVARCHAR2(1),
+  send_indicate        NVARCHAR2(32),
+  create_org_id        NVARCHAR2(32),
+  update_org_id        NVARCHAR2(32),
+  source               NVARCHAR2(64),
+  original_elevation   NUMBER(7,2)
+)
+
+insert into EPDM.CD_LOCATION
+  (LOCATION_ID,
+   COORDINATE_SYSTEM_ID,
+   ENTITY_ID,
+   ENTITY_TYPE,
+   ENTITY_LOCATION_TYPE,
+   PHASE,
+   GEO_OFFSET_EAST,
+   GEO_OFFSET_NORTH,
+   ELEVATION,
+   ORG_ID,
+   MEASURE_DATE,
+   REMARKS,
+   CREATE_DATE,
+   CREATE_USER_ID,
+   CREATE_APP_ID,
+   UPDATE_DATE,
+   UPDATE_USER_ID,
+   CHECK_DATE,
+   CHECK_USER_ID,
+   BSFLAG,
+   SEND_INDICATE,
+   CREATE_ORG_ID,
+   UPDATE_ORG_ID,
+   SOURCE,
+   ORIGINAL_ELEVATION
+   )
+values
+  ('JD3diI8ssrQpx85327wAHBR0d8fzxk21',
+   'Exioao90Kldoz3KdiknkIOlkdaKIL000',
+   'JD7TKoykKm',
+   'ALBzMoOtXEfHUPHWloXYs5WKezqFhYpu',
+   'cW3ZsilstZOzMjjhB2jnK3LhxXgP5Xsl',
+   'OXDuNs5ErVSydCnwcqyvOu2yYIFi6gAf',
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null
+ );
+
+```

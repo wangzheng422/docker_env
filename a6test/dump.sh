@@ -83,7 +83,7 @@ docker image prune -f
 # docker save flume:wzh | gzip -c > tmp/flume.wzh.tgz
 # docker save kite:build | gzip -c > tmp/kite.build.tgz
 # docker save mysql:5.7 | gzip -c > tmp/mysql.5.7.tgz
-# docker save dbz:wzh | gzip -c > tmp/dbz.wzh.tgz
+# docker save dbz-oracle:wzh | gzip -c > tmp/dbz-oracle.wzh.tgz
 # docker save kudu:wzh | gzip -c > tmp/kudu.wzh.tgz
 # docker save teiid:wzh | gzip -c > tmp/teiid.wzh.tgz
 # docker save adminer | gzip -c > tmp/adminer.tgz
