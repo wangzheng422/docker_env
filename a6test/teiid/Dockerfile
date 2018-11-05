@@ -55,7 +55,7 @@ USER jboss
 # ENTRYPOINT "/opt/jboss/entrypoint.sh"
 # CMD ["/bin/sh", "-c", "$JBOSS_HOME/bin/standalone.sh -c standalone-teiid.xml -b 0.0.0.0 -bmanagement 0.0.0.0"]
 
-COPY postgresql/modules/org/postgresql/main $JBOSS_HOME//modules/org/postgresql/main
+COPY postgresql/modules/org/postgresql/main/ $JBOSS_HOME/modules/org/postgresql/main/
 
 COPY vdb1-vdb.xml $JBOSS_HOME/
 
