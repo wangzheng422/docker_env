@@ -54,9 +54,20 @@ docker-compose exec dbz-connect curl -X POST -H "Content-Type: application/json"
     http://dbz-connect:8083/connectors
 
 
+docker-compose exec dbz-connect curl -X GET http://dbz-connect:8083/connector-plugins
+
+docker-compose exec dbz-connect curl -X GET http://dbz-connect:8083/topics
+
 docker-compose exec dbz-connect curl -X DELETE http://dbz-connect:8083/connectors/inventory-connector
 
 docker-compose logs --no-color dbz-connect > logs
+
+
+docker-compose exec dbz-connect curl -X POST -H "Content-Type: application/json" \
+    --data '{ "name": "inventory03", "config": { "connector.class": "io.debezium.connector.oracle.OracleConnector", "tasks.max": "1", "database.server.name": "ordb03", "database.hostname": "10.88.104.247", "database.port": "1521", "database.user": "c##xstrm", "database.password": "xs", "database.dbname": "crpdb", "database.out.server.name": "dbzxout", "database.history.kafka.bootstrap.servers": "10.88.104.225:9292",  "database.history.kafka.topic": "schema-changes.inventory03" , "table.whitelist":"orcl\\.epdm\\.cd_location", "database.tablename.case.insensitive": "true", "database.position.version": "v1" } }' \
+    http://dbz-connect:8083/connectors
+
+docker-compose exec dbz-connect curl -X DELETE http://dbz-connect:8083/connectors/inventory03
 ```
 
 ## feed some data
@@ -76,8 +87,8 @@ CREATE TABLE products (
   description VARCHAR2(512),
   weight FLOAT
 );
-GRANT SELECT ON products to c##xstrm;
-ALTER TABLE products ADD SUPPLEMENTAL LOG DATA (ALL) COLUMNS;
+GRANT SELECT ON epdm.cd_location to c##xstrm;
+ALTER TABLE epdm.cd_location ADD SUPPLEMENTAL LOG DATA (ALL) COLUMNS;
 
 
 INSERT INTO products
