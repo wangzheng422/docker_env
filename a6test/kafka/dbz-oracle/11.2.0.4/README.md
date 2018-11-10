@@ -53,6 +53,10 @@ docker-compose exec dbz-connect curl -X POST -H "Content-Type: application/json"
 docker-compose exec dbz-connect curl -X DELETE http://dbz-connect:8083/connectors/inventory-connector
 
 docker-compose logs --no-color dbz-connect > logs
+
+docker-compose exec kafka1 bash
+kafka-topics --zookeeper zoo1:2181 --list
+kafka-console-consumer --bootstrap-server kafka1:9092 --topic oracledb.DEBEZIUM.CD_LOCATION
 ```
 
 ## feed some data
