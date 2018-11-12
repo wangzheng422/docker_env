@@ -77,6 +77,10 @@ docker-compose exec kafka1 bash
 ./kafka-topics.sh --zookeeper 10.88.104.225:21810 --list
 ./kafka-console-consumer.sh --bootstrap-server 10.88.104.225:9292 --topic ordb.EPDM.CD_LOCATION
 
+
+
+docker run --rm -it dbz-oracle:wzh bash
+
 ```
 
 ```bash

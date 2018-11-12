@@ -72,7 +72,7 @@ sqlplus sys/oracle@//localhost:1521/orcl as sysdba <<- EOF
 EOF
 
 
-sqlplus c##xstrmadmin/xsa@//localhost:1521/orcl <<- EOF
+sqlplus c##xstrmadmin/xsa@//localhost:1521/crpdb <<- EOF
     DECLARE
 	  tables  DBMS_UTILITY.UNCL_ARRAY;
 	  schemas DBMS_UTILITY.UNCL_ARRAY;
@@ -88,7 +88,7 @@ sqlplus c##xstrmadmin/xsa@//localhost:1521/orcl <<- EOF
 	exit;
 EOF
 
-sqlplus sys/oracle@//localhost:1521/orcl as sysdba <<- EOF
+sqlplus sys/oracle@//localhost:1521/crpdb as sysdba <<- EOF
     BEGIN
         DBMS_XSTREAM_ADM.ALTER_OUTBOUND(
         server_name  => 'dbzxout',
@@ -99,3 +99,12 @@ sqlplus sys/oracle@//localhost:1521/orcl as sysdba <<- EOF
 EOF
 
 sqlplus c##xstrm/xs@//localhost:1521/orcl
+
+
+
+	BEGIN
+
+	  DBMS_XSTREAM_ADM.DROP_OUTBOUND(
+	    server_name     =>  'dbzxout');
+	END;
+	/
