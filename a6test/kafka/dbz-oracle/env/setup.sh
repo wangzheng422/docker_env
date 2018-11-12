@@ -98,4 +98,4 @@ sqlplus sys/oracle@//localhost:1521/orcl as sysdba <<- EOF
 	exit;
 EOF
 
-sqlplus c##xstrm/xs@//localhost:1521/crpdb
+sqlplus c##xstrm/xs@//localhost:1521/orcl
