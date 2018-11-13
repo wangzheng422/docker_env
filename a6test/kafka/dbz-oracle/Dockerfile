@@ -17,4 +17,5 @@ COPY tmp/instantclient_12_2/ojdbc8.jar /kafka/libs
 RUN rm -f /kafka/connect/debezium-connector-oracle/debezium-*.jar
 COPY tmp/*.jar $KAFKA_CONNECT_PLUGINS_DIR/debezium-connector-oracle/
 
+RUN copy -f /kafka/config.orig/* /kafka/config/
 COPY log4j.properties /kafka/config/
