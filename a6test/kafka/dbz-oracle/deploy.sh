@@ -6,6 +6,8 @@ set -x
 # SCRIPT=$(readlink -f "$0")
 # SCRIPTPATH=$(dirname "$SCRIPT")
 
+rm -f tmp/*.jar
+
 # mvn clean install -DskipITs
 # mvn clean install -pl debezium-connector-oracle -am -Poracle -DskipITs  -Dinstantclient.dir=/root/work/docker_env/a6test/kafka/dbz-oracle/tmp/instantclient_12_2
 # mvn clean install -pl debezium-connector-oracle -am -Poracle -DskipITs  -Dinstantclient.dir=/root/work/docker_env/a6test/kafka/dbz-oracle/tmp/instantclient_11_2

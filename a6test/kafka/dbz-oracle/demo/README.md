@@ -55,6 +55,7 @@ docker-compose exec dbz-connect curl -X DELETE http://dbz-connect:8083/connector
 docker-compose logs --no-color dbz-connect > logs
 
 docker-compose exec kafka1 bash
+docker-compose exec dbz-connect bash
 ./kafka-topics.sh --zookeeper 172.19.16.8:2181 --list
 ./kafka-console-consumer.sh --bootstrap-server 172.19.16.8:9092 --topic oracledb.DEBEZIUM.CD_LOCATION
 ```
