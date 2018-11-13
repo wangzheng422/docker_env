@@ -68,20 +68,20 @@ docker-compose exec dbz-connect curl -X GET http://dbz-connect:8083/connector-pl
 
 docker-compose exec dbz-connect curl -X GET http://dbz-connect:8083/connectors
 
-docker-compose exec dbz-connect curl -X GET http://dbz-connect:8083/connectors/inventory-connector03/config
+docker-compose exec dbz-connect curl -X GET http://dbz-connect:8083/connectors/inventory-connector/config
 
-docker-compose exec dbz-connect curl -X GET http://dbz-connect:8083/connectors/inventory-connector03/status
+docker-compose exec dbz-connect curl -X GET http://dbz-connect:8083/connectors/inventory-connector/status
 
-docker-compose exec dbz-connect curl -X GET http://dbz-connect:8083/connectors/inventory-connector03/tasks
+docker-compose exec dbz-connect curl -X GET http://dbz-connect:8083/connectors/inventory-connector/tasks
 
 docker-compose exec dbz-connect curl -X DELETE http://dbz-connect:8083/connectors/inventory-connector
 
 docker-compose logs --no-color dbz-connect > logs
 
 
-docker-compose exec kafka1 bash
-./kafka-topics.sh --zookeeper 10.88.104.225:21810 --list
-./kafka-console-consumer.sh --bootstrap-server 10.88.104.225:9292 --topic ordb.EPDM.CD_LOCATION
+docker-compose exec dbz-connect bash
+bin/kafka-topics.sh --zookeeper 10.88.104.225:21810 --list
+bin/kafka-console-consumer.sh --bootstrap-server 10.88.104.225:9292 --topic ordb03.EPDM.CD_LOCATION
 
 
 
