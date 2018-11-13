@@ -37,7 +37,7 @@ docker-compose exec dbz-connect curl -X POST -H "Content-Type: application/json"
     http://dbz-connect:8083/connectors
 
 docker-compose exec dbz-connect curl -X POST -H "Content-Type: application/json" \
-    --data '{ "name": "inventory-connector", "config": { "connector.class": "io.debezium.connector.oracle.OracleConnector", "tasks.max": "1", "database.server.name": "oracledb", "database.hostname": "172.19.16.8", "database.port": "1521", "database.user": "c##xstrm", "database.password": "xs", "database.dbname": "orcl", "database.out.server.name": "dbzxout", "database.history.kafka.bootstrap.servers": "172.19.16.8:9092",  "database.history.kafka.topic": "schema-changes.inventory" , "table.whitelist":"orcl\\.debezium\\.(.*)", "database.tablename.case.insensitive": "true", "database.position.version": "v1" } }' \
+    --data '{ "name": "inventory-connector02", "config": { "connector.class": "io.debezium.connector.oracle.OracleConnector", "tasks.max": "1", "database.server.name": "oracledb02", "database.hostname": "172.19.16.8", "database.port": "1521", "database.user": "c##xstrm", "database.password": "xs", "database.dbname": "orcl", "database.out.server.name": "dbzxout", "database.history.kafka.bootstrap.servers": "172.19.16.8:9092",  "database.history.kafka.topic": "schema-changes.inventory02" , "table.whitelist":"orcl\\.debezium\\.(.*)", "database.tablename.case.insensitive": "true", "database.position.version": "v1" } }' \
     http://dbz-connect:8083/connectors
 
 docker-compose exec dbz-connect curl -X POST -H "Content-Type: application/json" \
@@ -56,8 +56,8 @@ docker-compose logs --no-color dbz-connect > logs
 
 docker-compose exec kafka1 bash
 docker-compose exec dbz-connect bash
-./kafka-topics.sh --zookeeper 172.19.16.8:2181 --list
-./kafka-console-consumer.sh --bootstrap-server 172.19.16.8:9092 --topic oracledb.DEBEZIUM.CD_LOCATION
+bin/kafka-topics.sh --zookeeper 172.19.16.8:2181 --list
+bin/kafka-console-consumer.sh --bootstrap-server 172.19.16.8:9092 --topic oracledb02.DEBEZIUM.CD_LOCATION
 ```
 
 ## feed some data
