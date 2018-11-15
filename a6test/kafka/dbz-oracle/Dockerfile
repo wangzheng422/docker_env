@@ -6,8 +6,12 @@ ENV INSTANT_CLIENT_DIR=/instant_client/
 USER root
 RUN yum -y install libaio tcpdump sudo && yum clean all
 
-RUN adduser kafka -G sudo
-RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+RUN useradd -g wheel kafka && \
+    echo "kafka:kafka" | chpasswd && \
+    sed -i -e 's/^\(%wheel\s\+.\+\)/#\1/gi' /etc/sudoers && \
+    echo -e '\n%wheel ALL=(ALL) ALL' >> /etc/sudoers && \
+    echo -e '\nDefaults:root   !requiretty' >> /etc/sudoers && \
+    echo -e '\nDefaults:%wheel !requiretty' >> /etc/sudoers
 
 USER kafka
 # Deploy Oracle client and drivers
