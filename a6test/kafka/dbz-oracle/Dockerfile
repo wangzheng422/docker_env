@@ -23,4 +23,3 @@ COPY tmp/*.jar $KAFKA_CONNECT_PLUGINS_DIR/debezium-connector-oracle/
 # RUN cp -f /kafka/config.orig/* /kafka/config/
 COPY log4j/* /kafka/config/
 
-USER root
