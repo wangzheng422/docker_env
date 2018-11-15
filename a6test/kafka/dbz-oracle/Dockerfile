@@ -6,7 +6,7 @@ ENV INSTANT_CLIENT_DIR=/instant_client/
 USER root
 RUN yum -y install libaio tcpdump sudo && yum clean all
 
-RUN adduser kafka sudo
+RUN adduser kafka -G sudo
 RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 
 USER kafka
