@@ -299,3 +299,19 @@ SELECT SERVER_NAME,
           LAST_SENT_MESSAGE_CREATE_TIME
   FROM V$XSTREAM_OUTBOUND_SERVER;
 ```
+
+
+```bash
+docker-compose exec oracledb bash
+
+su - oracle
+
+sqlplus /nolog
+
+CONNECT sys/oracle AS SYSDBA
+
+
+grant dba to debezium;
+
+
+```

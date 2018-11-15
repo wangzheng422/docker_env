@@ -4,7 +4,7 @@ ENV KAFKA_CONNECT_JDBC_DIR=$KAFKA_CONNECT_PLUGINS_DIR/kafka-connect-jdbc
 ENV INSTANT_CLIENT_DIR=/instant_client/
 
 USER root
-RUN yum -y install libaio && yum clean all
+RUN yum -y install libaio tcpdump && yum clean all
 
 USER kafka
 # Deploy Oracle client and drivers
