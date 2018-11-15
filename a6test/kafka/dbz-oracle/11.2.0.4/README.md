@@ -57,6 +57,7 @@ docker-compose logs --no-color dbz-connect > logs
 docker-compose exec dbz-connect bash
 bin/kafka-topics.sh --zookeeper zoo1:2181 --list
 bin/kafka-console-consumer.sh --bootstrap-server kafka1:9092 --topic oracledb.DEBEZIUM.CD_LOCATION
+
 ```
 
 ## feed some data

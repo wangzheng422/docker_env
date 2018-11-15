@@ -12,19 +12,22 @@ rm -f tmp/*.jar
 # mvn clean install -pl debezium-connector-oracle -am -Poracle -DskipITs  -Dinstantclient.dir=/root/work/docker_env/a6test/kafka/dbz-oracle/tmp/instantclient_12_2
 # mvn clean install -pl debezium-connector-oracle -am -Poracle -DskipITs  -Dinstantclient.dir=/root/work/docker_env/a6test/kafka/dbz-oracle/tmp/instantclient_11_2
 
-cp /root/work/debezium/debezium-core/target/debezium-core-0.9.0-SNAPSHOT.jar tmp/
+# cp /root/work/debezium/debezium-core/target/debezium-core-0.9.0-SNAPSHOT.jar tmp/
 # cp /root/work/debezium/debezium-core/target/debezium-core-0.9.0.Alpha2.jar tmp/
+cp /root/.m2/repository/io/debezium/debezium-core/0.9.0.Alpha2/debezium-core-0.9.0.Alpha2.jar tmp/
 
-cp /root/work/debezium/debezium-ddl-parser/target/debezium-ddl-parser-0.9.0-SNAPSHOT.jar tmp/
+
+# cp /root/work/debezium/debezium-ddl-parser/target/debezium-ddl-parser-0.9.0-SNAPSHOT.jar tmp/
 # cp /root/work/debezium/debezium-ddl-parser/target/debezium-ddl-parser-0.9.0.Alpha2.jar tmp/
+cp /root/.m2/repository/io/debezium/debezium-ddl-parser/0.9.0.Alpha2/debezium-ddl-parser-0.9.0.Alpha2.jar tmp/
 
 cp /root/work/debezium-incubator/debezium-connector-oracle/target/debezium-connector-oracle-0.9.0-SNAPSHOT.jar tmp/
 
-cp /root/work/debezium/debezium-microbenchmark/target/debezium-microbenchmark-0.9.0-SNAPSHOT.jar tmp/
+# cp /root/work/debezium/debezium-microbenchmark/target/debezium-microbenchmark-0.9.0-SNAPSHOT.jar tmp/
 
-cp /root/work/debezium/debezium-assembly-descriptors/target/debezium-assembly-descriptors-0.9.0-SNAPSHOT.jar tmp/
+# cp /root/work/debezium/debezium-assembly-descriptors/target/debezium-assembly-descriptors-0.9.0-SNAPSHOT.jar tmp/
 
-cp /root/work/debezium/debezium-embedded/target/debezium-embedded-0.9.0-SNAPSHOT.jar tmp/
+# cp /root/work/debezium/debezium-embedded/target/debezium-embedded-0.9.0-SNAPSHOT.jar tmp/
 
 
 
