@@ -22,7 +22,7 @@ CREATE SERVER pg1 TYPE 'postgresql-9.4-1201.jdbc41.jar'
 /opt/jboss/wildfly/bin/jboss-cli.sh --connect --file=/opt/jboss/wildfly/bin/scripts/teiid-domain-mode-install.cli
 
 
-jdbc:teiid:vdb1@mm://127.0.0.1:31000
+jdbc:teiid:vdb1@mm://172.19.16.8:31000
 
 
 docker-compose logs teiid-master

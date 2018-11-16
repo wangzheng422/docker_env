@@ -57,7 +57,7 @@ USER jboss
 
 COPY postgresql/modules/org/postgresql/main/ $JBOSS_HOME/modules/org/postgresql/main/
 
-COPY vdb1-vdb.xml $JBOSS_HOME/
+COPY vdb1-vdb.xml $JBOSS_HOME/standalone/deployments/
 
 COPY conf/standalone-teiid.xml $JBOSS_HOME/standalone/configuration/
 
