@@ -19,6 +19,9 @@ CREATE SERVER pg1 TYPE 'postgresql-9.4-1201.jdbc41.jar'
         "jndi-name" 'java:/pg1-ds'
     );
 
+docker-compose logs teiid-master
+
+```
 
 
 
