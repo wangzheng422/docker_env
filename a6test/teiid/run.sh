@@ -5,7 +5,7 @@ set -x
 
 docker-compose up -d -V
 
-sleep 20
+sleep 10
 
 docker-compose exec teiid-master /opt/jboss/wildfly/bin/add-user.sh -u root -p root -e
 
