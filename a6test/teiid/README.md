@@ -27,6 +27,8 @@ jdbc:teiid:vdb1@mm://172.19.16.8:31000
 
 docker-compose logs teiid-master
 
+docker-compose exec teiid-master bash
+
 
 
 ```
