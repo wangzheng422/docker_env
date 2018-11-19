@@ -29,6 +29,8 @@ docker-compose logs teiid-master
 
 docker-compose exec teiid-master bash
 
+docker-compose exec teiid-master /opt/jboss/wildfly/bin/add-user.sh -u root -p root -e
 
+docker-compose exec teiid-master /opt/jboss/wildfly/bin/add-user.sh -a -u app -p app -e
 
 ```
