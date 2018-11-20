@@ -21,6 +21,7 @@ COPY tmp/instantclient_12_2/xstreams.jar /kafka/libs
 COPY tmp/instantclient_12_2/ojdbc8.jar /kafka/libs
 
 # -------- testing ---------
+RUN rm -rf /kafka/connect/* && mkdir -p /kafka/connect/debezium-connector-oracle/
 RUN rm -f /kafka/connect/debezium-connector-oracle/debezium-*.jar
 COPY tmp/*.jar $KAFKA_CONNECT_PLUGINS_DIR/debezium-connector-oracle/
 # COPY tmp/*embe*.jar /kafka/libs/
