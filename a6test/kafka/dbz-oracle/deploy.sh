@@ -26,8 +26,9 @@ cp /root/.m2/repository/io/debezium/debezium-ddl-parser/0.9.0.Alpha2/debezium-dd
 cp /root/.m2/repository/io/debezium/debezium-embedded/0.9.0.Alpha2/debezium-embedded-0.9.0.Alpha2.jar tmp/
 # cp /root/.m2/repository/io/debezium/debezium-embedded/0.9.0-SNAPSHOT/debezium-embedded-0.9.0-SNAPSHOT.jar tmp/
 
-cp /root/work/debezium-incubator/debezium-connector-oracle/target/debezium-connector-oracle-0.9.0.Alpha2.jar tmp/
+# cp /root/work/debezium-incubator/debezium-connector-oracle/target/debezium-connector-oracle-0.9.0.Alpha2.jar tmp/
 # cp /root/work/debezium-incubator/debezium-connector-oracle/target/debezium-connector-oracle-0.9.0-SNAPSHOT.jar tmp/
+cp /root/.m2/repository/io/debezium/debezium-connector-oracle/0.9.0-SNAPSHOT/debezium-connector-oracle-0.9.0-SNAPSHOT.jar tmp/
 
 # cp /root/work/debezium/debezium-microbenchmark/target/debezium-microbenchmark-0.9.0-SNAPSHOT.jar tmp/
 
