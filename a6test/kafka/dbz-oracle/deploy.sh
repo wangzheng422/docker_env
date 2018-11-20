@@ -34,7 +34,7 @@ cp /root/.m2/repository/io/debezium/debezium-assembly-descriptors/0.9.0-SNAPSHOT
 
 cp /root/.m2/repository/io/debezium/debezium-checkstyle/0.9.0-SNAPSHOT/debezium-checkstyle-0.9.0-SNAPSHOT.jar tmp/
 
-cp /root/.m2/repository/org/antlr/antlr4/4.7.1/antlr4-4.7.1.jar tmp/
+cp /root/.m2/repository/org/antlr/antlr4-runtime/4.7.1/antlr4-runtime-4.7.1.jar tmp/
 
 # cp /root/work/debezium/debezium-microbenchmark/target/debezium-microbenchmark-0.9.0-SNAPSHOT.jar tmp/
 
