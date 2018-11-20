@@ -30,6 +30,8 @@ cp /root/.m2/repository/io/debezium/debezium-embedded/0.9.0-SNAPSHOT/debezium-em
 # cp /root/work/debezium-incubator/debezium-connector-oracle/target/debezium-connector-oracle-0.9.0-SNAPSHOT.jar tmp/
 cp /root/.m2/repository/io/debezium/debezium-connector-oracle/0.9.0-SNAPSHOT/debezium-connector-oracle-0.9.0-SNAPSHOT.jar tmp/
 
+cp /root/.m2/repository/org/antlr/antlr4/4.7.1/antlr4-4.7.1.jar tmp/
+
 # cp /root/work/debezium/debezium-microbenchmark/target/debezium-microbenchmark-0.9.0-SNAPSHOT.jar tmp/
 
 # cp /root/work/debezium/debezium-assembly-descriptors/target/debezium-assembly-descriptors-0.9.0-SNAPSHOT.jar tmp/

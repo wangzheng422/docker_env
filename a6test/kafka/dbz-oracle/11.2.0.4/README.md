@@ -44,7 +44,7 @@ docker-compose exec dbz-connect curl -X POST -H "Content-Type: application/json"
     http://dbz-connect:8083/connectors
 
 
-    
+
 
 docker-compose exec dbz-connect curl -X POST -H "Content-Type: application/json" \
     --data '{ "name": "inventory-connector", "config": { "connector.class": "io.debezium.connector.oracle.OracleConnector", "tasks.max": "1", "database.server.name": "oracledb", "database.hostname": "oracledb", "database.port": "1521", "database.user": "c##xstrmadmin", "database.password": "xsa", "database.dbname": "orcl", "database.out.server.name": "dbzxout", "database.history.kafka.bootstrap.servers": "kafka1:9092",  "database.history.kafka.topic": "schema-changes.inventory" , "table.whitelist":"orcl.debezium.products" } }' \
@@ -61,8 +61,10 @@ docker-compose exec dbz-connect curl -X DELETE http://dbz-connect:8083/connector
 docker-compose logs --no-color dbz-connect > logs
 
 docker-compose exec dbz-connect bash
-bin/kafka-topics.sh --zookeeper zoo1:2181 --list
-bin/kafka-console-consumer.sh --bootstrap-server kafka1:9092 --topic oracledb.DEBEZIUM.CD_LOCATION
+
+docker-compose exec dbz-connect bin/kafka-topics.sh --zookeeper zoo1:2181 --list
+
+docker-compose exec dbz-connect bin/kafka-console-consumer.sh --bootstrap-server kafka1:9092 --topic oracledb.DEBEZIUM.CD_LOCATION
 
 ```
 
