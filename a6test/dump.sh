@@ -87,6 +87,7 @@ docker image prune -f
 # docker save kudu:wzh | gzip -c > tmp/kudu.wzh.tgz
 # docker save teiid:wzh | gzip -c > tmp/teiid.wzh.tgz
 # docker save adminer | gzip -c > tmp/adminer.tgz
+# docker save oracle-11g:wzh.11.2.0.4 | gzip -c > tmp/oracle-11g.wzh.11.2.0.4.tgz
 
 # docker save docker.elastic.co/kibana/kibana-oss:6.3.1 | gzip -c > tmp/kibana.tgz
 # docker save elastichq/elasticsearch-hq | gzip -c > tmp/elasticsearch-hq.tgz
