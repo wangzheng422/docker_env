@@ -89,7 +89,7 @@ docker run --rm -it dbz-oracle:wzh bash
 ```bash
 
 docker-compose exec dbz-connect curl -X POST -H "Content-Type: application/json" \
-    --data '{ "name": "inventory-connector", "config": { "connector.class": "io.debezium.connector.oracle.OracleConnector", "tasks.max": "1", "database.server.name": "ordb03", "database.hostname": "10.88.104.247", "database.port": "1521", "database.user": "c##xstrm", "database.password": "xs", "database.dbname": "crpdb", "database.out.server.name": "dbzxout", "database.history.kafka.bootstrap.servers": "10.88.104.225:9292",  "database.history.kafka.topic": "schema-changes.inventory03" , "table.whitelist":"crpdb\\.epdm\\.cd_location", "database.tablename.case.insensitive": "true", "database.oracle.version": "11" } }' \
+    --data '{ "name": "inventory-connector", "config": { "connector.class": "io.debezium.connector.oracle.OracleConnector", "tasks.max": "1", "database.server.name": "ordb03", "database.hostname": "10.88.104.247", "database.port": "1521", "database.user": "c##xstrm", "database.password": "xs", "database.dbname": "crpdb", "database.out.server.name": "dbzxout", "database.history.kafka.bootstrap.servers": "10.88.104.225:9292",  "database.history.kafka.topic": "schema-changes.inventory03" , "table.whitelist":"crpdb\\.epdm\\.cd_location", "database.tablename.case.insensitive": "true", "database.oracle.version": "11", "max.batch.size": "10", "max.queue.size": "10" } }' \
     http://dbz-connect:8083/connectors
 
 
