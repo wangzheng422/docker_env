@@ -56,3 +56,7 @@ docker-compose exec teiid-master /opt/jboss/wildfly/bin/add-user.sh -u root -p r
 docker-compose exec teiid-master /opt/jboss/wildfly/bin/add-user.sh -a -u app -p app -e
 
 ```
+
+```bash
+bug4
+```
