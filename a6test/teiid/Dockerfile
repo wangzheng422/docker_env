@@ -9,7 +9,7 @@ COPY conf/supervisord.ini /etc/supervisord.d/app.ini
 ENV JBOSS_HOME /opt/jboss/wildfly
 
 # Set the TEIID_VERSION env variable
-ENV TEIID_VERSION 10.2.1
+ENV TEIID_VERSION 11.2.0
 
 USER root
 
