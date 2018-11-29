@@ -17,9 +17,14 @@ files=(
  
 )
 
-for i in "${!images[@]}"; do
-    echo "docker save ${images[$i][0]} | gzip -c > tmp/${files[$i][1]}"
-    docker save ${images[$i][0]} | gzip -c > tmp/${files[$i][1]}
+read -r -d '' VAR << EOF
+elasticsearch:wzh elasticsearch.wzh.tgz
+filebeat:wzh filebeat.wzh.tgz
+EOF
+
+for i in "$VAR"; do
+    echo "docker save ${i[0]} | gzip -c > tmp/${i[1]}"
+    # docker save ${images[$i][0]} | gzip -c > tmp/${files[$i][1]}
 done
 
 docker image prune -f
