@@ -64,6 +64,9 @@ COPY vdb2-vdb.xml $JBOSS_HOME/standalone/deployments/
 
 COPY conf/standalone-teiid.xml $JBOSS_HOME/standalone/configuration/
 
+RUN /opt/jboss/wildfly/bin/add-user.sh -u root -p root -e
+RUN /opt/jboss/wildfly/bin/add-user.sh -a -u app -p app -e
+
 # USER root
 
 # Run Teiid server and bind to all interface
