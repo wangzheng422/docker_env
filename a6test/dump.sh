@@ -38,7 +38,7 @@ EOF
 
 while read -r line; do
     read -ra images <<<"$line"
-    # echo "docker save ${images[0]} | gzip -c > tmp/${images[1]}"
+    echo "docker save ${images[0]} | gzip -c > tmp/${images[1]}"
     docker save ${images[0]} | gzip -c > tmp/${images[1]}
 done <<< "$VAR"
 
