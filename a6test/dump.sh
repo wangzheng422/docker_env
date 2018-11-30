@@ -33,6 +33,8 @@ elkozmon/zoonavigator-web:0.5.0 zoonavigator-web.0.5.0.tgz
 elkozmon/zoonavigator-api:0.5.0 zoonavigator-api.0.5.0.tgz
 oracle-11g:wzh.11.2.0.4 oracle-11g.wzh.11.2.0.4.tgz
 dbz-oracle:wzh dbz-oracle.wzh.tgz
+apache/nifi apache.nifi.tgz
+cdh:wzh cdh.wzh.tgz
 EOF
 )
 

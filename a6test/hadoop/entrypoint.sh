@@ -260,8 +260,10 @@ if [ "$SERVER_ROLE" = "nn" ]; then
     hdfs dfs -chmod g+w /flume/.schema
     hdfs dfs -copyFromLocal /opt/schema/schema.avsc /flume/.schema/
 
-    echo $PREFIX"Init hive..."
-    schematool -dbType mysql -initSchema 
+    if [ "$FORMAT_NAMENODE" = "true" ]; then
+      echo $PREFIX"init hive"
+      schematool --dbType mysql --initSchema
+    fi
 
 
     echo $PREFIX"Starting supervisor..."
