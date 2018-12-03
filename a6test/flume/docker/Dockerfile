@@ -19,7 +19,7 @@ FROM kite:build as kite
 COPY --from=kite:build /app/kite/kite-morphlines/kite-morphlines-all/target/*.jar  /opt/flume/plugins.d/morphline/lib/
 COPY --from=kite:build /app/kite/kite-morphlines/kite-morphlines-all/target/lib/*.jar  /opt/flume/plugins.d/morphline/libext/
 
-# FROM hadoop:wzh as hadooper
+FROM hadoop:wzh as hadooper
 
 FROM centos:wzh
 
