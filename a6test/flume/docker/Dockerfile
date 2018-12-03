@@ -13,10 +13,13 @@ COPY src/AvroEventSerializer.java /app/flume-ng-sinks/flume-hdfs-sink/src/main/j
 WORKDIR /app
 RUN mvn clean install -DskipTests
 
+
 FROM kite:build as kite
 
+COPY --from=kite:build /app/kite/kite-morphlines/kite-morphlines-all/target/*.jar  /opt/flume/plugins.d/morphline/lib/
+COPY --from=kite:build /app/kite/kite-morphlines/kite-morphlines-all/target/lib/*.jar  /opt/flume/plugins.d/morphline/libext/
 
-FROM hadoop:wzh as hadooper
+# FROM hadoop:wzh as hadooper
 
 FROM centos:wzh
 
@@ -44,9 +47,6 @@ COPY --from=hadooper /opt/hadoop/share/hadoop/hdfs/*.jar /opt/flume/plugins.d/hd
 COPY --from=hadooper /opt/hadoop/share/hadoop/hdfs/lib/*.jar /opt/flume/plugins.d/hdfs-sink/libext/
 COPY --from=hadooper /opt/hadoop/lib/native/* /opt/flume/plugins.d/hdfs-sink/native/
 # COPY woodstox-core-5.1.0.jar /opt/flume/lib/
-
-COPY --from=kite:build /app/kite/kite-morphlines/kite-morphlines-all/target/*.jar  /opt/flume/plugins.d/morphline/lib/
-COPY --from=kite:build /app/kite/kite-morphlines/kite-morphlines-all/target/lib/*.jar  /opt/flume/plugins.d/morphline/libext/
 
 COPY start-flume.sh /opt/flume/bin/start-flume
 COPY flume.conf /opt/flume-config/
