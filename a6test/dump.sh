@@ -12,7 +12,7 @@ source config.sh
 while read -r line; do
     read -ra images <<<"$line"
     echo "docker save ${images[0]} | gzip -c > tmp/${images[1]}"
-    if [ "$dummy" = "dummy"]; then
+    if [ "$dummy" = "dummy" ]; then
         docker save ${images[0]} | gzip -c > tmp/${images[1]}
     fi
 done <<< "$VAR"
