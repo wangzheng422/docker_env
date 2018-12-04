@@ -13,7 +13,6 @@ COPY conf/default/ /etc/default/
 
 COPY conf/flume/ /etc/flume-ng/conf/
 
-
 EXPOSE 9000 8088 50070 9999
 
 COPY entrypoint.sh /
