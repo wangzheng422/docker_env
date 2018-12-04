@@ -3,6 +3,8 @@
 set -e
 set -x
 
+dummy=$1
+
 mkdir -p tmp
 
 source config.sh
@@ -10,7 +12,9 @@ source config.sh
 while read -r line; do
     read -ra images <<<"$line"
     echo "docker save ${images[0]} | gzip -c > tmp/${images[1]}"
-    docker save ${images[0]} | gzip -c > tmp/${images[1]}
+    if [ "$dummy" = "dummy"]; then
+        docker save ${images[0]} | gzip -c > tmp/${images[1]}
+    fi
 done <<< "$VAR"
 
 docker image prune -f
