@@ -11,6 +11,8 @@ COPY conf/namenode/mapred-site.xml /etc/hadoop/conf/
 COPY conf/hive/ /etc/hive/conf/
 COPY conf/default/ /etc/default/
 
+COPY conf/flume/ /etc/flume-ng/conf/
+
 
 EXPOSE 9000 8088 50070 9999
 
