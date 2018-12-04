@@ -278,6 +278,11 @@ elif [ "$SERVER_ROLE" = "sn" ]; then
   # sleep 5
   # service impala-catalog start
 
+elif [ "$SERVER_ROLE" = "flume" ]; then
+  echo $PREFIX"Will start as flume"
+  sleep 20
+  service flume-ng-agent start
+
 else
   echo $PREFIX"Will start as data node"
 
