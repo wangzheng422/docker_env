@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+set -x
 
 PREFIX="-------- "
 echo $PREFIX"Bootstraping hadoop..."
@@ -287,11 +288,11 @@ else
   echo $PREFIX"Will start as data node"
 
   sleep 10
-  echo $PREFIX"Will start second namenode hdfs in the background"
+  echo $PREFIX"Will start datanode hdfs in the background"
   service hadoop-hdfs-datanode start
 
   sleep 60
-  echo $PREFIX"Will start second namenode yarn in the background"
+  echo $PREFIX"Will start datanode yarn in the background"
   service hadoop-yarn-nodemanager start
 
   # sleep 180
