@@ -45,6 +45,7 @@ YARN_MEMORY=4096
 YARN_VCORES=4
 
 DEFAULT_DATA_DIR=/data/hdfs/
+chown -R hdfs:hdfs $DEFAULT_DATA_DIR
 
 # data dir should be "/data/hdfs,/data1/hdfs,/data2/hdfs" and so on.
 
