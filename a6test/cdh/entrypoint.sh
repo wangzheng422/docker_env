@@ -163,7 +163,7 @@ sed -i "s|{{node.name.ip}}|$NAMENODE_ADDRESS|g" $CONFIG_DIR/yarn-site.xml
 sed -i "s|{{node.name.port}}|$NAMENODE_PORT|g" $CONFIG_DIR/hdfs-site.xml
 sed -i "s|{{node.name.port}}|$NAMENODE_PORT|g" $CONFIG_DIR/core-site.xml
 
-sed -i "s|{{secondary.node.name.ip}}|$SECOND_NAMENODE_ADDRESS|g" $CONFIG_DIR/hdfs-site.xml
+sed -i "s|{{secondary.node.name.ip}}|$SECOND_NAME_NODE_ADDR|g" $CONFIG_DIR/hdfs-site.xml
 sed -i "s|{{secondary.node.name.webport}}|$SECOND_NAMENODE_WEBPORT|g" $CONFIG_DIR/hdfs-site.xml
 
 sed -i "s|{{HADOOP_HEAPSIZE}}|$HADOOP_HEAPSIZE|g" $CONFIG_DIR/hadoop-env.sh
@@ -189,10 +189,10 @@ fi
 
 echo "" > $CONFIG_DIR/slaves
 
-if [ "$SECOND_NAMENODE_ADDRESS" != "" ]; then
+if [ "$SECOND_NAME_NODE_ADDR" != "" ]; then
   # echo "" > $CONFIG_DIR/slaves
-  echo $PREFIX"Got secondary name nodes address as "$SECOND_NAMENODE_ADDRESS
-  echo "Host "$SECOND_NAMENODE_ADDRESS >> ~/.ssh/config
+  echo $PREFIX"Got secondary name nodes address as "$SECOND_NAME_NODE_ADDR
+  echo "Host "$SECOND_NAME_NODE_ADDR >> ~/.ssh/config
   echo "  StrictHostKeyChecking no" >> ~/.ssh/config
   echo "" >> ~/.ssh/config
 fi
