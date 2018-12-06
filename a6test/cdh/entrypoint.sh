@@ -47,6 +47,9 @@ YARN_VCORES=4
 DEFAULT_DATA_DIR=/data/hdfs/
 chown -R hdfs:hdfs $DEFAULT_DATA_DIR
 
+mkdir -p /data/flume
+chown -R flume:flume /data/flume
+
 # data dir should be "/data/hdfs,/data1/hdfs,/data2/hdfs" and so on.
 
 #
