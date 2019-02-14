@@ -18,7 +18,7 @@ while read -r line; do
         # fi
         echo $line;
     fi
-done <<< "$ose3-images"
+done <<< "$ose3_images"
 
 docker image prune -f
 

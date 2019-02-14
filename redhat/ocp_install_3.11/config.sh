@@ -2,7 +2,7 @@
 
 export tag=v3.11.69
 
-ose3-images=$(cat << EOF
+ose3_images=$(cat << EOF
 registry.redhat.io/openshift3/apb-base:$tag
 registry.redhat.io/openshift3/apb-tools:$tag
 registry.redhat.io/openshift3/automation-broker-apb:$tag
@@ -64,7 +64,7 @@ EOF
 )
 
 
-ose3-optional-imags=$(cat << EOF
+ose3_optional_imags=$(cat << EOF
 registry.redhat.io/openshift3/ose-efs-provisioner:$tag
 
 registry.redhat.io/openshift3/metrics-cassandra:$tag
@@ -101,7 +101,7 @@ EOF
 
 
 
-ose3-builder-images=$(cat << EOF
+ose3_builder_images=$(cat << EOF
 registry.redhat.io/jboss-amq-6/amq63-openshift
 registry.redhat.io/jboss-datagrid-7/datagrid71-openshift
 registry.redhat.io/jboss-datagrid-7/datagrid71-client-openshift
