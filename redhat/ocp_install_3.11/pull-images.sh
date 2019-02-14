@@ -16,9 +16,23 @@ while read -r line; do
         # if [ "$dummy" != "dummy" ]; then
         #     docker save ${images[0]} | gzip -c > tmp/${images[1]}
         # fi
-        echo $line;
+        docker pull $line;
     fi
 done <<< "$ose3_images"
+
+cmd_str="docker save -o ose3-images.tar "
+while read -r line; do
+    if [[ "$line" =~ [^[:space:]] ]]; then
+        # read -ra images <<<"$line"
+        # echo "docker save ${images[0]} | gzip -c > tmp/${images[1]}"
+        # if [ "$dummy" != "dummy" ]; then
+        #     docker save ${images[0]} | gzip -c > tmp/${images[1]}
+        # fi
+        cmd_str+=" $line"
+    fi
+done <<< "$ose3_images"
+
+$($cmd_str)
 
 docker image prune -f
 
