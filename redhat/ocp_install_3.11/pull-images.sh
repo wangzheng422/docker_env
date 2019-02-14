@@ -11,11 +11,6 @@ source config.sh
 
 while read -r line; do
     if [[ "$line" =~ [^[:space:]] ]]; then
-        # read -ra images <<<"$line"
-        # echo "docker save ${images[0]} | gzip -c > tmp/${images[1]}"
-        # if [ "$dummy" != "dummy" ]; then
-        #     docker save ${images[0]} | gzip -c > tmp/${images[1]}
-        # fi
         docker pull $line;
     fi
 done <<< "$ose3_images"
@@ -23,16 +18,47 @@ done <<< "$ose3_images"
 cmd_str="docker save -o ose3-images.tar "
 while read -r line; do
     if [[ "$line" =~ [^[:space:]] ]]; then
-        # read -ra images <<<"$line"
-        # echo "docker save ${images[0]} | gzip -c > tmp/${images[1]}"
-        # if [ "$dummy" != "dummy" ]; then
-        #     docker save ${images[0]} | gzip -c > tmp/${images[1]}
-        # fi
         cmd_str+=" $line"
     fi
 done <<< "$ose3_images"
 
 $($cmd_str)
+
+###################################
+
+while read -r line; do
+    if [[ "$line" =~ [^[:space:]] ]]; then
+        docker pull $line;
+    fi
+done <<< "$ose3_optional_imags"
+
+cmd_str="docker save -o ose3-optional-imags.tar "
+while read -r line; do
+    if [[ "$line" =~ [^[:space:]] ]]; then
+        cmd_str+=" $line"
+    fi
+done <<< "$ose3_optional_imags"
+
+$($cmd_str)
+
+####################################
+
+while read -r line; do
+    if [[ "$line" =~ [^[:space:]] ]]; then
+        docker pull $line;
+    fi
+done <<< "$ose3_builder_images"
+
+cmd_str="docker save -o ose3-builder-images.tar "
+while read -r line; do
+    if [[ "$line" =~ [^[:space:]] ]]; then
+        cmd_str+=" $line"
+    fi
+done <<< "$ose3_builder_images"
+
+$($cmd_str)
+
+##################################3
 
 docker image prune -f
 
