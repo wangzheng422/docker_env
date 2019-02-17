@@ -74,6 +74,8 @@ createrepo ./
 
 写这个脚本，是因为发现官方的镜像，有一些版本标签不对，需要手动的调整，需要的话，修改 config.sh
 
+下载的镜像，总共12G左右
+
 ## 主机IP地址
 
 ```bash
@@ -216,9 +218,21 @@ firewall-cmd --reload
 
 firewall-cmd --list-all
 
+# 把之前下载的镜像导入本地
 docker load -i ose3-images.tgz
 docker load -i ose3-optional-imags.tgz
 docker load -i ose3-builder-images.tgz
+docker load -i docker-builder-images.tgz
 docker load -i other-builder-images.tgz
+
+```
+
+运行 load-images.sh 来向镜像仓库倒入镜像
+
+## 准备DNS
+
+```bash
+
+
 
 ```

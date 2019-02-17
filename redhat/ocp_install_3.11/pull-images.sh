@@ -11,8 +11,8 @@ dummy=$1
 source config.sh
 
 pull_and_save_docker_image(){
-    $docker_images = $1
-    $save_file = $2
+    docker_images=$1
+    save_file=$2
 
     while read -r line; do
         if [[ "$line" =~ [^[:space:]] ]]; then
@@ -33,7 +33,7 @@ pull_and_save_docker_image(){
 #################################
 ## pull and dump images
 
-pull_and_save_docker_image $ose3_images "ose3-images.tgz"
+pull_and_save_docker_image "$ose3_images" "ose3-images.tgz"
 
 # while read -r line; do
 #     if [[ "$line" =~ [^[:space:]] ]]; then
@@ -53,7 +53,7 @@ pull_and_save_docker_image $ose3_images "ose3-images.tgz"
 ###################################
 ## pull and dump images
 
-pull_and_save_docker_image $ose3_optional_imags "ose3-optional-imags.tgz"
+pull_and_save_docker_image "$ose3_optional_imags" "ose3-optional-imags.tgz"
 
 # while read -r line; do
 #     if [[ "$line" =~ [^[:space:]] ]]; then
@@ -73,7 +73,7 @@ pull_and_save_docker_image $ose3_optional_imags "ose3-optional-imags.tgz"
 ####################################
 ## pull and dump images
 
-pull_and_save_docker_image $ose3_builder_images "ose3-builder-images.tgz"
+pull_and_save_docker_image "$ose3_builder_images" "ose3-builder-images.tgz"
 
 # while read -r line; do
 #     if [[ "$line" =~ [^[:space:]] ]]; then
@@ -93,7 +93,7 @@ pull_and_save_docker_image $ose3_builder_images "ose3-builder-images.tgz"
 ##################################
 ## pull and dump images
 
-pull_and_save_docker_image $docker_builder_images "docker-builder-images.tgz"
+pull_and_save_docker_image "$docker_builder_images" "docker-builder-images.tgz"
 
 # while read -r line; do
 #     if [[ "$line" =~ [^[:space:]] ]]; then
@@ -113,7 +113,7 @@ pull_and_save_docker_image $docker_builder_images "docker-builder-images.tgz"
 ##################################
 ## pull and dump images
 
-pull_and_save_docker_image $other_builder_images "other-builder-images.tgz"
+pull_and_save_docker_image "$other_builder_images" "other-builder-images.tgz"
 
 # while read -r line; do
 #     if [[ "$line" =~ [^[:space:]] ]]; then
