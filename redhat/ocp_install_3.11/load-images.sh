@@ -67,6 +67,25 @@ while read -r line; do
     if [[ "$line" =~ [^[:space:]] ]]; then
 
         part2=$(echo $line | awk  '{split($0,a,":"); print a[1]}')
+        part3=$(echo $line | awk  '{split($0,a,":"); print a[2]}')
+        if [ -z "$part3" ]; then
+            docker tag $line $private_repo/$part2
+            docker push $private_repo/$part2
+        else
+            docker tag $line $private_repo/$part2:$part3
+            docker push $private_repo/$part2:$part3
+        fi
+    fi
+done <<< "$docker_builder_images"
+
+
+##################################
+## pull and dump images
+
+while read -r line; do
+    if [[ "$line" =~ [^[:space:]] ]]; then
+        part1=$(echo $line | awk  '{split($0,a,"quay.io"); print a[2]}')
+        part2=$(echo $part1 | awk  '{split($0,a,":"); print a[1]}')
         part3=$(echo $part1 | awk  '{split($0,a,":"); print a[2]}')
         if [ -z "$part3" ]; then
             docker tag $line $private_repo/$part2
