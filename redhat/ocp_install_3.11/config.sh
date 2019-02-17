@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-export tag=v3.11.69
+export tag="v3.11.69"
 
 ## 后续导入的时候，要用2个版本号
 ose3_images=$(cat << EOF
@@ -138,7 +138,18 @@ registry.redhat.io/rhscl/mariadb-101-rhel7
 EOF
 )
 
-other_builder_images=$(cat << EOF
+docker_builder_images=$(cat << EOF
 gitlab/gitlab-ce
+nfvpe/sriov-device-plugin:latest
+centos/tools 
+nfvpe/multus:latest
+EOF
+)
+
+other_builder_images=$(cat << EOF
+quay.io/coreos/flannel:v0.10.0-amd64
+quay.io/coreos/flannel:v0.10.0-arm64
+quay.io/coreos/flannel:v0.10.0-ppc64le
+quay.io/coreos/flannel:v0.10.0-s390x
 EOF
 )

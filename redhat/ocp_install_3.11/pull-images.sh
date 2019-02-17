@@ -71,6 +71,24 @@ while read -r line; do
     if [[ "$line" =~ [^[:space:]] ]]; then
         docker pull $line;
     fi
+done <<< "$docker_builder_images"
+
+cmd_str="docker save "
+while read -r line; do
+    if [[ "$line" =~ [^[:space:]] ]]; then
+        cmd_str+=" $line"
+    fi
+done <<< "$docker_builder_images"
+
+$($cmd_str | gzip -c > docker-builder-images.tgz)
+
+##################################
+## pull and dump images
+
+while read -r line; do
+    if [[ "$line" =~ [^[:space:]] ]]; then
+        docker pull $line;
+    fi
 done <<< "$other_builder_images"
 
 cmd_str="docker save "
@@ -83,6 +101,27 @@ done <<< "$other_builder_images"
 $($cmd_str | gzip -c > other-builder-images.tgz)
 
 ##################################
+
+pull_and_save_docker_image(){
+    $docker_images = $1
+    $save_file = $2
+
+    while read -r line; do
+        if [[ "$line" =~ [^[:space:]] ]]; then
+            docker pull $line;
+        fi
+    done <<< "$other_builder_images"
+
+    cmd_str="docker save "
+    while read -r line; do
+        if [[ "$line" =~ [^[:space:]] ]]; then
+            cmd_str+=" $line"
+        fi
+    done <<< "$other_builder_images"
+
+    $($cmd_str | gzip -c > other-builder-images.tgz)
+}
+
 
 docker image prune -f
 
