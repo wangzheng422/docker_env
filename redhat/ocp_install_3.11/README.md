@@ -48,7 +48,7 @@ wget https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
 
 yum install ./epel-release-latest-7.noarch.rpm
 
-yum -y install htop
+yum -y install htop byobu
 ```
 
 GPU相关的包的源也装上
@@ -173,8 +173,8 @@ yum -y install wget git net-tools bind-utils iptables-services bridge-utils bash
 
 ```bash
 docker run -it --rm --name certbot \
-            -v "/Users/wzh/OneDrive/alauda/tools/certbot/etc:/etc/letsencrypt" \
-            -v "/Users/wzh/OneDrive/alauda/tools/certbot/lib:/var/lib/letsencrypt" \
+            -v "/Users/wzh/OneDrive/redhat/tools/certbot/etc:/etc/letsencrypt" \
+            -v "/Users/wzh/OneDrive/redhat/tools/certbot/lib:/var/lib/letsencrypt" \
             certbot/certbot certonly  -d "*.wander.ren" --manual --preferred-challenges dns-01  --server https://acme-v02.api.letsencrypt.org/directory
 ```
 
@@ -233,6 +233,46 @@ docker load -i other-builder-images.tgz
 
 ```bash
 
+yum -y install dnsmasq
 
+cat  > /etc/dnsmasq.d/openshift-cluster.conf << EOF
+local=/wander.ren/
+address=/.apps.wander.ren/192.168.253.22
+address=/master.wander.ren/192.168.253.21
+address=/infra.wander.ren/192.168.253.22
+address=/node1.wander.ren/192.168.253.22
+address=/node2.wander.ren/192.168.253.23
+address=/nfs.wander.ren/192.168.253.21
+address=/registry.wander.ren/192.168.253.21
+EOF
+
+# master节点
+cat > /etc/dnsmasq.d/origin-upstream-dns.conf << EOF 
+server=192.168.253.2
+EOF
+
+# slave 节点
+cat > /etc/dnsmasq.d/origin-upstream-dns.conf <<EOF
+server=192.168.253.21
+EOF
+
+
+systemctl start dnsmasq.service && systemctl enable dnsmasq.service && systemctl status dnsmasq.service
 
 ```
+
+## 准备安装
+
+```bash
+yum -y install openshift-ansible nfs-utils rpcbind
+
+systemctl enable nfs-server
+
+firewall-cmd --permanent --add-service=nfs
+firewall-cmd --permanent --add-service=mountd
+firewall-cmd --permanent --add-service=rpc-bind
+firewall-cmd --reload
+
+```
+
+nfs 相关操作 <https://linuxconfig.org/quick-nfs-server-configuration-on-redhat-7-linux>
