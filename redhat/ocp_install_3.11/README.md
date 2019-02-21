@@ -9,9 +9,9 @@ based on
 ## 机器规划
 
 ```host
-192.168.253.21  master.wander.ren yum.wander.ren registry.wander.ren
-192.168.253.22  node1.wander.ren
-192.168.253.23  node2.wander.ren
+192.168.253.21  master.redhat.ren yum.redhat.ren registry.redhat.ren
+192.168.253.22  node1.redhat.ren
+192.168.253.23  infra.redhat.ren
 ```
 
 ## rhel 安装源准备
@@ -82,38 +82,38 @@ createrepo ./
 
 timedatectl set-timezone Asia/Shanghai
 
-hostnamectl set-hostname master.wander.ren
-nmcli connection modify eth0 ipv4.addresses 192.168.253.21/24
-nmcli connection modify eth0 ipv4.gateway 192.168.253.2
-nmcli connection modify eth0 ipv4.dns 192.168.253.21
-nmcli connection modify eth0 ipv4.method manual
-nmcli connection modify eth0 connection.autoconnect yes
+hostnamectl set-hostname master.redhat.ren
+nmcli connection modify ens33 ipv4.addresses 192.168.253.21/24
+nmcli connection modify ens33 ipv4.gateway 192.168.253.2
+nmcli connection modify ens33 ipv4.dns 192.168.253.21
+nmcli connection modify ens33 ipv4.method manual
+nmcli connection modify ens33 connection.autoconnect yes
 nmcli connection reload
-nmcli connection up eth0
+nmcli connection up ens33
 
-hostnamectl set-hostname node1.wander.ren
-nmcli connection modify eth0 ipv4.addresses 192.168.253.22/24
-nmcli connection modify eth0 ipv4.gateway 192.168.253.2
-nmcli connection modify eth0 ipv4.dns 192.168.253.21
-nmcli connection modify eth0 ipv4.method manual
-nmcli connection modify eth0 connection.autoconnect yes
+hostnamectl set-hostname node1.redhat.ren
+nmcli connection modify ens33 ipv4.addresses 192.168.253.22/24
+nmcli connection modify ens33 ipv4.gateway 192.168.253.2
+nmcli connection modify ens33 ipv4.dns 192.168.253.21
+nmcli connection modify ens33 ipv4.method manual
+nmcli connection modify ens33 connection.autoconnect yes
 nmcli connection reload
-nmcli connection up eth0
+nmcli connection up ens33
 
-hostnamectl set-hostname node2.wander.ren
-nmcli connection modify eth0 ipv4.addresses 192.168.253.23/24
-nmcli connection modify eth0 ipv4.gateway 192.168.253.2
-nmcli connection modify eth0 ipv4.dns 192.168.253.21
-nmcli connection modify eth0 ipv4.method manual
-nmcli connection modify eth0 connection.autoconnect yes
+hostnamectl set-hostname infra.redhat.ren
+nmcli connection modify ens33 ipv4.addresses 192.168.253.23/24
+nmcli connection modify ens33 ipv4.gateway 192.168.253.2
+nmcli connection modify ens33 ipv4.dns 192.168.253.21
+nmcli connection modify ens33 ipv4.method manual
+nmcli connection modify ens33 connection.autoconnect yes
 nmcli connection reload
-nmcli connection up eth0
+nmcli connection up ens33
 
 cat << EOF >> /etc/hosts
 
-192.168.253.21  master.wander.ren yum.wander.ren registry.wander.ren
-192.168.253.22  node1.wander.ren
-192.168.253.23  node2.wander.ren
+192.168.253.21  master.redhat.ren yum.redhat.ren registry.redhat.ren
+192.168.253.22  node1.redhat.ren
+192.168.253.23  infra.redhat.ren
 
 EOF
 
@@ -139,7 +139,7 @@ mv /etc/yum.repos.d/* /etc/yum.repos.d.bak
 cat << EOF > /etc/yum.repos.d/remote.repo
 [remote]
 name=RHEL FTP
-baseurl=ftp://yum.wander.ren/data
+baseurl=ftp://yum.redhat.ren/data
 enabled=1
 gpgcheck=0
 
@@ -157,6 +157,9 @@ setsebool -P ftp_home_dir 1
 setsebool -P ftpd_full_access 1
 ls -lZ /var | grep ftp
 
+firewall-cmd --permanent --add-service=ftp
+firewall-cmd --reload
+
 # 一些基础的包
 yum -y update
 yum -y install wget git net-tools bind-utils iptables-services bridge-utils bash-completion vim lrzsz unzip docker htop
@@ -173,9 +176,20 @@ yum -y install wget git net-tools bind-utils iptables-services bridge-utils bash
 
 ```bash
 docker run -it --rm --name certbot \
-            -v "/Users/wzh/OneDrive/redhat/tools/certbot/etc:/etc/letsencrypt" \
-            -v "/Users/wzh/OneDrive/redhat/tools/certbot/lib:/var/lib/letsencrypt" \
-            certbot/certbot certonly  -d "*.wander.ren" --manual --preferred-challenges dns-01  --server https://acme-v02.api.letsencrypt.org/directory
+            -v "/Users/wzh/Documents/redhat/tools/redhat.ren/etc:/etc/letsencrypt" \
+            -v "/Users/wzh/Documents/redhat/tools/redhat.ren/lib:/var/lib/letsencrypt" \
+            certbot/certbot certonly  -d "*.redhat.ren" --manual --preferred-challenges dns-01  --server https://acme-v02.api.letsencrypt.org/directory
+
+cp ./etc/archive/redhat.ren/fullchain1.pem redhat.ren.crt
+cp ./etc/archive/redhat.ren/privkey1.pem redhat.ren.key
+
+docker run -it --rm --name certbot \
+            -v "/Users/wzh/Documents/redhat/tools/apps.redhat.ren/etc:/etc/letsencrypt" \
+            -v "/Users/wzh/Documents/redhat/tools/apps.redhat.ren/lib:/var/lib/letsencrypt" \
+            certbot/certbot certonly  -d "*.apps.redhat.ren" --manual --preferred-challenges dns-01  --server https://acme-v02.api.letsencrypt.org/directory
+
+cp ./etc/archive/apps.redhat.ren/fullchain1.pem apps.redhat.ren.crt
+cp ./etc/archive/apps.redhat.ren/privkey1.pem apps.redhat.ren.key
 ```
 
 有了证书，就让我们愉快的开始registry安装吧。
@@ -187,8 +201,8 @@ yum -y install docker-distribution
 
 # 把 Let’s Encrypt 上传到服务器上面
 mkdir /etc/crts/
-cp fullchain1.pem /etc/crts/wander.ren.crt
-cp privkey1.pem /etc/crts/wander.ren.key
+cp fullchain1.pem /etc/crts/redhat.ren.crt
+cp privkey1.pem /etc/crts/redhat.ren.key
 
 cat << EOF > /etc/docker-distribution/registry/config.yml
 version: 0.1
@@ -203,8 +217,8 @@ storage:
 http:
     addr: :5021
     tls:
-       certificate: /etc/crts/wander.ren.crt
-       key: /etc/crts/wander.ren.key
+       certificate: /etc/crts/redhat.ren.crt
+       key: /etc/crts/redhat.ren.key
 EOF
 
 systemctl daemon-reload
@@ -236,14 +250,14 @@ docker load -i other-builder-images.tgz
 yum -y install dnsmasq
 
 cat  > /etc/dnsmasq.d/openshift-cluster.conf << EOF
-local=/wander.ren/
-address=/.apps.wander.ren/192.168.253.22
-address=/master.wander.ren/192.168.253.21
-address=/infra.wander.ren/192.168.253.22
-address=/node1.wander.ren/192.168.253.22
-address=/node2.wander.ren/192.168.253.23
-address=/nfs.wander.ren/192.168.253.21
-address=/registry.wander.ren/192.168.253.21
+local=/redhat.ren/
+address=/.apps.redhat.ren/192.168.253.22
+address=/master.redhat.ren/192.168.253.21
+address=/infra.redhat.ren/192.168.253.22
+address=/node1.redhat.ren/192.168.253.22
+address=/node2.redhat.ren/192.168.253.23
+address=/nfs.redhat.ren/192.168.253.21
+address=/registry.redhat.ren/192.168.253.21
 EOF
 
 # master节点
