@@ -277,15 +277,19 @@ systemctl start dnsmasq.service && systemctl enable dnsmasq.service && systemctl
 
 ## 准备安装
 
+3.11的文档说，nfs已经不推荐了，让用glusterfs
+
 ```bash
-yum -y install openshift-ansible nfs-utils rpcbind
+# 3.11的文档说，nfs已经不推荐了，让用glusterfs
+#yum -y install openshift-ansible nfs-utils rpcbind
+#systemctl enable nfs-server
 
-systemctl enable nfs-server
+# firewall-cmd --permanent --add-service=nfs
+# firewall-cmd --permanent --add-service=mountd
+# firewall-cmd --permanent --add-service=rpc-bind
+# firewall-cmd --reload
 
-firewall-cmd --permanent --add-service=nfs
-firewall-cmd --permanent --add-service=mountd
-firewall-cmd --permanent --add-service=rpc-bind
-firewall-cmd --reload
+yum -y install openshift-ansible
 
 ```
 
