@@ -143,6 +143,11 @@ gitlab/gitlab-ce
 nfvpe/sriov-device-plugin:latest
 centos/tools 
 nfvpe/multus:latest
+kubevirt/virt-api:v0.14.0
+kubevirt/virt-launcher:v0.14.0
+kubevirt/virt-controller:v0.14.0
+kubevirt/virt-handler:v0.14.0
+kubevirt/cirros-registry-disk-demo
 EOF
 )
 
