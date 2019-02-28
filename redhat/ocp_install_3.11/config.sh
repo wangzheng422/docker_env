@@ -148,6 +148,8 @@ kubevirt/virt-launcher:v0.14.0
 kubevirt/virt-controller:v0.14.0
 kubevirt/virt-handler:v0.14.0
 kubevirt/cirros-registry-disk-demo
+nvidia/k8s-device-plugin:1.11
+mirrorgooglecontainers/cuda-vector-add:v0.1
 EOF
 )
 
