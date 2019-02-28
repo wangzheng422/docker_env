@@ -2,8 +2,9 @@
 masters
 nodes
 etcd
+glusterfs
 #nfs
-lb
+#lb
 
 [OSEv3:vars]
 
@@ -71,6 +72,18 @@ openshift_master_api_port=8443
 openshift_master_console_port=8443
 
 #####################################################
+# glusterfs
+#####################################################
+
+openshift_storage_glusterfs_namespace=glusterfs-storage
+openshift_storage_glusterfs_storageclass=true
+openshift_storage_glusterfs_storageclass_default=false
+openshift_storage_glusterfs_block_deploy=true
+openshift_storage_glusterfs_block_host_vol_size=100
+openshift_storage_glusterfs_block_storageclass=true
+openshift_storage_glusterfs_block_storageclass_default=false
+
+#####################################################
 # CLUSTER PRE-INSTALL CHECKS
 #####################################################
 
@@ -92,13 +105,18 @@ openshift_examples_modify_imagestreams=true
 openshift_hosted_registry_routehost=registry.apps.redhat.ren
 #openshift_hosted_registry_routetermination=reencrypt
 #openshift_hosted_registry_routecertificates= "{'certfile': '<path>/org-cert.pem', 'keyfile': '<path>/org-privkey.pem', 'cafile': '<path>/org-chain.pem'}"
+openshift_hosted_registry_routecertificates= "{'certfile': '/root/apps.redhat.ren.cert1.pem', 'keyfile': '/root/apps.redhat.ren.privkey1.pem', 'cafile': '/root/apps.redhat.ren.chain1.pem'}"
 
-openshift_hosted_registry_storage_kind=nfs
-openshift_hosted_registry_storage_access_modes=['ReadWriteMany']
-openshift_hosted_registry_storage_nfs_directory=/exports
-openshift_hosted_registry_storage_nfs_options='*(rw,root_squash)'
-openshift_hosted_registry_storage_volume_name=registry
-openshift_hosted_registry_storage_volume_size=10Gi
+openshift_hosted_registry_storage_kind=glusterfs 
+openshift_hosted_registry_storage_volume_size=50Gi
+openshift_hosted_registry_selector='node-role.kubernetes.io/infra=true'
+
+# openshift_hosted_registry_storage_kind=nfs
+# openshift_hosted_registry_storage_access_modes=['ReadWriteMany']
+# openshift_hosted_registry_storage_nfs_directory=/exports
+# openshift_hosted_registry_storage_nfs_options='*(rw,root_squash)'
+# openshift_hosted_registry_storage_volume_name=registry
+# openshift_hosted_registry_storage_volume_size=10Gi
 
 #####################################################
 # MASTER CONFIGURATION & CERTIFICATE
@@ -108,8 +126,8 @@ openshift_master_cluster_public_hostname=master.redhat.ren
 openshift_master_cluster_hostname=master.redhat.ren
 openshift_master_cluster_method=native
 
-#openshift_master_named_certificates=[{"certfile": "/root/redhat.ren.crt", "keyfile": "/root/redhat.ren.key", "names": ["redhat.ren"]}]
-#openshift_master_overwrite_named_certificates=true
+openshift_master_named_certificates=[{"certfile": "/root/redhat.ren.crt", "keyfile": "/root/redhat.ren.key", "names": ["redhat.ren"]}]
+openshift_master_overwrite_named_certificates=true
 
 #####################################################
 # Metrics & Logging Storage
@@ -117,31 +135,38 @@ openshift_master_cluster_method=native
 
 openshift_metrics_install_metrics=true
 
-openshift_metrics_cassandra_storage_type=emptydir
-openshift_metrics_image_prefix=registry.redhat.ren/openshift3/
+openshift_metrics_cassandra_storage_type=dynamic
+openshift_metrics_cassandra_storage_type=pv
+openshift_metrics_cassandra_pvc_storage_class_name=glusterfs-storage
+
+# openshift_metrics_image_prefix=registry.redhat.ren/openshift3/
 
 openshift_logging_install_logging=true
-openshift_logging_image_prefix=registry.redhat.ren/openshift3/
+openshift_logging_es_pvc_dynamic=true
+openshift_logging_elasticsearch_storage_type=pvc
+openshift_logging_es_pvc_storage_class_name=glusterfs-storage
 
-openshift_metrics_cassandra_nodeselector={"node-role.kubernetes.io/infra":"true"}
-openshift_metrics_hawkular_nodeselector={"node-role.kubernetes.io/infra":"true"}
-openshift_metrics_heapster_nodeselector={"node-role.kubernetes.io/infra":"true"}
-openshift_logging_es_ops_nodeselector={"node-role.kubernetes.io/infra":"true"}
-openshift_logging_es_nodeselector={"node-role.kubernetes.io/infra":"true"}
+# openshift_logging_image_prefix=registry.redhat.ren/openshift3/
 
-openshift_metrics_storage_kind=nfs
-openshift_metrics_storage_access_modes=['ReadWriteOnce']
-openshift_metrics_storage_nfs_directory=/exports
-openshift_metrics_storage_nfs_options='*(rw,root_squash)'
-openshift_metrics_storage_volume_name=metrics
-openshift_metrics_storage_volume_size=10Gi
+# openshift_metrics_cassandra_nodeselector={"node-role.kubernetes.io/infra":"true"}
+# openshift_metrics_hawkular_nodeselector={"node-role.kubernetes.io/infra":"true"}
+# openshift_metrics_heapster_nodeselector={"node-role.kubernetes.io/infra":"true"}
+# openshift_logging_es_ops_nodeselector={"node-role.kubernetes.io/infra":"true"}
+# openshift_logging_es_nodeselector={"node-role.kubernetes.io/infra":"true"}
 
-openshift_logging_storage_kind=nfs
-openshift_logging_storage_access_modes=['ReadWriteOnce']
-openshift_logging_storage_nfs_directory=/exports
-openshift_logging_storage_nfs_options='*(rw,root_squash)'
-openshift_logging_storage_volume_name=logging
-openshift_logging_storage_volume_size=10Gi
+# openshift_metrics_storage_kind=nfs
+# openshift_metrics_storage_access_modes=['ReadWriteOnce']
+# openshift_metrics_storage_nfs_directory=/exports
+# openshift_metrics_storage_nfs_options='*(rw,root_squash)'
+# openshift_metrics_storage_volume_name=metrics
+# openshift_metrics_storage_volume_size=10Gi
+
+# openshift_logging_storage_kind=nfs
+# openshift_logging_storage_access_modes=['ReadWriteOnce']
+# openshift_logging_storage_nfs_directory=/exports
+# openshift_logging_storage_nfs_options='*(rw,root_squash)'
+# openshift_logging_storage_volume_name=logging
+# openshift_logging_storage_volume_size=10Gi
 
 #####################################################
 # Service Catalog
@@ -150,6 +175,9 @@ openshift_logging_storage_volume_size=10Gi
 openshift_enable_service_catalog=true
 openshift_service_catalog_image_prefix=registry.redhat.ren/openshift3/ose-
 openshift_service_catalog_image_version=v3.11.69
+
+
+
 
 openshift_release=v3.11
 
@@ -181,13 +209,23 @@ template_service_broker_prefix=registry.redhat.ren/openshift3/ose-
 template_service_broker_version=v3.11.69
 
 
-openshift_hosted_etcd_storage_kind=nfs
-openshift_hosted_etcd_storage_nfs_options="*(rw,root_squash,sync,no_wdelay)"
-openshift_hosted_etcd_storage_nfs_directory=/var/export
-openshift_hosted_etcd_storage_volume_name=asb
-openshift_hosted_etcd_storage_access_modes=["ReadWriteOnce"]
-openshift_hosted_etcd_storage_volume_size=1G
-openshift_hosted_etcd_storage_labels={'storage': 'etcd'}
+####################
+# ansible broker
+####################
+
+
+ansible_service_broker_install=true
+openshift_service_catalog_image_prefix=registry.redhat.ren/openshift3/ose-
+openshift_hosted_etcd_storage_kind=glusterfs
+openshift_storage_glusterfs_name=glusterfs-storage
+openshift_storage_glusterfs_storageclass_default=true
+# openshift_hosted_etcd_storage_kind=nfs
+# openshift_hosted_etcd_storage_nfs_options="*(rw,root_squash,sync,no_wdelay)"
+# openshift_hosted_etcd_storage_nfs_directory=/var/export
+# openshift_hosted_etcd_storage_volume_name=asb
+# openshift_hosted_etcd_storage_access_modes=["ReadWriteOnce"]
+# openshift_hosted_etcd_storage_volume_size=1G
+# openshift_hosted_etcd_storage_labels={'storage': 'etcd'}
 
 ####################
 # Web Console
@@ -196,6 +234,17 @@ openshift_hosted_etcd_storage_labels={'storage': 'etcd'}
 openshift_web_console_install=true
 openshift_web_console_prefix=registry.redhat.ren/openshift3/ose-
 
+####################
+# monitor
+####################
+
+openshift_cluster_monitoring_operator_install=true
+openshift_cluster_monitoring_operator_prometheus_storage_enabled=true
+openshift_cluster_monitoring_operator_alertmanager_storage_enabled=true
+openshift_cluster_monitoring_operator_prometheus_storage_capacity=50Gi
+openshift_cluster_monitoring_operator_alertmanager_storage_capacity=2Gi
+openshift_cluster_monitoring_operator_prometheus_storage_class_name=""
+openshift_cluster_monitoring_operator_alertmanager_storage_class_name=""
 
 ####################
 # Router Setup
@@ -203,43 +252,42 @@ openshift_web_console_prefix=registry.redhat.ren/openshift3/ose-
 
 openshift_hosted_registry_replicas=1
 
-
-openshift_prometheus_node_selector={"node-role.kubernetes.io/infra":"true"}
-openshift_hosted_prometheus_deploy=true
-openshift_prometheus_storage_kind=nfs
-openshift_prometheus_storage_access_modes=['ReadWriteOnce']
-openshift_prometheus_storage_nfs_directory=/exports
-openshift_prometheus_storage_nfs_options='*(rw,root_squash)'
-openshift_prometheus_storage_volume_name=prometheus
-openshift_prometheus_storage_volume_size=10Gi
-openshift_prometheus_storage_labels={'storage': 'prometheus'}
-openshift_prometheus_storage_type='pvc'
-openshift_prometheus_alertmanager_storage_kind=nfs
-openshift_prometheus_alertmanager_storage_access_modes=['ReadWriteOnce']
-openshift_prometheus_alertmanager_storage_nfs_directory=/exports
-openshift_prometheus_alertmanager_storage_nfs_options='*(rw,root_squash)'
-openshift_prometheus_alertmanager_storage_volume_name=prometheus-alertmanager
-openshift_prometheus_alertmanager_storage_volume_size=10Gi
-openshift_prometheus_alertmanager_storage_labels={'storage': 'prometheus-alertmanager'}
-openshift_prometheus_alertmanager_storage_type='pvc'
-openshift_prometheus_alertbuffer_storage_kind=nfs
-openshift_prometheus_alertbuffer_storage_access_modes=['ReadWriteOnce']
-openshift_prometheus_alertbuffer_storage_nfs_directory=/exports
-openshift_prometheus_alertbuffer_storage_nfs_options='*(rw,root_squash)'
-openshift_prometheus_alertbuffer_storage_volume_name=prometheus-alertbuffer
-openshift_prometheus_alertbuffer_storage_volume_size=10Gi
-openshift_prometheus_alertbuffer_storage_labels={'storage': 'prometheus-alertbuffer'}
-openshift_prometheus_alertbuffer_storage_type='pvc'
-openshift_prometheus_image_prefix=registry.redhat.ren/openshift3/
-openshift_prometheus_image_version=v3.11.69
-openshift_prometheus_proxy_image_prefix=registry.redhat.ren/openshift3/
-openshift_prometheus_proxy_image_version=v3.11.69
-openshift_prometheus_alertbuffer_image_prefix=registry.redhat.ren/openshift3/
-openshift_prometheus_alertbuffer_image_version=v3.11.69
-openshift_prometheus_altermanager_image_prefix=registry.redhat.ren/openshift3/
-openshift_prometheus_alertmanager_image_version=v3.11.69
-openshift_prometheus_node_exporter_image_prefix=registry.redhat.ren/openshift3/
-openshift_prometheus_node_exporter_image_version=v3.11.69
+# openshift_prometheus_node_selector={"node-role.kubernetes.io/infra":"true"}
+# openshift_hosted_prometheus_deploy=true
+# openshift_prometheus_storage_kind=nfs
+# openshift_prometheus_storage_access_modes=['ReadWriteOnce']
+# openshift_prometheus_storage_nfs_directory=/exports
+# openshift_prometheus_storage_nfs_options='*(rw,root_squash)'
+# openshift_prometheus_storage_volume_name=prometheus
+# openshift_prometheus_storage_volume_size=10Gi
+# openshift_prometheus_storage_labels={'storage': 'prometheus'}
+# openshift_prometheus_storage_type='pvc'
+# openshift_prometheus_alertmanager_storage_kind=nfs
+# openshift_prometheus_alertmanager_storage_access_modes=['ReadWriteOnce']
+# openshift_prometheus_alertmanager_storage_nfs_directory=/exports
+# openshift_prometheus_alertmanager_storage_nfs_options='*(rw,root_squash)'
+# openshift_prometheus_alertmanager_storage_volume_name=prometheus-alertmanager
+# openshift_prometheus_alertmanager_storage_volume_size=10Gi
+# openshift_prometheus_alertmanager_storage_labels={'storage': 'prometheus-alertmanager'}
+# openshift_prometheus_alertmanager_storage_type='pvc'
+# openshift_prometheus_alertbuffer_storage_kind=nfs
+# openshift_prometheus_alertbuffer_storage_access_modes=['ReadWriteOnce']
+# openshift_prometheus_alertbuffer_storage_nfs_directory=/exports
+# openshift_prometheus_alertbuffer_storage_nfs_options='*(rw,root_squash)'
+# openshift_prometheus_alertbuffer_storage_volume_name=prometheus-alertbuffer
+# openshift_prometheus_alertbuffer_storage_volume_size=10Gi
+# openshift_prometheus_alertbuffer_storage_labels={'storage': 'prometheus-alertbuffer'}
+# openshift_prometheus_alertbuffer_storage_type='pvc'
+# openshift_prometheus_image_prefix=registry.redhat.ren/openshift3/
+# openshift_prometheus_image_version=v3.11.69
+# openshift_prometheus_proxy_image_prefix=registry.redhat.ren/openshift3/
+# openshift_prometheus_proxy_image_version=v3.11.69
+# openshift_prometheus_alertbuffer_image_prefix=registry.redhat.ren/openshift3/
+# openshift_prometheus_alertbuffer_image_version=v3.11.69
+# openshift_prometheus_altermanager_image_prefix=registry.redhat.ren/openshift3/
+# openshift_prometheus_alertmanager_image_version=v3.11.69
+# openshift_prometheus_node_exporter_image_prefix=registry.redhat.ren/openshift3/
+# openshift_prometheus_node_exporter_image_version=v3.11.69
 
 
 # host group for masters
@@ -255,7 +303,13 @@ master.redhat.ren
 master.redhat.ren openshift_node_group_name='node-config-master'
 infra.redhat.ren openshift_node_group_name='node-config-infra' 
 node1.redhat.ren openshift_node_group_name='node-config-compute'
-#node2.redhat.ren openshift_node_group_name='node-config-compute' 
+node2.redhat.ren openshift_node_group_name='node-config-compute' 
+node3.redhat.ren openshift_node_group_name='node-config-compute' 
+node4.redhat.ren openshift_node_group_name='node-config-compute'
+
+[glusterfs]
+infra.redhat.ren glusterfs_devices='[ "/dev/sdc", "/dev/sdd" ]'
+
 
 #[nfs]
 #nfs.redhat.ren 
