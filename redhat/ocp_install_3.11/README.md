@@ -291,6 +291,9 @@ systemctl start dnsmasq.service && systemctl enable dnsmasq.service && systemctl
 
 yum -y install openshift-ansible
 
+# dhcp 检测命令
+nmap --script broadcast-dhcp-discover
+
 ```
 
 nfs 相关操作 <https://linuxconfig.org/quick-nfs-server-configuration-on-redhat-7-linux>
@@ -300,3 +303,4 @@ sr-iov 参考项目 <https://github.com/openshift/ose-sriov-network-device-plugi
 kubevirt 参考文章 <https://blog.openshift.com/getting-started-with-kubevirt/>， 这里面有一个隐藏的，关于制作虚拟机镜像的文章，在这里<https://kubevirt.io/user-guide/docs/latest/creating-virtual-machines/disks-and-volumes.html>，找到 containerDisk 的章节，这个意思就是虚拟机镜像，就放到registry里面就可以了，但是这个镜像，要特殊的来做。
 
 GPU 参考 <https://blog.openshift.com/how-to-use-gpus-with-deviceplugin-in-openshift-3-10/>
+
