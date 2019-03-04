@@ -83,39 +83,66 @@ createrepo ./
 timedatectl set-timezone Asia/Shanghai
 
 hostnamectl set-hostname master.redhat.ren
-nmcli connection modify ens33 ipv4.addresses 192.168.253.21/24
-nmcli connection modify ens33 ipv4.gateway 192.168.253.2
-nmcli connection modify ens33 ipv4.dns 192.168.253.21
-nmcli connection modify ens33 ipv4.method manual
-nmcli connection modify ens33 connection.autoconnect yes
+nmcli connection modify eno2 ipv4.addresses 192.168.39.129/24
+nmcli connection modify eno2 ipv4.gateway 192.168.39.254
+nmcli connection modify eno2 ipv4.dns 192.168.39.129
+nmcli connection modify eno2 ipv4.method manual
+nmcli connection modify eno2 connection.autoconnect yes
 nmcli connection reload
-nmcli connection up ens33
-
-hostnamectl set-hostname node1.redhat.ren
-nmcli connection modify ens33 ipv4.addresses 192.168.253.22/24
-nmcli connection modify ens33 ipv4.gateway 192.168.253.2
-nmcli connection modify ens33 ipv4.dns 192.168.253.21
-nmcli connection modify ens33 ipv4.method manual
-nmcli connection modify ens33 connection.autoconnect yes
-nmcli connection reload
-nmcli connection up ens33
+nmcli connection up eno2
 
 hostnamectl set-hostname infra.redhat.ren
-nmcli connection modify ens33 ipv4.addresses 192.168.253.23/24
-nmcli connection modify ens33 ipv4.gateway 192.168.253.2
-nmcli connection modify ens33 ipv4.dns 192.168.253.21
-nmcli connection modify ens33 ipv4.method manual
-nmcli connection modify ens33 connection.autoconnect yes
+nmcli connection modify eno2 ipv4.addresses 192.168.39.130/24
+nmcli connection modify eno2 ipv4.gateway 192.168.39.254
+nmcli connection modify eno2 ipv4.dns 192.168.39.129
+nmcli connection modify eno2 ipv4.method manual
+nmcli connection modify eno2 connection.autoconnect yes
 nmcli connection reload
-nmcli connection up ens33
+nmcli connection up eno2
+
+hostnamectl set-hostname node1.redhat.ren
+nmcli connection modify eno2 ipv4.addresses 192.168.39.131/24
+nmcli connection modify eno2 ipv4.gateway 192.168.39.254
+nmcli connection modify eno2 ipv4.dns 192.168.39.129
+nmcli connection modify eno2 ipv4.method manual
+nmcli connection modify eno2 connection.autoconnect yes
+nmcli connection reload
+nmcli connection up eno2
+
+hostnamectl set-hostname node2.redhat.ren
+nmcli connection modify eno2 ipv4.addresses 192.168.39.132/24
+nmcli connection modify eno2 ipv4.gateway 192.168.39.254
+nmcli connection modify eno2 ipv4.dns 192.168.39.129
+nmcli connection modify eno2 ipv4.method manual
+nmcli connection modify eno2 connection.autoconnect yes
+nmcli connection reload
+nmcli connection up eno2
+
+hostnamectl set-hostname node4.redhat.ren
+nmcli connection modify eno2 ipv4.addresses 192.168.39.134/24
+nmcli connection modify eno2 ipv4.gateway 192.168.39.254
+nmcli connection modify eno2 ipv4.dns 192.168.39.129
+nmcli connection modify eno2 ipv4.method manual
+nmcli connection modify eno2 connection.autoconnect yes
+nmcli connection reload
+nmcli connection up eno2
 
 cat << EOF >> /etc/hosts
 
-192.168.253.21  master.redhat.ren yum.redhat.ren registry.redhat.ren
-192.168.253.22  node1.redhat.ren
-192.168.253.23  infra.redhat.ren
+
+192.168.39.135  yum.redhat.ren
+192.168.39.129  master.redhat.ren registry.redhat.ren
+192.168.39.130  infra.redhat.ren
+192.168.39.131  node1.redhat.ren
+192.168.39.132  node2.redhat.ren
+192.168.39.134  node4.redhat.ren
+
 
 EOF
+
+lshw -class network
+
+lspci | egrep -i --color 'network|ethernet'
 
 ```
 
@@ -304,3 +331,16 @@ kubevirt 参考文章 <https://blog.openshift.com/getting-started-with-kubevirt/
 
 GPU 参考 <https://blog.openshift.com/how-to-use-gpus-with-deviceplugin-in-openshift-3-10/>
 
+## ansible-console
+
+```bash
+ansible-console --private-key ~/.ssh/id_rsa.redhat cmcc -u root
+
+copy src=./hosts dest=/etc/hosts
+
+yum_repository name=ftp description=ftp baseurl=ftp://yum.redhat.ren/data gpgcheck=no state=present
+
+yum name=byobu
+
+yum name=nc,net-tools,ansible,iptables-services,ncdu,lftp,byobu,glances,htop,lsof,ntpdate,bash-completion,wget,nmon,vim,httpd-tools,fail2ban,unzip,git,bind-utils,bridge-utils,lrzsz,docker,openshift-ansible
+```
