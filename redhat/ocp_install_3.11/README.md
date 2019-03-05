@@ -331,6 +331,13 @@ kubevirt 参考文章 <https://blog.openshift.com/getting-started-with-kubevirt/
 
 GPU 参考 <https://blog.openshift.com/how-to-use-gpus-with-deviceplugin-in-openshift-3-10/>
 
+## harbor 按照
+
+客户要求装一个harbor。
+
+./prepare --with-notary --with-chartmuseum
+./install.sh --with-notary --with-chartmuseum
+
 ## ansible-console
 
 ```bash
@@ -342,5 +349,12 @@ yum_repository name=ftp description=ftp baseurl=ftp://yum.redhat.ren/data gpgche
 
 yum name=byobu
 
-yum name=nc,net-tools,ansible,iptables-services,ncdu,lftp,byobu,glances,htop,lsof,ntpdate,bash-completion,wget,nmon,vim,httpd-tools,fail2ban,unzip,git,bind-utils,bridge-utils,lrzsz,docker,openshift-ansible
+timezone name=Asia/Shanghai
+
+file path=/data/docker state=directory
+file src=/data/docker dest=/var/lib/docker state=link
+
+yum name=nc,net-tools,ansible,iptables-services,ncdu,lftp,byobu,glances,htop,lsof,ntpdate,bash-completion,wget,nmon,vim,httpd-tools,fail2ban,unzip,git,bind-utils,bridge-utils,lrzsz,docker,openshift-ansible,docker-compose,glusterfs-fuse
+
+systemd name=docker state=started enabled=yes
 ```
