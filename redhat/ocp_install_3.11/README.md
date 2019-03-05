@@ -322,7 +322,7 @@ kubevirt 参考文章 <https://blog.openshift.com/getting-started-with-kubevirt/
 
 GPU 参考 <https://blog.openshift.com/how-to-use-gpus-with-deviceplugin-in-openshift-3-10/>
 
-## harbor 按照
+## harbor 安装
 
 客户要求装一个harbor。但是harbor默认写死了/data，和我们数据盘冲突，需要改一个目录。
 
@@ -330,6 +330,7 @@ GPU 参考 <https://blog.openshift.com/how-to-use-gpus-with-deviceplugin-in-open
 
 在运行之前，把cert文件复制到 /data/cert 文件加下面。另外，不装clair了，似乎需要联网下载最新的cve数据。
 
+```bash
 ./prepare --with-notary --with-chartmuseum --with-clair
 ./install.sh --with-notary --with-chartmuseum --with-clair
 
@@ -339,6 +340,18 @@ GPU 参考 <https://blog.openshift.com/how-to-use-gpus-with-deviceplugin-in-open
 docker-compose -f ./docker-compose.yml -f ./docker-compose.notary.yml -f ./docker-compose.chartmuseum.yml -f ./docker-compose.clair.yml down -v
 
 docker-compose -f ./docker-compose.yml -f ./docker-compose.notary.yml -f ./docker-compose.chartmuseum.yml  down -v
+```
+
+在harbor中创建项目： openshift3 rhel7 cloudforms46 rhgs3 jboss-amq-6 jboss-datagrid-7  等
+
+## ssh 免密登录
+
+```bash
+for i in master infra node1 node2 node4 registry; do ssh-copy-id $i.redhat.ren; done;
+
+for i in master infra node1 node2 node4 registry; do ssh $i.redhat.ren 'date'; done
+
+```
 
 ## ansible-console
 
@@ -367,4 +380,28 @@ file path=/data/docker state=directory
 copy src=./sysconfig/docker dest=/etc/sysconfig/docker
 
 systemd name=docker state=started enabled=yes
+```
+
+## 加载镜像
+
+```bash
+docker load -i ose3-images.tgz
+docker load -i ose3-optional-imags.tgz
+docker load -i ose3-builder-images.tgz
+docker load -i docker-builder-images.tgz
+docker load -i other-builder-images.tgz
+
+# admin/Harbor12345
+bash load-images.sh
+
+```
+
+## 开始安装
+
+```bash
+ansible-playbook -i hosts-3.11.69 /usr/share/ansible/openshift-ansible/playbooks/prerequisites.yml
+
+ansible-playbook -i hosts-3.11.69 /usr/share/ansible/openshift-ansible/playbooks/deploy_cluster.yml
+
+ansible-playbook -i hosts-3.11.69 /usr/share/ansible/openshift-ansible/playbooks/adhoc/uninstall.yml
 ```

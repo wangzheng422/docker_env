@@ -14,7 +14,7 @@ dummy=$1
 ## read configration
 source config.sh
 
-private_repo="registry.wander.ren:5021"
+private_repo="registry.redhat.ren"
 major_tag="v3.11"
 
 #################################
