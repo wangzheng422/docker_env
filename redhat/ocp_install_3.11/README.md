@@ -333,10 +333,16 @@ GPU 参考 <https://blog.openshift.com/how-to-use-gpus-with-deviceplugin-in-open
 
 ## harbor 按照
 
-客户要求装一个harbor。
+客户要求装一个harbor。但是harbor默认写死了/data，和我们数据盘冲突，需要改一个目录。
+
+需要修改prepare，和各个yml。本项目相关目录下面，已经改好了一个版本，复制到服务器上面就可以了。
+
+在运行之前，把cert文件复制到 /data/cert 文件加下面。另外，不装clair了，似乎需要联网下载最新的cve数据。
 
 ./prepare --with-notary --with-chartmuseum
 ./install.sh --with-notary --with-chartmuseum
+
+docker-compose -f ./docker-compose.yml -f ./docker-compose.notary.yml -f ./docker-compose.chartmuseum.yml down -v
 
 ## ansible-console
 
@@ -355,6 +361,14 @@ file path=/data/docker state=directory
 file src=/data/docker dest=/var/lib/docker state=link
 
 yum name=nc,net-tools,ansible,iptables-services,ncdu,lftp,byobu,glances,htop,lsof,ntpdate,bash-completion,wget,nmon,vim,httpd-tools,fail2ban,unzip,git,bind-utils,bridge-utils,lrzsz,docker,openshift-ansible,docker-compose,glusterfs-fuse
+
+systemd name=docker state=stopped enabled=no
+
+file path=/data/docker state=absent
+file path=/data/docker state=directory
+
+# rhel下面，改docker的数据目录，由于selinux的限制，不能做软连接。
+copy src=./sysconfig/docker dest=/etc/sysconfig/docker
 
 systemd name=docker state=started enabled=yes
 ```
