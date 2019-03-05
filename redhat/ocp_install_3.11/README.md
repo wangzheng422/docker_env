@@ -9,9 +9,14 @@ based on
 ## 机器规划
 
 ```host
-192.168.253.21  master.redhat.ren yum.redhat.ren registry.redhat.ren
-192.168.253.22  node1.redhat.ren
-192.168.253.23  infra.redhat.ren
+192.168.39.135  yum yum.redhat.ren
+192.168.39.129  master master.redhat.ren registry registry.redhat.ren
+192.168.39.130  infra infra.redhat.ren
+192.168.39.131  node1 node1.redhat.ren
+192.168.39.132  node2 node2.redhat.ren
+192.168.39.134  node4 node4.redhat.ren
+
+192.168.39.130 *.apps.redhat.ren
 ```
 
 ## rhel 安装源准备
@@ -126,19 +131,6 @@ nmcli connection modify eno2 ipv4.method manual
 nmcli connection modify eno2 connection.autoconnect yes
 nmcli connection reload
 nmcli connection up eno2
-
-cat << EOF >> /etc/hosts
-
-
-192.168.39.135  yum.redhat.ren
-192.168.39.129  master.redhat.ren registry.redhat.ren
-192.168.39.130  infra.redhat.ren
-192.168.39.131  node1.redhat.ren
-192.168.39.132  node2.redhat.ren
-192.168.39.134  node4.redhat.ren
-
-
-EOF
 
 lshw -class network
 
@@ -278,27 +270,26 @@ yum -y install dnsmasq
 
 cat  > /etc/dnsmasq.d/openshift-cluster.conf << EOF
 local=/redhat.ren/
-address=/.apps.redhat.ren/192.168.253.22
-address=/master.redhat.ren/192.168.253.21
-address=/infra.redhat.ren/192.168.253.22
-address=/node1.redhat.ren/192.168.253.22
-address=/node2.redhat.ren/192.168.253.23
-address=/nfs.redhat.ren/192.168.253.21
-address=/registry.redhat.ren/192.168.253.21
+address=/.apps.redhat.ren/192.168.39.130
+address=/master.redhat.ren/192.168.39.129
+address=/infra.redhat.ren/192.168.39.130
+address=/node1.redhat.ren/192.168.39.131
+address=/node2.redhat.ren/192.168.39.132
+address=/node4.redhat.ren/192.168.39.134
+address=/registry.redhat.ren/192.168.39.129
 EOF
 
-# master节点
+# master节点，本次环境没有外网，也没有上级dns，就不用做这里了。
 cat > /etc/dnsmasq.d/origin-upstream-dns.conf << EOF 
 server=192.168.253.2
 EOF
 
-# slave 节点
-cat > /etc/dnsmasq.d/origin-upstream-dns.conf <<EOF
-server=192.168.253.21
-EOF
 
 
 systemctl start dnsmasq.service && systemctl enable dnsmasq.service && systemctl status dnsmasq.service
+
+firewall-cmd --permanent --add-service=dns
+firewall-cmd --reload
 
 ```
 
@@ -339,10 +330,15 @@ GPU 参考 <https://blog.openshift.com/how-to-use-gpus-with-deviceplugin-in-open
 
 在运行之前，把cert文件复制到 /data/cert 文件加下面。另外，不装clair了，似乎需要联网下载最新的cve数据。
 
+./prepare --with-notary --with-chartmuseum --with-clair
+./install.sh --with-notary --with-chartmuseum --with-clair
+
 ./prepare --with-notary --with-chartmuseum
 ./install.sh --with-notary --with-chartmuseum
 
-docker-compose -f ./docker-compose.yml -f ./docker-compose.notary.yml -f ./docker-compose.chartmuseum.yml down -v
+docker-compose -f ./docker-compose.yml -f ./docker-compose.notary.yml -f ./docker-compose.chartmuseum.yml -f ./docker-compose.clair.yml down -v
+
+docker-compose -f ./docker-compose.yml -f ./docker-compose.notary.yml -f ./docker-compose.chartmuseum.yml  down -v
 
 ## ansible-console
 
