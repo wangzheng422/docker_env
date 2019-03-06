@@ -399,7 +399,7 @@ bash load-images.sh
 ## 开始安装
 
 ```bash
-ansible-playbook -i hosts-3.11.69 /usr/share/ansible/openshift-ansible/playbooks/prerequisites.yml
+ansible-playbook -vvv -i hosts-3.11.69 /usr/share/ansible/openshift-ansible/playbooks/prerequisites.yml
 
 ansible-playbook -i hosts-3.11.69 /usr/share/ansible/openshift-ansible/playbooks/deploy_cluster.yml
 
