@@ -10,9 +10,9 @@ based on
 
 ```host
 192.168.39.135  yum yum.redhat.ren
-192.168.39.129  master master.redhat.ren registry registry.redhat.ren
+192.168.39.129  master master.redhat.ren
 192.168.39.130  infra infra.redhat.ren
-192.168.39.131  node1 node1.redhat.ren
+192.168.39.131  node1 node1.redhat.ren registry registry.redhat.ren
 192.168.39.132  node2 node2.redhat.ren
 192.168.39.134  node4 node4.redhat.ren
 
@@ -291,6 +291,8 @@ systemctl start dnsmasq.service && systemctl enable dnsmasq.service && systemctl
 firewall-cmd --permanent --add-service=dns
 firewall-cmd --reload
 
+systemctl restart dnsmasq
+
 ```
 
 ## 准备安装
@@ -340,6 +342,17 @@ GPU 参考 <https://blog.openshift.com/how-to-use-gpus-with-deviceplugin-in-open
 docker-compose -f ./docker-compose.yml -f ./docker-compose.notary.yml -f ./docker-compose.chartmuseum.yml -f ./docker-compose.clair.yml down -v
 
 docker-compose -f ./docker-compose.yml -f ./docker-compose.notary.yml -f ./docker-compose.chartmuseum.yml  down -v
+
+
+docker build -t redhat/harborclient .
+
+docker run --rm \
+ -e HARBOR_USERNAME="admin" \
+ -e HARBOR_PASSWORD="Harbor12345" \
+ -e HARBOR_PROJECT=1 \
+ -e HARBOR_URL="https://registry.redhat.ren" \
+ redhat/harborclient harbor info \
+ openshift3 rhel7 cloudforms46 rhgs3 jboss-amq-6 jboss-datagrid-7 jboss-datavirt-6 jboss-decisionserver-6 jboss-processserver-6 jboss-eap-6 jboss-eap-7 jboss-webserver-3 rhscl redhat-sso-7 redhat-openjdk-18 gitlab nfvpe centos kubevirt nvidia mirrorgooglecontainers krystism coreos
 ```
 
 在harbor中创建项目： openshift3 rhel7 cloudforms46 rhgs3 jboss-amq-6 jboss-datagrid-7  等
@@ -377,9 +390,19 @@ file path=/data/docker state=absent
 file path=/data/docker state=directory
 
 # rhel下面，改docker的数据目录，由于selinux的限制，不能做软连接。
-copy src=./sysconfig/docker dest=/etc/sysconfig/docker
+# copy src=./sysconfig/docker dest=/etc/sysconfig/docker
 
 systemd name=docker state=started enabled=yes
+
+lineinfile path=/etc/sysconfig/docker regexp="^INSECURE_REGISTRY" state=absent
+
+shell semanage fcontext -a -t container_var_lib_t "/data/docker(/.*)?"
+shell semanage fcontext -a -t container_share_t "/data/docker/overlay2(/.*)?"
+shell restorecon -r /data/docker
+
+systemd name=docker state=stopped enabled=no
+file path=/var/lib/docker state=absent
+file path=/var/lib/docker state=directory
 ```
 
 ## 加载镜像
@@ -398,8 +421,10 @@ bash load-images.sh
 
 ## 开始安装
 
+在安装的时候，发现需要手动的push openshift3/ose:latest这个镜像，随便什么内容都可以。不然检查不过。我用的openshift3/ose-node 这个镜像。
+
 ```bash
-ansible-playbook -vvv -i hosts-3.11.69 /usr/share/ansible/openshift-ansible/playbooks/prerequisites.yml
+ansible-playbook -v -i hosts-3.11.69 /usr/share/ansible/openshift-ansible/playbooks/prerequisites.yml
 
 ansible-playbook -i hosts-3.11.69 /usr/share/ansible/openshift-ansible/playbooks/deploy_cluster.yml
 

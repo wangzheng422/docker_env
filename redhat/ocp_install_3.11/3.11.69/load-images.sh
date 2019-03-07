@@ -29,6 +29,8 @@ while read -r line; do
         docker push "$private_repo$part2:$tag"
         docker tag $line $private_repo$part2:$major_tag
         docker push $private_repo$part2:$major_tag
+        docker tag $line $private_repo$part2
+        docker push $private_repo$part2
     fi
 done <<< "$ose3_images"
 
@@ -43,6 +45,8 @@ while read -r line; do
         part3=$(echo $part1 | awk  '{split($0,a,":"); print a[2]}')
         docker tag $line $private_repo$part2:$part3
         docker push $private_repo$part2:$part3
+        docker tag $line $private_repo$part2
+        docker push $private_repo$part2
     fi
 done <<< "$ose3_optional_imags"
 
@@ -56,6 +60,8 @@ while read -r line; do
         part3=$(echo $part1 | awk  '{split($0,a,":"); print a[2]}')
         docker tag $line $private_repo$part2:$tag
         docker push $private_repo$part2:$tag
+        docker tag $line $private_repo$part2
+        docker push $private_repo$part2
     fi
 done <<< "$ose3_builder_images"
 
