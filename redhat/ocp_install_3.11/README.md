@@ -439,4 +439,6 @@ ansible-playbook -i hosts-3.11.69 /usr/share/ansible/openshift-ansible/playbooks
 # if uninstall, on each glusterfs nodes, run
 vgremove -f $(vgs | tail -1 | awk '{print $1}')
 pvremove /dev/sdb2
+
+htpasswd -cb /etc/origin/master/htpasswd admin  password
 ```
