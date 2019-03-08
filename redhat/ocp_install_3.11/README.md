@@ -10,9 +10,9 @@ based on
 
 ```host
 192.168.39.135  yum yum.redhat.ren
-192.168.39.129  master master.redhat.ren
+192.168.39.129  master master.redhat.ren registry registry.redhat.ren paas paas.redhat.ren
 192.168.39.130  infra infra.redhat.ren
-192.168.39.131  node1 node1.redhat.ren registry registry.redhat.ren
+192.168.39.131  node1 node1.redhat.ren
 192.168.39.132  node2 node2.redhat.ren
 192.168.39.134  node4 node4.redhat.ren
 
@@ -277,6 +277,7 @@ address=/node1.redhat.ren/192.168.39.131
 address=/node2.redhat.ren/192.168.39.132
 address=/node4.redhat.ren/192.168.39.134
 address=/registry.redhat.ren/192.168.39.129
+address=/paas.redhat.ren/192.168.39.129
 EOF
 
 # master节点，本次环境没有外网，也没有上级dns，就不用做这里了。
@@ -368,6 +369,8 @@ for i in master infra node1 node2 node4 registry; do ssh $i.redhat.ren 'date'; d
 
 ## ansible-console
 
+以下内容，不能全部执行，根据需要自取。
+
 ```bash
 ansible-console --private-key ~/.ssh/id_rsa.redhat cmcc -u root
 
@@ -395,6 +398,9 @@ file path=/data/docker state=directory
 systemd name=docker state=started enabled=yes
 
 lineinfile path=/etc/sysconfig/docker regexp="^INSECURE_REGISTRY" state=absent
+
+lineinfile path=/etc/ssh/sshd_config regexp="^UseDNS" line="UseDNS no" insertafter=EOF state=present
+systemd name=sshd state=restarted enabled=yes
 
 shell semanage fcontext -a -t container_var_lib_t "/data/docker(/.*)?"
 shell semanage fcontext -a -t container_share_t "/data/docker/overlay2(/.*)?"
@@ -426,7 +432,7 @@ bash load-images.sh
 ```bash
 ansible-playbook -v -i hosts-3.11.69 /usr/share/ansible/openshift-ansible/playbooks/prerequisites.yml
 
-ansible-playbook -i hosts-3.11.69 /usr/share/ansible/openshift-ansible/playbooks/deploy_cluster.yml
+ansible-playbook -v -i hosts-3.11.69 /usr/share/ansible/openshift-ansible/playbooks/deploy_cluster.yml
 
 ansible-playbook -i hosts-3.11.69 /usr/share/ansible/openshift-ansible/playbooks/adhoc/uninstall.yml
 ```
