@@ -435,4 +435,8 @@ ansible-playbook -v -i hosts-3.11.69 /usr/share/ansible/openshift-ansible/playbo
 ansible-playbook -v -i hosts-3.11.69 /usr/share/ansible/openshift-ansible/playbooks/deploy_cluster.yml
 
 ansible-playbook -i hosts-3.11.69 /usr/share/ansible/openshift-ansible/playbooks/adhoc/uninstall.yml
+
+# if uninstall, on each glusterfs nodes, run
+vgremove -f $(vgs | tail -1 | awk '{print $1}')
+pvremove /dev/sdb2
 ```
