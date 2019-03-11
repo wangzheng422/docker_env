@@ -444,4 +444,7 @@ vgremove -f $(vgs | tail -1 | awk '{print $1}')
 pvremove /dev/sdb2
 
 htpasswd -cb /etc/origin/master/htpasswd admin  password
+
+oc adm policy add-cluster-role-to-user cluster-admin admin
+oc adm policy remove-cluster-role-from-user cluster-admin admin
 ```
