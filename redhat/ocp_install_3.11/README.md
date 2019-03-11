@@ -462,5 +462,10 @@ yum install -y virt-install virt-top
 yum name=virt-install,virt-top
 shell virt-host-validate qemu
 
+oc adm policy add-scc-to-user privileged -n kube-system -z kubevirt-privileged
+oc adm policy add-scc-to-user privileged -n kube-system -z kubevirt-controller
+oc adm policy add-scc-to-user privileged -n kube-system -z kubevirt-apiserver
 
+oc apply -f kubevirt.yaml
+oc delete -f kubevirt.yaml
 ```
