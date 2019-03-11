@@ -68,6 +68,10 @@ curl -so /etc/yum.repos.d/nvidia-container-runtime.repo https://nvidia.github.io
 
 ```bash
 reposync -n -d -l -m
+
+# 如果想用group install，那么要这么下载
+reposync --gpgcheck -n -d -l -m --downloadcomps --download-metadata
+
 createrepo ./
 ```
 
