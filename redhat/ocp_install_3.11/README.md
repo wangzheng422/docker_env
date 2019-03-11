@@ -452,3 +452,15 @@ htpasswd -cb /etc/origin/master/htpasswd admin  password
 oc adm policy add-cluster-role-to-user cluster-admin admin
 oc adm policy remove-cluster-role-from-user cluster-admin admin
 ```
+
+## kubevirt
+
+```bash
+yum install -y virt-install virt-top
+
+# with ansible
+yum name=virt-install,virt-top
+shell virt-host-validate qemu
+
+
+```
