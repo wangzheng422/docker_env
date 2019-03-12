@@ -71,6 +71,7 @@ reposync -n -d -l -m
 
 # 如果想用group install，那么要这么下载
 reposync --gpgcheck -n -d -l -m --downloadcomps --download-metadata
+reposync -n -d -l -m --downloadcomps --download-metadata
 
 createrepo ./
 ```
