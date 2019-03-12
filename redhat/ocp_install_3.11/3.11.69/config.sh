@@ -158,5 +158,6 @@ quay.io/coreos/flannel:v0.10.0-amd64
 quay.io/coreos/flannel:v0.10.0-arm64
 quay.io/coreos/flannel:v0.10.0-ppc64le
 quay.io/coreos/flannel:v0.10.0-s390x
+quay.io/kubevirt/kubevirt-web-ui-operator:v1.4.0
 EOF
 )

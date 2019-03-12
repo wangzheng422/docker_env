@@ -48,12 +48,12 @@ pull_and_save_docker_image(){
 ##################################
 ## pull and dump images
 
-pull_and_save_docker_image "$docker_builder_images" "docker-builder-images.tgz"
+# pull_and_save_docker_image "$docker_builder_images" "docker-builder-images.tgz"
 
 ##################################
 ## pull and dump images
 
-# pull_and_save_docker_image "$other_builder_images" "other-builder-images.tgz"
+pull_and_save_docker_image "$other_builder_images" "other-builder-images.tgz"
 
 ##################################
 
