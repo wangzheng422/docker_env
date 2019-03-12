@@ -74,6 +74,7 @@ reposync --gpgcheck -n -d -l -m --downloadcomps --download-metadata
 reposync -n -d -l -m --downloadcomps --download-metadata
 
 createrepo ./
+createrepo -g ./rhel-7-server-rpms/comps.xml --update .
 ```
 
 镜像应该有30多G。
