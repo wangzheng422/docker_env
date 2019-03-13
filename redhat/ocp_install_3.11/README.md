@@ -511,7 +511,7 @@ oc adm policy add-scc-to-user privileged -z default test-wzh
 systemctl start libvirtd
 export LIBGUESTFS_BACKEND=direct
 guestmount -a ./rhel-server-7.6-x86_64-kvm.qcow2 -i  disk/
-vipw -s -R disk/
-sed -i 's/root:!!/root:$1$QiSwNHrs$uID6S6qOifSNZKzfXsmQG1/' etc/shadow
 guestunmount disk/
+
+useradd -p $(openssl passwd -1 changeme) wzh -s /bin/bash -G sudo
 ```
