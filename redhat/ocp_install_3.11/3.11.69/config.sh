@@ -148,6 +148,8 @@ kubevirt/virt-launcher:v0.14.0
 kubevirt/virt-controller:v0.14.0
 kubevirt/virt-handler:v0.14.0
 kubevirt/cirros-registry-disk-demo
+kubevirt/container-disk-v1alpha
+kubevirt/virt-operator:v0.14.0
 nvidia/k8s-device-plugin:1.11
 mirrorgooglecontainers/cuda-vector-add:v0.1
 EOF
@@ -159,5 +161,6 @@ quay.io/coreos/flannel:v0.10.0-arm64
 quay.io/coreos/flannel:v0.10.0-ppc64le
 quay.io/coreos/flannel:v0.10.0-s390x
 quay.io/kubevirt/kubevirt-web-ui-operator:v1.4.0
+quay.io/kubevirt/kubevirt-web-ui:v1.4.0-14
 EOF
 )

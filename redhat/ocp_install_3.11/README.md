@@ -464,10 +464,54 @@ yum install -y virt-install virt-top
 yum name=virt-install,virt-top
 shell virt-host-validate qemu
 
+# 以下权限命令，还要在新建的project里面使用。
 oc adm policy add-scc-to-user privileged -n kube-system -z kubevirt-privileged
 oc adm policy add-scc-to-user privileged -n kube-system -z kubevirt-controller
 oc adm policy add-scc-to-user privileged -n kube-system -z kubevirt-apiserver
 
+oc adm policy add-scc-to-user privileged system:serviceaccount:kube-system:kubevirt-controller
+
+cd kubevirt.0.14.0
 oc apply -f kubevirt.yaml
 oc delete -f kubevirt.yaml
+
+oc new-project kubevirt-web-ui
+cd deploy
+
+oc apply -f service_account.yaml
+oc adm policy add-scc-to-user anyuid -z kubevirt-web-ui-operator  # use the "anyuid" string as it is
+
+
+oc apply -f role.yaml
+oc apply -f role_extra_for_console.yaml
+oc apply -f role_binding.yaml
+oc apply -f role_binding_extra_for_console.yaml
+
+oc apply -f crds/kubevirt_v1alpha1_kwebui_crd.yaml
+oc apply -f crds/kubevirt_v1alpha1_kwebui_cr.yaml
+oc apply -f operator.yaml
+```
+
+访问 <https://kubevirt-web-ui.apps.redhat.ren> , 就可以看到 kubevirt web ui了。
+
+使用 vm/Dockerfile 制作虚拟机要用的镜像
+
+```bash
+docker build -t registry.redhat.ren/vmidisks/rhel7.6:latest .
+docker push registry.redhat.ren/vmidisks/rhel7.6:latest
+
+oc create configmap kubevirt-config --from-literal feature-gates=DataVolumes -n kube-system
+
+oc create configmap kubevirt-config --from-literal feature-gates=DataVolumes -n test-wzh
+
+oc apply -f vm.yaml
+
+oc adm policy add-scc-to-user privileged -z default test-wzh
+
+systemctl start libvirtd
+export LIBGUESTFS_BACKEND=direct
+guestmount -a ./rhel-server-7.6-x86_64-kvm.qcow2 -i  disk/
+vipw -s -R disk/
+sed -i 's/root:!!/root:$1$QiSwNHrs$uID6S6qOifSNZKzfXsmQG1/' etc/shadow
+guestunmount disk/
 ```
