@@ -508,10 +508,30 @@ oc apply -f vm.yaml
 
 oc adm policy add-scc-to-user privileged -z default test-wzh
 
+# 如果你想修改以下kvm镜像里面的内容
 systemctl start libvirtd
 export LIBGUESTFS_BACKEND=direct
 guestmount -a ./rhel-server-7.6-x86_64-kvm.qcow2 -i  disk/
 guestunmount disk/
 
-useradd -p $(openssl passwd -1 changeme) wzh -s /bin/bash -G sudo
+# 用以下命令，作为启动脚本，这样就可以登录了。
+cat /etc/passwd || cat /etc/shadow || useradd -p $( openssl passwd -1 wzhwzh ) wzh -s /bin/bash -G wheel || cat /etc/shadow
+
+# 上面的方法好像不行，用下面的命令，base64编码
+cat startup.sh | base64
 ```
+
+然后在vm启动的yaml文件里面，用base64注入的方法，注入这个启动脚本。
+
+```yaml
+      volumes:
+        - containerDisk:
+            image: 'registry.redhat.ren/vmidisks/rhel7.6:latest'
+          name: rootdisk
+        - cloudInitNoCloud:
+            userDataBase64: >-
+              IyEvYmluL2Jhc2gKc2V0IC14CmNhdCAvZXRjL3Bhc3N3ZApjYXQgL2V0Yy9zaGFkb3cKdXNlcmFkZCAtcCAkKCBvcGVuc3NsIHBhc3N3ZCAtMSB3emh3emggKSB3emggLXMgL2Jpbi9iYXNoIC1HIHdoZWVsCmNhdCAvZXRjL3NoYWRvdw==
+          name: cloudinitdisk
+```
+
+如果需要添加硬盘，需要装另外一个插件 <https://github.com/kubevirt/containerized-data-importer>，本次实验时间有限，而且实际场景下面，也许不太用到，等弄完sr-iov再回来做这个组件。
