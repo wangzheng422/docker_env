@@ -1,10 +1,8 @@
 # openshift 3.11.69 离线安装
 
-based on 
+based on <https://docs.openshift.com/container-platform/3.11/install/disconnected_install.html> and <http://ksoong.org/docs/content/openshift/install/>
 
-<https://docs.openshift.com/container-platform/3.11/install/disconnected_install.html>
-
-<http://ksoong.org/docs/content/openshift/install/>
+以下文章中的命令，不是安装时候的顺序执行命令，请搞懂命令的含义，按照自己的需要取用。
 
 ## 机器规划
 
@@ -37,10 +35,12 @@ subscription-manager repos --disable="*"
 subscription-manager list --available --matches '*OpenShift Container Platform*'
 
 subscription-manager repos \
+    --proxy="http://192.168.253.1:5084" \
     --enable="rhel-7-server-rpms" \
     --enable="rhel-7-server-extras-rpms" \
     --enable="rhel-7-server-ose-3.11-rpms" \
-    --enable="rhel-7-server-ansible-2.6-rpms"
+    --enable="rhel-7-server-ansible-2.6-rpms" \
+    --enable="rhel-7-server-cnv-1.4-tech-preview-rpms"
 
 yum -y install wget yum-utils createrepo docker git
 
