@@ -535,3 +535,7 @@ cat startup.sh | base64
 ```
 
 如果需要添加硬盘，需要装另外一个插件 <https://github.com/kubevirt/containerized-data-importer>，本次实验时间有限，而且实际场景下面，也许不太用到，等弄完sr-iov再回来做这个组件。
+
+## sigma 服务支持
+
+sigma需要docker的socker支持，需要添加如下docker启动参数，-H tcp://0.0.0.0:5678 -H unix:///var/run/docker.sock ， 就加到 /etc/sysconfig/docker里面
