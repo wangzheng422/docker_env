@@ -138,6 +138,48 @@ registry.redhat.io/rhscl/mariadb-101-rhel7
 EOF
 )
 
+## Container-native virtualization 
+cnv_optional_imags=$(cat << EOF
+
+registry.access.redhat.com/cnv-tech-preview/multus-cni
+registry.access.redhat.com/cnv-tech-preview/ovs-cni-plugin
+registry.access.redhat.com/cnv-tech-preview/virt-cdi-cloner
+registry.access.redhat.com/cnv-tech-preview/virt-cdi-controller
+registry.access.redhat.com/cnv-tech-preview/cnv-libvirt
+registry.access.redhat.com/cnv-tech-preview/virt-cdi-uploadproxy
+registry.access.redhat.com/cnv-tech-preview/virt-api
+registry.access.redhat.com/cnv-tech-preview/virt-cdi-importer
+registry.access.redhat.com/cnv-tech-preview/virt-cdi-apiserver
+registry.access.redhat.com/cnv-tech-preview/virt-handler
+registry.access.redhat.com/cnv-tech-preview/virt-controller
+registry.access.redhat.com/cnv-tech-preview/virt-launcher
+registry.access.redhat.com/cnv-tech-preview/virt-cdi-uploadserver
+registry.access.redhat.com/cnv-tech-preview/kubevirt-web-ui
+registry.access.redhat.com/cnv-tech-preview/kubevirt-metrics-collector
+registry.access.redhat.com/cnv-tech-preview/sriov-cni
+registry.access.redhat.com/cnv-tech-preview/sriov-network-device-plugin
+registry.access.redhat.com/cnv-tech-preview/virt-operator
+registry.access.redhat.com/cnv-tech-preview/ember-csi
+registry.access.redhat.com/cnv-tech-preview/ember-csi-operator
+registry.access.redhat.com/cnv-tech-preview/kubevirt-cpu-node-labeller
+registry.access.redhat.com/cnv-tech-preview/kubevirt-web-ui-operator
+registry.access.redhat.com/cnv-tech-preview/virtio-win
+registry.access.redhat.com/cnv-tech-preview/virt-cdi-operator
+registry.access.redhat.com/cnv-tech-preview/kubevirt-cpu-model-nfd-plugin
+
+EOF
+)
+
+## istio, Red Hat OpenShift Service Mesh 
+istio_optional_imags=$(cat << EOF
+
+registry.access.redhat.com/openshift-istio-tech-preview/openshift-ansible
+registry.access.redhat.com/openshift-istio-tech-preview/proxyv2
+registry.access.redhat.com/openshift-istio-tech-preview/pilot
+
+EOF
+)
+
 docker_builder_images=$(cat << EOF
 gitlab/gitlab-ce
 nfvpe/sriov-device-plugin:latest
