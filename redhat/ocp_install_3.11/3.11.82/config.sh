@@ -188,11 +188,12 @@ registry.access.redhat.com/openshift-istio-tech-preview/sidecar-injector
 registry.access.redhat.com/openshift-istio-tech-preview/istio-operator
 registry.access.redhat.com/openshift-istio-tech-preview/kiali
 registry.access.redhat.com/openshift-istio-tech-preview/3scale-istio-adapter-tech-preview
-registry.access.redhat.com/distributed-tracing-tech-preview/jaeger-all-in-one
 registry.access.redhat.com/distributed-tracing-tech-preview/jaeger-ingester
 
 EOF
 )
+
+#registry.access.redhat.com/distributed-tracing-tech-preview/jaeger-all-in-one
 
 docker_builder_images=$(cat << EOF
 gitlab/gitlab-ce
