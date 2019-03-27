@@ -13,10 +13,15 @@ source config.sh
 pull_and_save_docker_image(){
     docker_images=$1
     save_file=$2
+    sleep_time=$3
 
     while read -r line; do
         if [[ "$line" =~ [^[:space:]] ]]; then
-            docker pull $line;
+            [ ! -z $(docker images -q $line) ] || docker pull $line;
+        fi
+
+        if [ ! -z "$sleep_time" ]; then
+            sleep $sleep_time
         fi
     done <<< "$docker_images"
 
