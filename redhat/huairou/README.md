@@ -93,14 +93,34 @@ createrepo -g ./rhel-7-server-rpms/comps.xml --update .
 
 timedatectl set-timezone Asia/Shanghai
 
-hostnamectl set-hostname master.redhat.ren
-nmcli connection modify eno2 ipv4.addresses 192.168.39.129/24
-nmcli connection modify eno2 ipv4.gateway 192.168.39.254
-nmcli connection modify eno2 ipv4.dns 192.168.39.129
-nmcli connection modify eno2 ipv4.method manual
-nmcli connection modify eno2 connection.autoconnect yes
+hostnamectl set-hostname R720-102
+nmcli connection modify p5p1 ipv4.addresses 192.168.6.102/24
+# nmcli connection modify eno2 ipv4.gateway 192.168.39.254
+# nmcli connection modify eno2 ipv4.dns 192.168.39.129
+nmcli connection modify p5p1 ipv4.method manual
+nmcli connection modify p5p1 connection.autoconnect yes
 nmcli connection reload
-nmcli connection up eno2
+nmcli connection up p5p1
+nmcli connection modify p6p2 ipv4.addresses 192.168.7.102/24
+# nmcli connection modify eno2 ipv4.gateway 192.168.39.254
+# nmcli connection modify eno2 ipv4.dns 192.168.39.129
+nmcli connection modify p6p2 ipv4.method manual
+nmcli connection modify p6p2 connection.autoconnect yes
+nmcli connection reload
+nmcli connection up p6p2
+
+hostnamectl set-hostname R720XD-103
+nmcli connection modify p6p2 ipv4.addresses 192.168.7.103/24
+# nmcli connection modify eno2 ipv4.gateway 192.168.39.254
+# nmcli connection modify eno2 ipv4.dns 192.168.39.129
+nmcli connection modify p6p2 ipv4.method manual
+nmcli connection modify p6p2 connection.autoconnect yes
+nmcli connection reload
+nmcli connection up p6p2
+
+pv --rate-limit 1000M </dev/zero | ssh root@192.168.7.102 'cat >/dev/null'
+
+hostnamectl set-hostname R710-101
 
 hostnamectl set-hostname infra.redhat.ren
 nmcli connection modify eno2 ipv4.addresses 192.168.39.130/24
@@ -165,7 +185,7 @@ mv /etc/yum.repos.d/* /etc/yum.repos.d.bak
 cat << EOF > /etc/yum.repos.d/remote.repo
 [remote]
 name=RHEL FTP
-baseurl=ftp://yum.redhat.ren/data
+baseurl=ftp://192.168.5.199/data
 enabled=1
 gpgcheck=0
 
