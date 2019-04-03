@@ -35,11 +35,13 @@ subscription-manager repos --disable="*"
 subscription-manager list --available --matches '*OpenShift Container Platform*'
 
 subscription-manager repos \
-    --proxy="http://192.168.253.1:5084" \
     --enable="rhel-7-server-rpms" \
     --enable="rhel-7-server-extras-rpms" \
     --enable="rhel-7-server-ose-3.11-rpms" \
     --enable="rhel-7-server-ansible-2.6-rpms" \
+    --enable=rhel-server-rhscl-7-rpms \
+    --enable=rhel-7-server-satellite-6.4-rpms \
+    --enable=rhel-7-server-satellite-maintenance-6-rpms \
     --enable="rhel-7-server-cnv-1.4-tech-preview-rpms"
 
 yum -y install wget yum-utils createrepo docker git
