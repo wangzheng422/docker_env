@@ -122,6 +122,8 @@ nmcli connection up p6p2
 
 pv --rate-limit 1000M </dev/zero | ssh root@192.168.7.102 'cat >/dev/null'
 
+iperf
+
 hostnamectl set-hostname R710-101
 
 hostnamectl set-hostname infra.redhat.ren
@@ -163,6 +165,11 @@ nmcli connection up eno2
 lshw -class network
 
 lspci | egrep -i --color 'network|ethernet'
+
+# to bridge, change /etc/sysconfig/network-scripts/
+systemctl restart network
+
+brctl addif virbr0 ztppiy3vks
 
 ```
 
