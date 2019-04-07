@@ -21,6 +21,8 @@ firewall-cmd --list-all
 
 ./add-user.sh -u 'admin' -p 'admin' -g 'guest,mgmtgroup'
 ```
+
+https://github.com/jbossdemocentral/rhpam7-install-demo
                                                                            docker run -it -p 8080:8080 -p 9990:9990 jbossdemocentral/rhpam7-install-demo
 
 Login into Business Central at:
