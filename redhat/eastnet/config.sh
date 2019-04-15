@@ -180,7 +180,7 @@ registry.access.redhat.com/openshift-istio-tech-preview/galley
 registry.access.redhat.com/openshift-istio-tech-preview/mixer
 registry.access.redhat.com/openshift-istio-tech-preview/proxy-init
 registry.access.redhat.com/openshift-istio-tech-preview/citadel
-registry.access.redhat.com/distributed-tracing-tech-preview/jaeger-elasticsearch
+registry.access.redhat.com/distributed-tracing-tech-preview/jaeger-elasticsearch:5.6.10
 registry.access.redhat.com/distributed-tracing-tech-preview/jaeger-agent
 registry.access.redhat.com/distributed-tracing-tech-preview/jaeger-query
 registry.access.redhat.com/distributed-tracing-tech-preview/jaeger-collector
@@ -188,6 +188,7 @@ registry.access.redhat.com/openshift-istio-tech-preview/sidecar-injector
 registry.access.redhat.com/openshift-istio-tech-preview/istio-operator
 registry.access.redhat.com/openshift-istio-tech-preview/kiali
 registry.access.redhat.com/openshift-istio-tech-preview/3scale-istio-adapter-tech-preview
+
 
 EOF
 )

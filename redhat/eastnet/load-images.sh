@@ -59,8 +59,14 @@ while read -r line; do
         part1=$(echo $line | awk  '{split($0,a,"access.redhat.com"); print a[2]}')
         part2=$(echo $part1 | awk  '{split($0,a,":"); print a[1]}')
         part3=$(echo $part1 | awk  '{split($0,a,":"); print a[2]}')
-        docker tag $line $private_repo$part2
-        docker push $private_repo$part2
+        if [[ "$part3" =~ [^[:space:]] ]]; then
+            docker tag $line $private_repo$part2:$part3
+            docker push $private_repo$part2:$part3
+        else
+            docker tag $line $private_repo$part2
+            docker push $private_repo$part2
+        fi
+        
     fi
 done <<< "$istio_optional_imags"
 
