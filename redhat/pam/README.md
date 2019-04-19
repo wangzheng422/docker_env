@@ -20,6 +20,9 @@ firewall-cmd --reload
 firewall-cmd --list-all
 
 ./add-user.sh -u 'admin' -p 'admin' -g 'guest,mgmtgroup'
+
+
+./target/jboss-eap-7.2/bin/standalone.sh -b 10.147.17.36
 ```
 
 https://github.com/jbossdemocentral/rhpam7-install-demo
