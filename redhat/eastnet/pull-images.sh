@@ -17,7 +17,8 @@ pull_and_save_docker_image(){
 
     while read -r line; do
         if [[ "$line" =~ [^[:space:]] ]]; then
-            [ ! -z $(docker images -q $line) ] || docker pull $line;
+            # [ ! -z $(docker images -q $line) ] || docker pull $line;
+            docker pull $line
         fi
 
         if [ ! -z "$sleep_time" ]; then
