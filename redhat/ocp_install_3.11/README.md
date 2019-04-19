@@ -395,8 +395,9 @@ timezone name=Asia/Shanghai
 file path=/data/docker state=directory
 file src=/data/docker dest=/var/lib/docker state=link
 
-yum name=nc,net-tools,ansible,iptables-services,ncdu,lftp,byobu,glances,htop,lsof,ntpdate,bash-completion,wget,nmon,vim,httpd-tools,fail2ban,unzip,git,bind-utils,bridge-utils,lrzsz,docker,openshift-ansible,docker-compose,glusterfs-fuse
+yum name=nc,net-tools,ansible,iptables-services,ncdu,lftp,byobu,glances,htop,lsof,ntpdate,bash-completion,wget,nmon,vim,httpd-tools,unzip,git,bind-utils,bridge-utils,lrzsz,docker,openshift-ansible,docker-compose,glusterfs-fuse
 
+# epel的ansible版本是2.7， openshift必须用2.6的。
 yum name=ansible state=absent
 yum name=ansible-2.6.13-1.el7ae,openshift-ansible
 
