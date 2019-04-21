@@ -26,12 +26,13 @@ firewall-cmd --list-all
 ```
 
 https://github.com/jbossdemocentral/rhpam7-install-demo
-                                                                           docker run -it -p 8080:8080 -p 9990:9990 jbossdemocentral/rhpam7-install-demo
+
+docker run -it -p 8080:8080 -p 9990:9990 jbossdemocentral/rhpam7-install-demo
 
 Login into Business Central at:
 
-http://localhost:8080/business-central  (u:pamAdmin / p:redhatpam1!)       
+http://v2.wandering.wang:8080/business-central  (u:pamAdmin / p:redhatpam1!)       
 
 Login into Case Management Showcase Application at:                        
 
-http://localhost:8080/rhpam-case-mgmt-showcase  (u:pamAdmin / p:redhatpam1!)
+http://v2.wandering.wang:8080/rhpam-case-mgmt-showcase  (u:pamAdmin / p:redhatpam1!)
