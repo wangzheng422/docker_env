@@ -36,3 +36,9 @@ http://v2.wandering.wang:8080/business-central  (u:pamAdmin / p:redhatpam1!)
 Login into Case Management Showcase Application at:                        
 
 http://v2.wandering.wang:8080/rhpam-case-mgmt-showcase  (u:pamAdmin / p:redhatpam1!)
+
+```bash
+
+node server.js
+
+```
