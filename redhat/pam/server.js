@@ -1,12 +1,26 @@
-var http = require('http'); // 1 - Import Node.js core module
+var http = require('http');
+var fs = require('fs'); // 1 - Import Node.js core module
 
 var server = http.createServer(function (req, res) {   // 2 - creating server
-
+    console.log(req.method);
+    console.log(req.headers);
+    console.log(req.url); 
     //handle incomming requests here..
     if (req.method === "GET") {
-        res.writeHead(200, { "Content-Type": "text/html" });
-        res.write('OK');
-        res.end();
+        
+        // res.writeHead(200, { "Content-Type": "application/xml" });
+        fs.readFile("data.xml", function(err, data){
+            if(err){
+              res.statusCode = 500;
+              res.end(`Error getting the file: ${err}.`);
+            } else {
+              // if the file is found, set Content-type and send data
+              res.setHeader('Content-type', "application/xml" );
+              res.end(data);
+            }
+          });
+        // res.write('<html><body><p>This is home Page.</p></body></html>');
+        // res.end();
     } else if (req.method === "POST") {
     
         var body = "";
@@ -15,13 +29,13 @@ var server = http.createServer(function (req, res) {   // 2 - creating server
         });
 
         req.on("end", function(){
-            res.writeHead(200, { "Content-Type": "text/html" });
-            res.end("OK");
+            res.writeHead(200, { "Content-Type": "application/xml" });
+            res.end("<html><body><p>This is home Page.</p></body></html>");
         });
     } else if (req.method === "DELETE") {
     
-        res.writeHead(200, { "Content-Type": "text/html" });
-        res.end("OK");
+        res.writeHead(200, { "Content-Type": "application/xml" });
+        res.end("<html><body><p>This is home Page.</p></body></html>");
 
     } 
 

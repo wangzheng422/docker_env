@@ -41,4 +41,6 @@ http://v2.wandering.wang:8080/rhpam-case-mgmt-showcase  (u:pamAdmin / p:redhatpa
 
 node server.js
 
+docker run -p 5000:8080 -p 5090:9990 -it jboss/wildfly /opt/jboss/wildfly/bin/standalone.sh -bmanagement 0.0.0.0
+
 ```
