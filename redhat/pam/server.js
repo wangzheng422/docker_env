@@ -9,13 +9,13 @@ var server = http.createServer(function (req, res) {   // 2 - creating server
     if (req.method === "GET") {
         
         // res.writeHead(200, { "Content-Type": "application/xml" });
-        fs.readFile("data.xml", function(err, data){
+        fs.readFile("data.json", function(err, data){
             if(err){
               res.statusCode = 500;
               res.end(`Error getting the file: ${err}.`);
             } else {
               // if the file is found, set Content-type and send data
-              res.setHeader('Content-type', "application/xml" );
+              res.setHeader('Content-type', "application/json" );
               res.end(data);
             }
           });
