@@ -16,7 +16,7 @@ remove_docker_image(){
     cmd_img_str=" "
 
     while read -r line; do
-        if [[ "$line" =~ [^[:space:]] ]]; then
+        if [[ "$line" =~ [^[:space:]] ]] && [[ !  "$line" =~ [\#][:print:]*  ]]; then
             cmd_img_str+=" $line";
         fi
     done <<< "$docker_images"

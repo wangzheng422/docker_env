@@ -16,7 +16,7 @@ pull_and_save_docker_image(){
     sleep_time=$3
 
     while read -r line; do
-        if [[ "$line" =~ [^[:space:]] ]]; then
+        if [[ "$line" =~ [^[:space:]] ]] && [[ !  "$line" =~ [\#][:print:]*  ]]; then
             [ ! -z $(docker images -q $line) ] || docker pull $line;
         fi
 
@@ -27,7 +27,7 @@ pull_and_save_docker_image(){
 
     cmd_str="docker save "
     while read -r line; do
-        if [[ "$line" =~ [^[:space:]] ]]; then
+        if [[ "$line" =~ [^[:space:]] ]] && [[ !  "$line" =~ [\#][:print:]*  ]]; then
             cmd_str+=" $line"
         fi
     done <<< "$docker_images"
@@ -38,9 +38,9 @@ pull_and_save_docker_image(){
 #################################
 ## pull and dump images
 
-pull_and_save_docker_image "$ose3_images" "ose3-images.tgz"
+# pull_and_save_docker_image "$ose3_images" "ose3-images.tgz"
 
-pull_and_save_docker_image "$ose3_optional_imags" "ose3-optional-imags.tgz"
+# pull_and_save_docker_image "$ose3_optional_imags" "ose3-optional-imags.tgz"
 
 pull_and_save_docker_image "$ose3_builder_images" "ose3-builder-images.tgz"
 
