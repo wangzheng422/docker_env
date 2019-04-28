@@ -544,3 +544,16 @@ cat startup.sh | base64
 ## sigma 服务支持
 
 sigma需要docker的socker支持，需要添加如下docker启动参数，-H tcp://0.0.0.0:5678 -H unix:///var/run/docker.sock ， 就加到 /etc/sysconfig/docker里面， 另外别忘记把ansible 的 inventory 文件给改掉。
+
+## stop cluster
+
+```bash
+systemctl stop docker atomic-openshift-node
+
+master-restart
+
+systemctl status etcd.service
+
+systemctl start docker atomic-openshift-node
+
+```
