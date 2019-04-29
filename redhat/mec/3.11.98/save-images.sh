@@ -20,7 +20,7 @@ save_docker_image(){
         if [[ "$line" =~ [^[:space:]] ]] && [[ !  "$line" =~ [\#][:print:]*  ]]; then
             cmd_str+=" $line"
         fi
-    done <<< $(cat $list_file)
+    done < $list_file
 
     $cmd_str | pigz -c > $save_file
 }

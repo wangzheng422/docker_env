@@ -142,9 +142,9 @@ registry.redhat.io/rhscl/devtoolset-7-perftools-rhel7
 registry.redhat.io/rhscl/devtoolset-7-toolchain-rhel7
 registry.redhat.io/rhscl/devtoolset-8-perftools-rhel7
 registry.redhat.io/rhscl/devtoolset-8-toolchain-rhel7
-# registry.redhat.io/rhscl/go-toolset-7-rhel7
+registry.redhat.io/rhscl/go-toolset-7-rhel7
 registry.redhat.io/rhscl/httpd-24-rhel7
-# registry.redhat.io/rhscl/llvm-toolset-7-rhel7
+registry.redhat.io/rhscl/llvm-toolset-7-rhel7
 registry.redhat.io/rhscl/mariadb-100-rhel7
 registry.redhat.io/rhscl/mariadb-101-rhel7
 registry.redhat.io/rhscl/mariadb-102-rhel7
@@ -160,7 +160,7 @@ registry.redhat.io/rhscl/nginx-112-rhel7
 registry.redhat.io/rhscl/nginx-114-rhel7
 registry.redhat.io/rhscl/nginx-16-rhel7
 registry.redhat.io/rhscl/nginx-18-rhel7
-# registry.redhat.io/rhscl/nodejs-10-rhel7
+registry.redhat.io/rhscl/nodejs-10-rhel7
 registry.redhat.io/rhscl/nodejs-4-rhel7
 registry.redhat.io/rhscl/nodejs-6-rhel7
 registry.redhat.io/rhscl/nodejs-8-rhel7
@@ -188,7 +188,7 @@ registry.redhat.io/rhscl/ruby-22-rhel7
 registry.redhat.io/rhscl/ruby-23-rhel7
 registry.redhat.io/rhscl/ruby-24-rhel7
 registry.redhat.io/rhscl/ruby-25-rhel7
-# registry.redhat.io/rhscl/rust-toolset-7-rhel7
+registry.redhat.io/rhscl/rust-toolset-7-rhel7
 registry.redhat.io/rhscl/s2i-base-rhel7
 registry.redhat.io/rhscl/s2i-core-rhel7
 registry.redhat.io/rhscl/thermostat-1-agent-rhel7
@@ -250,7 +250,7 @@ registry.redhat.io/cnv-tech-preview/ember-csi-operator
 registry.redhat.io/cnv-tech-preview/kubevirt-cpu-model-nfd-plugin
 registry.redhat.io/cnv-tech-preview/kubevirt-cpu-node-labeller
 registry.redhat.io/cnv-tech-preview/kubevirt-metrics-collector
-# registry.redhat.io/cnv-tech-preview/kubevirt-operator
+registry.redhat.io/cnv-tech-preview/kubevirt-operator
 registry.redhat.io/cnv-tech-preview/kubevirt-web-ui
 registry.redhat.io/cnv-tech-preview/kubevirt-web-ui-operator
 registry.redhat.io/cnv-tech-preview/multus-cni
@@ -270,8 +270,8 @@ registry.redhat.io/cnv-tech-preview/virt-handler
 registry.redhat.io/cnv-tech-preview/virt-launcher
 registry.redhat.io/cnv-tech-preview/virt-operator
 registry.redhat.io/cnv-tech-preview/virtio-win
-# registry.redhat.io/cnv-tech-preview/virtio-win-container
-# registry.redhat.io/cnv-tech-preview/vmctl
+registry.redhat.io/cnv-tech-preview/virtio-win-container
+registry.redhat.io/cnv-tech-preview/vmctl
 
 EOF
 )
@@ -294,16 +294,16 @@ registry.redhat.io/openshift-istio-tech-preview/pilot
 registry.redhat.io/openshift-istio-tech-preview/proxy-init
 registry.redhat.io/openshift-istio-tech-preview/proxyv2
 registry.redhat.io/openshift-istio-tech-preview/sidecar-injector
-# registry.redhat.io/openshift-istio/citadel
-# registry.redhat.io/openshift-istio/galley
-# registry.redhat.io/openshift-istio/istio-operator
-# registry.redhat.io/openshift-istio/kiali
-# registry.redhat.io/openshift-istio/mixer
-# registry.redhat.io/openshift-istio/openshift-ansible
-# registry.redhat.io/openshift-istio/pilot
-# registry.redhat.io/openshift-istio/proxy-init
-# registry.redhat.io/openshift-istio/proxyv2
-# registry.redhat.io/openshift-istio/sidecar-injector
+registry.redhat.io/openshift-istio/citadel
+registry.redhat.io/openshift-istio/galley
+registry.redhat.io/openshift-istio/istio-operator
+registry.redhat.io/openshift-istio/kiali
+registry.redhat.io/openshift-istio/mixer
+registry.redhat.io/openshift-istio/openshift-ansible
+registry.redhat.io/openshift-istio/pilot
+registry.redhat.io/openshift-istio/proxy-init
+registry.redhat.io/openshift-istio/proxyv2
+registry.redhat.io/openshift-istio/sidecar-injector
 
 registry.redhat.io/distributed-tracing-tech-preview/jaeger-agent
 registry.redhat.io/distributed-tracing-tech-preview/jaeger-all-in-one
@@ -312,10 +312,10 @@ registry.redhat.io/distributed-tracing-tech-preview/jaeger-elasticsearch
 registry.redhat.io/distributed-tracing-tech-preview/jaeger-ingester
 registry.redhat.io/distributed-tracing-tech-preview/jaeger-operator
 registry.redhat.io/distributed-tracing-tech-preview/jaeger-query
-# registry.redhat.io/distributed-tracing/jaeger-agent
-# registry.redhat.io/distributed-tracing/jaeger-collector
-# registry.redhat.io/distributed-tracing/jaeger-elasticsearch
-# registry.redhat.io/distributed-tracing/jaeger-query
+registry.redhat.io/distributed-tracing/jaeger-agent
+registry.redhat.io/distributed-tracing/jaeger-collector
+registry.redhat.io/distributed-tracing/jaeger-elasticsearch
+registry.redhat.io/distributed-tracing/jaeger-query
 
 
 EOF

@@ -43,7 +43,7 @@ load_redhat_image(){
             fi
             
         fi
-    done <<< "$docker_images"
+    done < $list_file
 }
 
 load_docker_image(){

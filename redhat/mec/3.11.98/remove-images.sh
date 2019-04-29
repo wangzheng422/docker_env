@@ -31,7 +31,7 @@ remove_docker_image(){
             fi
             cmd_img_str+=" $line";
         fi
-    done <<< $(cat $list_file)
+    done < $list_file
 
     docker image rm -f $cmd_img_str
 }
