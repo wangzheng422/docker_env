@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 
 export tag="v3.11.98"
-
+export private_repo="registry.redhat.ren"
+export major_tag="v3.11"
 # docker search rhgs3 | grep redhat.io | awk '{print $2}'
 
 ## 后续导入的时候，要用2个版本号

@@ -14,13 +14,14 @@ dummy=$1
 ## read configration
 source config.sh
 
-private_repo="registry.redhat.ren"
-major_tag="v3.11"
+# private_repo="registry.redhat.ren"
+# major_tag="v3.11"
 
 load_redhat_image(){
 
     docker_images=$1
     split_tag=$2
+    list_file=$3
 
     while read -r line; do
         if [[ "$line" =~ [^[:space:]] ]] && [[ !  "$line" =~ [\#][:print:]*  ]]; then
@@ -30,9 +31,15 @@ load_redhat_image(){
             if [[ "$part3" =~ [^[:space:]] ]]; then
                 docker tag $line $private_repo$part2:$part3
                 docker push $private_repo$part2:$part3
+                docker tag $line $private_repo$part2:$major_tag
+                docker push $private_repo$part2:$major_tag
+                docker tag $line $private_repo$part2
+                docker push $private_repo$part2
             else
                 docker tag $line $private_repo$part2
                 docker push $private_repo$part2
+                docker tag $line $private_repo$part2:$major_tag
+                docker push $private_repo$part2:$major_tag
             fi
             
         fi
@@ -59,122 +66,19 @@ load_docker_image(){
     done <<< "$docker_images"
 }
 
-#################################
-## pull and dump images
+load_redhat_image "$ose3_images" "redhat.io" "ose3-images.list"
 
-# while read -r line; do
-#     if [[ "$line" =~ [^[:space:]] ]]; then
-#         part1=$(echo $line | awk '{split($0,a,"redhat.io"); print a[2]}')
-#         part2=$(echo $part1 | awk  '{split($0,a,":"); print a[1]}')
-#         part3=$(echo $part1 | awk  '{split($0,a,":"); print a[2]}')
-#         docker tag $line $private_repo$part2:$tag
-#         docker push "$private_repo$part2:$tag"
-#         docker tag $line $private_repo$part2:$major_tag
-#         docker push $private_repo$part2:$major_tag
-#         docker tag $line $private_repo$part2
-#         docker push $private_repo$part2
-#     fi
-# done <<< "$ose3_images"
+load_redhat_image "$ose3_optional_imags" "redhat.io" "ose3-optional-imags.list"
 
-load_redhat_image "$ose3_images" "redhat.io"
+load_redhat_image "$ose3_builder_images" "redhat.io" "ose3-builder-images.list"
 
+load_redhat_image "$cnv_optional_imags" "redhat.io" "cnv-optional-images.list"
 
-###################################
-## pull and dump images
+load_redhat_image "$istio_optional_imags" "redhat.io" "istio-optional-images.list"
 
-# while read -r line; do
-#     if [[ "$line" =~ [^[:space:]] ]]; then
-#         part1=$(echo $line | awk  '{split($0,a,"redhat.io"); print a[2]}')
-#         part2=$(echo $part1 | awk  '{split($0,a,":"); print a[1]}')
-#         part3=$(echo $part1 | awk  '{split($0,a,":"); print a[2]}')
-#         docker tag $line $private_repo$part2:$part3
-#         docker push $private_repo$part2:$part3
-#         docker tag $line $private_repo$part2
-#         docker push $private_repo$part2
-#     fi
-# done <<< "$ose3_optional_imags"
+load_redhat_image "$docker_builder_images" "docker.io" "docker-builder-images.list"
 
-load_redhat_image "$ose3_optional_imags" "redhat.io"
-
-####################################
-## pull and dump images
-
-# while read -r line; do
-#     if [[ "$line" =~ [^[:space:]] ]]; then
-#         part1=$(echo $line | awk  '{split($0,a,"redhat.io"); print a[2]}')
-#         part2=$(echo $part1 | awk  '{split($0,a,":"); print a[1]}')
-#         part3=$(echo $part1 | awk  '{split($0,a,":"); print a[2]}')
-#         docker tag $line $private_repo$part2:$tag
-#         docker push $private_repo$part2:$tag
-#         docker tag $line $private_repo$part2
-#         docker push $private_repo$part2
-#     fi
-# done <<< "$ose3_builder_images"
-
-load_redhat_image "$ose3_builder_images" "redhat.io"
-
-####################################
-## pull and dump images
-
-# while read -r line; do
-#     if [[ "$line" =~ [^[:space:]] ]]; then
-#         part1=$(echo $line | awk  '{split($0,a,"redhat.io"); print a[2]}')
-#         part2=$(echo $part1 | awk  '{split($0,a,":"); print a[1]}')
-#         part3=$(echo $part1 | awk  '{split($0,a,":"); print a[2]}')
-#         docker tag $line $private_repo$part2:$tag
-#         docker push $private_repo$part2:$tag
-#         docker tag $line $private_repo$part2
-#         docker push $private_repo$part2
-#     fi
-# done <<< "$cnv_optional_imags"
-
-load_redhat_image "$cnv_optional_imags" "redhat.io"
-
-load_redhat_image "$istio_optional_imags" "redhat.io"
-
-
-##################################
-## pull and dump images
-
-# while read -r line; do
-#     if [[ "$line" =~ [^[:space:]] ]]; then
-
-#         part2=$(echo $line | awk  '{split($0,a,":"); print a[1]}')
-#         part3=$(echo $line | awk  '{split($0,a,":"); print a[2]}')
-#         if [ -z "$part3" ]; then
-#             docker tag $line $private_repo/$part2
-#             docker push $private_repo/$part2
-#         else
-#             docker tag $line $private_repo/$part2:$part3
-#             docker push $private_repo/$part2:$part3
-#         fi
-#     fi
-# done <<< "$docker_builder_images"
-
-load_docker_image "$docker_builder_images"
-
-##################################
-## pull and dump images
-
-# while read -r line; do
-#     if [[ "$line" =~ [^[:space:]] ]]; then
-#         part1=$(echo $line | awk  '{split($0,a,"quay.io"); print a[2]}')
-#         part2=$(echo $part1 | awk  '{split($0,a,":"); print a[1]}')
-#         part3=$(echo $part1 | awk  '{split($0,a,":"); print a[2]}')
-#         if [ -z "$part3" ]; then
-#             docker tag $line $private_repo$part2
-#             docker push $private_repo$part2
-#         else
-#             docker tag $line $private_repo$part2:$part3
-#             docker push $private_repo$part2:$part3
-#         fi
-#     fi
-# done <<< "$other_builder_images"
-
-load_redhat_image "$other_builder_images" "quay.io"
-
-
-##################################
+load_redhat_image "$other_builder_images" "quay.io" "other-builder-images.list"
 
 docker image prune -f
 
