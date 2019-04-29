@@ -249,7 +249,7 @@ registry.redhat.io/cnv-tech-preview/ember-csi-operator
 registry.redhat.io/cnv-tech-preview/kubevirt-cpu-model-nfd-plugin
 registry.redhat.io/cnv-tech-preview/kubevirt-cpu-node-labeller
 registry.redhat.io/cnv-tech-preview/kubevirt-metrics-collector
-registry.redhat.io/cnv-tech-preview/kubevirt-operator
+# registry.redhat.io/cnv-tech-preview/kubevirt-operator
 registry.redhat.io/cnv-tech-preview/kubevirt-web-ui
 registry.redhat.io/cnv-tech-preview/kubevirt-web-ui-operator
 registry.redhat.io/cnv-tech-preview/multus-cni
@@ -269,13 +269,15 @@ registry.redhat.io/cnv-tech-preview/virt-handler
 registry.redhat.io/cnv-tech-preview/virt-launcher
 registry.redhat.io/cnv-tech-preview/virt-operator
 registry.redhat.io/cnv-tech-preview/virtio-win
-registry.redhat.io/cnv-tech-preview/virtio-win-container
-registry.redhat.io/cnv-tech-preview/vmctl
+# registry.redhat.io/cnv-tech-preview/virtio-win-container
+# registry.redhat.io/cnv-tech-preview/vmctl
 
 EOF
 )
 
 ## istio, Red Hat OpenShift Service Mesh 
+# docker search istio | grep redhat.io | awk '{print $2}'
+# docker search distributed-tracing | grep redhat.io | awk '{print $2}'
 istio_optional_imags=$(cat << EOF
 
 registry.redhat.io/openshift-istio-tech-preview/3scale-istio-adapter
@@ -291,16 +293,16 @@ registry.redhat.io/openshift-istio-tech-preview/pilot
 registry.redhat.io/openshift-istio-tech-preview/proxy-init
 registry.redhat.io/openshift-istio-tech-preview/proxyv2
 registry.redhat.io/openshift-istio-tech-preview/sidecar-injector
-registry.redhat.io/openshift-istio/citadel
-registry.redhat.io/openshift-istio/galley
-registry.redhat.io/openshift-istio/istio-operator
-registry.redhat.io/openshift-istio/kiali
-registry.redhat.io/openshift-istio/mixer
-registry.redhat.io/openshift-istio/openshift-ansible
-registry.redhat.io/openshift-istio/pilot
-registry.redhat.io/openshift-istio/proxy-init
-registry.redhat.io/openshift-istio/proxyv2
-registry.redhat.io/openshift-istio/sidecar-injector
+# registry.redhat.io/openshift-istio/citadel
+# registry.redhat.io/openshift-istio/galley
+# registry.redhat.io/openshift-istio/istio-operator
+# registry.redhat.io/openshift-istio/kiali
+# registry.redhat.io/openshift-istio/mixer
+# registry.redhat.io/openshift-istio/openshift-ansible
+# registry.redhat.io/openshift-istio/pilot
+# registry.redhat.io/openshift-istio/proxy-init
+# registry.redhat.io/openshift-istio/proxyv2
+# registry.redhat.io/openshift-istio/sidecar-injector
 
 registry.redhat.io/distributed-tracing-tech-preview/jaeger-agent
 registry.redhat.io/distributed-tracing-tech-preview/jaeger-all-in-one
@@ -309,45 +311,30 @@ registry.redhat.io/distributed-tracing-tech-preview/jaeger-elasticsearch
 registry.redhat.io/distributed-tracing-tech-preview/jaeger-ingester
 registry.redhat.io/distributed-tracing-tech-preview/jaeger-operator
 registry.redhat.io/distributed-tracing-tech-preview/jaeger-query
-registry.redhat.io/distributed-tracing/jaeger-agent
-registry.redhat.io/distributed-tracing/jaeger-collector
-registry.redhat.io/distributed-tracing/jaeger-elasticsearch
-registry.redhat.io/distributed-tracing/jaeger-query
+# registry.redhat.io/distributed-tracing/jaeger-agent
+# registry.redhat.io/distributed-tracing/jaeger-collector
+# registry.redhat.io/distributed-tracing/jaeger-elasticsearch
+# registry.redhat.io/distributed-tracing/jaeger-query
+
 
 EOF
 )
-# registry.access.redhat.com/openshift-istio-tech-preview/openshift-ansible
-# registry.access.redhat.com/openshift-istio-tech-preview/proxyv2
-# registry.access.redhat.com/openshift-istio-tech-preview/pilot
-# registry.access.redhat.com/openshift-istio-tech-preview/galley
-# registry.access.redhat.com/openshift-istio-tech-preview/mixer
-# registry.access.redhat.com/openshift-istio-tech-preview/proxy-init
-# registry.access.redhat.com/openshift-istio-tech-preview/citadel
-# registry.access.redhat.com/distributed-tracing-tech-preview/jaeger-elasticsearch
-# registry.access.redhat.com/distributed-tracing-tech-preview/jaeger-agent
-# registry.access.redhat.com/distributed-tracing-tech-preview/jaeger-query
-# registry.access.redhat.com/distributed-tracing-tech-preview/jaeger-collector
-# registry.access.redhat.com/openshift-istio-tech-preview/sidecar-injector
-# registry.access.redhat.com/openshift-istio-tech-preview/istio-operator
-# registry.access.redhat.com/openshift-istio-tech-preview/kiali
-# registry.access.redhat.com/openshift-istio-tech-preview/3scale-istio-adapter-tech-preview
-#registry.access.redhat.com/distributed-tracing-tech-preview/jaeger-ingester
-#registry.access.redhat.com/distributed-tracing-tech-preview/jaeger-all-in-one
+
 
 docker_builder_images=$(cat << EOF
-gitlab/gitlab-ce
-nfvpe/sriov-device-plugin:latest
-centos/tools 
-nfvpe/multus:latest
-kubevirt/virt-api:v0.14.0
-kubevirt/virt-launcher:v0.14.0
-kubevirt/virt-controller:v0.14.0
-kubevirt/virt-handler:v0.14.0
-kubevirt/cirros-registry-disk-demo
-kubevirt/container-disk-v1alpha
-kubevirt/virt-operator:v0.14.0
-nvidia/k8s-device-plugin:1.11
-mirrorgooglecontainers/cuda-vector-add:v0.1
+docker.io/gitlab/gitlab-ce
+docker.io/nfvpe/sriov-device-plugin:latest
+docker.io/centos/tools 
+docker.io/nfvpe/multus:latest
+docker.io/kubevirt/virt-api:v0.14.0
+docker.io/kubevirt/virt-launcher:v0.14.0
+docker.io/kubevirt/virt-controller:v0.14.0
+docker.io/kubevirt/virt-handler:v0.14.0
+docker.io/kubevirt/cirros-registry-disk-demo
+docker.io/kubevirt/container-disk-v1alpha
+docker.io/kubevirt/virt-operator:v0.14.0
+docker.io/nvidia/k8s-device-plugin:1.11
+docker.io/mirrorgooglecontainers/cuda-vector-add:v0.1
 EOF
 )
 

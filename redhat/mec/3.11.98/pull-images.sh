@@ -10,14 +10,26 @@ dummy=$1
 ## read configration
 source config.sh
 
-pull_and_save_docker_image(){
+pull_docker_image(){
     docker_images=$1
     save_file=$2
-    sleep_time=$3
+    list_file=$3
+
+    echo > $list_file
 
     while read -r line; do
         if [[ "$line" =~ [^[:space:]] ]] && [[ !  "$line" =~ [\#][:print:]*  ]]; then
-            [ ! -z $(docker images -q $line) ] || docker pull $line;
+            if [[ -z $(docker images -q $line) ]]; then
+                if docker pull $line; then
+                    echo $line >> $list_file
+                else
+                    echo "# $line">> $list_file
+                fi
+            else
+                echo $line >> $list_file
+            fi
+        else
+            echo $line >> $list_file
         fi
 
         if [ ! -z "$sleep_time" ]; then
@@ -25,32 +37,24 @@ pull_and_save_docker_image(){
         fi
     done <<< "$docker_images"
 
-    cmd_str="docker save "
-    while read -r line; do
-        if [[ "$line" =~ [^[:space:]] ]] && [[ !  "$line" =~ [\#][:print:]*  ]]; then
-            cmd_str+=" $line"
-        fi
-    done <<< "$docker_images"
-
-    $cmd_str | gzip -c > $save_file
 }
 
 #################################
 ## pull and dump images
 
-# pull_and_save_docker_image "$ose3_images" "ose3-images.tgz"
+pull_docker_image "$ose3_images" "ose3-images.tgz" "ose3-images.list"
 
-# pull_and_save_docker_image "$ose3_optional_imags" "ose3-optional-imags.tgz"
+pull_docker_image "$ose3_optional_imags" "ose3-optional-imags.tgz" "ose3-optional-imags.list"
 
-pull_and_save_docker_image "$ose3_builder_images" "ose3-builder-images.tgz"
+pull_docker_image "$ose3_builder_images" "ose3-builder-images.tgz" "ose3-builder-images.list"
 
-pull_and_save_docker_image "$cnv_optional_imags" "cnv-optional-images.tgz"
+pull_docker_image "$cnv_optional_imags" "cnv-optional-images.tgz" "cnv-optional-images.list"
 
-pull_and_save_docker_image "$istio_optional_imags" "istio-optional-images.tgz"
+pull_docker_image "$istio_optional_imags" "istio-optional-images.tgz" "istio-optional-images.list"
 
-pull_and_save_docker_image "$docker_builder_images" "docker-builder-images.tgz"
+pull_docker_image "$docker_builder_images" "docker-builder-images.tgz" "docker-builder-images.list"
 
-pull_and_save_docker_image "$other_builder_images" "other-builder-images.tgz"
+pull_docker_image "$other_builder_images" "other-builder-images.tgz" "other-builder-images.list"
 
 ##################################
 
