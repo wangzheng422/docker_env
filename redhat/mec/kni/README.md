@@ -46,7 +46,7 @@ timedatectl set-timezone Asia/Shanghai
 hostnamectl set-hostname kni-master.redhat.ren
 nmcli connection modify enp1s0f0 ipv4.addresses 192.168.39.31/24
 nmcli connection modify enp1s0f0 ipv4.gateway 192.168.39.254
-nmcli connection modify enp1s0f0 ipv4.dns 192.168.39.129
+nmcli connection modify enp1s0f0 ipv4.dns 192.168.39.31
 nmcli connection modify enp1s0f0 ipv4.method manual
 nmcli connection modify enp1s0f0 connection.autoconnect yes
 nmcli connection reload
@@ -55,7 +55,7 @@ nmcli connection up enp1s0f0
 hostnamectl set-hostname kni-infra.redhat.ren
 nmcli connection modify eno2 ipv4.addresses 192.168.39.154/24
 nmcli connection modify eno2 ipv4.gateway 192.168.39.254
-nmcli connection modify eno2 ipv4.dns 192.168.39.129
+nmcli connection modify eno2 ipv4.dns 192.168.39.31
 nmcli connection modify eno2 ipv4.method manual
 nmcli connection modify eno2 connection.autoconnect yes
 nmcli connection reload
@@ -64,7 +64,7 @@ nmcli connection up eno2
 hostnamectl set-hostname kni-node1.redhat.ren
 nmcli connection modify enp1s0f0 ipv4.addresses 192.168.39.32/24
 nmcli connection modify enp1s0f0 ipv4.gateway 192.168.39.254
-nmcli connection modify enp1s0f0 ipv4.dns 192.168.39.129
+nmcli connection modify enp1s0f0 ipv4.dns 192.168.39.31
 nmcli connection modify enp1s0f0 ipv4.method manual
 nmcli connection modify enp1s0f0 connection.autoconnect yes
 nmcli connection reload
@@ -73,7 +73,7 @@ nmcli connection up enp1s0f0
 hostnamectl set-hostname kni-node2.redhat.ren
 nmcli connection modify enp1s0f0 ipv4.addresses 192.168.39.33/24
 nmcli connection modify enp1s0f0 ipv4.gateway 192.168.39.254
-nmcli connection modify enp1s0f0 ipv4.dns 192.168.39.129
+nmcli connection modify enp1s0f0 ipv4.dns 192.168.39.31
 nmcli connection modify enp1s0f0 ipv4.method manual
 nmcli connection modify enp1s0f0 connection.autoconnect yes
 nmcli connection reload
@@ -82,7 +82,7 @@ nmcli connection up enp1s0f0
 hostnamectl set-hostname kni-node3.redhat.ren
 nmcli connection modify enp1s0f0 ipv4.addresses 192.168.39.34/24
 nmcli connection modify enp1s0f0 ipv4.gateway 192.168.39.254
-nmcli connection modify enp1s0f0 ipv4.dns 192.168.39.129
+nmcli connection modify enp1s0f0 ipv4.dns 192.168.39.31
 nmcli connection modify enp1s0f0 ipv4.method manual
 nmcli connection modify enp1s0f0 connection.autoconnect yes
 nmcli connection reload
@@ -91,7 +91,7 @@ nmcli connection up enp1s0f0
 hostnamectl set-hostname kni-node4.redhat.ren
 nmcli connection modify eno2 ipv4.addresses 192.168.39.152/24
 nmcli connection modify eno2 ipv4.gateway 192.168.39.254
-nmcli connection modify eno2 ipv4.dns 192.168.39.129
+nmcli connection modify eno2 ipv4.dns 192.168.39.31
 nmcli connection modify eno2 ipv4.method manual
 nmcli connection modify eno2 connection.autoconnect yes
 nmcli connection reload
@@ -142,6 +142,7 @@ yum -y install byobu htop
 不过文章里面需要下载命令行工具，我们可以用docker来做这件事情
 
 ```bash
+cd /Users/wzh/Documents/redhat/tools/redhat.ren
 docker run -it --rm --name certbot \
             -v "/Users/wzh/Documents/redhat/tools/redhat.ren/etc:/etc/letsencrypt" \
             -v "/Users/wzh/Documents/redhat/tools/redhat.ren/lib:/var/lib/letsencrypt" \
@@ -168,8 +169,8 @@ yum -y install docker-distribution
 
 # 把 Let’s Encrypt 上传到服务器上面
 mkdir /etc/crts/
-cp fullchain1.pem /etc/crts/redhat.ren.crt
-cp privkey1.pem /etc/crts/redhat.ren.key
+cp redhat.ren.crt /etc/crts/redhat.ren.crt
+cp redhat.ren.key /etc/crts/redhat.ren.key
 
 
 mkdir -p /data/registry
@@ -212,6 +213,21 @@ docker load -i other-builder-images.tgz
 
 运行 load-images.sh 来向镜像仓库倒入镜像
 
+## cri-o
+
+```bash
+yum install cri-o crictl podman buildah skopeo pigz
+
+yum remove cri-o crictl podman buildah skopeo pigz
+
+systemctl enable cri-o
+systemctl start cri-o
+
+yum install docker
+systemctl start docker
+systemctl enable docker 
+```
+
 ## 准备DNS
 
 ```bash
@@ -220,15 +236,15 @@ yum -y install dnsmasq
 
 cat  > /etc/dnsmasq.d/openshift-cluster.conf << EOF
 local=/redhat.ren/
-address=/.kni-apps.redhat.ren/192.168.39.130
-address=/kni-master.redhat.ren/192.168.39.129
-address=/kni-infra.redhat.ren/192.168.39.130
-address=/kni-node1.redhat.ren/192.168.39.131
-address=/kni-node2.redhat.ren/192.168.39.132
-address=/kni-node3.redhat.ren/192.168.39.134
-address=/kni-node4.redhat.ren/192.168.39.134
-address=/kni-registry.redhat.ren/192.168.39.129
-address=/kni-paas.redhat.ren/192.168.39.129
+address=/.kni-apps.redhat.ren/192.168.39.154
+address=/kni-master.redhat.ren/192.168.39.31
+address=/kni-infra.redhat.ren/192.168.39.154
+address=/kni-node1.redhat.ren/192.168.39.32
+address=/kni-node2.redhat.ren/192.168.39.33
+address=/kni-node3.redhat.ren/192.168.39.34
+address=/kni-node4.redhat.ren/192.168.39.152
+address=/kni-registry.redhat.ren/192.168.39.31
+address=/kni-paas.redhat.ren/192.168.39.31
 EOF
 
 # master节点，本次环境没有外网，也没有上级dns，就不用做这里了。

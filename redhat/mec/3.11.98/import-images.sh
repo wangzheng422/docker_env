@@ -15,7 +15,7 @@ import_docker_image(){
     save_file=$2
     list_file=$3
 
-    zcat $save_file | docker load
+    docker load -i $save_file
 }
 
 #################################

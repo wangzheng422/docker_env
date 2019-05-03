@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 export tag="v3.11.98"
-export private_repo="registry.redhat.ren"
+export private_repo="kni-registry.redhat.ren:5021"
 export major_tag="v3.11"
 # docker search rhgs3 | grep redhat.io | awk '{print $2}'
 

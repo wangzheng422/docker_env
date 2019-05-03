@@ -46,25 +46,25 @@ load_redhat_image(){
     done < $list_file
 }
 
-load_docker_image(){
+# load_docker_image(){
 
-    docker_images=$1
+#     docker_images=$1
 
-    while read -r line; do
-        if [[ "$line" =~ [^[:space:]] ]] && [[ !  "$line" =~ [\#][:print:]*  ]]; then
+#     while read -r line; do
+#         if [[ "$line" =~ [^[:space:]] ]] && [[ !  "$line" =~ [\#][:print:]*  ]]; then
 
-            part2=$(echo $line | awk  '{split($0,a,":"); print a[1]}')
-            part3=$(echo $line | awk  '{split($0,a,":"); print a[2]}')
-            if [ -z "$part3" ]; then
-                docker tag $line $private_repo/$part2
-                docker push $private_repo/$part2
-            else
-                docker tag $line $private_repo/$part2:$part3
-                docker push $private_repo/$part2:$part3
-            fi
-        fi
-    done <<< "$docker_images"
-}
+#             part2=$(echo $line | awk  '{split($0,a,":"); print a[1]}')
+#             part3=$(echo $line | awk  '{split($0,a,":"); print a[2]}')
+#             if [ -z "$part3" ]; then
+#                 docker tag $line $private_repo/$part2
+#                 docker push $private_repo/$part2
+#             else
+#                 docker tag $line $private_repo/$part2:$part3
+#                 docker push $private_repo/$part2:$part3
+#             fi
+#         fi
+#     done <<< "$docker_images"
+# }
 
 load_redhat_image "$ose3_images" "redhat.io" "ose3-images.list"
 
