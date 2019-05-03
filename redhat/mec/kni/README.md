@@ -24,65 +24,10 @@ EOF
 
 ## rhel 安装源准备
 
-首先要做的，就是安装rhel操作系统了。去官网下周binary dvd, 4.2G左右。最小化安装就可以。
-
-然后弄一下订阅的问题，这个在一台机器上弄就好了，我们之后把安装包导出来，去其他机器上面装。
-
 ```bash
-subscription-manager register --username **** --password ********
-
-subscription-manager list --available --all
-
-subscription-manager attach --pool=********
-
-subscription-manager repos --disable="*"
-
-subscription-manager list --available --matches '*OpenShift Container Platform*'
-
-subscription-manager repos \
-    --proxy="http://192.168.253.1:5084" \
-    --enable="rhel-7-server-rpms" \
-    --enable="rhel-7-server-extras-rpms" \
-    --enable="rhel-7-server-ose-3.11-rpms" \
-    --enable="rhel-7-server-ansible-2.6-rpms" \
-    --enable="rhel-7-server-cnv-1.4-tech-preview-rpms"
-
-yum -y install wget yum-utils createrepo docker git
+ssh -i ~/.ssh/id_rsa.redhat -p 6001 -tt root@a1.wandering.wang byobu
 
 ```
-
-把epel的源也装上
-
-```bash
-wget https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
-
-yum install ./epel-release-latest-7.noarch.rpm
-
-yum -y install htop byobu ethtool
-```
-
-GPU相关的包的源也装上
-
-```bash
-yum install -y https://developer.download.nvidia.com/compute/cuda/repos/rhel7/x86_64/cuda-repo-rhel7-9.2.88-1.x86_64.rpm
-
-curl -so /etc/yum.repos.d/nvidia-container-runtime.repo https://nvidia.github.io/nvidia-container-runtime/centos7/nvidia-container-runtime.repo
-```
-
-开始制作镜像安装源吧
-
-```bash
-reposync -n -d -l -m
-
-# 如果想用group install，那么要这么下载
-reposync --gpgcheck -n -d -l -m --downloadcomps --download-metadata
-reposync -n -d -l -m --downloadcomps --download-metadata
-
-createrepo ./
-createrepo -g ./rhel-7-server-rpms/comps.xml --update .
-```
-
-镜像应该有30多G。
 
 ## 准备docker镜像
 
@@ -166,13 +111,6 @@ lspci | egrep -i --color 'network|ethernet'
 systemctl status chronyd
 chronyc status
 
-find . -name vsftp*
-yum -y install ./data/rhel-7-server-rpms/Packages/vsftpd-3.0.2-25.el7.x86_64.rpm
-mv /root/down/data /var/ftp/
-systemctl start vsftpd
-systemctl restart vsftpd
-systemctl enable vsftpd
-
 mkdir /etc/yum.repos.d.bak
 mv /etc/yum.repos.d/* /etc/yum.repos.d.bak
 
@@ -187,25 +125,11 @@ EOF
 
 yum clean all
 yum repolist
-
-# 如果有问题，按照下面的链接，解决权限问题
-# https://www.tuxfixer.com/vsftpd-installation-on-centos-7-with-selinux/
-chown -R ftp:ftp /var/ftp
-chmod a-w /var/ftp
-
-# below is no use
-semanage fcontext -a -t public_content_rw_t /var/ftp
-restorecon -Rvv /var/ftp
-setsebool -P ftp_home_dir 1
-setsebool -P ftpd_full_access 1
-ls -lZ /var | grep ftp
-
-firewall-cmd --permanent --add-service=ftp
-firewall-cmd --reload
+yum -y install byobu htop
 
 # 一些基础的包
-yum -y update
-yum -y install wget git net-tools bind-utils iptables-services bridge-utils bash-completion vim lrzsz unzip docker htop
+# yum -y update
+# yum -y install wget git net-tools bind-utils iptables-services bridge-utils bash-completion vim lrzsz unzip htop
 
 ```
 
@@ -227,12 +151,12 @@ cp ./etc/archive/redhat.ren/fullchain1.pem redhat.ren.crt
 cp ./etc/archive/redhat.ren/privkey1.pem redhat.ren.key
 
 docker run -it --rm --name certbot \
-            -v "/Users/wzh/Documents/redhat/tools/apps.redhat.ren/etc:/etc/letsencrypt" \
-            -v "/Users/wzh/Documents/redhat/tools/apps.redhat.ren/lib:/var/lib/letsencrypt" \
-            certbot/certbot certonly  -d "*.apps.redhat.ren" --manual --preferred-challenges dns-01  --server https://acme-v02.api.letsencrypt.org/directory
+            -v "/Users/wzh/Documents/redhat/tools/kni-apps.redhat.ren/etc:/etc/letsencrypt" \
+            -v "/Users/wzh/Documents/redhat/tools/kni-apps.redhat.ren/lib:/var/lib/letsencrypt" \
+            certbot/certbot certonly  -d "*.kni-apps.redhat.ren" --manual --preferred-challenges dns-01  --server https://acme-v02.api.letsencrypt.org/directory
 
-cp ./etc/archive/apps.redhat.ren/fullchain1.pem apps.redhat.ren.crt
-cp ./etc/archive/apps.redhat.ren/privkey1.pem apps.redhat.ren.key
+cp ./etc/archive/kni-apps.redhat.ren/fullchain1.pem kni-apps.redhat.ren.crt
+cp ./etc/archive/kni-apps.redhat.ren/privkey1.pem kni-apps.redhat.ren.key
 ```
 
 有了证书，就让我们愉快的开始registry安装吧。
@@ -247,6 +171,8 @@ mkdir /etc/crts/
 cp fullchain1.pem /etc/crts/redhat.ren.crt
 cp privkey1.pem /etc/crts/redhat.ren.key
 
+
+mkdir -p /data/registry
 cat << EOF > /etc/docker-distribution/registry/config.yml
 version: 0.1
 log:
@@ -256,7 +182,7 @@ storage:
     cache:
         layerinfo: inmemory
     filesystem:
-        rootdirectory: /var/lib/registry
+        rootdirectory: /data/registry
 http:
     addr: :5021
     tls:
@@ -294,14 +220,15 @@ yum -y install dnsmasq
 
 cat  > /etc/dnsmasq.d/openshift-cluster.conf << EOF
 local=/redhat.ren/
-address=/.apps.redhat.ren/192.168.39.130
-address=/master.redhat.ren/192.168.39.129
-address=/infra.redhat.ren/192.168.39.130
-address=/node1.redhat.ren/192.168.39.131
-address=/node2.redhat.ren/192.168.39.132
-address=/node4.redhat.ren/192.168.39.134
-address=/registry.redhat.ren/192.168.39.129
-address=/paas.redhat.ren/192.168.39.129
+address=/.kni-apps.redhat.ren/192.168.39.130
+address=/kni-master.redhat.ren/192.168.39.129
+address=/kni-infra.redhat.ren/192.168.39.130
+address=/kni-node1.redhat.ren/192.168.39.131
+address=/kni-node2.redhat.ren/192.168.39.132
+address=/kni-node3.redhat.ren/192.168.39.134
+address=/kni-node4.redhat.ren/192.168.39.134
+address=/kni-registry.redhat.ren/192.168.39.129
+address=/kni-paas.redhat.ren/192.168.39.129
 EOF
 
 # master节点，本次环境没有外网，也没有上级dns，就不用做这里了。
