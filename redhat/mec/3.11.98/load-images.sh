@@ -25,7 +25,10 @@ load_redhat_image(){
 
     while read -r line; do
         if [[ "$line" =~ [^[:space:]] ]] && [[ !  "$line" =~ [\#][:print:]*  ]]; then
-            part1=$(echo $line | awk  '{split($0,a,$split_tag); print a[2]}')
+            # part1=$(echo "$line" | awk  '{split($0,a,"$split_tag"); print a[2]}')
+            # https://stackoverflow.com/questions/19885660/shell-script-command-to-split-string-using-a-variable-delimiter
+            # front = ${line%${split_tag}*}
+            part1=${line#*${split_tag}}
             part2=$(echo $part1 | awk  '{split($0,a,":"); print a[1]}')
             part3=$(echo $part1 | awk  '{split($0,a,":"); print a[2]}')
             if [[ "$part3" =~ [^[:space:]] ]]; then
