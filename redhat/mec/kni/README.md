@@ -103,9 +103,9 @@ lspci | egrep -i --color 'network|ethernet'
 
 ```
 
-## 配置yum源
+## ntp 时间源
 
-我们用vsftpd来做yum源。先把之前弄好的yum镜像，解压缩到本地。
+服务器配置和客户端不一样，服务器需要把本地时钟作为源。
 
 ```bash
 vi /etc/chrony.conf
@@ -122,7 +122,13 @@ firewall-cmd --reload
 firewall-cmd --list-all
 
 timedatectl set-ntp true
+```
 
+## 配置yum源
+
+我们用vsftpd来做yum源。先把之前弄好的yum镜像，解压缩到本地。
+
+```bash
 mkdir /etc/yum.repos.d.bak
 mv /etc/yum.repos.d/* /etc/yum.repos.d.bak
 
@@ -215,11 +221,11 @@ firewall-cmd --reload
 firewall-cmd --list-all
 
 # 把之前下载的镜像导入本地
-docker load -i ose3-images.tgz
-docker load -i ose3-optional-imags.tgz
-docker load -i ose3-builder-images.tgz
-docker load -i docker-builder-images.tgz
-docker load -i other-builder-images.tgz
+# docker load -i ose3-images.tgz
+# docker load -i ose3-optional-imags.tgz
+# docker load -i ose3-builder-images.tgz
+# docker load -i docker-builder-images.tgz
+# docker load -i other-builder-images.tgz
 
 ```
 
@@ -289,7 +295,12 @@ systemctl restart dnsmasq
 # firewall-cmd --permanent --add-service=rpc-bind
 # firewall-cmd --reload
 
-yum -y install openshift-ansible
+# yum info <package name>
+# yum list <package name>
+# yum --showduplicates list <package name>
+yum --showduplicates list ansible
+yum downgrade ansible-2.6.16-1.el7ae
+yum install ansible-2.6.16-1.el7ae openshift-ansible
 
 # dhcp 检测命令
 nmap --script broadcast-dhcp-discover
@@ -318,47 +329,53 @@ for i in kni-master kni-infra kni-node1 kni-node2 kni-node3 kni-node4; do ssh $i
 以下内容，不能全部执行，根据需要自取。
 
 ```bash
-ansible-console --private-key ~/.ssh/id_rsa.redhat cmcc -u root
+ansible-console cmcc -u root
 
-copy src=./hosts dest=/etc/hosts
+# 以下不要在ntp server上运行
+copy src=./chrony_other.conf dest=/etc/chrony.conf
+systemd name=chronyd state=restarted enabled=no
 
-yum_repository name=ftp description=ftp baseurl=ftp://yum.redhat.ren/data gpgcheck=no state=present
+# copy src=./hosts dest=/etc/hosts
 
-yum name=byobu
+# yum_repository name=ftp description=ftp baseurl=ftp://yum.redhat.ren/data gpgcheck=no state=present
 
-timezone name=Asia/Shanghai
+# yum name=byobu
 
-file path=/data/docker state=directory
-file src=/data/docker dest=/var/lib/docker state=link
+# timezone name=Asia/Shanghai
 
-yum name=nc,net-tools,ansible,iptables-services,ncdu,lftp,byobu,glances,htop,lsof,ntpdate,bash-completion,wget,nmon,vim,httpd-tools,unzip,git,bind-utils,bridge-utils,lrzsz,docker,openshift-ansible,docker-compose,glusterfs-fuse
+# file path=/data/docker state=directory
+# file src=/data/docker dest=/var/lib/docker state=link
+
+yum name=nc,net-tools,ansible-2.6.16-1.el7ae,iptables-services,ncdu,lftp,byobu,glances,htop,lsof,ntpdate,bash-completion,wget,nmon,vim,httpd-tools,unzip,git,bind-utils,bridge-utils,lrzsz,openshift-ansible,glusterfs-fuse,kubevirt-virtctl,kubevirt-ansible
+
+yum name=docker state=absent
 
 # epel的ansible版本是2.7， openshift必须用2.6的。
-yum name=ansible state=absent
-yum name=ansible-2.6.13-1.el7ae,openshift-ansible
+# yum name=ansible state=absent
+# yum name=ansible-2.6.13-1.el7ae,openshift-ansible
 
-systemd name=docker state=stopped enabled=no
+# systemd name=docker state=stopped enabled=no
 
-file path=/data/docker state=absent
-file path=/data/docker state=directory
+# file path=/data/docker state=absent
+# file path=/data/docker state=directory
 
 # rhel下面，改docker的数据目录，由于selinux的限制，不能做软连接。
 # copy src=./sysconfig/docker dest=/etc/sysconfig/docker
 
-systemd name=docker state=started enabled=yes
+# systemd name=docker state=started enabled=yes
 
-lineinfile path=/etc/sysconfig/docker regexp="^INSECURE_REGISTRY" state=absent
+# lineinfile path=/etc/sysconfig/docker regexp="^INSECURE_REGISTRY" state=absent
 
 lineinfile path=/etc/ssh/sshd_config regexp="^UseDNS" line="UseDNS no" insertafter=EOF state=present
 systemd name=sshd state=restarted enabled=yes
 
-shell semanage fcontext -a -t container_var_lib_t "/data/docker(/.*)?"
-shell semanage fcontext -a -t container_share_t "/data/docker/overlay2(/.*)?"
-shell restorecon -r /data/docker
+# shell semanage fcontext -a -t container_var_lib_t "/data/docker(/.*)?"
+# shell semanage fcontext -a -t container_share_t "/data/docker/overlay2(/.*)?"
+# shell restorecon -r /data/docker
 
-systemd name=docker state=stopped enabled=no
-file path=/var/lib/docker state=absent
-file path=/var/lib/docker state=directory
+# systemd name=docker state=stopped enabled=no
+# file path=/var/lib/docker state=absent
+# file path=/var/lib/docker state=directory
 ```
 
 ## 加载镜像
@@ -380,11 +397,11 @@ bash load-images.sh
 在安装的时候，发现需要手动的push openshift3/ose:latest这个镜像，随便什么内容都可以。不然检查不过。我用的openshift3/ose-node 这个镜像。
 
 ```bash
-ansible-playbook -v -i hosts-3.11.69 /usr/share/ansible/openshift-ansible/playbooks/prerequisites.yml
+ansible-playbook -v -i hosts-3.11.98.cnv.yaml /usr/share/ansible/openshift-ansible/playbooks/prerequisites.yml
 
-ansible-playbook -v -i hosts-3.11.69 /usr/share/ansible/openshift-ansible/playbooks/deploy_cluster.yml
+ansible-playbook -v -i hosts-3.11.98.cnv.yaml /usr/share/ansible/openshift-ansible/playbooks/deploy_cluster.yml
 
-ansible-playbook -i hosts-3.11.69 /usr/share/ansible/openshift-ansible/playbooks/adhoc/uninstall.yml
+ansible-playbook -v -i hosts-3.11.98.cnv.yaml /usr/share/ansible/openshift-ansible/playbooks/adhoc/uninstall.yml
 
 # if uninstall, on each glusterfs nodes, run
 vgremove -f $(vgs | tail -1 | awk '{print $1}')
