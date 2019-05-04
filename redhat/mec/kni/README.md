@@ -108,8 +108,20 @@ lspci | egrep -i --color 'network|ethernet'
 我们用vsftpd来做yum源。先把之前弄好的yum镜像，解压缩到本地。
 
 ```bash
+vi /etc/chrony.conf
+systemctl restart chronyd
 systemctl status chronyd
-chronyc status
+chronyc tracking
+chronyc sources -v
+chronyc sourcestats -v
+chronyc makestep
+
+firewall-cmd --permanent --add-port=123/udp
+firewall-cmd --reload
+
+firewall-cmd --list-all
+
+timedatectl set-ntp true
 
 mkdir /etc/yum.repos.d.bak
 mv /etc/yum.repos.d/* /etc/yum.repos.d.bak
@@ -295,9 +307,9 @@ GPU 参考 <https://blog.openshift.com/how-to-use-gpus-with-deviceplugin-in-open
 ## ssh 免密登录
 
 ```bash
-for i in master infra node1 node2 node4 registry; do ssh-copy-id $i.redhat.ren; done;
+for i in kni-master kni-infra kni-node1 kni-node2 kni-node3 kni-node4; do ssh-copy-id $i.redhat.ren; done;
 
-for i in master infra node1 node2 node4 registry; do ssh $i.redhat.ren 'date'; done
+for i in kni-master kni-infra kni-node1 kni-node2 kni-node3 kni-node4; do ssh $i.redhat.ren 'date'; done
 
 ```
 

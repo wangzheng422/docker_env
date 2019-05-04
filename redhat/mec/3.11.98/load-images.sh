@@ -36,6 +36,8 @@ load_redhat_image(){
                 docker push $private_repo$part2:$part3
                 docker tag $line $private_repo$part2:$major_tag
                 docker push $private_repo$part2:$major_tag
+                docker tag $line $private_repo$part2:$tag
+                docker push $private_repo$part2:$tag
                 docker tag $line $private_repo$part2
                 docker push $private_repo$part2
             else
@@ -43,31 +45,33 @@ load_redhat_image(){
                 docker push $private_repo$part2
                 docker tag $line $private_repo$part2:$major_tag
                 docker push $private_repo$part2:$major_tag
+                docker tag $line $private_repo$part2:$tag
+                docker push $private_repo$part2:$tag
             fi
             
         fi
     done < $list_file
 }
 
-# load_docker_image(){
+load_docker_image(){
 
-#     docker_images=$1
+    docker_images=$1
 
-#     while read -r line; do
-#         if [[ "$line" =~ [^[:space:]] ]] && [[ !  "$line" =~ [\#][:print:]*  ]]; then
+    while read -r line; do
+        if [[ "$line" =~ [^[:space:]] ]] && [[ !  "$line" =~ [\#][:print:]*  ]]; then
 
-#             part2=$(echo $line | awk  '{split($0,a,":"); print a[1]}')
-#             part3=$(echo $line | awk  '{split($0,a,":"); print a[2]}')
-#             if [ -z "$part3" ]; then
-#                 docker tag $line $private_repo/$part2
-#                 docker push $private_repo/$part2
-#             else
-#                 docker tag $line $private_repo/$part2:$part3
-#                 docker push $private_repo/$part2:$part3
-#             fi
-#         fi
-#     done <<< "$docker_images"
-# }
+            part2=$(echo $line | awk  '{split($0,a,":"); print a[1]}')
+            part3=$(echo $line | awk  '{split($0,a,":"); print a[2]}')
+            if [ -z "$part3" ]; then
+                docker tag $line $private_repo/$part2
+                docker push $private_repo/$part2
+            else
+                docker tag $line $private_repo/$part2:$part3
+                docker push $private_repo/$part2:$part3
+            fi
+        fi
+    done <<< "$docker_images"
+}
 
 load_redhat_image "$ose3_images" "redhat.io" "ose3-images.list"
 
@@ -79,7 +83,7 @@ load_redhat_image "$cnv_optional_imags" "redhat.io" "cnv-optional-images.list"
 
 load_redhat_image "$istio_optional_imags" "redhat.io" "istio-optional-images.list"
 
-load_redhat_image "$docker_builder_images" "docker.io" "docker-builder-images.list"
+# load_docker_image "$docker_builder_images" "docker.io" "docker-builder-images.list"
 
 load_redhat_image "$other_builder_images" "quay.io" "other-builder-images.list"
 

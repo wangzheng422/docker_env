@@ -323,19 +323,19 @@ EOF
 
 
 docker_builder_images=$(cat << EOF
-docker.io/gitlab/gitlab-ce
-docker.io/nfvpe/sriov-device-plugin:latest
-docker.io/centos/tools 
-docker.io/nfvpe/multus:latest
-docker.io/kubevirt/virt-api:v0.14.0
-docker.io/kubevirt/virt-launcher:v0.14.0
-docker.io/kubevirt/virt-controller:v0.14.0
-docker.io/kubevirt/virt-handler:v0.14.0
-docker.io/kubevirt/cirros-registry-disk-demo
-docker.io/kubevirt/container-disk-v1alpha
-docker.io/kubevirt/virt-operator:v0.14.0
-docker.io/nvidia/k8s-device-plugin:1.11
-docker.io/mirrorgooglecontainers/cuda-vector-add:v0.1
+gitlab/gitlab-ce
+nfvpe/sriov-device-plugin:latest
+centos/tools 
+nfvpe/multus:latest
+kubevirt/virt-api:v0.14.0
+kubevirt/virt-launcher:v0.14.0
+kubevirt/virt-controller:v0.14.0
+kubevirt/virt-handler:v0.14.0
+kubevirt/cirros-registry-disk-demo
+kubevirt/container-disk-v1alpha
+kubevirt/virt-operator:v0.14.0
+nvidia/k8s-device-plugin:1.11
+mirrorgooglecontainers/cuda-vector-add:v0.1
 EOF
 )
 
