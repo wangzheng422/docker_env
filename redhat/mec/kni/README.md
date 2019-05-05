@@ -407,6 +407,9 @@ ansible-playbook -v -i hosts-3.11.98.cnv.yaml /usr/share/ansible/openshift-ansib
 vgremove -f $(vgs | tail -1 | awk '{print $1}')
 pvremove /dev/sdb2
 
+crictl stopp $(crictl pods -q)
+crictl rmp $(crictl pods -q)
+
 htpasswd -cb /etc/origin/master/htpasswd admin  admin
 
 oc adm policy add-cluster-role-to-user cluster-admin admin
