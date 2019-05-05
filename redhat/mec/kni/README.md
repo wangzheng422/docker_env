@@ -304,6 +304,10 @@ yum install ansible-2.6.16-1.el7ae openshift-ansible
 
 yum list $(yum search -q openshift | awk '{print $1}' | grep -v : | head -n -2)
 
+# 清理文件系统
+# https://www.cyberciti.biz/faq/howto-use-wipefs-to-wipe-a-signature-from-disk-on-linux/
+wipefs --all --force /dev/sda1
+
 # dhcp 检测命令
 nmap --script broadcast-dhcp-discover
 
@@ -371,6 +375,9 @@ yum name=docker state=absent
 lineinfile path=/etc/ssh/sshd_config regexp="^UseDNS" line="UseDNS no" insertafter=EOF state=present
 systemd name=sshd state=restarted enabled=yes
 
+shell crictl stopp $(crictl pods -q)
+shell crictl rmp $(crictl pods -q)
+
 # shell semanage fcontext -a -t container_var_lib_t "/data/docker(/.*)?"
 # shell semanage fcontext -a -t container_share_t "/data/docker/overlay2(/.*)?"
 # shell restorecon -r /data/docker
@@ -407,7 +414,8 @@ ansible-playbook -v -i hosts-3.11.98.cnv.yaml /usr/share/ansible/openshift-ansib
 
 # if uninstall, on each glusterfs nodes, run
 vgremove -f $(vgs | tail -1 | awk '{print $1}')
-pvremove /dev/sdb2
+pvremove $(pvs | tail -1 | awk '{print $1}')
+# pvremove /dev/sdb2
 
 crictl stopp $(crictl pods -q)
 crictl rmp $(crictl pods -q)
