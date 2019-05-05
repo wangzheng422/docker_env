@@ -302,6 +302,8 @@ yum --showduplicates list ansible
 yum downgrade ansible-2.6.16-1.el7ae
 yum install ansible-2.6.16-1.el7ae openshift-ansible
 
+yum list $(yum search -q openshift | awk '{print $1}' | grep -v : | head -n -2)
+
 # dhcp 检测命令
 nmap --script broadcast-dhcp-discover
 
