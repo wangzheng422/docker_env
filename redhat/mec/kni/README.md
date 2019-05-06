@@ -166,16 +166,18 @@ docker run -it --rm --name certbot \
             -v "/Users/wzh/Documents/redhat/tools/redhat.ren/lib:/var/lib/letsencrypt" \
             certbot/certbot certonly  -d "*.redhat.ren" --manual --preferred-challenges dns-01  --server https://acme-v02.api.letsencrypt.org/directory
 
-cp ./etc/archive/redhat.ren/fullchain1.pem redhat.ren.crt
-cp ./etc/archive/redhat.ren/privkey1.pem redhat.ren.key
+cp ./etc/archive/redhat.ren/fullchain1.pem redhat.ren.fullchain1.pem
+cp ./etc/archive/redhat.ren/privkey1.pem redhat.ren.privkey1.pem
 
 docker run -it --rm --name certbot \
             -v "/Users/wzh/Documents/redhat/tools/kni-apps.redhat.ren/etc:/etc/letsencrypt" \
             -v "/Users/wzh/Documents/redhat/tools/kni-apps.redhat.ren/lib:/var/lib/letsencrypt" \
             certbot/certbot certonly  -d "*.kni-apps.redhat.ren" --manual --preferred-challenges dns-01  --server https://acme-v02.api.letsencrypt.org/directory
 
-cp ./etc/archive/kni-apps.redhat.ren/fullchain1.pem kni-apps.redhat.ren.crt
-cp ./etc/archive/kni-apps.redhat.ren/privkey1.pem kni-apps.redhat.ren.key
+cp ./etc/archive/kni-apps.redhat.ren/fullchain1.pem kni-apps.redhat.ren.fullchain1.pem
+cp ./etc/archive/kni-apps.redhat.ren/privkey1.pem kni-apps.redhat.ren.privkey1.pem
+cp ./etc/archive/kni-apps.redhat.ren/chain1.pem kni-apps.redhat.ren.chain1.pem
+
 ```
 
 有了证书，就让我们愉快的开始registry安装吧。
@@ -377,6 +379,9 @@ systemd name=sshd state=restarted enabled=yes
 
 shell crictl stopp $(crictl pods -q)
 shell crictl rmp $(crictl pods -q)
+
+shell vgremove -f $(vgs | tail -1 | awk '{print $1}')
+shell pvremove $(pvs | tail -1 | awk '{print $1}')
 
 # shell semanage fcontext -a -t container_var_lib_t "/data/docker(/.*)?"
 # shell semanage fcontext -a -t container_share_t "/data/docker/overlay2(/.*)?"
