@@ -417,6 +417,8 @@ ansible-playbook -v -i hosts-3.11.98.cnv.yaml /usr/share/ansible/openshift-ansib
 
 ansible-playbook -v -i hosts-3.11.98.cnv.yaml /usr/share/ansible/openshift-ansible/playbooks/adhoc/uninstall.yml
 
+ansible-playbook -v -i hosts-3.11.98.cnv.yaml /usr/share/ansible/openshift-ansible/playbooks/openshift-metrics/config.yml
+
 # if uninstall, on each glusterfs nodes, run
 vgremove -f $(vgs | tail -1 | awk '{print $1}')
 pvremove $(pvs | tail -1 | awk '{print $1}')
@@ -430,88 +432,34 @@ htpasswd -cb /etc/origin/master/htpasswd admin  admin
 oc adm policy add-cluster-role-to-user cluster-admin admin
 oc adm policy remove-cluster-role-from-user cluster-admin admin
 ```
-
-## kubevirt
-
-```bash
-yum install -y virt-install virt-top
-
-# with ansible
-yum name=virt-install,virt-top
-shell virt-host-validate qemu
-
-# 以下权限命令，还要在新建的project里面使用。
-oc adm policy add-scc-to-user privileged -n kube-system -z kubevirt-privileged
-oc adm policy add-scc-to-user privileged -n kube-system -z kubevirt-controller
-oc adm policy add-scc-to-user privileged -n kube-system -z kubevirt-apiserver
-
-oc adm policy add-scc-to-user privileged system:serviceaccount:kube-system:kubevirt-controller
-
-cd kubevirt.0.14.0
-oc apply -f kubevirt.yaml
-oc delete -f kubevirt.yaml
-
-oc new-project kubevirt-web-ui
-cd deploy
-
-oc apply -f service_account.yaml
-oc adm policy add-scc-to-user anyuid -z kubevirt-web-ui-operator  # use the "anyuid" string as it is
-
-
-oc apply -f role.yaml
-oc apply -f role_extra_for_console.yaml
-oc apply -f role_binding.yaml
-oc apply -f role_binding_extra_for_console.yaml
-
-oc apply -f crds/kubevirt_v1alpha1_kwebui_crd.yaml
-oc apply -f crds/kubevirt_v1alpha1_kwebui_cr.yaml
-oc apply -f operator.yaml
-```
-
-访问 <https://kubevirt-web-ui.apps.redhat.ren> , 就可以看到 kubevirt web ui了。
-
-使用 vm/Dockerfile 制作虚拟机要用的镜像
+## kni
 
 ```bash
-docker build -t registry.redhat.ren/vmidisks/rhel7.6:latest .
-docker push registry.redhat.ren/vmidisks/rhel7.6:latest
+oc login -u system:admin
+cd /usr/share/ansible/kubevirt-ansible
+ansible-playbook -v -i /data/down/ocp/hosts-3.11.98.cnv.yaml -e @vars/cnv.yml playbooks/kubevirt.yml \
+-e apb_action=provision -e registry_url=kni-registry.redhat.ren:5021 -e docker_tag=latest
 
-oc create configmap kubevirt-config --from-literal feature-gates=DataVolumes -n kube-system
+ansible-playbook -v -i /data/down/ocp/hosts-3.11.98.cnv.yaml -e @vars/cnv.yml playbooks/kubevirt.yml \
+-e apb_action=deprovision -e registry_url=kni-registry.redhat.ren:5021 -e docker_tag=latest
 
-oc create configmap kubevirt-config --from-literal feature-gates=DataVolumes -n test-wzh
+oc delete route -n cdi cdi-uploadproxy-route
 
-oc apply -f vm.yaml
+oc get secret -n cdi cdi-upload-proxy-ca-key -o=jsonpath="{.data['tls\.crt']}" | base64 -d > ca.pem
 
-oc adm policy add-scc-to-user privileged -z default test-wzh
+oc create route reencrypt cdi-uploadproxy-route -n cdi --service=cdi-uploadproxy --dest-ca-cert=ca.pem
 
-# 如果你想修改以下kvm镜像里面的内容
-systemctl start libvirtd
-export LIBGUESTFS_BACKEND=direct
-guestmount -a ./rhel-server-7.6-x86_64-kvm.qcow2 -i  disk/
-guestunmount disk/
 
-# 用以下命令，作为启动脚本，这样就可以登录了。
-cat /etc/passwd || cat /etc/shadow || useradd -p $( openssl passwd -1 wzhwzh ) wzh -s /bin/bash -G wheel || cat /etc/shadow
 
-# 上面的方法好像不行，用下面的命令，base64编码
-cat startup.sh | base64
+yum install qemu-img
+
+qemu-img convert -f raw -O qcow2 cn_windows_7_ultimate_with_sp1_x64_dvd_618537.iso win7_iso.qcow2
+
+cp cn_windows_7_ultimate_with_sp1_x64_dvd_618537.iso win7_iso.raw
+
+virtctl image-upload --uploadproxy-url=https://$(oc get route cdi-uploadproxy-route -n cdi -o=jsonpath='{.status.ingress[0].host}') --pvc-name=upload-win7-pvc --pvc-size=4Gi --image-path=/data/down/ftp/win7_iso.raw 
 ```
 
-然后在vm启动的yaml文件里面，用base64注入的方法，注入这个启动脚本。
 
-```yaml
-      volumes:
-        - containerDisk:
-            image: 'registry.redhat.ren/vmidisks/rhel7.6:latest'
-          name: rootdisk
-        - cloudInitNoCloud:
-            userDataBase64: >-
-              IyEvYmluL2Jhc2gKc2V0IC14CmNhdCAvZXRjL3Bhc3N3ZApjYXQgL2V0Yy9zaGFkb3cKdXNlcmFkZCAtcCAkKCBvcGVuc3NsIHBhc3N3ZCAtMSB3emh3emggKSB3emggLXMgL2Jpbi9iYXNoIC1HIHdoZWVsCmNhdCAvZXRjL3NoYWRvdw==
-          name: cloudinitdisk
-```
 
-如果需要添加硬盘，需要装另外一个插件 <https://github.com/kubevirt/containerized-data-importer>，本次实验时间有限，而且实际场景下面，也许不太用到，等弄完sr-iov再回来做这个组件。
-
-## sigma 服务支持
-
-sigma需要docker的socker支持，需要添加如下docker启动参数，-H tcp://0.0.0.0:5678 -H unix:///var/run/docker.sock ， 就加到 /etc/sysconfig/docker里面， 另外别忘记把ansible 的 inventory 文件给改掉。
+ftp://192.168.39.135/cn_windows_7_ultimate_with_sp1_x64_dvd_618537.iso 

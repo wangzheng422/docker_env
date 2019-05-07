@@ -557,3 +557,7 @@ systemctl status etcd.service
 systemctl start docker atomic-openshift-node
 
 ```
+
+## 问题排查
+
+如果grafana看不到数据，别着急，检查一下服务器时间和本地浏览器时间，是不是差别太大，差别太大，就看不到数据了。
