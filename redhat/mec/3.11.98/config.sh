@@ -3,6 +3,7 @@
 export tag="v3.11.98"
 export private_repo="kni-registry.redhat.ren:5021"
 export major_tag="v3.11"
+# https://access.redhat.com/articles/2834301
 # docker search rhgs3 | grep redhat.io | awk '{print $2}'
 
 ## 后续导入的时候，要用2个版本号
