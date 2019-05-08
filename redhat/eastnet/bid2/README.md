@@ -2,6 +2,10 @@
 
 ## lftp
 
-lftp sftp://root:nOCmVsKW\&pji0EAa@172.16.20.143
+tar cvf ocp_3.11.98.tgz ocp_3.11.98
 
-mirror -R --parallel=30 ./ /opt/litc/
+split -b 500m ocp_3.11.98.tgz ocp.
+
+lftp sftp://root:******@172.16.20.143
+
+mirror -R --parallel=22 ./ /opt/litc/
