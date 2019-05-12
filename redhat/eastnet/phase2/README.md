@@ -13,3 +13,4 @@ mirror -c -R --parallel=25 ./ /opt/litc/
 split -b 50m rhel-server-7.6-x86_64-dvd.iso rhel.
 
 mirror -c -R --parallel=40 ./ /opt/litc/
+

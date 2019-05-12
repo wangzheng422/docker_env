@@ -30,7 +30,14 @@ subscription-manager list --available --all
 
 subscription-manager attach --pool=********
 
-subscription-manager repos --disable="*"
+subscription-manager repos --proxy="http://192.168.253.1:5084" --disable="*"
+
+subscription-manager repos --enable="*"
+
+subscription-manager repos --disable=rhel-7-fast-datapath-htb-debug-rpms
+subscription-manager repos --disable=rhel-7-fast-datapath-htb-rpms
+subscription-manager repos --disable=rhel-7-fast-datapath-htb-source-rpms
+subscription-manager repos --disable=rhel-7-server-aus-satellite-tools-6.5-debug-rpms
 
 subscription-manager list --available --matches '*OpenShift Container Platform*'
 
@@ -38,9 +45,14 @@ subscription-manager repos \
     --proxy="http://192.168.253.1:5084" \
     --enable="rhel-7-server-rpms" \
     --enable="rhel-7-server-extras-rpms" \
+    --enable="rhel-7-server-supplementary-rpms" \
     --enable="rhel-7-server-ose-3.11-rpms" \
     --enable="rhel-7-server-ansible-2.6-rpms" \
     --enable="rhel-7-server-cnv-1.4-tech-preview-rpms"
+
+subscription-manager repos \
+    --proxy="http://192.168.253.1:5084" \
+    --list | grep "Repo ID" | grep rhel-7-server-cnv
 
 yum -y install wget yum-utils createrepo docker git
 

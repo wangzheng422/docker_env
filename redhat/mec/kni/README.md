@@ -451,15 +451,83 @@ oc create route reencrypt cdi-uploadproxy-route -n cdi --service=cdi-uploadproxy
 
 
 
-yum install qemu-img
+yum install qemu-img kvm
 
-qemu-img convert -f raw -O qcow2 cn_windows_7_ultimate_with_sp1_x64_dvd_618537.iso win7_iso.qcow2
+# qemu-img convert -f raw -O qcow2 cn_windows_7_ultimate_with_sp1_x64_dvd_618537.iso win7_iso.qcow2
 
-cp cn_windows_7_ultimate_with_sp1_x64_dvd_618537.iso win7_iso.raw
+# cp cn_windows_7_ultimate_with_sp1_x64_dvd_618537.iso win7_iso.raw
 
-virtctl image-upload --uploadproxy-url=https://$(oc get route cdi-uploadproxy-route -n cdi -o=jsonpath='{.status.ingress[0].host}') --pvc-name=upload-win7-pvc --pvc-size=4Gi --image-path=/data/down/ftp/win7_iso.raw 
+virtctl image-upload --uploadproxy-url=https://$(oc get route cdi-uploadproxy-route -n cdi -o=jsonpath='{.status.ingress[0].host}') --pvc-name=upload-win7-pvc --pvc-size=11Gi --image-path=/data/down/virtio-win/win7.qcow2 --insecure
+
+virtctl image-upload --uploadproxy-url=https://$(oc get route cdi-uploadproxy-route -n cdi -o=jsonpath='{.status.ingress[0].host}') --pvc-name=upload-win7-install-pvc --pvc-size=4Gi --image-path=/data/down/virtio-win/cn_windows_7_ultimate_with_sp1_x64_dvd_618537.iso --insecure
+
+cd /var/lib/libvirt/images
+
+# qemu-img create -f qcow2 win7sp1_x64.qcow2 50G
+
+# kvm -m 4096 -cdrom cn_windows_7_ultimate_with_sp1_x64_dvd_618537.iso -drive file=win7sp1_x64.qcow2,if=virtio,boot=on -fda virtio-win-0.1.141_amd64.vfd -boot d -nographic -vnc :3
+
+yum install qemu-kvm libvirt libvirt-python libguestfs-tools virt-install virt-viewer
+
+systemctl enable libvirtd
+systemctl start libvirtd
+
+firewall-cmd --zone=public --permanent --list-ports
+
+# https://access.redhat.com/articles/2470791
+# https://www.cyberciti.biz/faq/how-to-install-kvm-on-centos-7-rhel-7-headless-server/
+# https://serverfault.com/questions/631317/windows-7-as-kvm-guest-installation-with-virtio-drivers-detected-virtio-scsi-d
+
+virt-install \
+--virt-type=kvm \
+--name win7 \
+--ram 4096 \
+--vcpus=2 \
+--os-variant=win7 \
+--disk path=./virtio-win-0.1.141_amd64.vfd,device=floppy \
+--cdrom=./cn_windows_7_ultimate_with_sp1_x64_dvd_618537.iso \
+--network=network=default,model=virtio \
+--graphics vnc,port=5900 \
+--disk path=./win7.qcow2,size=10,bus=virtio,format=qcow2 \
+--boot hd,cdrom,menu=on
+
+virt-install \
+--name win7 \
+--ram 4096 \
+--vcpus=2 \
+--os-variant=win10 \
+--disk path=./virtio-win-0.1.141_amd64.vfd,device=floppy \
+--cdrom=./cn_windows_7_ultimate_with_sp1_x64_dvd_618537.iso \
+--network=network=default,model=virtio \
+--graphics vnc,port=5900 \
+--disk path=./win7_10.qcow2,size=10,bus=virtio,format=qcow2 \
+--boot hd,cdrom,menu=on
+
+docker build -t win7_10boot ./
+docker tag win7_10boot kni-registry.redhat.ren:5021/win7_10boot
+
+docker build -t win7_install ./
+docker tag win7_install kni-registry.redhat.ren:5021/win7_install
+
+docker build -t win7_virtio_rhel ./
+docker tag win7_virtio_rhel kni-registry.redhat.ren:5021/win7_virtio_rhel
+docker push kni-registry.redhat.ren:5021/win7_virtio_rhel
+
+
+# qemu-img convert -f qcow2  -O raw ./win7.qcow2 ./win7.raw
+# gzip win7.raw
+
+# virsh attach-disk win7 ./virtio-win-0.1.141.iso hdc --type cdrom --mode readonly 
+
+virsh shutdown win7
+virsh destroy win7
+virsh undefine win7
+virsh pool-destroy virtio-win
+virsh list
+
+
+python -m SimpleHTTPServer
+python -m  http.server 8000
+firewall-cmd --permanent --add-port=8000/tcp
+firewall-cmd --reload
 ```
-
-
-
-ftp://192.168.39.135/cn_windows_7_ultimate_with_sp1_x64_dvd_618537.iso 

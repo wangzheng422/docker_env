@@ -2,13 +2,8 @@ apiVersion: kubevirt.io/v1alpha3
 kind: VirtualMachine
 metadata:
   annotations:
-    name.os.template.cnv.io/win10: Microsoft Windows 10
-  selfLink: /apis/kubevirt.io/v1alpha3/namespaces/default/virtualmachines/win7
-  resourceVersion: '1227426'
+    name.os.template.cnv.io/win2k8: Microsoft Windows Server 2008
   name: win7
-  uid: 6375f463-7269-11e9-83a9-7ca23e90ca35
-  creationTimestamp: '2019-05-09T14:47:37Z'
-  generation: 1
   namespace: default
   labels:
     app: win7
@@ -18,10 +13,22 @@ metadata:
     vm.cnv.io/template: win2k12r2-generic-medium
     workload.template.cnv.io/generic: 'true'
 spec:
-  running: true
+  dataVolumeTemplates:
+    - metadata:
+        name: win7-kni-win7
+      spec:
+        pvc:
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 20Gi
+          storageClassName: glusterfs-storage
+        source:
+          blank: {}
+  running: false
   template:
     metadata:
-      creationTimestamp: null
       labels:
         vm.cnv.io/name: win7
     spec:
@@ -42,16 +49,15 @@ spec:
           threads: 1
         devices:
           disks:
-            - bootOrder: 1
-              disk:
-                bus: sata
-              name: rootdisk
-            - name: win7installdisk
+            - name: installcd
               bootOrder: 2
               cdrom:
                 bus: sata
+            - name: win7-kni
+              bootOrder: 1
+              disk:
+                bus: sata
             - name: virtiocontainerdisk
-              bootOrder: 3
               cdrom:
                 bus: sata
           interfaces:
@@ -66,8 +72,6 @@ spec:
             spinlocks:
               spinlocks: 8191
             vapic: {}
-        machine:
-          type: ''
         resources:
           requests:
             memory: 4G
@@ -77,14 +81,11 @@ spec:
       terminationGracePeriodSeconds: 0
       volumes:
         - containerDisk:
-            image: 'kni-registry.redhat.ren:5021/win7_10boot'
-          name: rootdisk
+            image: 'kni-registry.redhat.ren:5021/win7_install'
+          name: installcd
+        - dataVolume:
+            name: win7-kni-win7
+          name: win7-kni
         - containerDisk:
             image: kni-registry.redhat.ren:5021/cnv-tech-preview/virtio-win
           name: virtiocontainerdisk
-        - containerDisk:
-            image: kni-registry.redhat.ren:5021/win7_install
-          name: win7installdisk
-status:
-  created: true
-  ready: true
