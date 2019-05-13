@@ -249,7 +249,7 @@ systemctl enable docker-distribution
 
 # 打开防火墙
 firewall-cmd --get-active-zones
-firewall-cmd --zone=public --add-port=5021/tcp --permanent
+firewall-cmd --zone=public --add-port=443/tcp --permanent
 firewall-cmd --reload
 
 firewall-cmd --list-all
