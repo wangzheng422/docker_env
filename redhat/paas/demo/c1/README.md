@@ -285,7 +285,9 @@ address=/it-registry.redhat.ren/192.168.122.111
 address=/it-yum.redhat.ren/192.168.122.111
 address=/it-c1.redhat.ren/192.168.122.119
 address=/it-c2.redhat.ren/192.168.122.120
-
+address=/.it-apps.redhat.ren/192.168.122.118
+address=/.it-c1-apps.redhat.ren/192.168.122.119
+address=/.it-c2-apps.redhat.ren/192.168.122.120
 
 EOF
 
@@ -307,7 +309,7 @@ systemctl restart dnsmasq
 
 ## 准备安装
 
-3.11的文档说，nfs已经不推荐了，让用glusterfs
+3.11的文档说，nfs已经不推荐了，让用glusterfs，但是没办法，继续用把。
 
 ```bash
 # 3.11的文档说，nfs已经不推荐了，让用glusterfs

@@ -514,6 +514,8 @@ docker tag win7_virtio_rhel kni-registry.redhat.ren:5021/win7_virtio_rhel
 docker push kni-registry.redhat.ren:5021/win7_virtio_rhel
 
 
+virtctl expose virtualmachine win7 --name win7-rdp --port 3389 --target-port 3389 --type NodePort
+
 # qemu-img convert -f qcow2  -O raw ./win7.qcow2 ./win7.raw
 # gzip win7.raw
 
