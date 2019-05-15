@@ -207,13 +207,13 @@ cp ./etc/archive/redhat.ren/fullchain1.pem redhat.ren.fullchain1.pem
 cp ./etc/archive/redhat.ren/privkey1.pem redhat.ren.privkey1.pem
 
 docker run -it --rm --name certbot \
-            -v "/Users/wzh/Documents/redhat/tools/kni-apps.redhat.ren/etc:/etc/letsencrypt" \
-            -v "/Users/wzh/Documents/redhat/tools/kni-apps.redhat.ren/lib:/var/lib/letsencrypt" \
-            certbot/certbot certonly  -d "*.kni-apps.redhat.ren" --manual --preferred-challenges dns-01  --server https://acme-v02.api.letsencrypt.org/directory
+            -v "/Users/wzh/Documents/redhat/tools/it-apps.redhat.ren/etc:/etc/letsencrypt" \
+            -v "/Users/wzh/Documents/redhat/tools/it-apps.redhat.ren/lib:/var/lib/letsencrypt" \
+            certbot/certbot certonly  -d "*.it-apps.redhat.ren" --manual --preferred-challenges dns-01  --server https://acme-v02.api.letsencrypt.org/directory
 
-cp ./etc/archive/kni-apps.redhat.ren/fullchain1.pem kni-apps.redhat.ren.fullchain1.pem
-cp ./etc/archive/kni-apps.redhat.ren/privkey1.pem kni-apps.redhat.ren.privkey1.pem
-cp ./etc/archive/kni-apps.redhat.ren/chain1.pem kni-apps.redhat.ren.chain1.pem
+cp ./etc/archive/it-apps.redhat.ren/fullchain1.pem it-apps.redhat.ren.fullchain1.pem
+cp ./etc/archive/it-apps.redhat.ren/privkey1.pem it-apps.redhat.ren.privkey1.pem
+cp ./etc/archive/it-apps.redhat.ren/chain1.pem it-apps.redhat.ren.chain1.pem
 
 ```
 
@@ -318,13 +318,14 @@ systemctl restart dnsmasq
 
 ```bash
 # 3.11的文档说，nfs已经不推荐了，让用glusterfs
-#yum -y install openshift-ansible nfs-utils rpcbind
-#systemctl enable nfs-server
+yum -y install nfs-utils rpcbind
 
-# firewall-cmd --permanent --add-service=nfs
-# firewall-cmd --permanent --add-service=mountd
-# firewall-cmd --permanent --add-service=rpc-bind
-# firewall-cmd --reload
+systemctl enable nfs-server
+
+firewall-cmd --permanent --add-service=nfs
+firewall-cmd --permanent --add-service=mountd
+firewall-cmd --permanent --add-service=rpc-bind
+firewall-cmd --reload
 
 # yum info <package name>
 # yum list <package name>
@@ -346,11 +347,6 @@ nmap --script broadcast-dhcp-discover
 
 nfs 相关操作 <https://linuxconfig.org/quick-nfs-server-configuration-on-redhat-7-linux>
 
-sr-iov 参考项目 <https://github.com/openshift/ose-sriov-network-device-plugin>，这里面，sriov-network-device-plugin 编译镜像这个，似乎可以不用做，因为docker.io 上面有。
-
-kubevirt 参考文章 <https://blog.openshift.com/getting-started-with-kubevirt/>， 这里面有一个隐藏的，关于制作虚拟机镜像的文章，在这里<https://kubevirt.io/user-guide/docs/latest/creating-virtual-machines/disks-and-volumes.html>，找到 containerDisk 的章节，这个意思就是虚拟机镜像，就放到registry里面就可以了，但是这个镜像，要特殊的来做。
-
-GPU 参考 <https://blog.openshift.com/how-to-use-gpus-with-deviceplugin-in-openshift-3-10/>
 
 ## ssh 免密登录
 
@@ -440,7 +436,7 @@ bash load-images.sh
 在安装的时候，发现需要手动的push openshift3/ose:latest这个镜像，随便什么内容都可以。不然检查不过。我用的openshift3/ose-node 这个镜像。
 
 ```bash
-ansible-playbook -v -i hosts-3.11.98.cnv.yaml /usr/share/ansible/openshift-ansible/playbooks/prerequisites.yml
+ansible-playbook -v -i hosts-3.11.98.yaml /usr/share/ansible/openshift-ansible/playbooks/prerequisites.yml
 
 ansible-playbook -v -i hosts-3.11.98.cnv.yaml /usr/share/ansible/openshift-ansible/playbooks/deploy_cluster.yml
 
