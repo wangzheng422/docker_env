@@ -438,11 +438,11 @@ bash load-images.sh
 ```bash
 ansible-playbook -v -i hosts-3.11.98.yaml /usr/share/ansible/openshift-ansible/playbooks/prerequisites.yml
 
-ansible-playbook -v -i hosts-3.11.98.cnv.yaml /usr/share/ansible/openshift-ansible/playbooks/deploy_cluster.yml
+ansible-playbook -v -i hosts-3.11.98.yaml /usr/share/ansible/openshift-ansible/playbooks/deploy_cluster.yml
 
-ansible-playbook -v -i hosts-3.11.98.cnv.yaml /usr/share/ansible/openshift-ansible/playbooks/adhoc/uninstall.yml
+ansible-playbook -v -i hosts-3.11.98.yaml /usr/share/ansible/openshift-ansible/playbooks/adhoc/uninstall.yml
 
-ansible-playbook -v -i hosts-3.11.98.cnv.yaml /usr/share/ansible/openshift-ansible/playbooks/openshift-metrics/config.yml
+ansible-playbook -v -i hosts-3.11.98.yaml /usr/share/ansible/openshift-ansible/playbooks/openshift-metrics/config.yml
 
 # if uninstall, on each glusterfs nodes, run
 vgremove -f $(vgs | tail -1 | awk '{print $1}')
