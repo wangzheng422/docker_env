@@ -7,6 +7,9 @@ based on <https://docs.openshift.com/container-platform/3.11/install/disconnecte
 ## 机器规划
 
 ```bash
+
+localectl set-locale LANG=en_US.UTF-8
+
 cat << EOF > /etc/hosts
 
 127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4
@@ -33,6 +36,8 @@ cat << EOF > /etc/hosts
 # 10.252.166.109  it-paas it-paas.redhat.ren
 
 EOF
+
+
 ```
 
 ## 准备docker镜像
@@ -237,7 +242,7 @@ storage:
     filesystem:
         rootdirectory: /data/registry
 http:
-    addr: :443
+    addr: :5021
     tls:
        certificate: /etc/crts/redhat.ren.crt
        key: /etc/crts/redhat.ren.key
@@ -249,7 +254,7 @@ systemctl enable docker-distribution
 
 # 打开防火墙
 firewall-cmd --get-active-zones
-firewall-cmd --zone=public --add-port=443/tcp --permanent
+firewall-cmd --zone=public --add-port=5021/tcp --permanent
 firewall-cmd --reload
 
 firewall-cmd --list-all
@@ -350,7 +355,7 @@ GPU 参考 <https://blog.openshift.com/how-to-use-gpus-with-deviceplugin-in-open
 ## ssh 免密登录
 
 ```bash
-d
+for i in it-m1 it-m2 it-m3 it-n1 it-n2 it-n3 it-lb it-infra it-c1 it-c2; do ssh-copy-id $i.redhat.ren; done;
 
 for i in it-m1 it-m2 it-m3 it-n1 it-n2 it-n3 it-lb it-infra it-c1 it-c2; do ssh $i.redhat.ren 'date'; done
 
