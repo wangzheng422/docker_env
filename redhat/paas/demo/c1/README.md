@@ -285,6 +285,7 @@ address=/it-n1.redhat.ren/192.168.122.114
 address=/it-n2.redhat.ren/192.168.122.115
 address=/it-n3.redhat.ren/192.168.122.116
 address=/it-lb.redhat.ren/192.168.122.117
+address=/it-paas.redhat.ren/192.168.122.117
 address=/it-infra.redhat.ren/192.168.122.118
 address=/it-registry.redhat.ren/192.168.122.111
 address=/it-yum.redhat.ren/192.168.122.111
