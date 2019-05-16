@@ -456,62 +456,25 @@ crictl rmp $(crictl pods -q)
 htpasswd -cb /etc/origin/master/htpasswd admin  admin
 
 oc adm policy add-cluster-role-to-user cluster-admin admin
+
 oc adm policy remove-cluster-role-from-user cluster-admin admin
+
+scp /etc/origin/master/htpasswd root@it-m2:/etc/origin/master/htpasswd
+scp /etc/origin/master/htpasswd root@it-m3:/etc/origin/master/htpasswd
 ```
 
 ## nfs
 
 ```bash
-oc project openshift-monitoring
 
-mkdir -p /exports/prometheus-k8s-db
-echo "/exports/prometheus-k8s-db *(rw,root_squash)" >> /etc/exports.d/openshift-uservols.exports
-chown -R nfsnobody.nfsnobody  /exports/prometheus-k8s-db
-chmod -R 777 /exports/prometheus-k8s-db
+# 在nfs服务器上面运行，共享一堆的nfs目录
+bash config-nfs.sh
 
-mkdir -p /exports/alertmanager-k8s-db
-echo "/exports/alertmanager-k8s-db *(rw,root_squash)" >> /etc/exports.d/openshift-uservols.exports
-chown -R nfsnobody.nfsnobody  /exports/alertmanager-k8s-db
-chmod -R 777 /exports/alertmanager-k8s-db
+# 在master上面运行，准备一堆的pv.yaml文件，准备创建pv
+bash pvs.sh
 
-
-systemctl restart nfs-server
-
-cat > pv.yaml << EOF
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: prometheus-k8s-db
-spec:
-  capacity:
-    storage: 50Gi
-  accessModes:
-    - ReadWriteOnce
-  nfs:
-    server: it-lb.redhat.ren
-    path: "/exports"
-
-EOF
-
-oc create -f pv.yaml
-
-cat > pv.yaml << EOF
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: alertmanager-k8s-db
-spec:
-  capacity:
-    storage: 2Gi
-  accessModes:
-    - ReadWriteOnce
-  nfs:
-    server: it-lb.redhat.ren
-    path: "/exports"
-
-EOF
-
-oc create -f pv.yaml
+# 创建pv，让系统组件能顺利运行。
+cat /root/pvs/* | oc create -f -
 
 ```
 

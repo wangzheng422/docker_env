@@ -347,5 +347,9 @@ quay.io/coreos/flannel:v0.10.0-ppc64le
 quay.io/coreos/flannel:v0.10.0-s390x
 quay.io/kubevirt/kubevirt-web-ui-operator:v1.4.0
 quay.io/kubevirt/kubevirt-web-ui:v1.4.0-14
+quay.io/openshift/origin-metering-helm-operator
+quay.io/openshift/origin-metering-reporting-operator
+quay.io/openshift/origin-metering-presto
+quay.io/openshift/origin-metering-hive
 EOF
 )
