@@ -351,5 +351,6 @@ quay.io/openshift/origin-metering-helm-operator
 quay.io/openshift/origin-metering-reporting-operator
 quay.io/openshift/origin-metering-presto
 quay.io/openshift/origin-metering-hive
+quay.io/openshift/origin-metering-hadoop
 EOF
 )

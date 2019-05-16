@@ -1,4 +1,4 @@
-# openshift 3.11.81 离线安装
+# openshift 3.11.98 离线安装
 
 based on <https://docs.openshift.com/container-platform/3.11/install/disconnected_install.html> and <http://ksoong.org/docs/content/openshift/install/>
 
@@ -450,6 +450,13 @@ oc get secret -n cdi cdi-upload-proxy-ca-key -o=jsonpath="{.data['tls\.crt']}" |
 oc create route reencrypt cdi-uploadproxy-route -n cdi --service=cdi-uploadproxy --dest-ca-cert=ca.pem
 
 
+```
+
+以下命令是做实验的时候，走的弯路，打算装一个kvm，启动虚拟机，安装win7，把镜像弄到手，然后导入kni集群，直接启动这个镜像。
+
+实际发现，这个镜像启动不了，似乎是kni的硬件配置和kvm里面的差别非常大，只能去kni里面直接来安装一个新的操作系统。
+
+```bash
 
 yum install qemu-img kvm
 
