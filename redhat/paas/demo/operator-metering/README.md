@@ -18,6 +18,20 @@ docker tag quay.io/openshift/origin-metering-reporting-operator:4.1 it-registry.
 
 docker tag openshift/oauth-proxy:v1.1.0 it-registry.redhat.ren:5021/openshift/oauth-proxy:v1.1.0
 
-docker save it-registry.redhat.ren:5021/openshift/origin-metering-helm-operator:4.1 it-registry.redhat.ren:5021/openshift/origin-metering-helm-operator it-registry.redhat.ren:5021/openshift/origin-metering-reporting-operator:4.1 it-registry.redhat.ren:5021/openshift/oauth-proxy:v1.1.0 | gzip -c > metering.tgz
+docker pull quay.io/openshift/origin-metering-presto:4.1 
+docker tag quay.io/openshift/origin-metering-presto:4.1 it-registry.redhat.ren:5021/openshift/origin-metering-presto:4.1
+
+docker pull quay.io/openshift/origin-metering-hive:4.1 
+docker tag quay.io/openshift/origin-metering-hive:4.1 it-registry.redhat.ren:5021/openshift/origin-metering-hive:4.1
+
+docker pull quay.io/openshift/origin-metering-hadoop:4.1 
+docker tag quay.io/openshift/origin-metering-hadoop:4.1 it-registry.redhat.ren:5021/openshift/origin-metering-hadoop:4.1
+
+
+docker save it-registry.redhat.ren:5021/openshift/origin-metering-helm-operator:4.1 it-registry.redhat.ren:5021/openshift/origin-metering-helm-operator it-registry.redhat.ren:5021/openshift/origin-metering-reporting-operator:4.1 it-registry.redhat.ren:5021/openshift/oauth-proxy:v1.1.0 it-registry.redhat.ren:5021/openshift/origin-metering-presto:4.1 it-registry.redhat.ren:5021/openshift/origin-metering-hive:4.1 it-registry.redhat.ren:5021/openshift/origin-metering-hadoop:4.1 | gzip -c > metering.tgz
+
+docker tag quay.io/openshift/origin-metering-helm-operator:4.1 it-registry.redhat.ren:5021/openshift/origin-metering-helm-operator:4.1
+
+docker save it-registry.redhat.ren:5021/openshift/origin-metering-helm-operator:4.1 | gzip -c > m-op.tgz
 
 ```
