@@ -337,6 +337,7 @@ kubevirt/container-disk-v1alpha
 kubevirt/virt-operator:v0.14.0
 nvidia/k8s-device-plugin:1.11
 mirrorgooglecontainers/cuda-vector-add:v0.1
+openshift/oauth-proxy:v1.1.0
 EOF
 )
 
