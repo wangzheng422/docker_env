@@ -478,3 +478,21 @@ cat /root/pvs/* | oc create -f -
 
 ```
 
+## flusterfs
+
+```bash
+virsh list
+
+qemu-img create -f raw gluster_rhel04 500G
+virsh attach-disk rhel04.node.com /kvmdata/gluster_rhel04 vdc --cache none
+
+qemu-img create -f raw gluster_rhel05 500G
+virsh attach-disk rhel05.node.com /kvmdata/gluster_rhel05 vdc --cache none
+
+qemu-img create -f raw gluster_rhel06 500G
+virsh attach-disk rhel06.node.com /kvmdata/gluster_rhel06 vdc --cache none
+
+virsh detach-disk rhel04.node.com vdc
+virsh detach-disk rhel05.node.com vdc
+```
+

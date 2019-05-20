@@ -1,0 +1,5 @@
+#
+
+```bash
+ansible-doc -l
+```

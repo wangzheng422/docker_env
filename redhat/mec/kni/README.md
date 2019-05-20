@@ -449,6 +449,17 @@ oc get secret -n cdi cdi-upload-proxy-ca-key -o=jsonpath="{.data['tls\.crt']}" |
 
 oc create route reencrypt cdi-uploadproxy-route -n cdi --service=cdi-uploadproxy --dest-ca-cert=ca.pem
 
+# you need some disk to mount
+docker build -t win7_10boot ./
+docker tag win7_10boot kni-registry.redhat.ren:5021/win7_10boot
+
+docker build -t win7_install ./
+docker tag win7_install kni-registry.redhat.ren:5021/win7_install
+
+docker build -t win7_virtio_rhel ./
+docker tag win7_virtio_rhel kni-registry.redhat.ren:5021/win7_virtio_rhel
+docker push kni-registry.redhat.ren:5021/win7_virtio_rhel
+
 
 ```
 
@@ -510,15 +521,6 @@ virt-install \
 --disk path=./win7_10.qcow2,size=10,bus=virtio,format=qcow2 \
 --boot hd,cdrom,menu=on
 
-docker build -t win7_10boot ./
-docker tag win7_10boot kni-registry.redhat.ren:5021/win7_10boot
-
-docker build -t win7_install ./
-docker tag win7_install kni-registry.redhat.ren:5021/win7_install
-
-docker build -t win7_virtio_rhel ./
-docker tag win7_virtio_rhel kni-registry.redhat.ren:5021/win7_virtio_rhel
-docker push kni-registry.redhat.ren:5021/win7_virtio_rhel
 
 
 virtctl expose virtualmachine win7 --name win7-rdp --port 3389 --target-port 3389 --type NodePort
