@@ -159,6 +159,32 @@ firewall-cmd --reload
 firewall-cmd --list-all
 
 timedatectl set-ntp true
+
+mv /etc/chrony.conf /etc/chrony.conf.bak
+cat << EOF > /etc/chrony.conf
+
+server 127.0.0.1
+driftfile /var/lib/chrony/drift
+makestep 1.0 3
+rtcsync
+logdir /var/log/chrony
+allow 192.168.122.0/24
+local stratum 10
+
+EOF
+systemctl restart chronyd
+
+mv /etc/chrony.conf /etc/chrony.conf.bak
+cat << EOF > /etc/chrony.conf
+
+server 192.168.122.111
+driftfile /var/lib/chrony/drift
+makestep 1.0 3
+rtcsync
+logdir /var/log/chrony
+
+EOF
+systemctl restart chronyd
 ```
 
 ## 配置yum源
@@ -495,4 +521,8 @@ virsh attach-disk rhel06.node.com /kvmdata/gluster_rhel06 vdc --cache none
 virsh detach-disk rhel04.node.com vdc
 virsh detach-disk rhel05.node.com vdc
 ```
+## cygwin
 
+```
+cygrunsrv --install supervisord --path /home/wzh/virtualenv/supervisor/bin/python  --args "/home/wzh/virtualenv/supervisor/bin/supervisord -n -c /home/wzh/virtualenv/supervisor/etc/supervisor/supervisord.ini"
+```
