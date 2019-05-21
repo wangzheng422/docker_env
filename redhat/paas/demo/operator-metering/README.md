@@ -46,7 +46,7 @@ docker tag quay.io/openshift/origin-metering-helm-operator:4.1 it-registry.redha
 
 https://github.com/wangzheng422/operator-metering/tree/eastnet-20190517
 
-这个项目更改了原来项目中的image url，如果是新的项目，那么，修改和运行update.sh，重新编译，就可以在新环境里面使用了。
+这个项目更改了原来项目中的image url，如果是新的环境，那么，修改和运行update.sh，重新编译，就可以在新环境里面使用了。
 
 ```bash
 
