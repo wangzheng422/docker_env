@@ -1,6 +1,6 @@
 # operator metering
 
-## 
+## 打包
 
 ```bash
 
@@ -39,6 +39,16 @@ docker push it-registry.redhat.ren:5021/openshift/origin-metering-hive:4.1
 docker push it-registry.redhat.ren:5021/openshift/origin-metering-hadoop:4.1 
 
 docker tag quay.io/openshift/origin-metering-helm-operator:4.1 it-registry.redhat.ren:5021/openshift/origin-metering-helm-operator:4.1
+
+```
+
+## 适配离线部署
+
+https://github.com/wangzheng422/operator-metering/tree/eastnet-20190517
+
+这个项目更改了原来项目中的image url，如果是新的项目，那么，修改和运行update.sh，重新编译，就可以在新环境里面使用了。
+
+```bash
 
 docker save it-registry.redhat.ren:5021/openshift/origin-metering-helm-operator:4.1 | gzip -c > m-op.tgz
 
