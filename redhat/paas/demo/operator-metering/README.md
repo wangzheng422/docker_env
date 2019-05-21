@@ -61,7 +61,40 @@ export METERING_OPERATOR_IMAGE_REPO=it-registry.redhat.ren:5021/openshift/origin
 export METERING_OPERATOR_IMAGE_TAG=4.1
 ./hack/openshift-install.sh
 
+```
 
+## 使用
+
+```bash
+
+kubectl get reportqueries -n metering-wzh
+
+mkdir -p /root/yml/
+cat << EOF > /root/yml/metering-report.yml
+apiVersion: metering.openshift.io/v1alpha1
+kind: Report
+metadata:
+  name: namespace-cpu-request
+spec:
+  reportingStart: '2019-05-21T07:00:00Z'
+  reportingEnd: '2019-05-21T07:30:00Z'
+  query: "namespace-cpu-request"
+  runImmediately: true
+EOF
+
+kubectl -n metering-wzh create -f /root/yml/metering-report.yml
+
+kubectl -n metering-wzh get reports
+
+kubectl -n metering-wzh get report namespace-cpu-request -o json
+
+kubectl -n metering-wzh delete -f /root/yml/metering-report.yml
+
+# https://it-paas.redhat.ren:8443/api/v1/reports/get?name=namespace-cpu-request&namespace=metering-wzh&format=csv
+
+kubectl proxy
+
+curl "http://127.0.0.1:8001/api/v1/namespaces/metering-wzh/services/https:reporting-operator:http/proxy/api/v1/reports/get?name=namespace-cpu-request&namespace=metering-wzh&format=csv"
 
 ```
 
