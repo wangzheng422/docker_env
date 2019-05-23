@@ -166,8 +166,8 @@ docker run -it --rm --name certbot \
             -v "/Users/wzh/Documents/redhat/tools/redhat.ren/lib:/var/lib/letsencrypt" \
             certbot/certbot certonly  -d "*.redhat.ren" --manual --preferred-challenges dns-01  --server https://acme-v02.api.letsencrypt.org/directory
 
-cp ./etc/archive/redhat.ren/fullchain1.pem redhat.ren.fullchain1.pem
-cp ./etc/archive/redhat.ren/privkey1.pem redhat.ren.privkey1.pem
+cp ./etc/archive/redhat.ren/fullchain3.pem redhat.ren.fullchain1.pem
+cp ./etc/archive/redhat.ren/privkey3.pem redhat.ren.privkey1.pem
 
 docker run -it --rm --name certbot \
             -v "/Users/wzh/Documents/redhat/tools/kni-apps.redhat.ren/etc:/etc/letsencrypt" \
@@ -189,8 +189,8 @@ yum -y install docker-distribution
 
 # 把 Let’s Encrypt 上传到服务器上面
 mkdir /etc/crts/
-cp redhat.ren.crt /etc/crts/redhat.ren.crt
-cp redhat.ren.key /etc/crts/redhat.ren.key
+cp -f redhat.ren.fullchain1.pem /etc/crts/redhat.ren.crt
+cp -f redhat.ren.privkey1.pem /etc/crts/redhat.ren.key
 
 
 mkdir -p /data/registry

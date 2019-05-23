@@ -63,6 +63,12 @@ export METERING_OPERATOR_IMAGE_TAG=4.1
 
 ```
 
+两个tar 包的下载位置：
+
+https://drive.google.com/open?id=1QIlJuToEItdn8sUD31Z3AWyvMJqZksDj
+
+https://drive.google.com/open?id=1woqlR17s06lJPGieJO0zAOx_qJYbvy3X
+
 ## 使用
 
 ```bash
