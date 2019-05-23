@@ -338,10 +338,11 @@ kubevirt/virt-operator:v0.14.0
 nvidia/k8s-device-plugin:1.11
 mirrorgooglecontainers/cuda-vector-add:v0.1
 openshift/oauth-proxy:v1.1.0
+chartmuseum/chartmuseum
 EOF
 )
 
-other_builder_images=$(cat << EOF
+quay_builder_images=$(cat << EOF
 quay.io/coreos/flannel:v0.10.0-amd64
 quay.io/coreos/flannel:v0.10.0-arm64
 quay.io/coreos/flannel:v0.10.0-ppc64le
@@ -354,5 +355,13 @@ quay.io/openshift/origin-metering-presto
 quay.io/openshift/origin-metering-hive
 quay.io/openshift/origin-metering-hadoop
 # quay.io/openshift/origin-metering-helm-operator:4.1
+quay.io/kubernetes-multicluster/federation-v2:v0.0.10
+EOF
+)
+
+
+gcr_builder_images=$(cat << EOF
+gcr.io/kubernetes-helm/tiller:v2.14.0
+
 EOF
 )

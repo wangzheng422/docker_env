@@ -55,7 +55,7 @@ remove_docker_image "$istio_optional_imags" "redhat.io"  "istio-optional-images.
 
 # remove_docker_image "$docker_builder_images" "docker-builder-images.list"
 
-remove_docker_image "$other_builder_images" "quay.io" "other-builder-images.list"
+remove_docker_image "$quay_builder_images" "quay.io" "quay-builder-images.list"
 
 ##################################
 

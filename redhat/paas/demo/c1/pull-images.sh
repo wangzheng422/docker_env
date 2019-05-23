@@ -54,7 +54,7 @@ pull_docker_image "$istio_optional_imags" "istio-optional-images.tgz" "istio-opt
 
 pull_docker_image "$docker_builder_images" "docker-builder-images.tgz" "docker-builder-images.list"
 
-pull_docker_image "$other_builder_images" "other-builder-images.tgz" "other-builder-images.list"
+pull_docker_image "$quay_builder_images" "quay-builder-images.tgz" "quay-builder-images.list"
 
 ##################################
 

@@ -2,7 +2,7 @@
 
 
 ```
-cygrunsrv --install supervisord --path /home/wzh/virtualenv/supervisor/bin/python  --args "/home/wzh/virtualenv/supervisor/bin/supervisord -n -c /home/wzh/virtualenv/supervisor/etc/supervisor/supervisord.ini"
+cygrunsrv --install supervisord --user 'wzh' --passwd '' --path /home/wzh/virtualenv/supervisor/bin/python  --args "/home/wzh/virtualenv/supervisor/bin/supervisord -n -c /home/wzh/virtualenv/supervisor/etc/supervisor/supervisord.ini"
 
 supervisorctl -c ~/virtualenv/supervisor/etc/supervisor/supervisord.ini status
 

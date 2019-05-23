@@ -85,7 +85,7 @@ load_redhat_image "$istio_optional_imags" "redhat.io" "istio-optional-images.lis
 
 # load_docker_image "$docker_builder_images" "docker.io" "docker-builder-images.list"
 
-load_redhat_image "$other_builder_images" "quay.io" "other-builder-images.list"
+load_redhat_image "$quay_builder_images" "quay.io" "quay-builder-images.list"
 
 docker image prune -f
 
