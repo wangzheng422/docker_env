@@ -528,4 +528,40 @@ cygrunsrv --install supervisord --path /home/wzh/virtualenv/supervisor/bin/pytho
 
 supervisorctl -c ~/virtualenv/supervisor/etc/supervisor/supervisord.ini status
 
+ssh root@192.168.122.111 -o "ProxyCommand=nc --proxy localhost:5023 %h %p"
+
 ```
+
+## cert redeploy
+
+https://access.redhat.com/documentation/en-us/openshift_container_platform/3.11/html/configuring_clusters/install-config-certificate-customization#configuring-custom-certificates-retrofit
+
+```bash
+
+ansible-playbook -v -i hosts-3.11.98.yaml \
+    /usr/share/ansible/openshift-ansible/playbooks/openshift-checks/certificate_expiry/easy-mode.yaml
+
+# ansible-playbook -v -i hosts-3.11.98.yaml \
+#     /usr/share/ansible/openshift-ansible/playbooks/openshift-master/redeploy-openshift-ca.yml --extra-vars "openshift_certificate_expiry_warning_days=5"
+
+# ansible-playbook -v -i hosts-3.11.98.yaml \
+#     /usr/share/ansible/openshift-ansible/playbooks/redeploy-certificates.yml
+
+
+
+/bin/cp -f /root/down/cert/redhat.ren.fullchain1.pem  /etc/origin/master/named_certificates/redhat.ren.fullchain1.pem
+/bin/cp -f /root/down/cert/redhat.ren.privkey1.pem /etc/origin/master/named_certificates/redhat.ren.privkey1.pem
+
+scp /root/down/cert/redhat.ren.fullchain1.pem root@it-m2:/etc/origin/master/named_certificates/redhat.ren.fullchain1.pem
+scp /root/down/cert/redhat.ren.privkey1.pem root@it-m2:/etc/origin/master/named_certificates/redhat.ren.privkey1.pem
+
+scp /root/down/cert/redhat.ren.fullchain1.pem root@it-m3:/etc/origin/master/named_certificates/redhat.ren.fullchain1.pem
+scp /root/down/cert/redhat.ren.privkey1.pem root@it-m3:/etc/origin/master/named_certificates/redhat.ren.privkey1.pem
+
+ansible-playbook -v -i hosts-3.11.98.yaml \
+    /usr/share/ansible/openshift-ansible/playbooks/redeploy-certificates.yml --extra-vars "openshift_certificate_expiry_warning_days=5"
+
+ansible-playbook -v -i hosts-3.11.98.yaml \
+    /usr/share/ansible/openshift-ansible/ansible-playbook playbooks/openshift-hosted/redeploy-router-certificates.yml --extra-vars "openshift_certificate_expiry_warning_days=5"
+```
+

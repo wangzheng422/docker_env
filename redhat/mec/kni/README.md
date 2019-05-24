@@ -542,3 +542,17 @@ python -m  http.server 8000
 firewall-cmd --permanent --add-port=8000/tcp
 firewall-cmd --reload
 ```
+
+## cert
+
+```bash
+
+ansible-playbook -v -i hosts-3.11.98.cnv.yaml \
+    /usr/share/ansible/openshift-ansible/playbooks/openshift-checks/certificate_expiry/easy-mode.yaml
+
+ansible-playbook -v -i hosts-3.11.98.cnv.yaml \
+    /usr/share/ansible/openshift-ansible/playbooks/openshift-master/redeploy-openshift-ca.yml
+
+ansible-playbook -v -i hosts-3.11.98.cnv.yaml \
+    /usr/share/ansible/openshift-ansible/playbooks/redeploy-certificates.yml
+```
