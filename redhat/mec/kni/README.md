@@ -189,8 +189,8 @@ yum -y install docker-distribution
 
 # 把 Let’s Encrypt 上传到服务器上面
 mkdir /etc/crts/
-cp -f redhat.ren.fullchain1.pem /etc/crts/redhat.ren.crt
-cp -f redhat.ren.privkey1.pem /etc/crts/redhat.ren.key
+/bin/cp -f redhat.ren.fullchain1.pem /etc/crts/redhat.ren.crt
+/bin/cp -f redhat.ren.privkey1.pem /etc/crts/redhat.ren.key
 
 
 mkdir -p /data/registry

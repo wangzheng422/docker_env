@@ -563,5 +563,19 @@ ansible-playbook -v -i hosts-3.11.98.yaml \
 
 ansible-playbook -v -i hosts-3.11.98.yaml \
     /usr/share/ansible/openshift-ansible/ansible-playbook playbooks/openshift-hosted/redeploy-router-certificates.yml --extra-vars "openshift_certificate_expiry_warning_days=5"
+
 ```
 
+更新证书以后，grafana坏掉了 
+https://access.redhat.com/solutions/3693251
+
+```bash
+oc delete secret -n openshift-monitoring  alertmanager-main-tls grafana-tls kube-state-metrics-tls node-exporter-tls prometheus-k8s-tls
+
+oc get secrets -n openshift-monitoring | grep "\-tls"
+
+oc delete pods -n openshift-monitoring --all
+
+oc get pods -n openshift-monitoring 
+
+```
