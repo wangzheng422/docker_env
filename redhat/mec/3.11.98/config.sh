@@ -338,6 +338,7 @@ kubevirt/virt-operator:v0.14.0
 nvidia/k8s-device-plugin:1.11
 mirrorgooglecontainers/cuda-vector-add:v0.1
 openshift/oauth-proxy:v1.1.0
+nicolaka/netshoot
 EOF
 )
 
@@ -348,5 +349,6 @@ quay.io/coreos/flannel:v0.10.0-ppc64le
 quay.io/coreos/flannel:v0.10.0-s390x
 quay.io/kubevirt/kubevirt-web-ui-operator:v1.4.0
 quay.io/kubevirt/kubevirt-web-ui:v1.4.0-14
+quay.io/kubernetes-multicluster/kubefed:v0.1.0-rc1
 EOF
 )

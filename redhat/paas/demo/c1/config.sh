@@ -339,6 +339,7 @@ nvidia/k8s-device-plugin:1.11
 mirrorgooglecontainers/cuda-vector-add:v0.1
 openshift/oauth-proxy:v1.1.0
 chartmuseum/chartmuseum
+nicolaka/netshoot
 EOF
 )
 
@@ -356,6 +357,7 @@ quay.io/openshift/origin-metering-hive
 quay.io/openshift/origin-metering-hadoop
 # quay.io/openshift/origin-metering-helm-operator:4.1
 quay.io/kubernetes-multicluster/federation-v2:v0.0.10
+quay.io/kubernetes-multicluster/kubefed:v0.1.0-rc1
 EOF
 )
 
