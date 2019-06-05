@@ -229,8 +229,8 @@ docker run -it --rm --name certbot \
             -v "/Users/wzh/Documents/redhat/tools/redhat.ren/lib:/var/lib/letsencrypt" \
             certbot/certbot certonly  -d "*.redhat.ren" --manual --preferred-challenges dns-01  --server https://acme-v02.api.letsencrypt.org/directory
 
-cp ./etc/archive/redhat.ren/fullchain1.pem redhat.ren.fullchain1.pem
-cp ./etc/archive/redhat.ren/privkey1.pem redhat.ren.privkey1.pem
+cp ./etc/archive/redhat.ren/fullchain3.pem redhat.ren.fullchain1.pem
+cp ./etc/archive/redhat.ren/privkey3.pem redhat.ren.privkey1.pem
 
 docker run -it --rm --name certbot \
             -v "/Users/wzh/Documents/redhat/tools/it-apps.redhat.ren/etc:/etc/letsencrypt" \

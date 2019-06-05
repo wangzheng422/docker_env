@@ -1,6 +1,6 @@
 # ipv6
 
-vps上面给的ipv6地址是/64的， 但是docker配置里面，要用/80的，小一点的。
+vps上面给的ipv6地址是/64的， 但是docker配置里面，要用这个地址的/80的，小一点的。
 
 ```bash
 docker run -itd nicolaka/netshoot

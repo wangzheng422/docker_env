@@ -28,4 +28,19 @@ ansible all -m lineinfile -a "dest=/etc/sudoers state=present line='devops ALL=(
 export GUID=`hostname | awk -F"." '{print $2}'`
 
 ansible localhost -m command -a 'id'
+
+python -c 'import yaml, sys; print yaml.load(sys.stdin)' < myyaml.yml
+
+    - name: Create index.html
+      copy:
+        content: "{{ ansible_fqdn }} has been customized using Ansible on the {{ ansible_date_time.date }}\n"
+        dest: /var/www/html/index.html
+
+    - name: Creating users from secret.yml
+      user:
+        name: "{{ item.name }}"
+        password: "{{ item.pw | password_hash('sha512') }}"
+      with_items: "{{ newusers }}"
+      
 ```
+
