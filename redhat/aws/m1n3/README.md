@@ -14,14 +14,19 @@ timedatectl set-timezone Asia/Shanghai
 
 # localectl set-locale LANG=en_US.UTF-8
 
-cat << EOF > /etc/NetworkManager/conf.d/disable-resolve.conf-managing.conf
-[main]
-dns=none
-EOF
+# cat << EOF > /etc/NetworkManager/conf.d/disable-resolve.conf-managing.conf
+# [main]
+# dns=none
+# EOF
 
-cat << EOF >> /etc/resolv.conf
-nameserver 172.31.17.41
-EOF
+# cat << EOF >> /etc/resolv.conf
+# nameserver 172.31.17.41
+# EOF
+
+# mkdir -p /etc/dnsmasq.d/
+# cat > /etc/dnsmasq.d/origin-upstream-dns.conf << EOF 
+# server=172.31.0.2
+# EOF
 
 # ntp
 mv /etc/chrony.conf /etc/chrony.conf.bak
@@ -108,6 +113,14 @@ hostnamectl set-hostname aws-n3.redhat.ren
 # nmcli connection up eth0
 
 # /dev/nvme1n1
+ansible -i inventory aws -m service -a "name=dnsmasq state=restarted"
+ansible -i inventory aws -m command -a "cat /etc/resolve.conf"
+ansible -i inventory aws -m command -a "ls /etc/dnsmasq.d/"
+ansible -i inventory aws -m copy -a "src=origin-upstream-dns.conf dest=/etc/dnsmasq.d/"
+ansible -i inventory aws -m command -a "ping -c 1 aws-yum.redhat.ren"
+ansible -i inventory aws -m command -a "rm -f /etc/NetworkManager/conf.d/disable-resolve.conf-managing.conf"
+
+ansible -i inventory aws -m command -a "vgs"
 ```
 
 ## yum update

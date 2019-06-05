@@ -181,9 +181,12 @@ cat << EOF > /etc/hosts
 172.31.18.62  aws-paas aws-paas.redhat.ren
 
 EOF
+```
 
+以下的都有问题，不用运行了。
 
-
+```bash
+# do below dns on master
 yum -y install dnsmasq
 
 # cat  > /etc/dnsmasq.d/openshift-cluster.conf << EOF
@@ -209,4 +212,16 @@ firewall-cmd --reload
 
 systemctl restart dnsmasq
 
+```
+
+## zerotier
+
+```bash
+firewall-cmd --permanent --change-zone=ztnfaahj5u --zone=public
+firewall-cmd --permanent --change-zone=ztnfaahj5u --zone=trusted
+firewall-cmd --permanent --remove-interface=ztnfaahj5u --zone=public
+
+nmcli d
+firewall-cmd --get-active-zones
+firewall-cmd --get-default-zone
 ```
