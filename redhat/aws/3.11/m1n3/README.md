@@ -2,6 +2,8 @@
 
 ## 机器规划
 
+这部分内容，都不用了，用后面的ansible
+
 ```bash
 
 cat << EOF >> ~/.ssh/authorized_keys
@@ -41,7 +43,7 @@ logdir /var/log/chrony
 EOF
 systemctl restart chronyd
 
-mkdir /etc/yum.repos.d.bak
+mkdir -p /etc/yum.repos.d.bak
 mv -f /etc/yum.repos.d/* /etc/yum.repos.d.bak
 
 cat << EOF > /etc/yum.repos.d/remote.repo
@@ -121,14 +123,64 @@ ansible -i inventory aws -m command -a "ping -c 1 aws-yum.redhat.ren"
 ansible -i inventory aws -m command -a "rm -f /etc/NetworkManager/conf.d/disable-resolve.conf-managing.conf"
 
 ansible -i inventory aws -m command -a "vgs"
+ansible -i inventory aws -m command -a "pvs"
+ansible -i inventory aws -m command -a "lsblk"
 ```
 
-## yum update
+## ansible
 
 ```bash
+cd /home/ec2-user/down/inv
+# rm /home/ec2-user/.ssh/known_hosts
+cat << EOF > ~/.ssh/config
+StrictHostKeyChecking no
+EOF
+chmod 600 ~/.ssh/config
+
+ansible -i inventory aws -m ping
+ansible -i inventory aws -m authorized_key -a "user=ec2-user key='ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDStcQmcsIt93Fkg8OVJabRXXqUQHtylMX0COkIS2hSk8JOVwXNjAX3199s1SIZ00179PwGcixXbQJs7FieBtu2JYb4XK4b37mbNfnls6+08Xc+3HCgEDaQf87bjnA4/ph3rriuipZWsbNw7mUg9GAsYTKZh3Bd9Y2WHD7eJ/AsqOKmox9ttNnR+g/z1RCMKUcvTHO29sPw/VmThdADQEfhhu4ErcYyFmy+G2hXY8fI2iYZdXrISc635eYs6DEHAtvKwxMV62/hm2gHYC3/u7ewDTntNd8tITCPr3KNRyNAHIGBDLN1xn2zw3o7tU2E/Bkw0iUmhC+YTToVOc9h42/T wzh@Wang-Zhengs-MacBook-Pro.local'"
+ansible -i inventory aws -m timezone -a "name=Asia/Shanghai"
+ansible -i inventory aws -m copy -a "src=chrony.conf dest=/etc/"
+ansible -i inventory aws -m service -a "name=chronyd state=restarted"
+ansible -i inventory aws -m command -a "chronyc tracking"
+ansible -i inventory aws -m command -a "chronyc sources -v"
+ansible -i inventory aws -m hostname -a "name={{ inventory_hostname }}"
+ansible -i inventory aws -m command -a "hostnamectl"
+
+ansible -i inventory aws -m command -a "mv -f /etc/yum.repos.d/ /etc/yum.repos.d.bak"
+ansible -i inventory aws -m file -a "name=/etc/yum.repos.d state=directory"
+ansible -i inventory aws -m command -a "ls /etc/yum.repos.d/"
+ansible -i inventory aws -m yum_repository -a "name=ftp description=ftp baseurl=ftp://aws-yum.redhat.ren/yum gpgcheck=0"
+ansible -i inventory aws -m command -a "yum clean all"
+ansible -i inventory aws -m command -a "yum repolist"
+ansible -i inventory aws -m yum -a "name=byobu,htop,ansible-2.6.17-1.el7ae state=present"
+ansible -i inventory aws -m yum -a "name=* state=latest"
+
+ansible -i inventory aws -m command -a "reboot"
+
+########################
+
+ansible -i inventory aws -m ping
+
+ansible -i inventory aws -m file -a "name=/etc/yum.repos.d.bak state=absent"
+ansible -i inventory aws -m command -a "mv -f /etc/yum.repos.d/ /etc/yum.repos.d.bak"
+ansible -i inventory aws -m file -a "name=/etc/yum.repos.d state=directory"
+ansible -i inventory aws -m yum_repository -a "name=ftp description=ftp baseurl=ftp://aws-yum.redhat.ren/yum gpgcheck=0"
+ansible -i inventory aws -m command -a "yum clean all"
+ansible -i inventory aws -m command -a "yum repolist"
+
+ansible -i inventory aws -m shell -a "df -h | head -n 5"
+ansible -i inventory aws -m command -a "lsblk"
+
+############################
+
+ansible -i inventory aws[1:3] -m command -a "vgs"
+ansible -i inventory aws[1:3] -m command -a "pvs"
+ansible -i inventory aws[1:3] -m command -a "lsblk"
+ansible -i inventory aws[1:3] -m shell -a "vgremove -f \$(vgs | tail -1 | awk '{print \$1}')"
+ansible -i inventory aws[1:3] -m shell -a "pvremove \$(pvs | tail -1 | awk '{print \$1}')"
 
 ```
-
 
 ## 开始安装
 
@@ -140,6 +192,8 @@ ansible-playbook -v -i hosts-3.11.98.yaml /usr/share/ansible/openshift-ansible/p
 ansible-playbook -v -i hosts-3.11.98.yaml /usr/share/ansible/openshift-ansible/playbooks/adhoc/uninstall.yml
 
 ansible-playbook -v -i hosts-3.11.98.yaml /usr/share/ansible/openshift-ansible/playbooks/openshift-metrics/config.yml
+
+ansible-playbook -v -i hosts-3.11.98.yaml /usr/share/ansible/openshift-ansible/playbooks/openshift-glusterfs/new_install.yml
 
 # if uninstall, on each glusterfs nodes, run
 vgremove -f $(vgs | tail -1 | awk '{print $1}')

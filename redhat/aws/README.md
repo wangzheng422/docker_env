@@ -216,12 +216,21 @@ systemctl restart dnsmasq
 
 ## zerotier
 
+https://www.lisenet.com/2016/firewalld-rich-and-direct-rules-setup-rhel-7-server-as-a-router/
+
 ```bash
-firewall-cmd --permanent --change-zone=ztnfaahj5u --zone=public
-firewall-cmd --permanent --change-zone=ztnfaahj5u --zone=trusted
+# firewall-cmd --permanent --change-zone=ztnfaahj5u --zone=public
+# firewall-cmd --permanent --change-zone=ztnfaahj5u --zone=trusted
 firewall-cmd --permanent --remove-interface=ztnfaahj5u --zone=public
+firewall-cmd --permanent --add-interface=ztnfaahj5u --zone=trusted
 
 nmcli d
 firewall-cmd --get-active-zones
 firewall-cmd --get-default-zone
 ```
+
+# vim
+
+disable auto indent
+
+setl noai nocin nosi inde=
