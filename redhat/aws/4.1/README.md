@@ -3,17 +3,53 @@
 ```bash
 mkdir -p conf
 
-vi install-config.yaml 
+vi conf/install-config.yaml 
 
 ./openshift-install create install-config --dir=conf/
 
 ./openshift-install create manifests --dir=conf/
 
-rm -f openshift/99_openshift-cluster-api_master-machines-*.yaml
-rm -f openshift/99_openshift-cluster-api_worker-machineset-*
+rm -f conf/openshift/99_openshift-cluster-api_master-machines-*.yaml
+rm -f conf/openshift/99_openshift-cluster-api_worker-machineset-*
 
 ./openshift-install create ignition-configs --dir=conf/
 
+aws s3 mb s3://ocp41demo-infra
+
+ls conf/
+
+aws s3 cp conf/bootstrap.ign s3://ocp41demo-infra/bootstrap.ign
+aws s3 cp conf/master.ign s3://ocp41demo-infra/master.ign
+aws s3 cp conf/worker.ign s3://ocp41demo-infra/worker.ign
+
+aws s3 ls s3://ocp41demo-infra/
+
+./openshift-install wait-for bootstrap-complete --dir=conf  --log-level debug
+
+
+```
+
+us-west-1 ami-0e52dafdb6762af40
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## no use
+
+```bash
 
 scp bootstrap.ign core@aws4boot.redhat.ren:~/
 ssh core@aws4boot.redhat.ren

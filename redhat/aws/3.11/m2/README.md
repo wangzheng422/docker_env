@@ -11,6 +11,7 @@ EOF
 chmod 600 ~/.ssh/config
 
 ansible -i inventory aws -m ping
+
 ansible -i inventory aws -m authorized_key -a "user=ec2-user key='ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDStcQmcsIt93Fkg8OVJabRXXqUQHtylMX0COkIS2hSk8JOVwXNjAX3199s1SIZ00179PwGcixXbQJs7FieBtu2JYb4XK4b37mbNfnls6+08Xc+3HCgEDaQf87bjnA4/ph3rriuipZWsbNw7mUg9GAsYTKZh3Bd9Y2WHD7eJ/AsqOKmox9ttNnR+g/z1RCMKUcvTHO29sPw/VmThdADQEfhhu4ErcYyFmy+G2hXY8fI2iYZdXrISc635eYs6DEHAtvKwxMV62/hm2gHYC3/u7ewDTntNd8tITCPr3KNRyNAHIGBDLN1xn2zw3o7tU2E/Bkw0iUmhC+YTToVOc9h42/T wzh@Wang-Zhengs-MacBook-Pro.local'"
 ansible -i inventory aws -m timezone -a "name=Asia/Shanghai"
 ansible -i inventory aws -m copy -a "src=chrony.conf dest=/etc/"
@@ -26,7 +27,6 @@ ansible -i inventory aws -m command -a "ls /etc/yum.repos.d/"
 ansible -i inventory aws -m yum_repository -a "name=ftp description=ftp baseurl=ftp://aws-yum.redhat.ren/yum gpgcheck=0"
 ansible -i inventory aws -m command -a "yum clean all"
 ansible -i inventory aws -m command -a "yum repolist"
-ansible -i inventory aws -m yum -a "name=byobu,htop state=present"
 ansible -i inventory aws -m yum -a "name=* state=latest"
 
 ansible -i inventory aws -m command -a "reboot"
@@ -42,6 +42,8 @@ ansible -i inventory aws -m yum_repository -a "name=ftp description=ftp baseurl=
 ansible -i inventory aws -m command -a "yum clean all"
 ansible -i inventory aws -m command -a "yum repolist"
 
+ansible -i inventory aws -m yum -a "name=byobu,htop,ansible-2.6.17-1.el7ae state=present"
+
 ansible -i inventory aws -m shell -a "df -h | head -n 5"
 ansible -i inventory aws -m command -a "lsblk"
 
@@ -53,6 +55,24 @@ ansible -i inventory aws[1:3] -m command -a "lsblk"
 ansible -i inventory aws[1:3] -m shell -a "vgremove -f \$(vgs | tail -1 | awk '{print \$1}')"
 ansible -i inventory aws[1:3] -m shell -a "pvremove \$(pvs | tail -1 | awk '{print \$1}')"
 
+```
+
+## 证书
+
+```bash
+
+mkdir -p /Users/wzh/Documents/redhat/tools/aws-m2-apps.redhat.ren/
+
+docker run -it --rm --name certbot \
+            -v "/Users/wzh/Documents/redhat/tools/aws-m2-apps.redhat.ren/etc:/etc/letsencrypt" \
+            -v "/Users/wzh/Documents/redhat/tools/aws-m2-apps.redhat.ren/lib:/var/lib/letsencrypt" \
+            certbot/certbot certonly  -d "*.aws-m2-apps.redhat.ren" --manual --preferred-challenges dns-01  --server https://acme-v02.api.letsencrypt.org/directory
+
+cd /Users/wzh/Documents/redhat/tools/aws-m2-apps.redhat.ren/
+
+cp ./etc/archive/aws-m2-apps.redhat.ren/fullchain1.pem aws-m2-apps.redhat.ren.fullchain1.pem
+cp ./etc/archive/aws-m2-apps.redhat.ren/privkey1.pem aws-m2-apps.redhat.ren.privkey1.pem
+cp ./etc/archive/aws-m2-apps.redhat.ren/chain1.pem aws-m2-apps.redhat.ren.chain1.pem
 ```
 
 ## 开始安装

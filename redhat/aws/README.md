@@ -22,7 +22,12 @@ subscription-manager repos \
     --enable="rhel-7-server-3scale-amp-2.5-rpms" \
     --enable="rhel-7-server-cnv-1.4-tech-preview-rpms"
 
-yum -y install wget yum-utils createrepo docker git
+yum -y install wget yum-utils createrepo docker git 
+
+yum -y install ansible-2.6.17-1.el7ae openshift-ansible
+
+systemctl enable docker
+systemctl start docker
 ```
 
 ## epel
@@ -51,6 +56,7 @@ curl -so /etc/yum.repos.d/nvidia-container-runtime.repo https://nvidia.github.io
 mkdir -p /data/yum
 cd /data/yum
 reposync -n -d -l -m
+createrepo ./
 ```
 
 ## build the ftp server
@@ -110,8 +116,8 @@ yum -y install docker-distribution
 
 # 把 Let’s Encrypt 上传到服务器上面
 mkdir -p /etc/crts/
-cp redhat.ren.fullchain1.pem /etc/crts/redhat.ren.crt
-cp redhat.ren.privkey1.pem /etc/crts/redhat.ren.key
+cp /home/ec2-user/down/cert/redhat.ren.fullchain1.pem /etc/crts/redhat.ren.crt
+cp /home/ec2-user/down/cert/redhat.ren.privkey1.pem /etc/crts/redhat.ren.key
 
 
 mkdir -p /data/registry
@@ -159,78 +165,97 @@ allow 172.31.16.0/20
 
 EOF
 systemctl restart chronyd
-```
 
-## dns
-
-```bash
-
-cat << EOF > /etc/hosts
-
-127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4
-::1         localhost localhost.localdomain localhost6 localhost6.localdomain6
-
-172.31.17.41  aws-registry aws-registry.redhat.ren aws-yum aws-yum.redhat.ren
-172.31.18.62  aws-m1 aws-m1.redhat.ren
-172.31.31.155  aws-n1 aws-n1.redhat.ren
-172.31.18.239  aws-n2 aws-n2.redhat.ren
-172.31.17.7  aws-n3 aws-n3.redhat.ren
-
-# 172.31.18.62 *.aws-apps.redhat.ren
-
-172.31.18.62  aws-paas aws-paas.redhat.ren
-
-EOF
-```
-
-以下的都有问题，不用运行了。
-
-```bash
-# do below dns on master
-yum -y install dnsmasq
-
-# cat  > /etc/dnsmasq.d/openshift-cluster.conf << EOF
-# local=/redhat.ren/
-# address=/aws-m1.redhat.ren/172.31.18.62
-# address=/aws-n1.redhat.ren/192.168.122.114
-# address=/aws-n2.redhat.ren/192.168.122.115
-# address=/aws-n3.redhat.ren/192.168.122.116
-# address=/aws-yum.redhat.ren/192.168.122.116
-# address=/.aws-apps.redhat.ren/192.168.122.118
-
-# EOF
-
-# master节点，本次环境没有外网，也没有上级dns，就不用做这里了。
-cat > /etc/dnsmasq.d/origin-upstream-dns.conf << EOF 
-server=172.31.0.2
-EOF
-
-systemctl start dnsmasq.service && systemctl enable dnsmasq.service && systemctl status dnsmasq.service
-
-firewall-cmd --permanent --add-service=dns
-firewall-cmd --reload
-
-systemctl restart dnsmasq
-
+chronyc tracking
+chronyc sources -v
+chronyc sourcestats -v
+chronyc makestep
 ```
 
 ## zerotier
 
 https://www.lisenet.com/2016/firewalld-rich-and-direct-rules-setup-rhel-7-server-as-a-router/
 
+https://zerotier.atlassian.net/wiki/spaces/SD/pages/7503890/ZeroTier+to+Amazon+VPC+Gateway
+
 ```bash
+
+curl -s 'https://raw.githubusercontent.com/zerotier/download.zerotier.com/master/htdocs/contact%40zerotier.com.gpg' | gpg --import && \
+if z=$(curl -s 'https://install.zerotier.com/' | gpg); then echo "$z" | sudo bash; fi
+
+yum -y install firewalld
+systemctl enable firewalld
+systemctl start firewalld
+
+sysctl net.ipv4.conf.all.forwarding
+
+sysctl -w net.ipv4.conf.all.forwarding=1
+sysctl -w net.ipv4.ip_forward=1
+
+cat << EOF > /etc/sysctl.d/ip_forward.conf
+net.ipv4.ip_forward=1
+EOF
+
+
 # firewall-cmd --permanent --change-zone=ztnfaahj5u --zone=public
 # firewall-cmd --permanent --change-zone=ztnfaahj5u --zone=trusted
-firewall-cmd --permanent --remove-interface=ztnfaahj5u --zone=public
+# firewall-cmd --permanent --remove-interface=ztnfaahj5u --zone=public
 firewall-cmd --permanent --add-interface=ztnfaahj5u --zone=trusted
+firewall-cmd --permanent --zone=public --add-masquerade
+firewall-cmd --reload
 
 nmcli d
 firewall-cmd --get-active-zones
 firewall-cmd --get-default-zone
+
 ```
 
 # vim
 
 disable auto indent
 
-setl noai nocin nosi inde=
+:setl noai nocin nosi inde=
+
+# aws cli
+
+```bash
+yum -y install python2-pip
+
+pip install awscli --upgrade --user
+
+# cat << EOF >> ~/.bash_profile
+
+# export PATH=~/.local/bin:$PATH
+
+# EOF
+
+aws --version
+
+aws configure
+
+aws ec2 describe-volumes --output text
+
+aws ec2 describe-instances --output table 
+
+# cat << EOF >> ~/.bashrc
+
+# source ~/.bash_profile
+
+# EOF
+
+# ocp-3.11-m1
+aws ec2 run-instances --launch-template LaunchTemplateId=lt-0b9f087b945ec9d5c,Version=8
+
+# ocp-3.11-n1
+aws ec2 run-instances --launch-template LaunchTemplateId=lt-0a1ea0c9a2b782e08,Version=7
+
+# ocp-3.11-n2
+aws ec2 run-instances --launch-template LaunchTemplateId=lt-098beb0c4004751ea,Version=7
+
+# ocp-3.11-n3
+aws ec2 run-instances --launch-template LaunchTemplateId=lt-0891c7f965582df2d,Version=8
+
+# ocp-3.11-c2
+aws ec2 run-instances --launch-template LaunchTemplateId=lt-0126d8eb82619864b,Version=3
+
+```

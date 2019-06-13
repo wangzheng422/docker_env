@@ -357,12 +357,12 @@ quay.io/openshift/origin-metering-hive
 quay.io/openshift/origin-metering-hadoop
 # quay.io/openshift/origin-metering-helm-operator:4.1
 quay.io/kubernetes-multicluster/federation-v2:v0.0.10
-quay.io/kubernetes-multicluster/kubefed:v0.1.0-rc1
+quay.io/kubernetes-multicluster/kubefed:v0.1.0-rc2
 EOF
 )
 
 gcr_builder_images=$(cat << EOF
-gcr.io/kubernetes-helm/tiller:v2.14.0
+gcr.io/kubernetes-helm/tiller:v2.14.1
 
 EOF
 )
