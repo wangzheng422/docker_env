@@ -188,9 +188,9 @@ ansible -i inventory aws[1:3] -m shell -a "pvremove \$(pvs | tail -1 | awk '{pri
 ## 开始安装
 
 ```bash
-ansible-playbook -v -i hosts-3.11.98.yaml /usr/share/ansible/openshift-ansible/playbooks/prerequisites.yml
+ansible-playbook -v -i hosts-3.11.104.yaml /usr/share/ansible/openshift-ansible/playbooks/prerequisites.yml
 
-ansible-playbook -v -i hosts-3.11.98.yaml /usr/share/ansible/openshift-ansible/playbooks/deploy_cluster.yml
+ansible-playbook -v -i hosts-3.11.104.yaml /usr/share/ansible/openshift-ansible/playbooks/deploy_cluster.yml
 
 ansible-playbook -v -i hosts-3.11.98.yaml /usr/share/ansible/openshift-ansible/playbooks/adhoc/uninstall.yml
 
