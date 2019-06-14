@@ -198,6 +198,13 @@ ansible-playbook -v -i hosts-3.11.98.yaml /usr/share/ansible/openshift-ansible/p
 
 ansible-playbook -v -i hosts-3.11.98.yaml /usr/share/ansible/openshift-ansible/playbooks/openshift-glusterfs/new_install.yml
 
+oc delete pod --all -n openshift-logging
+ansible-playbook /usr/share/ansible/openshift-ansible/playbooks/openshift-logging/config.yml
+ansible-playbook /usr/share/ansible/openshift-ansible/playbooks/deploy_cluster.yml
+ansible-playbook [-i </path/to/inventory>] \
+    playbooks/openshift-logging/config.yml \
+    -e openshift_logging_install_logging=False
+
 # if uninstall, on each glusterfs nodes, run
 vgremove -f $(vgs | tail -1 | awk '{print $1}')
 pvremove $(pvs | tail -1 | awk '{print $1}')

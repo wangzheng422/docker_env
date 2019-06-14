@@ -7,6 +7,9 @@ vi conf/install-config.yaml
 
 ./openshift-install create install-config --dir=conf/
 
+cp conf/install-config.yaml ./
+vi conf/install-config.yaml 
+
 ./openshift-install create manifests --dir=conf/
 
 rm -f conf/openshift/99_openshift-cluster-api_master-machines-*.yaml
@@ -14,15 +17,15 @@ rm -f conf/openshift/99_openshift-cluster-api_worker-machineset-*
 
 ./openshift-install create ignition-configs --dir=conf/
 
-aws s3 mb s3://ocp41demo-infra
+aws s3 mb s3://ocp41-infra
 
 ls conf/
 
-aws s3 cp conf/bootstrap.ign s3://ocp41demo-infra/bootstrap.ign
-aws s3 cp conf/master.ign s3://ocp41demo-infra/master.ign
-aws s3 cp conf/worker.ign s3://ocp41demo-infra/worker.ign
+aws s3 cp conf/bootstrap.ign s3://ocp41-infra/bootstrap.ign
+aws s3 cp conf/master.ign s3://ocp41-infra/master.ign
+aws s3 cp conf/worker.ign s3://ocp41-infra/worker.ign
 
-aws s3 ls s3://ocp41demo-infra/
+aws s3 ls s3://ocp41-infra/
 
 ./openshift-install wait-for bootstrap-complete --dir=conf  --log-level debug
 
