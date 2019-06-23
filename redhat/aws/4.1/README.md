@@ -3,8 +3,6 @@
 ```bash
 mkdir -p conf
 
-vi conf/install-config.yaml 
-
 ./openshift-install create install-config --dir=conf/
 
 cp conf/install-config.yaml ./
@@ -22,6 +20,7 @@ aws s3 mb s3://ocp41-infra
 ls conf/
 
 aws s3 cp conf/bootstrap.ign s3://ocp41-infra/bootstrap.ign
+
 aws s3 cp conf/master.ign s3://ocp41-infra/master.ign
 aws s3 cp conf/worker.ign s3://ocp41-infra/worker.ign
 
@@ -29,6 +28,23 @@ aws s3 ls s3://ocp41-infra/
 
 ./openshift-install wait-for bootstrap-complete --dir=conf  --log-level debug
 
+# on boot
+ssh core@boot.aws.redhat.ren
+
+journalctl -b -f -u bootkube.service
+
+curl --insecure https://api.ocp41.aws.redhat.ren:6443/version?timeout=32s
+
+curl --insecure https://api-int.ocp41.aws.redhat.ren:22623/config/master
+
+curl --insecure "https://api-int.ocp41.aws.redhat.ren:6443/api/v1/pods?fieldSelector=spec.nodeName%3Dip-172-31-17-81.us-west-1.compute.internal&limit=500&resourceVersion=0"
+
+# create iam role for ec2 instance
+# https://coreos.com/tectonic/docs/latest/files/aws-policy.json
+kubernetes.io/cluster/ocp41-p8wfh  shared
+
+ssh core@m1.aws.redhat.ren
+journalctl -f -u kubelet
 
 ```
 
