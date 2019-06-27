@@ -244,7 +244,7 @@ aws ec2 describe-instances --output table
 # EOF
 
 # ocp-3.11-m1
-aws ec2 run-instances --launch-template LaunchTemplateId=lt-0b9f087b945ec9d5c,Version=8
+aws ec2 run-instances --launch-template LaunchTemplateId=lt-0b9f087b945ec9d5c,Version=9
 
 # ocp-3.11-n1
 aws ec2 run-instances --launch-template LaunchTemplateId=lt-0a1ea0c9a2b782e08,Version=7
