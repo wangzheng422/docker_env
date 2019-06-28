@@ -244,16 +244,16 @@ aws ec2 describe-instances --output table
 # EOF
 
 # ocp-3.11-m1
-aws ec2 run-instances --launch-template LaunchTemplateId=lt-0b9f087b945ec9d5c,Version=9
+aws ec2 run-instances --launch-template LaunchTemplateId=lt-0b9f087b945ec9d5c,Version=8
 
 # ocp-3.11-n1
-aws ec2 run-instances --launch-template LaunchTemplateId=lt-0a1ea0c9a2b782e08,Version=7
+aws ec2 run-instances --launch-template LaunchTemplateId=lt-0a1ea0c9a2b782e08,Version=11
 
 # ocp-3.11-n2
-aws ec2 run-instances --launch-template LaunchTemplateId=lt-098beb0c4004751ea,Version=7
+aws ec2 run-instances --launch-template LaunchTemplateId=lt-098beb0c4004751ea,Version=8
 
 # ocp-3.11-n3
-aws ec2 run-instances --launch-template LaunchTemplateId=lt-0891c7f965582df2d,Version=8
+aws ec2 run-instances --launch-template LaunchTemplateId=lt-0891c7f965582df2d,Version=9
 
 # ocp-3.11-c2
 aws ec2 run-instances --launch-template LaunchTemplateId=lt-0126d8eb82619864b,Version=3

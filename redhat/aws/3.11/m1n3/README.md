@@ -205,6 +205,14 @@ ansible-playbook [-i </path/to/inventory>] \
     playbooks/openshift-logging/config.yml \
     -e openshift_logging_install_logging=False
 
+# simple
+ansible-playbook -v -i hosts-3.11.104.simple.yaml /usr/share/ansible/openshift-ansible/playbooks/prerequisites.yml
+
+ansible-playbook -v -i hosts-3.11.104.simple.yaml /usr/share/ansible/openshift-ansible/playbooks/deploy_cluster.yml
+
+ansible-playbook -v -i hosts-3.11.104.simple.yaml /usr/share/ansible/openshift-ansible/playbooks/adhoc/uninstall.yml
+
+
 # if uninstall, on each glusterfs nodes, run
 vgremove -f $(vgs | tail -1 | awk '{print $1}')
 pvremove $(pvs | tail -1 | awk '{print $1}')
