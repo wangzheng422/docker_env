@@ -340,6 +340,7 @@ mirrorgooglecontainers/cuda-vector-add:v0.1
 openshift/oauth-proxy:v1.1.0
 chartmuseum/chartmuseum
 nicolaka/netshoot
+dougbtv/dhcp
 EOF
 )
 

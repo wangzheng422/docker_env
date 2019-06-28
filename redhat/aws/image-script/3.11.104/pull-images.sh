@@ -42,21 +42,21 @@ pull_docker_image(){
 #################################
 ## pull and dump images
 
-pull_docker_image "$ose3_images" "ose3-images.tgz" "ose3-images.list"
+# pull_docker_image "$ose3_images" "ose3-images.tgz" "ose3-images.list"
 
-pull_docker_image "$ose3_optional_imags" "ose3-optional-imags.tgz" "ose3-optional-imags.list"
+# pull_docker_image "$ose3_optional_imags" "ose3-optional-imags.tgz" "ose3-optional-imags.list"
 
-pull_docker_image "$ose3_builder_images" "ose3-builder-images.tgz" "ose3-builder-images.list"
+# pull_docker_image "$ose3_builder_images" "ose3-builder-images.tgz" "ose3-builder-images.list"
 
-pull_docker_image "$cnv_optional_imags" "cnv-optional-images.tgz" "cnv-optional-images.list"
+# pull_docker_image "$cnv_optional_imags" "cnv-optional-images.tgz" "cnv-optional-images.list"
 
-pull_docker_image "$istio_optional_imags" "istio-optional-images.tgz" "istio-optional-images.list"
+# pull_docker_image "$istio_optional_imags" "istio-optional-images.tgz" "istio-optional-images.list"
 
 pull_docker_image "$docker_builder_images" "docker-builder-images.tgz" "docker-builder-images.list"
 
-pull_docker_image "$quay_builder_images" "quay-builder-images.tgz" "quay-builder-images.list"
+# pull_docker_image "$quay_builder_images" "quay-builder-images.tgz" "quay-builder-images.list"
 
-pull_docker_image "$gcr_builder_images" "gcr-builder-images.tgz" "gcr-builder-images.list"
+# pull_docker_image "$gcr_builder_images" "gcr-builder-images.tgz" "gcr-builder-images.list"
 
 ##################################
 
