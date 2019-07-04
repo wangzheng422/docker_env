@@ -131,6 +131,8 @@ storage:
         layerinfo: inmemory
     filesystem:
         rootdirectory: /data/registry
+    delete:
+        enabled: true
 http:
     addr: :443
     tls:
