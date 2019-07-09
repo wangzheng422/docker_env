@@ -4,6 +4,12 @@ based on <https://docs.openshift.com/container-platform/3.11/install/disconnecte
 
 以下文章中的命令，不是安装时候的顺序执行命令，请搞懂命令的含义，按照自己的需要取用。
 
+ps.txt 是运行了一个虚拟机以后，去ocp node上面用ps -ef ww 得到的结果，对分析cnv是怎么启动了kvm，应该有帮助。
+
+fs.txt 是启动虚拟机以后，去节点上面，查看文件系统，证实是挂在的gluster fs。
+
+演示视频： https://drive.google.com/open?id=1LkGg9pqOrLfcXpt5O7q-JiYHe8DTj6n_
+
 ## 机器规划
 
 ```bash
@@ -450,6 +456,9 @@ oc get secret -n cdi cdi-upload-proxy-ca-key -o=jsonpath="{.data['tls\.crt']}" |
 oc create route reencrypt cdi-uploadproxy-route -n cdi --service=cdi-uploadproxy --dest-ca-cert=ca.pem
 
 # you need some disk to mount
+# cnv用的硬盘，可以打包成docker image的方式提供。
+# 可以使用iso, qcow2等等kvm认的镜像，参照win7/Dockerfile的样子
+# 去创建这个镜像，然后push到镜像仓库里面去。
 docker build -t win7_10boot ./
 docker tag win7_10boot kni-registry.redhat.ren:5021/win7_10boot
 
