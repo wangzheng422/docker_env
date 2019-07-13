@@ -10,6 +10,8 @@ fs.txt 是启动虚拟机以后，去节点上面，查看文件系统，证实�
 
 演示视频： https://drive.google.com/open?id=1LkGg9pqOrLfcXpt5O7q-JiYHe8DTj6n_
 
+https://youtu.be/9JUHMKqixpQ
+
 ## 机器规划
 
 ```bash
