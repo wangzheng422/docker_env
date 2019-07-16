@@ -221,6 +221,9 @@ pvremove $(pvs | tail -1 | awk '{print $1}')
 crictl stopp $(crictl pods -q)
 crictl rmp $(crictl pods -q)
 
+echo "" >> /root/htpasswd.openshift
+htpasswd -b /root/htpasswd.openshift admin 'admin'
+
 htpasswd -cb /etc/origin/master/htpasswd admin  admin
 
 oc adm policy add-cluster-role-to-user cluster-admin admin
