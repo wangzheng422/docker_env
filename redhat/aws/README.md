@@ -22,6 +22,8 @@ subscription-manager repos \
     --enable="rhel-7-server-3scale-amp-2.5-rpms" \
     --enable="rhel-7-server-cnv-1.4-tech-preview-rpms"
 
+subscription-manager repos --list-enabled
+
 yum -y install wget yum-utils createrepo docker git 
 
 yum -y install ansible-2.6.17-1.el7ae openshift-ansible
@@ -57,6 +59,8 @@ mkdir -p /data/yum
 cd /data/yum
 reposync -n -d -l -m
 createrepo ./
+
+tar -cvf - yum/ | pigz -c > yum.tgz
 ```
 
 ## build the ftp server
