@@ -481,7 +481,8 @@ docker push kni-registry.redhat.ren:5021/win7_virtio_rhel
 3. cdi 部署流程
 4. pv / pvc 挂载问题
 5. vm 网络 可以访问外网问题 （验证）
-6. vm 上的服务可以被外部访问
+6. vm 上的服务可以被外部访问 ( NodePort or router)
+7. install higher version kubevirt ( like v14 )
 
 ## 弯路
 
