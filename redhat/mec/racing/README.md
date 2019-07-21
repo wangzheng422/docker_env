@@ -6,7 +6,7 @@ based on <https://docs.openshift.com/container-platform/3.11/install/disconnecte
 
 ## 机器规划
 
-![](imgs/2019-07-19-13-54-50.png)
+https://docs.google.com/spreadsheets/d/18igPrKuOA0nOApnWBXc_qzCyqGKjSjDdmx4szn5LhHo/edit#gid=0
 
 ```bash
 # copy hosts and other config files to remote
