@@ -33,9 +33,11 @@ import_docker_image(){
 
 # import_docker_image "$docker_builder_images" "docker-builder-images.tgz" "docker-builder-images.list"
 
-import_docker_image "$quay_builder_images" "quay-builder-images.tgz" "quay-builder-images.list"
+# import_docker_image "$quay_builder_images" "quay-builder-images.tgz" "quay-builder-images.list"
 
-import_docker_image "$gcr_builder_images" "gcr-builder-images.tgz" "gcr-builder-images.list"
+# import_docker_image "$gcr_builder_images" "gcr-builder-images.tgz" "gcr-builder-images.list"
+
+import_docker_image "$nvcr_builder_images" "nvcr-builder-images.tgz" "nvcr-builder-images.list"
 
 ##################################
 

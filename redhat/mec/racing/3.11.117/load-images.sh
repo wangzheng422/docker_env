@@ -73,21 +73,23 @@ load_docker_image(){
     done <<< "$docker_images"
 }
 
-load_redhat_image "$ose3_images" "redhat.io" "ose3-images.list"
+# load_redhat_image "$ose3_images" "redhat.io" "ose3-images.list"
 
-load_redhat_image "$ose3_optional_imags" "redhat.io" "ose3-optional-imags.list"
+# load_redhat_image "$ose3_optional_imags" "redhat.io" "ose3-optional-imags.list"
 
-load_redhat_image "$ose3_builder_images" "redhat.io" "ose3-builder-images.list"
+# load_redhat_image "$ose3_builder_images" "redhat.io" "ose3-builder-images.list"
 
-load_redhat_image "$cnv_optional_imags" "redhat.io" "cnv-optional-images.list"
+# load_redhat_image "$cnv_optional_imags" "redhat.io" "cnv-optional-images.list"
 
-load_redhat_image "$istio_optional_imags" "redhat.io" "istio-optional-images.list"
+# load_redhat_image "$istio_optional_imags" "redhat.io" "istio-optional-images.list"
 
-load_docker_image "$docker_builder_images" "docker.io" "docker-builder-images.list"
+# load_docker_image "$docker_builder_images" "docker.io" "docker-builder-images.list"
 
-load_redhat_image "$quay_builder_images" "quay.io" "quay-builder-images.list"
+# load_redhat_image "$quay_builder_images" "quay.io" "quay-builder-images.list"
 
-load_redhat_image "$gcr_builder_images" "gcr.io" "gcr-builder-images.list"
+# load_redhat_image "$gcr_builder_images" "gcr.io" "gcr-builder-images.list"
+
+load_redhat_image "$nvcr_builder_images" "nvcr-builder-images.tgz" "nvcr-builder-images.list"
 
 docker image prune -f
 

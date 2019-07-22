@@ -440,7 +440,9 @@ htpasswd -cb /etc/origin/master/htpasswd admin  admin
 oc adm policy add-cluster-role-to-user cluster-admin admin
 oc adm policy remove-cluster-role-from-user cluster-admin admin
 ```
-## kni
+## cnv
+
+https://docs.openshift.com/container-platform/3.11/cnv_install/cnv_install.html
 
 ```bash
 oc login -u system:admin

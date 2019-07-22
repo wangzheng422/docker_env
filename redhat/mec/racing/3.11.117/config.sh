@@ -367,3 +367,21 @@ gcr.io/kubernetes-helm/tiller:v2.14.1
 
 EOF
 )
+
+nvcr_builder_images=$(cat << EOF
+nvcr.io/nvidia/tensorflow:19.06-py3
+nvcr.io/nvidia/pytorch:19.06-py3
+nvcr.io/nvidia/mxnet:19.06-py3
+nvcr.io/nvidia/kaldi:19.06-py3
+nvcr.io/nvidia/rapidsai/rapidsai:cuda9.2-runtime-ubuntu16.04
+nvcr.io/nvidia/rapidsai/rapidsai:cuda9.2-runtime-centos7
+nvcr.io/nvidia/rapidsai/rapidsai:cuda10.0-runtime-ubuntu18.04
+nvcr.io/nvidia/rapidsai/rapidsai:cuda10.0-runtime-centos7
+nvcr.io/nvidia/rapidsai/rapidsai:cuda10.0-runtime-ubuntu16.04
+nvcr.io/nvidia/rapidsai/rapidsai:cuda9.2-runtime-ubuntu18.04
+nvcr.io/nvidia/tensorrt:19.06-py3
+nvcr.io/nvidia/tensorrtserver:19.06-py3
+nvcr.io/nvidia/deepstream:3.0-18.11
+
+EOF
+)
