@@ -43,21 +43,23 @@ remove_docker_image(){
 #################################
 ## pull and dump images
 
-remove_docker_image "$ose3_images" "redhat.io"  "ose3-images.list"
+# remove_docker_image "$ose3_images" "redhat.io"  "ose3-images.list"
 
-remove_docker_image "$ose3_optional_imags" "redhat.io"  "ose3-optional-imags.list"
+# remove_docker_image "$ose3_optional_imags" "redhat.io"  "ose3-optional-imags.list"
 
-remove_docker_image "$ose3_builder_images" "redhat.io"  "ose3-builder-images.list"
+# remove_docker_image "$ose3_builder_images" "redhat.io"  "ose3-builder-images.list"
 
-remove_docker_image "$cnv_optional_imags" "redhat.io"  "cnv-optional-images.list"
+# remove_docker_image "$cnv_optional_imags" "redhat.io"  "cnv-optional-images.list"
 
-remove_docker_image "$istio_optional_imags" "redhat.io"  "istio-optional-images.list"
+# remove_docker_image "$istio_optional_imags" "redhat.io"  "istio-optional-images.list"
 
-remove_docker_image "$docker_builder_images" "docker-builder-images.list"
+# remove_docker_image "$docker_builder_images" "docker-builder-images.list"
 
-remove_docker_image "$other_builder_images" "quay.io" "other-builder-images.list"
+# remove_docker_image "$other_builder_images" "quay.io" "other-builder-images.list"
 
-remove_docker_image "$gcr_builder_images" "gcr.io" "gcr-builder-images.list"
+# remove_docker_image "$gcr_builder_images" "gcr.io" "gcr-builder-images.list"
+
+remove_docker_image "$nvcr_builder_images" "nvcr-builder-images.tgz" "nvcr-builder-images.list"
 
 ##################################
 
