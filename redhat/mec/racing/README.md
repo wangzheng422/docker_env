@@ -376,7 +376,7 @@ ansible-playbook -v -i hosts-3.11.117.yaml /usr/share/ansible/openshift-ansible/
 
 ansible-playbook -i hosts-3.11.117.yaml /usr/share/ansible/openshift-ansible/playbooks/adhoc/uninstall.yml
 
-ansible -i ansible_host cmcc[0:2] -u root -m file -a "path=/var/lib/etcd state=absent"
+# ansible -i ansible_host cmcc[0:2] -u root -m file -a "path=/var/lib/etcd state=absent"
 
 # if uninstall, on each glusterfs nodes, run
 ansible -i ansible_host cmcc[1:4] -u root -m shell -a "vgs | tail -1 | awk '{print $1}'"
@@ -384,8 +384,9 @@ ansible -i ansible_host cmcc[1:4] -u root -m shell -a "pvs | tail -1 | awk '{pri
 vgremove -f $(vgs | tail -1 | awk '{print $1}')
 pvremove $(pvs | tail -1 | awk '{print $1}')
 
-ansible -i ansible_host cmcc -u root -m command -a "crictl stopp $(crictl pods -q)"
-ansible -i ansible_host cmcc -u root -m command -a "crictl rmp $(crictl pods -q)"
+ansible -i ansible_host cmcc -u root -m shell -a "crictl pods"
+ansible -i ansible_host cmcc -u root -m shell -a "crictl stopp \$(crictl pods -q)"
+ansible -i ansible_host cmcc -u root -m shell -a "crictl rmp \$(crictl pods -q)"
 
 wipefs --all --force /dev/sda6
 
