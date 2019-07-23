@@ -431,8 +431,9 @@ oc label node node-otii.crmi.cn openshift.com/gpu-accelerator=true
 oc create -f nvidia-device-plugin.yml
 
 oc describe node node-otii.crmi.cn
+```
 ![](imgs/2019-07-23-17-38-13.png)
-
+```bash
 oc new-project nvidia
 oc project nvidia
 oc create -f cuda-vector-add.yaml
