@@ -59,7 +59,7 @@ remove_docker_image(){
 
 # remove_docker_image "$gcr_builder_images" "gcr.io" "gcr-builder-images.list"
 
-remove_docker_image "$nvcr_builder_images" "nvcr-builder-images.tgz" "nvcr-builder-images.list"
+remove_docker_image "$nvcr_builder_images" "nvcr.io" "nvcr-builder-images.list"
 
 ##################################
 

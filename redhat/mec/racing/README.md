@@ -351,8 +351,8 @@ GPU 参考 <https://blog.openshift.com/how-to-use-gpus-with-deviceplugin-in-open
 
 # lineinfile path=/etc/sysconfig/docker regexp="^INSECURE_REGISTRY" state=absent
 
-lineinfile path=/etc/ssh/sshd_config regexp="^UseDNS" line="UseDNS no" insertafter=EOF state=present
-systemd name=sshd state=restarted enabled=yes
+ansible -i ansible_host cmcc -u root -m lineinfile -a "path=/etc/ssh/sshd_config regexp="^UseDNS" line="UseDNS no" insertafter=EOF state=present"
+ansible -i ansible_host cmcc -u root -m systemd =a "name=sshd state=restarted enabled=yes"
 
 # shell semanage fcontext -a -t container_var_lib_t "/data/docker(/.*)?"
 # shell semanage fcontext -a -t container_share_t "/data/docker/overlay2(/.*)?"
@@ -409,10 +409,23 @@ scp /etc/origin/master/htpasswd root@master3:/etc/origin/master/htpasswd
 
 https://blog.openshift.com/how-to-use-gpus-with-deviceplugin-in-openshift-3-10/
 
+nvida GPU 需要一个奇怪的源
+```bash
+subscription-manager repos --enable="rhel-7-server-e4s-optional-rpms"
+```
+
 ```bash
 
 yum -y install kernel-devel-`uname -r`
-yum -y install xorg-x11-drv-nvidia xorg-x11-drv-nvidia-devel
+yum -y install xorg-x11-drv-nvidia xorg-x11-drv-nvidia-devel nvidia-modprobe nvidia-driver-NVML nvidia-driver-cuda
+modprobe -r nouveau
+modprobe -r nouveaunvidia-modprobe && nvidia-modprobe -u
+nvidia-smi --query-gpu=gpu_name --format=csv,noheader --id=0 | sed -e 's/ /-/g'
+#Tesla-T4
+yum -y install nvidia-container-runtime-hook
+yum -y install podman
+
+podman run --privileged -it --rm registry.crmi.cn:5021/mirrorgooglecontainers/cuda-vector-add:v0.1
 
 ```
 

@@ -89,7 +89,7 @@ load_docker_image(){
 
 # load_redhat_image "$gcr_builder_images" "gcr.io" "gcr-builder-images.list"
 
-load_redhat_image "$nvcr_builder_images" "nvcr-builder-images.tgz" "nvcr-builder-images.list"
+load_redhat_image "$nvcr_builder_images" "nvcr.io" "nvcr-builder-images.list"
 
 docker image prune -f
 
