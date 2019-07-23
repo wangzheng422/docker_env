@@ -437,8 +437,9 @@ oc describe node node-otii.crmi.cn
 oc new-project nvidia
 oc project nvidia
 oc create -f cuda-vector-add.yaml
-
+oc logs pod/cuda-vector-add
 ```
+![](imgs/2019-07-23-18-04-18.png)
 
 operation on master, scc mode, !!! do not use !!!
 
