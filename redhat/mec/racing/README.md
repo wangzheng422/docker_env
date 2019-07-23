@@ -379,14 +379,17 @@ ansible-playbook -i hosts-3.11.117.yaml /usr/share/ansible/openshift-ansible/pla
 # ansible -i ansible_host cmcc[0:2] -u root -m file -a "path=/var/lib/etcd state=absent"
 
 # if uninstall, on each glusterfs nodes, run
-ansible -i ansible_host cmcc[1:4] -u root -m shell -a "vgs | tail -1 | awk '{print $1}'"
-ansible -i ansible_host cmcc[1:4] -u root -m shell -a "pvs | tail -1 | awk '{print $1}'"
-vgremove -f $(vgs | tail -1 | awk '{print $1}')
-pvremove $(pvs | tail -1 | awk '{print $1}')
+ansible -i ansible_host cmcc[1:3] -u root -m shell -a "vgs | tail -1 | awk '{print $1}'"
+ansible -i ansible_host cmcc[1:3] -u root -m shell -a "pvs | tail -1 | awk '{print $1}'"
+ansible -i ansible_host cmcc[1:3] -u root -m shell -a "vgremove -f \$(vgs | tail -1 | awk '{print \$1}')"
+ansible -i ansible_host cmcc[1:3] -u root -m shell -a "pvremove \$(pvs | tail -1 | awk '{print \$1}')"
 
 ansible -i ansible_host cmcc -u root -m shell -a "crictl pods"
 ansible -i ansible_host cmcc -u root -m shell -a "crictl stopp \$(crictl pods -q)"
 ansible -i ansible_host cmcc -u root -m shell -a "crictl rmp \$(crictl pods -q)"
+
+# ansible -i ansible_host cmcc -u root -m shell -a "crictl images 2>/dev/null"
+# ansible -i ansible_host cmcc -u root -m shell -a "crictl rmi \$(crictl images 2>/dev/null)"
 
 wipefs --all --force /dev/sda6
 
@@ -409,24 +412,79 @@ scp /etc/origin/master/htpasswd root@master3:/etc/origin/master/htpasswd
 
 https://blog.openshift.com/how-to-use-gpus-with-deviceplugin-in-openshift-3-10/
 
+https://blog.openshift.com/use-gpus-with-device-plugin-in-openshift-3-9/
+
+https://github.com/zvonkok/origin-ci-gpu/blob/release-3.11/doc/How%20to%20use%20GPUs%20with%20DevicePlugin%20in%20OpenShift%203.11%20.pdf
+
 nvida GPU 需要一个奇怪的源
 ```bash
 subscription-manager repos --enable="rhel-7-server-e4s-optional-rpms"
 ```
+
+install on gpu machine
 
 ```bash
 
 yum -y install kernel-devel-`uname -r`
 yum -y install xorg-x11-drv-nvidia xorg-x11-drv-nvidia-devel nvidia-modprobe nvidia-driver-NVML nvidia-driver-cuda
 modprobe -r nouveau
-modprobe -r nouveaunvidia-modprobe && nvidia-modprobe -u
+nvidia-modprobe && nvidia-modprobe -u
 nvidia-smi --query-gpu=gpu_name --format=csv,noheader --id=0 | sed -e 's/ /-/g'
 #Tesla-T4
 yum -y install nvidia-container-runtime-hook
 yum -y install podman
 
-podman run --privileged -it --rm registry.crmi.cn:5021/mirrorgooglecontainers/cuda-vector-add:v0.1
+cat <<'EOF' > /usr/share/containers/oci/hooks.d/oci-nvidia-hook.json
+{
+  "hook": "/usr/bin/nvidia-container-runtime-hook",
+  "arguments": ["prestart"],
+  "annotations": ["sandbox"],
+  "stage": [ "prestart" ]
+}
+EOF
 
+semodule -i nvidia-container.pp
+nvidia-container-cli -k list | restorecon -v -f -
+restorecon -Rv /dev
+restorecon -Rv /var/lib/kubelet
+# https://bugzilla.redhat.com/show_bug.cgi?id=1729855
+# chcon -t container_file_t /dev/nvidia*
+
+podman run --user 1000:1000  --security-opt=no-new-privileges --cap-drop=ALL  --security-opt label=type:nvidia_container_t  registry.crmi.cn:5021/mirrorgooglecontainers/cuda-vector-add:v0.1
+
+docker run  --user 1000:1000 --security-opt=no-new-privileges --cap-drop=ALL --security-opt label=type:nvidia_container_t     registry.crmi.cn:5021/mirrorgooglecontainers/cuda-vector-add:v0.1
+
+```
+operation on master
+
+目前发现，只能用docker，不能用cri-o。后续会再研究一下，为什么。
+
+```bash
+oc project kube-system
+oc label node node-otii.crmi.cn openshift.com/gpu-accelerator=true
+
+oc create -f nvidia-device-plugin.yml
+
+oc describe node node-otii.crmi.cn
+![](imgs/2019-07-23-17-38-13.png)
+
+oc new-project nvidia
+oc project nvidia
+oc create -f cuda-vector-add.yaml
+
+```
+
+operation on master, scc mode, !!! do not use !!!
+
+```bash
+oc project kube-system
+oc create serviceaccount nvidia-deviceplugin
+
+oc label node node-otii.crmi.cn openshift.com/gpu-accelerator=true
+
+oc create -f nvidia-deviceplugin-scc.yaml
+oc get scc | grep nvidia
+oc create -f nvidia-device-plugin-scc.yml
 ```
 
 ## stop cluster
