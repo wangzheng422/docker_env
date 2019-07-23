@@ -20,7 +20,9 @@ subscription-manager repos \
     --enable="rhel-7-server-ose-3.11-rpms" \
     --enable="rhel-7-server-ansible-2.6-rpms" \
     --enable="rhel-7-server-3scale-amp-2.5-rpms" \
-    --enable="rhel-7-server-cnv-1.4-tech-preview-rpms"
+    --enable="rhel-7-server-cnv-1.4-tech-preview-rpms" \
+
+subscription-manager repos --enable="rhel-7-server-e4s-optional-rpms"
 
 subscription-manager repos --list-enabled
 
@@ -59,6 +61,8 @@ mkdir -p /data/yum
 cd /data/yum
 reposync -n -d -l -m
 createrepo ./
+
+# reposync -r rhel-7-server-e4s-optional-rpms -n -d -l -m
 
 tar -cvf - yum/ | pigz -c > yum.tgz
 ```

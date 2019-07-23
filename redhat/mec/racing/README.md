@@ -390,96 +390,31 @@ ansible -i ansible_host cmcc -u root -m shell -a "crictl rmp \$(crictl pods -q)"
 
 wipefs --all --force /dev/sda6
 
-htpasswd -cb /etc/origin/master/htpasswd admin  password
+
+echo "" >> /root/htpasswd.openshift
+htpasswd -b /root/htpasswd.openshift admin 'admin'
+
+htpasswd -cb /etc/origin/master/htpasswd admin  admin
 
 oc adm policy add-cluster-role-to-user cluster-admin admin
-oc adm policy remove-cluster-role-from-user cluster-admin admin
+
+# oc adm policy remove-cluster-role-from-user cluster-admin admin
+
+scp /etc/origin/master/htpasswd root@master2:/etc/origin/master/htpasswd
+scp /etc/origin/master/htpasswd root@master3:/etc/origin/master/htpasswd
+
 ```
 
-## kubevirt
+## GPU
+
+https://blog.openshift.com/how-to-use-gpus-with-deviceplugin-in-openshift-3-10/
 
 ```bash
-yum install -y virt-install virt-top
 
-# with ansible
-yum name=virt-install,virt-top
-shell virt-host-validate qemu
+yum -y install kernel-devel-`uname -r`
+yum -y install xorg-x11-drv-nvidia xorg-x11-drv-nvidia-devel
 
-# 以下权限命令，还要在新建的project里面使用。
-oc adm policy add-scc-to-user privileged -n kube-system -z kubevirt-privileged
-oc adm policy add-scc-to-user privileged -n kube-system -z kubevirt-controller
-oc adm policy add-scc-to-user privileged -n kube-system -z kubevirt-apiserver
-
-oc adm policy add-scc-to-user privileged system:serviceaccount:kube-system:kubevirt-controller
-
-cd kubevirt.0.14.0
-oc apply -f kubevirt.yaml
-oc delete -f kubevirt.yaml
-
-oc new-project kubevirt-web-ui
-cd deploy
-
-oc apply -f service_account.yaml
-oc adm policy add-scc-to-user anyuid -z kubevirt-web-ui-operator  # use the "anyuid" string as it is
-
-
-oc apply -f role.yaml
-oc apply -f role_extra_for_console.yaml
-oc apply -f role_binding.yaml
-oc apply -f role_binding_extra_for_console.yaml
-
-oc apply -f crds/kubevirt_v1alpha1_kwebui_crd.yaml
-oc apply -f crds/kubevirt_v1alpha1_kwebui_cr.yaml
-oc apply -f operator.yaml
 ```
-
-访问 <https://kubevirt-web-ui.apps.crmi.cn> , 就可以看到 kubevirt web ui了。
-
-使用 vm/Dockerfile 制作虚拟机要用的镜像
-
-```bash
-docker build -t registry.crmi.cn/vmidisks/rhel7.6:latest .
-docker push registry.crmi.cn/vmidisks/rhel7.6:latest
-
-oc create configmap kubevirt-config --from-literal feature-gates=DataVolumes -n kube-system
-
-oc create configmap kubevirt-config --from-literal feature-gates=DataVolumes -n test-wzh
-
-oc apply -f vm.yaml
-
-oc adm policy add-scc-to-user privileged -z default test-wzh
-
-# 如果你想修改以下kvm镜像里面的内容
-systemctl start libvirtd
-export LIBGUESTFS_BACKEND=direct
-guestmount -a ./rhel-server-7.6-x86_64-kvm.qcow2 -i  disk/
-guestunmount disk/
-
-# 用以下命令，作为启动脚本，这样就可以登录了。
-cat /etc/passwd || cat /etc/shadow || useradd -p $( openssl passwd -1 wzhwzh ) wzh -s /bin/bash -G wheel || cat /etc/shadow
-
-# 上面的方法好像不行，用下面的命令，base64编码
-cat startup.sh | base64
-```
-
-然后在vm启动的yaml文件里面，用base64注入的方法，注入这个启动脚本。
-
-```yaml
-      volumes:
-        - containerDisk:
-            image: 'registry.crmi.cn/vmidisks/rhel7.6:latest'
-          name: rootdisk
-        - cloudInitNoCloud:
-            userDataBase64: >-
-              IyEvYmluL2Jhc2gKc2V0IC14CmNhdCAvZXRjL3Bhc3N3ZApjYXQgL2V0Yy9zaGFkb3cKdXNlcmFkZCAtcCAkKCBvcGVuc3NsIHBhc3N3ZCAtMSB3emh3emggKSB3emggLXMgL2Jpbi9iYXNoIC1HIHdoZWVsCmNhdCAvZXRjL3NoYWRvdw==
-          name: cloudinitdisk
-```
-
-如果需要添加硬盘，需要装另外一个插件 <https://github.com/kubevirt/containerized-data-importer>，本次实验时间有限，而且实际场景下面，也许不太用到，等弄完sr-iov再回来做这个组件。
-
-## sigma 服务支持
-
-sigma需要docker的socker支持，需要添加如下docker启动参数，-H tcp://0.0.0.0:5678 -H unix:///var/run/docker.sock ， 就加到 /etc/sysconfig/docker里面， 另外别忘记把ansible 的 ansible_host 文件给改掉。
 
 ## stop cluster
 
