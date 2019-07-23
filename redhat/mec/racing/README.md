@@ -322,45 +322,10 @@ GPU 参考 <https://blog.openshift.com/how-to-use-gpus-with-deviceplugin-in-open
 以下内容，不能全部执行，根据需要自取。
 
 ```bash
-# copy ansible_host to /etc/ansible/host
-# ansible-console cmcc -u root
-
-# ansible -i ansible_host cmcc -u root -m copy -a "src=./hosts dest=/etc/hosts"
-
-# ansible -i ansible_host cmcc -u root -m yum_repository -a "name=ftp description=ftp baseurl=ftp://yum.crmi.cn/data gpgcheck=no state=present"
-
-# ansible -i ansible_host cmcc -u root -m yum -a "name=byobu,htop,ansible-2.6.17-1.el7ae state=present"
-
-# ansible -i ansible_host cmcc -u root -m timezone -a "name=Asia/Shanghai"
-
-# yum name=nc,net-tools,ansible,iptables-services,ncdu,lftp,byobu,glances,htop,lsof,ntpdate,bash-completion,wget,nmon,vim,httpd-tools,unzip,git,bind-utils,bridge-utils,lrzsz,docker,openshift-ansible,docker-compose,glusterfs-fuse
-
-# epel的ansible版本是2.7， openshift必须用2.6的。
-# yum name=ansible state=absent
-# yum name=ansible-2.6.13-1.el7ae,openshift-ansible
-
-# systemd name=docker state=stopped enabled=no
-
-# file path=/data/docker state=absent
-# file path=/data/docker state=directory
-
-# rhel下面，改docker的数据目录，由于selinux的限制，不能做软连接。
-# copy src=./sysconfig/docker dest=/etc/sysconfig/docker
-
-# systemd name=docker state=started enabled=yes
-
-# lineinfile path=/etc/sysconfig/docker regexp="^INSECURE_REGISTRY" state=absent
 
 ansible -i ansible_host cmcc -u root -m lineinfile -a "path=/etc/ssh/sshd_config regexp="^UseDNS" line="UseDNS no" insertafter=EOF state=present"
 ansible -i ansible_host cmcc -u root -m systemd =a "name=sshd state=restarted enabled=yes"
 
-# shell semanage fcontext -a -t container_var_lib_t "/data/docker(/.*)?"
-# shell semanage fcontext -a -t container_share_t "/data/docker/overlay2(/.*)?"
-# shell restorecon -r /data/docker
-
-# systemd name=docker state=stopped enabled=no
-# file path=/var/lib/docker state=absent
-# file path=/var/lib/docker state=directory
 ```
 
 ## 开始安装
@@ -487,19 +452,3 @@ oc get scc | grep nvidia
 oc create -f nvidia-device-plugin-scc.yml
 ```
 
-## stop cluster
-
-```bash
-systemctl stop docker atomic-openshift-node
-
-master-restart
-
-systemctl status etcd.service
-
-systemctl start docker atomic-openshift-node
-
-```
-
-## 问题排查
-
-如果grafana看不到数据，别着急，检查一下服务器时间和本地浏览器时间，是不是差别太大，差别太大，就看不到数据了。
