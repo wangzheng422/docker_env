@@ -415,6 +415,7 @@ restorecon -Rv /var/lib/kubelet
 # https://bugzilla.redhat.com/show_bug.cgi?id=1729855
 # chcon -t container_file_t /dev/nvidia*
 
+# podman will fail, don't know why
 podman run --user 1000:1000  --security-opt=no-new-privileges --cap-drop=ALL  --security-opt label=type:nvidia_container_t  registry.crmi.cn:5021/mirrorgooglecontainers/cuda-vector-add:v0.1
 
 docker run  --user 1000:1000 --security-opt=no-new-privileges --cap-drop=ALL --security-opt label=type:nvidia_container_t     registry.crmi.cn:5021/mirrorgooglecontainers/cuda-vector-add:v0.1
@@ -432,7 +433,7 @@ oc create -f nvidia-device-plugin.yml
 
 oc describe node node-otii.crmi.cn
 ```
-![](imgs/2019-07-23-17-38-13.png)
+![](imgs/2019-07-23-17-38-13.png){:height="50%" width="50%"}
 ```bash
 oc new-project nvidia
 oc project nvidia
