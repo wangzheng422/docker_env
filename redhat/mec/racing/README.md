@@ -433,7 +433,7 @@ oc create -f nvidia-device-plugin.yml
 
 oc describe node node-otii.crmi.cn
 ```
-![](imgs/2019-07-23-17-38-13.png){:height="50%" width="50%"}
+![](imgs/2019-07-23-17-38-13.png)
 ```bash
 oc new-project nvidia
 oc project nvidia
@@ -442,6 +442,7 @@ oc logs pod/cuda-vector-add
 ```
 ![](imgs/2019-07-23-18-04-18.png)
 
+!!! do not use !!!
 operation on master, scc mode, !!! do not use !!!
 
 ```bash
@@ -455,3 +456,37 @@ oc get scc | grep nvidia
 oc create -f nvidia-device-plugin-scc.yml
 ```
 
+## sriov
+
+https://github.com/openshift/sriov-network-device-plugin
+
+https://github.com/majek/ixgbe
+
+build multus, sriov-cni, , follow on the above page.
+
+you don't need to follow sriov-network-device-plugin, because image already download ( nfvpe/sriov-device-plugin:latest )
+
+```bash
+# no use: when build sriov-network-device-plugin, change Makefile, change docker to podman, for make image.
+
+
+# on node-sriov
+# vi /etc/modprobe.d/ixgbe.conf
+options ixgbe max_vfs=8,8
+
+ansible -i ../oper/ansible_host cmcc -u root -m copy -a "src=./multus dest=/opt/cni/bin"
+ansible -i ../oper/ansible_host cmcc -u root -m copy -a "src=./sriov dest=/opt/cni/bin"
+
+ansible -i ../oper/ansible_host cmcc -u root -m copy -a "src=./cni-conf.json dest=/etc/cni/net.d/"
+
+oc create -f ./crdnetwork.yaml
+
+oc create -f ./sriov-crd.yaml
+
+oc create -f ./configMap.yaml
+
+oc create -f ./sriovdp-daemonset.yaml
+
+kubectl get node node-sriov.crmi.cn -o json | jq '.status.allocatable'
+
+```
