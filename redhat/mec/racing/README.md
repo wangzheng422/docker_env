@@ -512,3 +512,8 @@ oc delete -f ./multus-sriov-daemonsets.yaml
 download driver and tools
 https://github.com/openshift/sriov-network-device-plugin#config-parameters
 
+intel_iommu=on
+
+https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/6/html/virtualization_host_configuration_and_guest_installation_guide/chap-Virtualization_Host_Configuration_and_Guest_Installation_Guide-PCI_Device_Config#intel-prep
+
+https://access.redhat.com/documentation/en-us/red_hat_openstack_platform/10/html/networking_guide/sr-iov-support-for-virtual-networking
