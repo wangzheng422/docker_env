@@ -326,8 +326,9 @@ EOF
 docker_builder_images=$(cat << EOF
 gitlab/gitlab-ce
 nfvpe/sriov-device-plugin:latest
-centos/tools 
+nfvpe/sriov-cni:latest
 nfvpe/multus:latest
+centos/tools 
 kubevirt/virt-api:v0.14.0
 kubevirt/virt-launcher:v0.14.0
 kubevirt/virt-controller:v0.14.0

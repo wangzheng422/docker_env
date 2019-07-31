@@ -323,8 +323,8 @@ GPU 参考 <https://blog.openshift.com/how-to-use-gpus-with-deviceplugin-in-open
 
 ```bash
 
-ansible -i ansible_host cmcc -u root -m lineinfile -a "path=/etc/ssh/sshd_config regexp="^UseDNS" line="UseDNS no" insertafter=EOF state=present"
-ansible -i ansible_host cmcc -u root -m systemd =a "name=sshd state=restarted enabled=yes"
+ansible -i ansible_host cmcc -u root -m lineinfile -a "path=/etc/ssh/sshd_config regexp='^UseDNS' line='UseDNS no' insertafter=EOF state=present"
+ansible -i ansible_host cmcc -u root -m service -a "name=sshd state=restarted enabled=yes"
 
 ```
 
@@ -474,19 +474,41 @@ you don't need to follow sriov-network-device-plugin, because image already down
 # vi /etc/modprobe.d/ixgbe.conf
 options ixgbe max_vfs=8,8
 
+modprobe ixgbe max_vfs=8
+
+modprobe -r ixgbe
+
+modprobe igb max_vfs=8
+
+# 这个在otii上面运行，直接网络就断了。。。
+modprobe -r igb
+
 ansible -i ../oper/ansible_host cmcc -u root -m copy -a "src=./multus dest=/opt/cni/bin"
 ansible -i ../oper/ansible_host cmcc -u root -m copy -a "src=./sriov dest=/opt/cni/bin"
-
 ansible -i ../oper/ansible_host cmcc -u root -m copy -a "src=./cni-conf.json dest=/etc/cni/net.d/"
 
 oc create -f ./crdnetwork.yaml
-
 oc create -f ./sriov-crd.yaml
-
 oc create -f ./configMap.yaml
-
 oc create -f ./sriovdp-daemonset.yaml
+
+ansible -i ../oper/ansible_host cmcc -u root -m file -a "path=/opt/cni/bin/multus state=absent"
+ansible -i ../oper/ansible_host cmcc -u root -m file -a "path=/opt/cni/bin/sriov state=absent"
+ansible -i ../oper/ansible_host cmcc -u root -m file -a "path=/etc/cni/net.d/cni-conf.json state=absent"
+
+oc delete -f ./crdnetwork.yaml
+oc delete -f ./sriov-crd.yaml
+oc delete -f ./configMap.yaml
+oc delete -f ./sriovdp-daemonset.yaml
+
 
 kubectl get node node-sriov.crmi.cn -o json | jq '.status.allocatable'
 
+oc create -f ./multus-sriov-daemonsets.yaml
+
+oc delete -f ./multus-sriov-daemonsets.yaml
 ```
+
+download driver and tools
+https://github.com/openshift/sriov-network-device-plugin#config-parameters
+
