@@ -275,6 +275,14 @@ registry.redhat.io/cnv-tech-preview/virtio-win
 registry.redhat.io/cnv-tech-preview/virtio-win-container
 registry.redhat.io/cnv-tech-preview/vmctl
 
+# registry.redhat.io/3scale-amp20/memcached:1.4.15
+registry.redhat.io/3scale-amp20/memcached
+registry.redhat.io/rhscl/postgresql-10-rhel7
+registry.redhat.io/3scale-amp25/system
+registry.redhat.io/3scale-amp25/backend
+registry.redhat.io/3scale-amp25/apicast-gateway
+registry.redhat.io/3scale-amp22/wildcard-router
+registry.redhat.io/3scale-amp25/zync
 EOF
 )
 
