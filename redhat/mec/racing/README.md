@@ -359,8 +359,10 @@ ansible -i ansible_host cmcc -u root -m shell -a "crictl rmp \$(crictl pods -q)"
 wipefs --all --force /dev/sda6
 
 
-echo "" >> /root/htpasswd.openshift
+echo "" > /root/htpasswd.openshift
 htpasswd -b /root/htpasswd.openshift admin 'admin'
+
+ansible -i ansible_host cmcc[0:2] -u root -m copy -a "src=/root/htpasswd.openshift dest=/etc/origin/master/htpasswd"
 
 htpasswd -cb /etc/origin/master/htpasswd admin  admin
 
@@ -502,8 +504,11 @@ cat /sys/class/net/*/device/sriov_totalvfs
 # network sriov status
 # https://docs.google.com/spreadsheets/d/18igPrKuOA0nOApnWBXc_qzCyqGKjSjDdmx4szn5LhHo/edit#gid=956006240
 
-#
+# on node-otii
 echo 7 > /sys/class/net/enp216s0f0/device/sriov_numvfs
+
+# on node-sriov
+echo 7 > /sys/class/net/enp27s0f0/device/sriov_numvfs
 
 # be careful, below maybe block you from reboot.
 # cat << EOF > /etc/udev/rules.d/enp64s0f0.rules
@@ -540,7 +545,8 @@ oc create -f ./multus-sriov-daemonsets.yaml
 
 oc delete -f ./multus-sriov-daemonsets.yaml
 
-kubectl get node node-otii.crmi.cn -o json | jq '.status.allocatable'
+oc get node node-otii.crmi.cn -o json | jq '.status.allocatable'
+oc get node node-sriov.crmi.cn -o json | jq '.status.allocatable'
 ```
 ![](imgs/2019-08-02-13-05-16.png)
 
@@ -605,4 +611,14 @@ https://access.redhat.com/documentation/en-us/red_hat_virtualization/4.1/html/in
 # oc delete -f ./sriovdp-daemonset.yaml
 
 # kubectl get node node-sriov.crmi.cn -o json | jq '.status.allocatable'
+```
+
+## 3scale
+
+```bash
+subscription-manager repos --enable=rhel-7-server-3scale-amp-2.0-rpms
+
+yum install 3scale-amp-template
+
+
 ```

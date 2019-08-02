@@ -5,6 +5,7 @@ export private_repo="registry.crmi.cn:5021"
 export major_tag="v3.11"
 # https://access.redhat.com/articles/2834301
 # docker search rhgs3 | grep redhat.io | awk '{print $2}'
+# search for openshift, openshift3, fuse7, dotnet, jboss
 
 ## 后续导入的时候，要用2个版本号
 ose3_images=$(cat << EOF
