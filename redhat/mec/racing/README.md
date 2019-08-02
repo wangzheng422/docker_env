@@ -466,68 +466,8 @@ do not need to build multus, sriov-cni, do not follow the above page, just for r
 
 you don't need to follow sriov-network-device-plugin, because image already download ( nfvpe/sriov-device-plugin:latest )
 
-```bash
-# no use: when build sriov-network-device-plugin, change Makefile, change docker to podman, for make image.
-
-# on node-sriov
-# vi /etc/modprobe.d/ixgbe.conf
-# cat << EOF > /etc/modprobe.d/ixgbe.conf
-# options ixgbe max_vfs=8
-# EOF
-
-# cat << EOF > /etc/modprobe.d/igb.conf
-# options igb max_vfs=8
-# EOF
-
-# rm -f /etc/modprobe.d/ixgbe.conf
-# rm -f /etc/modprobe.d/igb.conf
-
-# modprobe ixgbe max_vfs=8
-
-# modprobe -r ixgbe
-
-# modprobe igb max_vfs=8
-
-# # 这个在otii上面运行，直接网络就断了。。。
-# modprobe -r igb
-
-# ansible -i ../oper/ansible_host cmcc -u root -m copy -a "src=./multus dest=/opt/cni/bin"
-# ansible -i ../oper/ansible_host cmcc -u root -m copy -a "src=./sriov dest=/opt/cni/bin"
-# ansible -i ../oper/ansible_host cmcc -u root -m copy -a "src=./cni-conf.json dest=/etc/cni/net.d/"
-
-# oc create -f ./crdnetwork.yaml
-# oc create -f ./sriov-crd.yaml
-# oc create -f ./configMap.yaml
-# oc create -f ./sriovdp-daemonset.yaml
-
-# ansible -i ../oper/ansible_host cmcc -u root -m file -a "path=/opt/cni/bin/multus state=absent"
-# ansible -i ../oper/ansible_host cmcc -u root -m file -a "path=/opt/cni/bin/sriov state=absent"
-# ansible -i ../oper/ansible_host cmcc -u root -m file -a "path=/etc/cni/net.d/cni-conf.json state=absent"
-
-# oc delete -f ./crdnetwork.yaml
-# oc delete -f ./sriov-crd.yaml
-# oc delete -f ./configMap.yaml
-# oc delete -f ./sriovdp-daemonset.yaml
-
-# kubectl get node node-sriov.crmi.cn -o json | jq '.status.allocatable'
-```
-
-download driver and tools
-https://github.com/openshift/sriov-network-device-plugin#config-parameters
-
-intel_iommu=on
-
-https://docs.infoblox.com/display/NOSIG/Enabling+SRIOV+on+RHEL+7
-
-https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/7/html/system_administrators_guide/sec-customizing_the_grub_2_configuration_file
-
-https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/6/html/virtualization_host_configuration_and_guest_installation_guide/chap-Virtualization_Host_Configuration_and_Guest_Installation_Guide-PCI_Device_Config#intel-prep
-
-https://access.redhat.com/documentation/en-us/red_hat_openstack_platform/10/html/networking_guide/sr-iov-support-for-virtual-networking
-
-https://access.redhat.com/documentation/en-us/red_hat_virtualization/4.1/html/installation_guide/appe-configuring_a_hypervisor_host_for_pci_passthrough
-
 以下这个链接，才是真正能激活sriov的方法
+
 https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/7/html/virtualization_deployment_and_administration_guide/sect-pci_devices-pci_passthrough
 
 https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/7/html/virtualization_deployment_and_administration_guide/chap-Guest_virtual_machine_device_configuration#proc-PCI_devices-Preparing_an_Intel_system_for_PCI_device_assignment
@@ -535,6 +475,7 @@ https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/7/html/vi
 https://zshisite.wordpress.com/blog/
 
 以下是主机被玩的启动不了了，如何进入单用户模式，自救
+
 https://www.tecmint.com/boot-into-single-user-mode-in-centos-7/
 
 ```bash
@@ -600,3 +541,66 @@ oc delete -f ./multus-sriov-daemonsets.yaml
 kubectl get node node-otii.crmi.cn -o json | jq '.status.allocatable'
 ```
 ![](imgs/2019-08-02-13-05-16.png)
+
+以下是走的弯路
+
+download driver and tools
+https://github.com/openshift/sriov-network-device-plugin#config-parameters
+
+intel_iommu=on
+
+https://docs.infoblox.com/display/NOSIG/Enabling+SRIOV+on+RHEL+7
+
+https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/7/html/system_administrators_guide/sec-customizing_the_grub_2_configuration_file
+
+https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/6/html/virtualization_host_configuration_and_guest_installation_guide/chap-Virtualization_Host_Configuration_and_Guest_Installation_Guide-PCI_Device_Config#intel-prep
+
+https://access.redhat.com/documentation/en-us/red_hat_openstack_platform/10/html/networking_guide/sr-iov-support-for-virtual-networking
+
+https://access.redhat.com/documentation/en-us/red_hat_virtualization/4.1/html/installation_guide/appe-configuring_a_hypervisor_host_for_pci_passthrough
+
+```bash
+# no use: when build sriov-network-device-plugin, change Makefile, change docker to podman, for make image.
+
+# on node-sriov
+# vi /etc/modprobe.d/ixgbe.conf
+# cat << EOF > /etc/modprobe.d/ixgbe.conf
+# options ixgbe max_vfs=8
+# EOF
+
+# cat << EOF > /etc/modprobe.d/igb.conf
+# options igb max_vfs=8
+# EOF
+
+# rm -f /etc/modprobe.d/ixgbe.conf
+# rm -f /etc/modprobe.d/igb.conf
+
+# modprobe ixgbe max_vfs=8
+
+# modprobe -r ixgbe
+
+# modprobe igb max_vfs=8
+
+# # 这个在otii上面运行，直接网络就断了。。。
+# modprobe -r igb
+
+# ansible -i ../oper/ansible_host cmcc -u root -m copy -a "src=./multus dest=/opt/cni/bin"
+# ansible -i ../oper/ansible_host cmcc -u root -m copy -a "src=./sriov dest=/opt/cni/bin"
+# ansible -i ../oper/ansible_host cmcc -u root -m copy -a "src=./cni-conf.json dest=/etc/cni/net.d/"
+
+# oc create -f ./crdnetwork.yaml
+# oc create -f ./sriov-crd.yaml
+# oc create -f ./configMap.yaml
+# oc create -f ./sriovdp-daemonset.yaml
+
+# ansible -i ../oper/ansible_host cmcc -u root -m file -a "path=/opt/cni/bin/multus state=absent"
+# ansible -i ../oper/ansible_host cmcc -u root -m file -a "path=/opt/cni/bin/sriov state=absent"
+# ansible -i ../oper/ansible_host cmcc -u root -m file -a "path=/etc/cni/net.d/cni-conf.json state=absent"
+
+# oc delete -f ./crdnetwork.yaml
+# oc delete -f ./sriov-crd.yaml
+# oc delete -f ./configMap.yaml
+# oc delete -f ./sriovdp-daemonset.yaml
+
+# kubectl get node node-sriov.crmi.cn -o json | jq '.status.allocatable'
+```
