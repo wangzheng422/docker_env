@@ -567,6 +567,8 @@ oc delete -f ./sriov-crd.yaml
 oc delete -f ./multus-sriov-daemonsets.yaml
 
 ```
+![](imgs/2019-08-06-17-44-26.png)
+
 
 以下是走的弯路
 
