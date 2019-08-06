@@ -351,6 +351,7 @@ openshift/oauth-proxy:v1.1.0
 chartmuseum/chartmuseum
 nicolaka/netshoot
 dougbtv/dhcp
+nginx/nginx-ingress
 EOF
 )
 

@@ -543,12 +543,30 @@ echo 7 > /sys/class/net/enp27s0f0/device/sriov_numvfs
 
 oc create -f ./multus-sriov-daemonsets.yaml
 
-oc delete -f ./multus-sriov-daemonsets.yaml
-
 oc get node node-otii.crmi.cn -o json | jq '.status.allocatable'
 oc get node node-sriov.crmi.cn -o json | jq '.status.allocatable'
 ```
 ![](imgs/2019-08-02-13-05-16.png)
+
+```bash
+oc create -f ./sriov-crd.yaml
+
+oc get crd
+oc get network-attachment-definitions
+oc get node -o json | jq '.items[].status.allocatable'
+oc get node -o json | jq '.items[] | .metadata.name,.status.allocatable'
+
+oc create -f ./pod-tc1.yaml
+
+oc exec -it testpod1 -- ip addr show
+
+oc exec -it testpod1 -- route -n
+
+oc delete -f ./pod-tc1.yaml
+oc delete -f ./sriov-crd.yaml
+oc delete -f ./multus-sriov-daemonsets.yaml
+
+```
 
 以下是走的弯路
 
