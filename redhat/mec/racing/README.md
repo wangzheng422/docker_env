@@ -456,7 +456,7 @@ oc rsh nvidia-test
 # cd /workspace/tensorrt/bin
 #  ./sample_mnist
 # cd /workspace/tensorrt/samples/python/introductory_parser_samples
-#  c
+#  python caffe_resnet50.py -d /workspace/tensorrt/data
 ```
 ![](imgs/2019-08-16-15-12-57.png)
 ![](imgs/2019-08-16-15-16-52.png)
