@@ -461,7 +461,8 @@ oc rsh nvidia-test
 ![](imgs/2019-08-16-15-12-57.png)
 ![](imgs/2019-08-16-15-16-52.png)
 
-有个问题，容器不退出，新的GPU pod不能创建成功，解决办法，就是别用request limit，用node selector就可以了。
+有个问题，容器不退出，新的GPU pod不能创建成功，解决办法，就是别用request limit，用node selector就可以了。这样，可以有多个容器，同时跑在gpu节点上，争抢gpu。
+![](imgs/2019-08-16-16-37-03.png)
 
 以下是弯路
 
