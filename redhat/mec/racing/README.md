@@ -444,6 +444,25 @@ oc logs pod/cuda-vector-add
 ```
 ![](imgs/2019-07-23-18-04-18.png)
 
+```bash
+docker build -t registry.crmi.cn:5021/nvidia/tensorrt:wzh ./
+docker push registry.crmi.cn:5021/nvidia/tensorrt:wzh
+docker run --rm registry.crmi.cn:5021/nvidia/tensorrt:wzh
+oc create -f nvidia-test.yaml
+
+oc rsh nvidia-test
+# /usr/local/bin/nvidia_entrypoint.sh
+# https://ngc.nvidia.com/catalog/containers/nvidia:tensorrt
+# cd /workspace/tensorrt/bin
+#  ./sample_mnist
+# cd /workspace/tensorrt/samples/python/introductory_parser_samples
+#  c
+```
+![](imgs/2019-08-16-15-12-57.png)
+![](imgs/2019-08-16-15-16-52.png)
+
+有个问题，容器不退出，新的GPU pod不能创建成功，解决办法，就是别用request limit，用node selector就可以了。
+
 以下是弯路
 
 !!! do not use !!!

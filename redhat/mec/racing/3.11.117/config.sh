@@ -353,7 +353,7 @@ nicolaka/netshoot
 dougbtv/dhcp
 nginx/nginx-ingress:edge
 nginx/nginx-ingress
-
+nvidia/cuda:9.0-base
 EOF
 )
 
