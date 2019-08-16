@@ -445,6 +445,7 @@ oc logs pod/cuda-vector-add
 ![](imgs/2019-07-23-18-04-18.png)
 
 ```bash
+# https://ngc.nvidia.com/catalog/containers/nvidia:tensorrt
 docker build -t registry.crmi.cn:5021/nvidia/tensorrt:wzh ./
 docker push registry.crmi.cn:5021/nvidia/tensorrt:wzh
 docker run --rm registry.crmi.cn:5021/nvidia/tensorrt:wzh
@@ -452,11 +453,10 @@ oc create -f nvidia-test.yaml
 
 oc rsh nvidia-test
 # /usr/local/bin/nvidia_entrypoint.sh
-# https://ngc.nvidia.com/catalog/containers/nvidia:tensorrt
-# cd /workspace/tensorrt/bin
-#  ./sample_mnist
-# cd /workspace/tensorrt/samples/python/introductory_parser_samples
-#  python caffe_resnet50.py -d /workspace/tensorrt/data
+cd /workspace/tensorrt/bin
+./sample_mnist
+cd /workspace/tensorrt/samples/python/introductory_parser_samples
+python caffe_resnet50.py -d /workspace/tensorrt/data
 ```
 ![](imgs/2019-08-16-15-12-57.png)
 ![](imgs/2019-08-16-15-16-52.png)
