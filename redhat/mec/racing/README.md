@@ -444,6 +444,8 @@ oc logs pod/cuda-vector-add
 ```
 ![](imgs/2019-07-23-18-04-18.png)
 
+测试用的镜像，需要去百度盘上面下载和导入 https://pan.baidu.com/s/1Bjbb7SDFrJWpGzeFCZfHxw
+
 ```bash
 # https://ngc.nvidia.com/catalog/containers/nvidia:tensorrt
 docker build -t registry.crmi.cn:5021/nvidia/tensorrt:wzh ./
