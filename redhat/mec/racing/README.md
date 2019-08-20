@@ -388,7 +388,7 @@ nvida GPU 需要一个奇怪的源
 subscription-manager repos --enable="rhel-7-server-e4s-optional-rpms"
 ```
 
-install on gpu machine
+### install on gpu machine
 
 目前发现，只能用docker，不能用cri-o。后续会再研究一下，为什么。
 
@@ -425,7 +425,7 @@ podman run --user 1000:1000  --security-opt=no-new-privileges --cap-drop=ALL  --
 docker run  --user 1000:1000 --security-opt=no-new-privileges --cap-drop=ALL --security-opt label=type:nvidia_container_t     registry.crmi.cn:5021/mirrorgooglecontainers/cuda-vector-add:v0.1
 
 ```
-operation on master
+### operation on master
 
 ```bash
 oc project kube-system
@@ -466,7 +466,7 @@ python caffe_resnet50.py -d /workspace/tensorrt/data
 有个问题，容器不退出，新的GPU pod不能创建成功，解决办法，就是别用request limit，用node selector就可以了。这样，可以有多个容器，同时跑在gpu节点上，争抢gpu。
 ![](imgs/2019-08-16-16-37-03.png)
 
-以下是弯路
+### 以下是弯路
 
 !!! do not use !!!
 operation on master, scc mode, !!! do not use !!!
@@ -510,6 +510,7 @@ grub2-mkconfig -o /boot/efi/EFI/redhat/grub.cfg
 
 reboot
 
+# 以下命令都可以查看硬件状态，各有千秋。
 lspci -nn | grep -i net
 
 lshw -numeric -class network
@@ -518,7 +519,7 @@ inxi -N -v 7
 
 inxi -n -v 8
 
-# on node-otii
+# on node-otii， 看看支持不支持vf，最大支持几个
 cat /sys/class/net/*/device/sriov_numvfs
 ls -l /sys/class/net/*/device/sriov_numvfs
 cat /sys/class/net/*/device/sriov_totalvfs
@@ -526,7 +527,7 @@ cat /sys/class/net/*/device/sriov_totalvfs
 # network sriov status
 # https://docs.google.com/spreadsheets/d/18igPrKuOA0nOApnWBXc_qzCyqGKjSjDdmx4szn5LhHo/edit#gid=956006240
 
-# on node-otii
+# on node-otii，设置创建几个vf
 echo 7 > /sys/class/net/enp216s0f0/device/sriov_numvfs
 
 # on node-sriov
@@ -592,7 +593,7 @@ oc delete -f ./multus-sriov-daemonsets.yaml
 ![](imgs/2019-08-06-17-44-26.png)
 
 
-以下是走的弯路
+### 以下是走的弯路
 
 download driver and tools
 https://github.com/openshift/sriov-network-device-plugin#config-parameters
