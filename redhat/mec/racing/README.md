@@ -390,6 +390,8 @@ subscription-manager repos --enable="rhel-7-server-e4s-optional-rpms"
 
 install on gpu machine
 
+目前发现，只能用docker，不能用cri-o。后续会再研究一下，为什么。
+
 ```bash
 
 yum -y install kernel-devel-`uname -r`
@@ -424,8 +426,6 @@ docker run  --user 1000:1000 --security-opt=no-new-privileges --cap-drop=ALL --s
 
 ```
 operation on master
-
-目前发现，只能用docker，不能用cri-o。后续会再研究一下，为什么。
 
 ```bash
 oc project kube-system
