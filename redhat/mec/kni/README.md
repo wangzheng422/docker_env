@@ -450,9 +450,11 @@ cd /usr/share/ansible/kubevirt-ansible
 ansible-playbook -v -i /data/down/ocp/hosts-3.11.98.cnv.yaml -e @vars/cnv.yml playbooks/kubevirt.yml \
 -e apb_action=provision -e registry_url=kni-registry.redhat.ren:5021 -e docker_tag=latest
 
+# if you want to uninstall
 ansible-playbook -v -i /data/down/ocp/hosts-3.11.98.cnv.yaml -e @vars/cnv.yml playbooks/kubevirt.yml \
 -e apb_action=deprovision -e registry_url=kni-registry.redhat.ren:5021 -e docker_tag=latest
 
+# 如果你想用image upload的方式上传image，要做以下3个步骤，一般用不到。
 oc delete route -n cdi cdi-uploadproxy-route
 
 oc get secret -n cdi cdi-upload-proxy-ca-key -o=jsonpath="{.data['tls\.crt']}" | base64 -d > ca.pem
