@@ -412,6 +412,7 @@ cat <<'EOF' > /usr/share/containers/oci/hooks.d/oci-nvidia-hook.json
 }
 EOF
 
+# below 4 lines should go to /etc/rc.local, so the sec file can be active after reboot.
 semodule -i nvidia-container.pp
 nvidia-container-cli -k list | restorecon -v -f -
 restorecon -Rv /dev
