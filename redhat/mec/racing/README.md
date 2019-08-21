@@ -4,6 +4,10 @@ based on <https://docs.openshift.com/container-platform/3.11/install/disconnecte
 
 以下文章中的命令，不是安装时候的顺序执行命令，请搞懂命令的含义，按照自己的需要取用。
 
+## yum源
+
+yum源的准备，参考 https://github.com/wangzheng422/docker_env/tree/master/redhat/aws
+
 ## 机器规划
 
 https://docs.google.com/spreadsheets/d/18igPrKuOA0nOApnWBXc_qzCyqGKjSjDdmx4szn5LhHo/edit#gid=0
@@ -387,6 +391,7 @@ nvida GPU 需要一个奇怪的源
 ```bash
 subscription-manager repos --enable="rhel-7-server-e4s-optional-rpms"
 ```
+也不一定，似乎rhel-7-server-optional-rpms也可以。
 
 ### install on gpu machine
 
