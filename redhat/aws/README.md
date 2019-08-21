@@ -21,8 +21,11 @@ subscription-manager repos \
     --enable="rhel-7-server-ansible-2.6-rpms" \
     --enable="rhel-7-server-3scale-amp-2.5-rpms" \
     --enable="rhel-7-server-cnv-1.4-tech-preview-rpms" \
+    --enable="rhel-7-server-optional-rpms"
 
 subscription-manager repos --enable="rhel-7-server-e4s-optional-rpms"
+
+subscription-manager repos --disable="rhel-7-server-e4s-optional-rpms"
 
 subscription-manager repos --list-enabled
 
@@ -34,12 +37,27 @@ systemctl enable docker
 systemctl start docker
 ```
 
+yum proxy
+```bash
+cat ~/.ssh/id_rsa.pub
+vi ~/.ssh/authorized_keys
+
+cat << EOF >> /etc/yum.conf
+proxy=socks5://192.168.253.1:5085
+EOF
+
+rm -fr /var/cache/yum/*
+yum clean all 
+yum -y install deltarpm
+yum -y update
+```
+
 ## epel
 
 ```bash
-wget https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+# wget https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
 
-yum -y install ./epel-release-latest-7.noarch.rpm
+yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
 
 yum -y install htop byobu ethtool
 ```
@@ -49,12 +67,23 @@ yum -y install htop byobu ethtool
 这个暂时不做吧
 
 ```bash
-yum install -y https://developer.download.nvidia.com/compute/cuda/repos/rhel7/x86_64/cuda-repo-rhel7-10.1.168-1.x86_64.rpm
+yum install -y https://developer.download.nvidia.com/compute/cuda/repos/rhel7/x86_64/cuda-repo-rhel7-10.1.243-1.x86_64.rpm
 
-curl -so /etc/yum.repos.d/nvidia-container-runtime.repo https://nvidia.github.io/nvidia-container-runtime/centos7/nvidia-container-runtime.repo
+# curl -so /etc/yum.repos.d/nvidia-container-runtime.repo https://nvidia.github.io/nvidia-container-runtime/centos7/nvidia-container-runtime.repo
 
 distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
-curl -s -L https://nvidia.github.io/nvidia-docker/$distribution/nvidia-docker.repo | sudo tee /etc/yum.repos.d/nvidia-docker.repo
+curl -s -L https://nvidia.github.io/nvidia-container-runtime/$distribution/nvidia-container-runtime.repo | \
+  sudo tee /etc/yum.repos.d/nvidia-container-runtime.repo
+
+curl -s -L https://nvidia.github.io/nvidia-container-runtime/rhel7.6/nvidia-container-runtime.repo | \
+  sudo tee /etc/yum.repos.d/nvidia-container-runtime.repo
+
+# update key
+DIST=$(sed -n 's/releasever=//p' /etc/yum.conf)
+DIST=${DIST:-$(. /etc/os-release; echo $VERSION_ID)}
+sudo rpm -e gpg-pubkey-f796ecb0
+sudo gpg --homedir /var/lib/yum/repos/$(uname -m)/$DIST/nvidia-container-runtime/gpgdir --delete-key f796ecb0
+sudo yum makecache
 ```
 
 ## download yum
