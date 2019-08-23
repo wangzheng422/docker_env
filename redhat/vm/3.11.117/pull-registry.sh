@@ -130,7 +130,8 @@ remove_docker_image(){
 
 pull_docker_image "$ose3_images" "ose3-images.tgz" "ose3-images.list"
 load_redhat_image "$ose3_images" "redhat.io" "ose3-images.list"
-remove_docker_image "$ose3_images" "redhat.io"  "ose3-images.list"
+# remove_docker_image "$ose3_images" "redhat.io"  "ose3-images.list"
+docker image rm -f $(docker image ls -qa)
 
 # pull_docker_image "$ose3_optional_imags" "ose3-optional-imags.tgz" "ose3-optional-imags.list"
 
