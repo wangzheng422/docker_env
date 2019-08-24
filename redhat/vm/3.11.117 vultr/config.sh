@@ -352,8 +352,10 @@ chartmuseum/chartmuseum
 nicolaka/netshoot
 dougbtv/dhcp
 nginx/nginx-ingress:edge
-nginx/nginx-ingress
+nginx/nginx-ingress:latest
 nvidia/cuda:9.0-base
+busybox
+nginx
 EOF
 )
 
@@ -362,8 +364,8 @@ quay.io/coreos/flannel:v0.10.0-amd64
 quay.io/coreos/flannel:v0.10.0-arm64
 quay.io/coreos/flannel:v0.10.0-ppc64le
 quay.io/coreos/flannel:v0.10.0-s390x
-quay.io/kubevirt/kubevirt-web-ui-operator:v1.4.0
-quay.io/kubevirt/kubevirt-web-ui:v1.4.0-14
+quay.io/kubevirt/kubevirt-web-ui-operator
+quay.io/kubevirt/kubevirt-web-ui
 # quay.io/openshift/origin-metering-helm-operator
 # quay.io/openshift/origin-metering-reporting-operator
 quay.io/openshift/origin-metering-presto

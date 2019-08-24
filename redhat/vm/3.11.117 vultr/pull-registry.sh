@@ -154,60 +154,23 @@ pull_registry_docker() {
 #################################
 ## pull and dump images
 
-# pull_docker_image "$ose3_images" "ose3-images.tgz" "ose3-images.list"
-# load_redhat_image "$ose3_images" "redhat.io" "ose3-images.list"
-# remove_docker_image "$ose3_images" "redhat.io"  "ose3-images.list"
-# docker image rm -f $(docker image ls -qa)
+pull_registry_redhat "$ose3_images"  "redhat.io" "ose3-images.list"
 
-# pull_registry_redhat "$ose3_images"  "redhat.io" "ose3-images.list"
+pull_registry_redhat "$ose3_optional_imags"  "redhat.io" "ose3-optional-imags.list"
 
-# pull_docker_image "$ose3_optional_imags" "ose3-optional-imags.tgz" "ose3-optional-imags.list"
-# load_redhat_image "$ose3_optional_imags" "redhat.io" "ose3-optional-imags.list"
-# docker image rm -f $(docker image ls -qa)
-
-# pull_registry_redhat "$ose3_optional_imags"  "redhat.io" "ose3-optional-imags.list"
-
-# pull_docker_image "$ose3_builder_images" "ose3-builder-images.tgz" "ose3-builder-images.list"
-# load_redhat_image "$ose3_builder_images" "redhat.io" "ose3-builder-images.list"
-# docker image rm -f $(docker image ls -qa)
-
-# pull_registry_redhat "$ose3_builder_images"  "redhat.io" "ose3-builder-images.list"
-
-# pull_docker_image "$cnv_optional_imags" "cnv-optional-images.tgz" "cnv-optional-images.list"
-# load_redhat_image "$cnv_optional_imags" "redhat.io" "cnv-optional-images.list"
-# docker image rm -f $(docker image ls -qa)
+pull_registry_redhat "$ose3_builder_images"  "redhat.io" "ose3-builder-images.list"
 
 pull_registry_redhat "$cnv_optional_imags"  "redhat.io" "cnv-optional-images.list"
 
-# pull_docker_image "$istio_optional_imags" "istio-optional-images.tgz" "istio-optional-images.list"
-# load_redhat_image "$istio_optional_imags" "redhat.io" "istio-optional-images.list"
-# docker image rm -f $(docker image ls -qa)
-
 pull_registry_redhat "$istio_optional_imags"  "redhat.io" "istio-optional-images.list"
-
-# pull_docker_image "$docker_builder_images" "docker-builder-images.tgz" "docker-builder-images.list"
-# load_docker_image "$docker_builder_images" "docker.io" "docker-builder-images.list"
-# docker image rm -f $(docker image ls -qa)
 
 pull_registry_docker "$docker_builder_images"  "docker.io" "docker-builder-images.list"
 
-# pull_docker_image "$quay_builder_images" "quay-builder-images.tgz" "quay-builder-images.list"
-# load_redhat_image "$quay_builder_images" "quay.io" "quay-builder-images.list"
-# docker image rm -f $(docker image ls -qa)
-
 pull_registry_redhat "$quay_builder_images"  "quay.io" "quay-builder-images.list"
-
-# pull_docker_image "$gcr_builder_images" "gcr-builder-images.tgz" "gcr-builder-images.list"
-# load_redhat_image "$gcr_builder_images" "gcr.io" "gcr-builder-images.list"
-# docker image rm -f $(docker image ls -qa)
 
 pull_registry_redhat "$gcr_builder_images"  "gcr.io" "gcr-builder-images.list"
 
-# pull_docker_image "$nvcr_builder_images" "nvcr-builder-images.tgz" "nvcr-builder-images.list"
-# load_redhat_image "$nvcr_builder_images" "nvcr.io" "nvcr-builder-images.list"
-# docker image rm -f $(docker image ls -qa)
-
-pull_registry_redhat "$nvcr_builder_images"  "nvcr.io" "nvcr-builder-images.list"
+# pull_registry_redhat "$nvcr_builder_images"  "nvcr.io" "nvcr-builder-images.list"
 
 ##################################
 

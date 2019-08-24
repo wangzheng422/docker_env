@@ -669,5 +669,74 @@ subscription-manager repos --enable=rhel-7-server-3scale-amp-2.0-rpms
 
 yum install 3scale-amp-template
 
+```
+
+## cnv
+
+```bash
+
+yum -y install tigervnc-server tigervnc gnome-terminal gnome-session gnome-classic-session gnome-terminal nautilus-open-terminal control-center liberation-mono-fonts google-noto-sans-cjk-fonts google-noto-sans-fonts fonts-tweak-tool
+
+yum install -y    qgnomeplatform   xdg-desktop-portal-gtk   NetworkManager-libreswan-gnome   PackageKit-command-not-found   PackageKit-gtk3-module   abrt-desktop   at-spi2-atk   at-spi2-core   avahi   baobab   caribou   caribou-gtk2-module   caribou-gtk3-module   cheese   compat-cheese314   control-center   dconf   empathy   eog   evince   evince-nautilus   file-roller   file-roller-nautilus   firewall-config   firstboot   fprintd-pam   gdm   gedit   glib-networking   gnome-bluetooth   gnome-boxes   gnome-calculator   gnome-classic-session   gnome-clocks   gnome-color-manager   gnome-contacts   gnome-dictionary   gnome-disk-utility   gnome-font-viewer   gnome-getting-started-docs   gnome-icon-theme   gnome-icon-theme-extras   gnome-icon-theme-symbolic   gnome-initial-setup   gnome-packagekit   gnome-packagekit-updater   gnome-screenshot   gnome-session   gnome-session-xsession   gnome-settings-daemon   gnome-shell   gnome-software   gnome-system-log   gnome-system-monitor   gnome-terminal   gnome-terminal-nautilus   gnome-themes-standard   gnome-tweak-tool   nm-connection-editor   orca   redhat-access-gui   sane-backends-drivers-scanners   seahorse   setroubleshoot   sushi   totem   totem-nautilus   vinagre   vino   xdg-user-dirs-gtk   yelp
+
+yum install -y    cjkuni-uming-fonts   dejavu-sans-fonts   dejavu-sans-mono-fonts   dejavu-serif-fonts   gnu-free-mono-fonts   gnu-free-sans-fonts   gnu-free-serif-fonts   google-crosextra-caladea-fonts   google-crosextra-carlito-fonts   google-noto-emoji-fonts   jomolhari-fonts   khmeros-base-fonts   liberation-mono-fonts   liberation-sans-fonts   liberation-serif-fonts   lklug-fonts   lohit-assamese-fonts   lohit-bengali-fonts   lohit-devanagari-fonts   lohit-gujarati-fonts   lohit-kannada-fonts   lohit-malayalam-fonts   lohit-marathi-fonts   lohit-nepali-fonts   lohit-oriya-fonts   lohit-punjabi-fonts   lohit-tamil-fonts   lohit-telugu-fonts   madan-fonts   nhn-nanum-gothic-fonts   open-sans-fonts   overpass-fonts   paktype-naskh-basic-fonts   paratype-pt-sans-fonts   sil-abyssinica-fonts   sil-nuosu-fonts   sil-padauk-fonts   smc-meera-fonts   stix-fonts   thai-scalable-waree-fonts   ucs-miscfixed-fonts   vlgothic-fonts   wqy-microhei-fonts   wqy-zenhei-fonts
+
+# gdm
+
+fc-cache /usr/local/share/fonts/
+
+yum groupinfo  'GNOME Desktop'
+yum groupinfo  'gnome-desktop'
+
+# https://www.tecmint.com/install-and-configure-vnc-server-on-ubuntu/
+cat << EOF > ~/.vnc/xstartup
+#!/bin/sh
+unset SESSION_MANAGER
+unset DBUS_SESSION_BUS_ADDRESS
+gnome-session &
+EOF
+chmod +x ~/.vnc/xstartup
+
+vncpasswd
+
+vncserver :1 -geometry 1280x800
+vncserver -kill :1
+
+oc get vm
+virtctl expose vm centosvmbjyx --port=20022 --target-port=22 --name=centos-vm-ssh --type=NodePort
+
+virtctl expose vm centosvmbjyx --port=22 --name=centos-vm-ssh --type=NodePort
+
+oc run busybox --image=registry.crmi.cn:5021/centos/tools --command -- sleep 36000
+oc exec -ti busybox-1-s95q6 -- ssh root@10.144.6.204
+
+oc run nginx --image=registry.crmi.cn:5021/jboss-eap-7/eap72-openshift
+oc exec -ti busybox-1-s95q6 -- curl --head http://10.144.6.216:8080/
+
+cat << EOF > nodeport.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx
+  labels:
+    name: nginx
+spec:
+  type: NodePort
+  ports:
+    - port: 8080
+      name: nginx
+  selector:
+    name: nginx
+EOF
+oc apply -f nodeport.yaml
+oc exec -ti busybox-1-s95q6 -- curl --head http://172.130.177.242:8080/
+curl --head http://node-sriov:31791
+
+oc expose dc nginx --port 8080 --name nginx-route
+oc expose svc nginx-route
+oc exec -ti busybox-1-s95q6 -- curl --head http://172.130.124.179:8080/
+curl http://nginx-route-gyx.apps.crmi.cn/
+
+#172.29.122.160
 
 ```

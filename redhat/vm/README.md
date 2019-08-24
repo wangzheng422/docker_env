@@ -49,4 +49,7 @@ ADD_REGISTRY='--add-registry registry.redhat.io'
 EOF
 
 systemctl restart docker
+
+yum -y install pigz
+tar -cvf - registry/ | pigz -c > registry.tgz
 ```
