@@ -675,6 +675,7 @@ yum install 3scale-amp-template
 
 ```bash
 
+# 装桌面环境
 yum -y install tigervnc-server tigervnc gnome-terminal gnome-session gnome-classic-session gnome-terminal nautilus-open-terminal control-center liberation-mono-fonts google-noto-sans-cjk-fonts google-noto-sans-fonts fonts-tweak-tool
 
 yum install -y    qgnomeplatform   xdg-desktop-portal-gtk   NetworkManager-libreswan-gnome   PackageKit-command-not-found   PackageKit-gtk3-module   abrt-desktop   at-spi2-atk   at-spi2-core   avahi   baobab   caribou   caribou-gtk2-module   caribou-gtk3-module   cheese   compat-cheese314   control-center   dconf   empathy   eog   evince   evince-nautilus   file-roller   file-roller-nautilus   firewall-config   firstboot   fprintd-pam   gdm   gedit   glib-networking   gnome-bluetooth   gnome-boxes   gnome-calculator   gnome-classic-session   gnome-clocks   gnome-color-manager   gnome-contacts   gnome-dictionary   gnome-disk-utility   gnome-font-viewer   gnome-getting-started-docs   gnome-icon-theme   gnome-icon-theme-extras   gnome-icon-theme-symbolic   gnome-initial-setup   gnome-packagekit   gnome-packagekit-updater   gnome-screenshot   gnome-session   gnome-session-xsession   gnome-settings-daemon   gnome-shell   gnome-software   gnome-system-log   gnome-system-monitor   gnome-terminal   gnome-terminal-nautilus   gnome-themes-standard   gnome-tweak-tool   nm-connection-editor   orca   redhat-access-gui   sane-backends-drivers-scanners   seahorse   setroubleshoot   sushi   totem   totem-nautilus   vinagre   vino   xdg-user-dirs-gtk   yelp
@@ -688,6 +689,7 @@ fc-cache /usr/local/share/fonts/
 yum groupinfo  'GNOME Desktop'
 yum groupinfo  'gnome-desktop'
 
+# 装vnc环境
 # https://www.tecmint.com/install-and-configure-vnc-server-on-ubuntu/
 cat << EOF > ~/.vnc/xstartup
 #!/bin/sh
@@ -709,19 +711,19 @@ oc get vmi
 # 普通的nodeport，随便访问哪个节点都行的。
 virtctl expose vm centosvmbjyx --port=20022 --target-port=22 --name=centos-vm-ssh --type=NodePort
 
+# 访问ssh
 virtctl expose vm centosvmbjyx --port=22 --name=centos-vm-ssh --type=NodePort
 
+# windows 远程桌面
 virtctl expose virtualmachineinstance win7bjyx --name vmrdptcp --type NodePort --port 3389 --target-port 3389
 
-## 测试一下nodeport
+## 出问题了，调试 nodeport
 
 oc run busybox --image=registry.crmi.cn:5021/centos/tools --command -- sleep 36000
 oc exec -ti busybox-1-8bnjd -- ssh root@10.144.6.204
 
 oc run nginx --image=registry.crmi.cn:5021/jboss-eap-7/eap72-openshift
 oc exec -ti busybox-1-s95q6 -- curl --head http://10.144.6.216:8080/
-
- 
 
 oc exec -ti busybox-1-tcps5 -- curl http://10.129.2.6:8080/
 cat << EOF > nodeport.yaml
