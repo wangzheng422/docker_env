@@ -703,16 +703,27 @@ vncserver :1 -geometry 1280x800
 vncserver -kill :1
 
 oc get vm
+oc get vmi
+
+# cnv有个很坑的地方，expose出来的node port, 必须访问vm所在的节点才可以。
+# 普通的nodeport，随便访问哪个节点都行的。
 virtctl expose vm centosvmbjyx --port=20022 --target-port=22 --name=centos-vm-ssh --type=NodePort
 
 virtctl expose vm centosvmbjyx --port=22 --name=centos-vm-ssh --type=NodePort
 
+virtctl expose virtualmachineinstance win7bjyx --name vmrdptcp --type NodePort --port 3389 --target-port 3389
+
+## 测试一下nodeport
+
 oc run busybox --image=registry.crmi.cn:5021/centos/tools --command -- sleep 36000
-oc exec -ti busybox-1-s95q6 -- ssh root@10.144.6.204
+oc exec -ti busybox-1-8bnjd -- ssh root@10.144.6.204
 
 oc run nginx --image=registry.crmi.cn:5021/jboss-eap-7/eap72-openshift
 oc exec -ti busybox-1-s95q6 -- curl --head http://10.144.6.216:8080/
 
+ 
+
+oc exec -ti busybox-1-tcps5 -- curl http://10.129.2.6:8080/
 cat << EOF > nodeport.yaml
 apiVersion: v1
 kind: Service
@@ -726,17 +737,13 @@ spec:
     - port: 8080
       name: nginx
   selector:
-    name: nginx
+    run: nginx
 EOF
 oc apply -f nodeport.yaml
-oc exec -ti busybox-1-s95q6 -- curl --head http://172.130.177.242:8080/
-curl --head http://node-sriov:31791
+curl --head http://node1.$GUID.internal:30083
 
 oc expose dc nginx --port 8080 --name nginx-route
 oc expose svc nginx-route
 oc exec -ti busybox-1-s95q6 -- curl --head http://172.130.124.179:8080/
 curl http://nginx-route-gyx.apps.crmi.cn/
-
-#172.29.122.160
-
 ```
