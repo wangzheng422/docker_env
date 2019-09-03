@@ -719,6 +719,9 @@ virtctl expose virtualmachineinstance win7bjyx --name vmrdptcp --type NodePort -
 
 ## 出问题了，调试 nodeport
 
+# https://medium.com/faun/kubernetes-headless-service-vs-clusterip-and-traffic-distribution-904b058f0dfd
+# arunvelsriram/utils
+
 oc run busybox --image=registry.crmi.cn:5021/centos/tools --command -- sleep 36000
 oc exec -ti busybox-1-8bnjd -- ssh root@10.144.6.204
 
@@ -749,3 +752,10 @@ oc expose svc nginx-route
 oc exec -ti busybox-1-s95q6 -- curl --head http://172.130.124.179:8080/
 curl http://nginx-route-gyx.apps.crmi.cn/
 ```
+
+## huawei server
+
+https://support.huawei.com/enterprise/en/doc/EDOC1100077995?idPath=7919749%7C9856522%7C21782478%7C21872244
+
+https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/7/html/installation_guide/sect-driver-updates-performing-ppc
+
