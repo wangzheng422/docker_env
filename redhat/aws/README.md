@@ -23,9 +23,10 @@ subscription-manager repos \
     --enable="rhel-7-server-cnv-1.4-tech-preview-rpms" \
     --enable="rhel-7-server-optional-rpms"
 
-subscription-manager repos --enable="rhel-7-server-e4s-optional-rpms"
+subscription-manager repos --enable="rhel-7-server-openstack-14-rpms"
 
-subscription-manager repos --disable="rhel-7-server-e4s-optional-rpms"
+# subscription-manager repos --enable="rhel-7-server-e4s-optional-rpms"
+# subscription-manager repos --disable="rhel-7-server-e4s-optional-rpms"
 
 subscription-manager repos --list-enabled
 
@@ -92,6 +93,8 @@ sudo yum makecache
 mkdir -p /data/yum
 cd /data/yum
 reposync -n -d -l -m
+yum repolist
+reposync -n -d -l -m -r rhel-7-server-openstack-14-rpms
 createrepo ./
 
 # reposync -r rhel-7-server-e4s-optional-rpms -n -d -l -m

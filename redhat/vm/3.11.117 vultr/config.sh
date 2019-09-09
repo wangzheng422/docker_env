@@ -9,6 +9,8 @@ export major_tag="v3.11"
 
 ## 后续导入的时候，要用2个版本号
 ose3_images=$(cat << EOF
+registry.redhat.io/openshift3/node:$tag
+
 registry.redhat.io/openshift3/apb-base:$tag
 registry.redhat.io/openshift3/apb-tools:$tag
 registry.redhat.io/openshift3/automation-broker-apb:$tag
