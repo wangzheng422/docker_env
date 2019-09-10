@@ -58,4 +58,7 @@ make
 build.sh
 cd /usr/local/cuda/nvvm/libnvvm-samples/install/bin
 ./simple
+
 ```
+
+应用是tensorflow的，发现如果设置的环境变量CUDA_VISIBLE_DEVICES，会指定GPU运行，如果指定到不存在的GPU，就会报错。解决办法，就是把这个环境变量给去掉。
