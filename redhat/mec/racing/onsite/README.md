@@ -30,5 +30,32 @@ oc adm policy remove-scc-from-user privileged -z mysvcacct -n nvidia
 oc adm policy add-scc-to-user anyuid -z mysvcacct -n nvidia
 oc adm policy remove-scc-from-user anyuid -z mysvcacct -n nvidia
 
+docker run --rm -it registry.sigma.cmri/test/nttmec_cpu bash
 docker run --rm -it registry.sigma.cmri/test/nttmec_gpu bash
+
+oc run busybox --image=registry.sigma.cmri/centos/tools --command -- sleep 36000
+
+docker build -t registry.sigma.cmri/test/nttmec_cpu:wzh -f cpu.Dockerfile ./
+docker push registry.sigma.cmri/test/nttmec_cpu:wzh
+docker build -t registry.sigma.cmri/test/nttmec_gpu:wzh -f gpu.Dockerfile ./
+docker push registry.sigma.cmri/test/nttmec_gpu:wzh
+
+yum install atomic-openshift-clients
+
+# to check which user has role
+oc edit scc privileged
+
+docker run --rm -it --privileged --security-opt label=type:nvidia_container_t  -p 28080:8080 registry.sigma.cmri/test/nttmec_gpu bash
+
+docker run  --user 1000:1000 --security-opt=no-new-privileges --cap-drop=ALL --security-opt label=type:nvidia_container_t     registry.sigma.cmri/mirrorgooglecontainers/cuda-vector-add:v0.1
+
+
+/usr/local/cuda-10.1/nvml/example
+make
+./supportedVgpus
+
+/usr/local/cuda/nvvm/libnvvm-samples
+build.sh
+cd /usr/local/cuda/nvvm/libnvvm-samples/install/bin
+./simple
 ```
