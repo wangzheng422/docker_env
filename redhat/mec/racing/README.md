@@ -387,11 +387,10 @@ https://blog.openshift.com/use-gpus-with-device-plugin-in-openshift-3-9/
 
 https://github.com/zvonkok/origin-ci-gpu/blob/release-3.11/doc/How%20to%20use%20GPUs%20with%20DevicePlugin%20in%20OpenShift%203.11%20.pdf
 
-nvida GPU 需要一个奇怪的源
+nvida GPU 需要一个特殊的源
 ```bash
-subscription-manager repos --enable="rhel-7-server-e4s-optional-rpms"
+subscription-manager repos --enable="rhel-7-server-optional-rpms"
 ```
-也不一定，似乎rhel-7-server-optional-rpms也可以。
 
 ### install on gpu machine
 
@@ -470,7 +469,10 @@ python caffe_resnet50.py -d /workspace/tensorrt/data
 ![](imgs/2019-08-16-15-16-52.png)
 
 有个问题，容器不退出，新的GPU pod不能创建成功，解决办法，就是别用request limit，用node selector就可以了。这样，可以有多个容器，同时跑在gpu节点上，争抢gpu。
+
 ![](imgs/2019-08-16-16-37-03.png)
+
+应用是tensorflow的，发现如果设置的环境变量CUDA_VISIBLE_DEVICES，会指定GPU运行，如果指定到不存在的GPU，就会报错。解决办法，就是把这个环境变量给去掉。
 
 ### 以下是弯路
 
@@ -597,6 +599,10 @@ oc delete -f ./multus-sriov-daemonsets.yaml
 
 ```
 ![](imgs/2019-08-06-17-44-26.png)
+
+以下截屏，会发现，有default路由的问题，就算sriov的网卡，配置的0.0.0.0的路由
+
+![](imgs/2019-09-11-10-57-28.png)
 
 
 ### 以下是走的弯路
