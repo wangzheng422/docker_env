@@ -20,6 +20,11 @@ docker load -i nttmec_gpu.tar.gz
 docker tag 72719d7ba3f5ceaac97e84c146e96b690cfc4d2f24bce577265fc60085aa9d8f registry.sigma.cmri/test/nttmec_gpu
 docker push registry.sigma.cmri/test/nttmec_gpu
 
+docker tag 8d799e8b85d80577bd96abae0e9a75b281d43097c5afe8db3eded6aaebbdfc86 registry.sigma.cmri/test/nttmec_gpu:02
+docker push registry.sigma.cmri/test/nttmec_gpu:02
+
+docker run --rm -it registry.sigma.cmri/test/nttmec_gpu:02 bash
+
 oc apply -f demo.yaml
 
 oc create serviceaccount mysvcacct -n nvidia
