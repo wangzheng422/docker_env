@@ -70,6 +70,63 @@ oc adm policy add-role-to-user edit zw -n zhuowang
 
 oc adm policy add-role-to-user admin zw -n zhuowang
 
+docker load -i centos-7-nginx-rtmp.tar
+docker tag haipenge/centos-7-nginx-rtmp:latest registry.sigma.cmri/test/centos-7-nginx-rtmp:latest
+docker push registry.sigma.cmri/test/centos-7-nginx-rtmp:latest
+
+docker run --rm -it --name=rtmp-server registry.sigma.cmri/test/centos-7-nginx-rtmp:latest
+
+docker load -i facego.tar
+docker tag facego:v1.1 registry.sigma.cmri/test/facego:v1.1
+docker push registry.sigma.cmri/test/facego:v1.1
+
+docker load -i kafka.tar
+docker tag wurstmeister/kafka:latest registry.sigma.cmri/test/kafka:latest
+docker push registry.sigma.cmri/test/kafka:latest
+
+docker load -i mobilesoldier_v0.2.tar
+docker tag mobilesoldier:v0.2 registry.sigma.cmri/test/mobilesoldier:v0.2
+docker push registry.sigma.cmri/test/mobilesoldier:v0.2
+
+docker load -i mysql.tar
+docker tag mysql-oc:last registry.sigma.cmri/test/mysql-oc:last
+docker push registry.sigma.cmri/test/mysql-oc:last
+
+docker load -i ocean-api.tar
+docker tag ocean-api:last registry.sigma.cmri/test/ocean-api:last
+docker push registry.sigma.cmri/test/ocean-api:last
+
+docker load -i ocean-deletefile.tar
+docker tag ocean-deletefile:v1 registry.sigma.cmri/test/ocean-deletefile:v1
+docker push registry.sigma.cmri/test/ocean-deletefile:v1
+
+docker load -i ocean-manager.tar
+docker tag ocean-manager:v1 registry.sigma.cmri/test/ocean-manager:v1
+docker push registry.sigma.cmri/test/ocean-manager:v1
+
+docker load -i ocean-nginx.tar
+docker tag nginx-ocean:v1 registry.sigma.cmri/test/nginx-ocean:v1
+docker push registry.sigma.cmri/test/nginx-ocean:v1
+
+docker load -i ocean-socket.tar
+docker tag ocean-socket:v1 registry.sigma.cmri/test/ocean-socket:v1
+docker push registry.sigma.cmri/test/ocean-socket:v1
+
+docker load -i redis.tar
+docker tag redis:latest registry.sigma.cmri/test/redis:latest
+docker push registry.sigma.cmri/test/redis:latest
+
+docker load -i zookeeper.tar
+docker tag zookeeper:latest registry.sigma.cmri/test/zookeeper:latest
+docker push registry.sigma.cmri/test/zookeeper:latest
+
+oc create serviceaccount mysvcacct -n zhuowang
+oc adm policy add-scc-to-user privileged -z mysvcacct -n zhuowang
+oc adm policy add-scc-to-user anyuid -z mysvcacct -n zhuowang
+# hostaccess
+# hostmount-anyuid
+# hostnetwork
+
 ```
 
 应用是tensorflow的，发现如果设置的环境变量CUDA_VISIBLE_DEVICES，会指定GPU运行，如果指定到不存在的GPU，就会报错。解决办法，就是把这个环境变量给去掉。
