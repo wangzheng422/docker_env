@@ -1,0 +1,3 @@
+```bash
+oc get clusterversion
+```
