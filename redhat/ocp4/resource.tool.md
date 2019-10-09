@@ -49,4 +49,8 @@ oc patch route/bluegreen -p '{"spec":{"to":{"name":"green"}}}'
 #     weight: 50
 oc set route-backends bluegreen blue=9 green=1
 while true; do curl $ROUTE/version ; echo ""; sleep 1; done
+
+uuidgen -t
+# To generate the current time as Unix time:
+date +%s%N | cut -b1-13
 ```
