@@ -31,7 +31,7 @@ tar -xzf openshift-install-linux-${BUILDNUMBER}.tar.gz -C /usr/local/bin/
 # wget https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/pre-release/latest/rhcos-${BUILDNUMBER}-metal-bios.raw.gz
 # wget https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/pre-release/latest/rhcos-${BUILDNUMBER}-installer.iso
 
-wget --recursive --no-parent https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/pre-release/latest/
+wget --recursive --no-directories --no-parent https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/pre-release/latest/
 
 
 export OCP_RELEASE="4.2.0-0.nightly-2019-10-07-011045"
