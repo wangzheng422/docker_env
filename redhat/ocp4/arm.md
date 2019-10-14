@@ -119,5 +119,10 @@ yum -y install wget yum-utils createrepo docker git
 yum -y install git docker
 systemctl start docker
 yum -y install vim goversioninfo bsdtar golang krb5-devel
-yumdownloader --source atomic-openshift
+
+# arm平台上面，无法下载到atomic-openshift，所以要去x86上面下载
 ```
+
+https://medium.com/@carlosedp/building-a-hybrid-x86-64-and-arm-kubernetes-cluster-e7f94ff6e51d
+
+https://itnext.io/building-an-arm-kubernetes-cluster-ef31032636f9
