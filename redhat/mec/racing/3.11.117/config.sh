@@ -337,6 +337,7 @@ gitlab/gitlab-ce
 nfvpe/sriov-device-plugin:latest
 nfvpe/sriov-cni:latest
 nfvpe/multus:latest
+nfvpe/cni-route-override:latest
 centos/tools 
 kubevirt/virt-api:v0.14.0
 kubevirt/virt-launcher:v0.14.0

@@ -4,6 +4,8 @@ https://adam.younglogic.com/2017/08/openshift-origin-from-source/
 
 https://github.com/Project31/ansible-kubernetes-openshift-pi3
 
+https://github.com/Project31/rh-middleware-on-arm/issues/1
+
 ```bash
 yum groupinstall "Development Tools"
 

@@ -84,9 +84,17 @@ curl -s -L https://nvidia.github.io/nvidia-container-runtime/rhel7.6/nvidia-cont
 # update key
 DIST=$(sed -n 's/releasever=//p' /etc/yum.conf)
 DIST=${DIST:-$(. /etc/os-release; echo $VERSION_ID)}
-sudo rpm -e gpg-pubkey-f796ecb0
-sudo gpg --homedir /var/lib/yum/repos/$(uname -m)/$DIST/nvidia-container-runtime/gpgdir --delete-key f796ecb0
+DIST=7Server
+sudo sudo rpm -e gpg-pubkey-f796ecb0
+sudo gpg --homedir /var/lib/yum/repos/$(uname -m)/$DIST/*/gpgdir --delete-key f796ecb0
+sudo gpg --homedir /var/lib/yum/repos/$(uname -m)/latest/nvidia-docker/gpgdir --delete-key f796ecb0
+sudo gpg --homedir /var/lib/yum/repos/$(uname -m)/latest/nvidia-container-runtime/gpgdir --delete-key f796ecb0
+sudo gpg --homedir /var/lib/yum/repos/$(uname -m)/latest/libnvidia-container/gpgdir --delete-key f796ecb0
 sudo yum makecache
+
+# change /etc/yum.repos.d/nvidia-container-runtime.repo repo_gpgcheck=0
+# https://github.com/NVIDIA/nvidia-docker/issues/836
+# https://github.com/NVIDIA/nvidia-docker/issues/860
 ```
 
 ## download yum
