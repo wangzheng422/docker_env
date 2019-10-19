@@ -26,6 +26,8 @@ quay.io/k8scsi/csi-attacher
 quay.io/k8scsi/csi-snapshotter
 quay.io/k8scsi/csi-node-driver-registrar
 
+quay.io/external_storage/nfs-client-provisioner:latest
+
 
 EOF
 )
