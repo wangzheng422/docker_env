@@ -8,7 +8,7 @@ export major_tag="4.2"
 # search for openshift, openshift3, fuse7, dotnet, jboss
 
 ## 后续导入的时候，要用2个版本号
-ose4_images=$(cat << EOF
+quay_images=$(cat << EOF
 quay.io/openshift/origin-cli:$tag
 quay.io/openshift/origin-cli-artifacts:$tag
 quay.io/openshift/origin-cluster-samples-operator:$tag
@@ -21,6 +21,21 @@ quay.io/openshift/origin-jenkins-agent-maven:$tag
 quay.io/openshift/origin-tests:$tag
 quay.io/openshift/origin-must-gather:$tag
 
+quay.io/k8scsi/csi-provisioner
+quay.io/k8scsi/csi-attacher
+quay.io/k8scsi/csi-snapshotter
+quay.io/k8scsi/csi-node-driver-registrar
+
+
+EOF
+)
+
+docker_images=$(cat << EOF
+docker.io/rook/nfs:master
+docker.io/rook/ceph:master
+docker.io/ceph/ceph:v14
+
+docker.io/nfvpe/cni-route-override
 
 EOF
 )
