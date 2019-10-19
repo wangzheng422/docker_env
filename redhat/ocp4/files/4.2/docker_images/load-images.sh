@@ -75,7 +75,9 @@ load_docker_image(){
     done <<< "$docker_images"
 }
 
-load_redhat_image "$ose4_images" "quay.io" "ose4_images.list"
+load_redhat_image "$quay_images" "quay.io" "ose4_images.list"
+
+load_redhat_image "$dockerio_images" "docker.io" "ose4_images.list"
 
 # docker image prune -f
 

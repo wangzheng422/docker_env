@@ -21,23 +21,23 @@ quay.io/openshift/origin-jenkins-agent-maven:$tag
 quay.io/openshift/origin-tests:$tag
 quay.io/openshift/origin-must-gather:$tag
 
-quay.io/k8scsi/csi-provisioner
-quay.io/k8scsi/csi-attacher
-quay.io/k8scsi/csi-snapshotter
-quay.io/k8scsi/csi-node-driver-registrar
+quay.io/k8scsi/csi-provisioner:v1.3.0
+quay.io/k8scsi/csi-attacher:v1.2.0
+quay.io/k8scsi/csi-snapshotter:v1.2.0
+quay.io/k8scsi/csi-node-driver-registrar:v1.1.0
+quay.io/cephcsi/cephcsi:v1.2.1
 
 quay.io/external_storage/nfs-client-provisioner:latest
-
 
 EOF
 )
 
-docker_images=$(cat << EOF
+dockerio_images=$(cat << EOF
 docker.io/rook/nfs:master
 docker.io/rook/ceph:master
 docker.io/ceph/ceph:v14
 
-docker.io/nfvpe/cni-route-override
+docker.io/nfvpe/cni-route-override:latest
 
 EOF
 )
