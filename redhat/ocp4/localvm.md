@@ -17,3 +17,8 @@ enabled=0
 EOF
 
 ```
+
+osx
+```bash
+git config --global credential.helper store
+```
