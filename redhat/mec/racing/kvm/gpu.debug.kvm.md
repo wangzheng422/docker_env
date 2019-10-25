@@ -1,6 +1,8 @@
 # GPU 在 openshift 3.11 kvm 部署环境中的验证
 
-验证结论是，用kvm部署openshift 3.11，支持nvidia GPU passthrough
+验证结论是，用kvm部署openshift 3.11，支持nvidia GPU passthrough。
+
+整个安装过程的重点，是宿主机的kernel启动参数intel_iommu=on， 以及gpu vm的domain配置。其他配置过程，和正常集群安装没有区别。
 
 ```bash
 # on kvm host
@@ -357,8 +359,6 @@ nvidia-modprobe && nvidia-modprobe -u
 nvidia-smi --query-gpu=gpu_name --format=csv,noheader --id=0 | sed -e 's/ /-/g'
 
 lspci -Dnn | grep -i nvidia
-
-
 
 # on kvm host
 
