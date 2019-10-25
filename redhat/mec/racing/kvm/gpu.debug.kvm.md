@@ -1,3 +1,7 @@
+# GPU 在 openshift 3.11 kvm 部署环境中的验证
+
+验证结论是，用kvm部署openshift 3.11，支持nvidia GPU passthrough
+
 ```bash
 # on kvm host
 cat << EOF >>  /etc/hosts
