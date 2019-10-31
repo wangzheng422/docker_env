@@ -1,18 +1,28 @@
 #!/usr/bin/env bash
 
+# exec 5> debug_output.txt
+# BASH_XTRACEFD="5"
+# PS4='$LINENO: '
+
+
+
 set -e
 set -x
 
 /bin/rm -rf /data/operator/manifests
-/bin/rm -f operator.ok operator.failed
 mkdir -p /data/operator/manifests
 cd /data/operator/
 
 curl https://quay.io/cnr/api/v1/packages?namespace=redhat-operators > packages.txt
 curl https://quay.io/cnr/api/v1/packages?namespace=certified-operators >> packages.txt
-curl https://quay.io/cnr/api/v1/packages?namespace=community-operators >> packages.txt
+# # curl https://quay.io/cnr/api/v1/packages?namespace=community-operators >> packages.txt
 
-cat packages.txt | jq -r ".[] | [.namespace, .name, .releases[0]] | @tsv" | awk -v FS="\t" '{printf "https://quay.io/cnr/api/v1/packages/%s/%s\t%s\t%s%s",$2,$3,$2,$3,ORS}' > url.txt
+
+# # cat packages.txt | jq -r ".[] | {namespace:.namespace, name:.name, release:.releases[]} " | jq -r "[.namespace, .name, .release] | @tsv" | awk -v FS="\t" '{printf "https://quay.io/cnr/api/v1/packages/%s/%s\t%s\t%s%s",$2,$3,$2,$3,ORS}' > url.txt
+
+cat packages.txt | jq -r ".[] | [.namespace, .name, .releases[0]] | @tsv" | awk -v FS="\t" '{printf "https://quay.io/cnr/api/v1/packages/%s/%s\t%s\t%s%s",$2,$3,$2,$3,ORS}' | grep -v "appsody-operator-certified" > url.txt
+
+
 
 while read -r line; do
 #   echo $line;
@@ -48,6 +58,11 @@ while read -r line; do
 
     if [ -f "manifests/${namespace}.$name/bundle.yaml" ]; then
 
+        # oper_version=$( cat manifests/$name/bundle.yaml | yq -r .data.packages | sed 's/^..//' | yq -r .channels[0].currentCSV | grep -e ".*${name}[\.|\.v]" | sed "s/.*${name}[\.|\.v]//" )
+        # oper_version=$release
+
+        # mkdir -p manifests/$name/$oper_version
+
         csv_num=$(cat manifests/${namespace}.$name/bundle.yaml | yq -r .data.clusterServiceVersions | yq length)
 
         for (( csv_i=0; csv_i<$csv_num; csv_i++ ))
@@ -70,18 +85,14 @@ while read -r line; do
 
     /bin/rm -f manifests/${namespace}.$name/bundle.yaml
 
-    if podman build -f ../custom-registry.Dockerfile -t registry.redhat.ren/ocp-operator/custom-registry ./ ; then
-        echo "$line" >> ../operator.ok
-    else
-        echo "$line" >> ../operator.failed
-        /bin/rm -rf manifests/${namespace}.$name
-    fi
-
-    podman image prune
-
 done < url.txt
 
-# find . -type f | xargs grep "image: " | sed 's/^.*image: //' | sort | uniq | grep -e '^.*\/.*:.*' | grep -v '\\n' | sed s/"'"// | sed 's/\"//' | sort | uniq >  image.list
+podman build -f ../custom-registry.Dockerfile -t registry.redhat.ren/ocp-operator/custom-registry ./
+
+podman image prune
+
+
+# find . -type f | xargs grep "image: " | sed 's/^.*image: //' | sort | uniq | grep -e '^.*\/.*:.*' | grep -v '\\n\\' | sed s/"'"// | sed 's/\"//' | sort | uniq >  image.list
 
 
 
