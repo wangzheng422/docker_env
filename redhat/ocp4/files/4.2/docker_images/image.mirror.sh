@@ -3,6 +3,8 @@
 set -e
 set -x
 
+/bin/rm -f pull.image.failed.list pull.image.ok.list
+
 # export OCP_RELEASE=${BUILDNUMBER}
 # export LOCAL_REG='registry.redhat.ren'
 # export LOCAL_REPO='ocp4/openshift4'
@@ -28,34 +30,56 @@ mirror_docker_image(){
     if [[ "$docker_image" =~ ^$ ]] || [[ "$docker_image" =~ ^[[:space:]]+$ ]] || [[ "$docker_image" =~ \#[:print:]*  ]]; then
         # echo "this is comments"
         return;
+    elif [[ $docker_image =~ ^.*\.(io|com|org)/.*@sha256:.* ]]; then
+        # echo "io, com, org with tag: $docker_image"
+        image_part=$(echo $docker_image | sed -r 's/^.*\.(io|com|org)//')
+        local_image="${LOCAL_REG}${image_part}"
+        image_part=$(echo $image_part | sed -r 's/@sha256:.*$//')
+        local_image_url="${LOCAL_REG}${image_part}"
+        # echo $image_url
     elif [[ $docker_image =~ ^.*\.(io|com|org)/.*:.* ]]; then
         # echo "io, com, org with tag: $docker_image"
-        image_part=$(echo $docker_image | sed -r 's/^.*\.(io\|com\|org)//')
-        image_url="${LOCAL_REG}${image_part}"
+        image_part=$(echo $docker_image | sed -r 's/^.*\.(io|com|org)//')
+        local_image="${LOCAL_REG}${image_part}"
+        local_image_url="${LOCAL_REG}${image_part}"
         # echo $image_url
     elif [[ $docker_image =~ ^.*\.(io|com|org)/[^:]*  ]]; then
         # echo "io, com, org without tag: $docker_image"
-        image_part=$(echo $docker_image | sed -r 's/^.*\.(io\|com\|org)//')
-        image_url="${LOCAL_REG}${image_part}:latest"
+        image_part=$(echo $docker_image | sed -r 's/^.*\.(io|com|org)//')
+        local_image="${LOCAL_REG}${image_part}:latest"
+        local_image_url="${LOCAL_REG}${image_part}:latest"
         # echo $image_url
         docker_image+=":latest"
+    elif [[ $docker_image =~ ^.*/.*@sha256:.* ]]; then
+        # echo "docker with tag: $docker_image"
+        local_image="${LOCAL_REG}/${docker_image}"
+        image_part=$(echo $docker_image | sed -r 's/@sha256:.*$//')
+        local_image_url="${LOCAL_REG}/${image_part}"
+        # echo $image_url
     elif [[ $docker_image =~ ^.*/.*:.* ]]; then
         # echo "docker with tag: $docker_image"
-        image_url="${LOCAL_REG}/${docker_image}"
+        local_image="${LOCAL_REG}/${docker_image}"
+        local_image_url="${LOCAL_REG}/${docker_image}"
         # echo $image_url
     elif [[ $docker_image =~ ^.*/[^:]* ]]; then
         # echo "docker without tag: $docker_image"
-        image_url="${LOCAL_REG}/${docker_image}:latest"
+        local_image="${LOCAL_REG}/${docker_image}:latest"
+        local_image_url="${LOCAL_REG}/${docker_image}:latest"
         # echo $image_url
         docker_image+=":latest"
     fi
 
-    oc image mirror $docker_image $image_url
-
+    if oc image mirror $docker_image $local_image_url; then
+        echo "$docker_image" >> pull.image.ok.list
 cat << EOF >> mirror-image.yaml
-    - ${image_url}
+    - ${local_image}
     source: ${docker_image}
 EOF
+    else
+        echo "$docker_image" >> pull.image.failed.list
+    fi
+
+
 }
 
 while read -r line; do

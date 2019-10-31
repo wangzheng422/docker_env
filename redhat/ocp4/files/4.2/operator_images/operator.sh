@@ -3,10 +3,12 @@
 set -e
 set -x
 
-/bin/rm -rf /data/operator/manifests
-/bin/rm -f operator.ok operator.failed
-mkdir -p /data/operator/manifests
-cd /data/operator/
+cd /data/ocp4
+/bin/rm -rf /data/ocp4/operator
+/bin/rm -f operator.ok.list operator.failed.list
+mkdir -p /data/ocp4/operator/manifests
+mkdir -p /data/ocp4/operator/tgz
+cd /data/ocp4/operator/
 
 curl https://quay.io/cnr/api/v1/packages?namespace=redhat-operators > packages.txt
 curl https://quay.io/cnr/api/v1/packages?namespace=certified-operators >> packages.txt
@@ -70,10 +72,10 @@ while read -r line; do
 
     /bin/rm -f manifests/${namespace}.$name/bundle.yaml
 
-    if podman build -f ../custom-registry.Dockerfile -t registry.redhat.ren/ocp-operator/custom-registry ./ ; then
-        echo "$line" >> ../operator.ok
+    if podman build -f /data/ocp4/custom-registry.Dockerfile -t registry.redhat.ren/ocp-operator/custom-registry ./ ; then
+        echo "$line" >> /data/ocp4/operator.ok.list
     else
-        echo "$line" >> ../operator.failed
+        echo "$line" >> /data/ocp4/operator.failed.list
         /bin/rm -rf manifests/${namespace}.$name
     fi
 
@@ -81,10 +83,11 @@ while read -r line; do
 
 done < url.txt
 
+cd /data/ocp4
 podman image save registry.redhat.ren/ocp-operator/custom-registry | pigz -c > custom-registry.tgz
 
-cd /data/operator
-tar zcf manifests.tgz manifests/
+# cd /data/ocp4/operator
+# tar zcf manifests.tgz manifests/
 
 
 
