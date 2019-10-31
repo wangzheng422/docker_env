@@ -81,7 +81,10 @@ while read -r line; do
 
 done < url.txt
 
-# find . -type f | xargs grep "image: " | sed 's/^.*image: //' | sort | uniq | grep -e '^.*\/.*:.*' | grep -v '\\n' | sed s/"'"// | sed 's/\"//' | sort | uniq >  image.list
+podman image save registry.redhat.ren/ocp-operator/custom-registry | pigz -c > custom-registry.tgz
+
+cd /data/operator
+tar zcf manifests.tgz manifests/
 
 
 
