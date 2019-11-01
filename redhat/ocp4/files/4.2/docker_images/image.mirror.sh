@@ -47,44 +47,38 @@ mirror_docker_image(){
         local_image_url="${LOCAL_REG}${image_part}:latest"
         # echo $image_url
 
-        yaml_image=$docker_image
-
         docker_image+=":latest"
 
+        yaml_image=$docker_image
         yaml_local_image="${LOCAL_REG}${image_part}"
     elif [[ $docker_image =~ ^.*/.*@sha256:.* ]]; then
         # echo "docker with tag: $docker_image"
+        NEW_UUID=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)
+        # cksum <<< 'b79a5903075388c64a2215540398ae5bcf6b77b7fdd84c66c9eb62762aa4aaef' | cut -f 1 -d ' '
         local_image="${LOCAL_REG}/${docker_image}"
         image_part=$(echo $docker_image | sed -r 's/@sha256:.*$//')
-        local_image_url="${LOCAL_REG}/${image_part}"
+        local_image_url="${LOCAL_REG}/${image_part}:${NEW_UUID}"
         # echo $image_url
-        yaml_image=$(echo $docker_image | sed -r 's/@sha256:.*$//')
-        yaml_local_image="${LOCAL_REG}/${image_part}"
+        yaml_image=$docker_image
+        yaml_local_image=$local_image_url
     elif [[ $docker_image =~ ^.*/.*:.* ]]; then
         # echo "docker with tag: $docker_image"
         local_image="${LOCAL_REG}/${docker_image}"
         local_image_url="${LOCAL_REG}/${docker_image}"
         # echo $image_url
-        yaml_image=$(echo $docker_image | sed -r 's/:.*$//')
-        yaml_local_image=$(echo $local_image_url | sed -r 's/:.*$//')
+        yaml_image=$docker_image
+        yaml_local_image=local_image_url
+
     elif [[ $docker_image =~ ^.*/[^:]* ]]; then
         # echo "docker without tag: $docker_image"
         local_image="${LOCAL_REG}/${docker_image}:latest"
         local_image_url="${LOCAL_REG}/${docker_image}:latest"
 
-        yaml_image=$docker_image
-        yaml_local_image="${LOCAL_REG}${docker_image}"
         # echo $image_url
         docker_image+=":latest"
 
-    elif [[ $docker_image =~ ^.*:.* ]]; then
-        # echo "docker with tag: $docker_image"
-        local_image="${LOCAL_REG}/${docker_image}"
-        local_image_url="${LOCAL_REG}/${docker_image}"
-        # echo $image_url
-        yaml_image=$(echo $docker_image | sed -r 's/:.*$//')
-        yaml_local_image=$(echo $local_image_url | sed -r 's/:.*$//')
-
+        yaml_image=$docker_image
+        yaml_local_image="$local_image_url"
     fi
 
     if oc image mirror $docker_image $local_image_url; then
