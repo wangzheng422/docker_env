@@ -13,15 +13,6 @@ set -x
 # export OPENSHIFT_INSTALL_RELEASE_IMAGE_OVERRIDE=${LOCAL_REG}/${LOCAL_REPO}:${OCP_RELEASE}
 # export RELEASE_NAME="ocp-release"
 
-cat << EOF > mirror-image.yaml
-apiVersion: operator.openshift.io/v1alpha1
-kind: ImageContentSourcePolicy
-metadata:
-  name: operator-images
-spec:
-  repositoryDigestMirrors:
-EOF
-
 mirror_docker_image(){
 
     docker_image=$1
@@ -70,15 +61,10 @@ mirror_docker_image(){
     fi
 
     if oc image mirror $docker_image $local_image_url; then
-        echo "$docker_image" >> pull.image.ok.list
-cat << EOF >> mirror-image.yaml
-    - ${local_image}
-    source: ${docker_image}
-EOF
+        echo -e "${docker_image}\t${local_image_url}" >> pull.image.ok.list
     else
         echo "$docker_image" >> pull.image.failed.list
     fi
-
 
 }
 

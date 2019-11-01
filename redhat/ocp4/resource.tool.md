@@ -53,4 +53,7 @@ while true; do curl $ROUTE/version ; echo ""; sleep 1; done
 uuidgen -t
 # To generate the current time as Unix time:
 date +%s%N | cut -b1-13
+
+
+pigz -dc registry.tgz | tar xf -
 ```

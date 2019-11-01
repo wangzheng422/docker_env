@@ -7,7 +7,8 @@ COPY manifests manifests
 
 RUN /bin/initializer -o ./bundles.db
 
-FROM scratch
+# FROM scratch
+FROM registry.redhat.io/openshift4/ose-operator-registry:v4.2.0
 
 COPY --from=builder /registry/bundles.db /bundles.db
 COPY --from=builder /usr/bin/registry-server /registry-server
@@ -17,4 +18,4 @@ EXPOSE 50051
 
 ENTRYPOINT ["/registry-server"]
 
-CMD ["--database", "bundles.db"]
+CMD ["--database", "/bundles.db"]
