@@ -11,8 +11,16 @@ set -x
 # export OPENSHIFT_INSTALL_RELEASE_IMAGE_OVERRIDE=${LOCAL_REG}/${LOCAL_REPO}:${OCP_RELEASE}
 # export RELEASE_NAME="ocp-release"
 
-/bin/rm -rf ./operator/yaml/
-mkdir -p ./operator/yaml/
+# /bin/rm -rf ./operator/yaml/
+# mkdir -p ./operator/yaml/
+cat << EOF > ./image.mirror.yaml
+apiVersion: operator.openshift.io/v1alpha1
+kind: ImageContentSourcePolicy
+metadata:
+  name: mirror-images
+spec:
+  repositoryDigestMirrors:
+EOF
 
 yaml_docker_image(){
 
@@ -21,17 +29,12 @@ yaml_docker_image(){
     num=$3
     # echo $docker_image
 
-cat << EOF > ./operator/yaml/operator-images-$num.yaml
-apiVersion: operator.openshift.io/v1alpha1
-kind: ImageContentSourcePolicy
-metadata:
-  name: operator-images-$num
-spec:
-  repositoryDigestMirrors:
+cat << EOF >> ./image.mirror.yaml
   - mirrors:
     - ${local_image}
     source: ${docker_image}
 EOF
+
 }
 
 declare -i num=1
@@ -47,4 +50,4 @@ while read -r line; do
     yaml_docker_image $docker_image $local_image $num
     num=${num}+1;
 
-done < pull.image.ok.list
+done < yaml.image.ok.list.uniq

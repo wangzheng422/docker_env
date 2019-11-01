@@ -27,12 +27,18 @@ mirror_docker_image(){
         local_image="${LOCAL_REG}${image_part}"
         image_part=$(echo $image_part | sed -r 's/@sha256:.*$//')
         local_image_url="${LOCAL_REG}${image_part}"
+
+        yaml_image=$(echo $docker_image | sed -r 's/@sha256:.*$//')
+        yaml_local_image=$local_image_url
         # echo $image_url
     elif [[ $docker_image =~ ^.*\.(io|com|org)/.*:.* ]]; then
         # echo "io, com, org with tag: $docker_image"
         image_part=$(echo $docker_image | sed -r 's/^.*\.(io|com|org)//')
         local_image="${LOCAL_REG}${image_part}"
         local_image_url="${LOCAL_REG}${image_part}"
+
+        yaml_image=$(echo $docker_image | sed -r 's/:.*$//')
+        yaml_local_image=$(echo $local_image_url | sed -r 's/:.*$//')
         # echo $image_url
     elif [[ $docker_image =~ ^.*\.(io|com|org)/[^:]*  ]]; then
         # echo "io, com, org without tag: $docker_image"
@@ -40,28 +46,50 @@ mirror_docker_image(){
         local_image="${LOCAL_REG}${image_part}:latest"
         local_image_url="${LOCAL_REG}${image_part}:latest"
         # echo $image_url
+
+        yaml_image=$docker_image
+
         docker_image+=":latest"
+
+        yaml_local_image="${LOCAL_REG}${image_part}"
     elif [[ $docker_image =~ ^.*/.*@sha256:.* ]]; then
         # echo "docker with tag: $docker_image"
         local_image="${LOCAL_REG}/${docker_image}"
         image_part=$(echo $docker_image | sed -r 's/@sha256:.*$//')
         local_image_url="${LOCAL_REG}/${image_part}"
         # echo $image_url
+        yaml_image=$(echo $docker_image | sed -r 's/@sha256:.*$//')
+        yaml_local_image="${LOCAL_REG}/${image_part}"
     elif [[ $docker_image =~ ^.*/.*:.* ]]; then
         # echo "docker with tag: $docker_image"
         local_image="${LOCAL_REG}/${docker_image}"
         local_image_url="${LOCAL_REG}/${docker_image}"
         # echo $image_url
+        yaml_image=$(echo $docker_image | sed -r 's/:.*$//')
+        yaml_local_image=$(echo $local_image_url | sed -r 's/:.*$//')
     elif [[ $docker_image =~ ^.*/[^:]* ]]; then
         # echo "docker without tag: $docker_image"
         local_image="${LOCAL_REG}/${docker_image}:latest"
         local_image_url="${LOCAL_REG}/${docker_image}:latest"
+
+        yaml_image=$docker_image
+        yaml_local_image="${LOCAL_REG}${docker_image}"
         # echo $image_url
         docker_image+=":latest"
+
+    elif [[ $docker_image =~ ^.*:.* ]]; then
+        # echo "docker with tag: $docker_image"
+        local_image="${LOCAL_REG}/${docker_image}"
+        local_image_url="${LOCAL_REG}/${docker_image}"
+        # echo $image_url
+        yaml_image=$(echo $docker_image | sed -r 's/:.*$//')
+        yaml_local_image=$(echo $local_image_url | sed -r 's/:.*$//')
+
     fi
 
     if oc image mirror $docker_image $local_image_url; then
-        echo -e "${docker_image}\t${local_image_url}" >> pull.image.ok.list
+        echo -e "${docker_image}" >> pull.image.ok.list
+        echo -e "${yaml_image}\t${yaml_local_image}" >> yaml.image.ok.list
     else
         echo "$docker_image" >> pull.image.failed.list
     fi
@@ -83,6 +111,8 @@ while read -r line; do
     mirror_docker_image $url
 
 done < operator.image.list
+
+cat yaml.image.ok.list | sort | uniq > yaml.image.ok.list.uniq
 
 
 

@@ -94,8 +94,8 @@ find ./operator -type f | xargs egrep "(containerImage: |image: |value: )" | sed
 
 find ./operator -type f | xargs egrep "(containerImage: |image: |value: )" | sed 's/\\n/\n/g'| sed 's/^.*image: //' | sed 's/^.*value: //' | egrep -v "^.*\.(io|com|org|net)/.*:.*"| egrep  "^[[:alnum:]]*/.*:[[:print:]]*$" | sed s/"'"//g | sed 's/\"//g' | sort | uniq  >> /data/ocp4/operator.image.list
 
-# cd /data/ocp4/operator
-# tar zcf manifests.tgz manifests/
+cd /data/ocp4/operator
+tar zcf manifests.tgz manifests/
 
 
 
