@@ -27,10 +27,12 @@ docker.io_image(){
         image_part=$(echo $docker_image | sed -r 's/^.*\.(io|com|org)//')
         local_image="${LOCAL_REG}/${domain_part}${image_part}"
         image_part=$(echo $image_part | sed -r 's/@sha256:.*$//')
-        local_image_url="${LOCAL_REG}/${domain_part}${image_part}"
+        sha_part==$(echo $image_part | sed -r 's/.*@sha256://')
+        sha_part=$(cksum <<< ${sha_part} | cut -f 1 -d ' ')
+        local_image_url="${LOCAL_REG}/${domain_part}${image_part}:${sha_part}"
 
         yaml_image=$(echo $docker_image | sed -r 's/@sha256:.*$//')
-        yaml_local_image=$local_image_url
+        yaml_local_image="${LOCAL_REG}/${domain_part}${image_part}"
         # echo $image_url
     elif [[ $docker_image =~ ^.*\.(io|com|org)/.*:.* ]]; then
         # echo "io, com, org with tag: $docker_image"
@@ -59,7 +61,10 @@ docker.io_image(){
         # echo "docker with tag: $docker_image"
         local_image="${LOCAL_REG}/docker.io/${docker_image}"
         image_part=$(echo $docker_image | sed -r 's/@sha256:.*$//')
-        local_image_url="${LOCAL_REG}/docker.io/${image_part}"
+        sha_part==$(echo $image_part | sed -r 's/.*@sha256://')
+        sha_part=$(cksum <<< ${sha_part} | cut -f 1 -d ' ')
+        local_image_url="${LOCAL_REG}/docker.io/${image_part}:${sha_part}"
+        
         # echo $image_url
         yaml_image=$(echo $docker_image | sed -r 's/@sha256:.*$//')
         yaml_local_image="${LOCAL_REG}/docker.io/${image_part}"
@@ -114,7 +119,7 @@ while read -r line; do
     # declare -a array=($(echo $line | tr "$delimiter" " "))
     # url=${array[0]}
 
-    docker.io_image $url
+    docker.io_image $line
 
 done < operator.image.list
 
