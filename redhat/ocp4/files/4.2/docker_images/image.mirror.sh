@@ -3,7 +3,7 @@
 set -e
 set -x
 
-/bin/rm -f pull.image.failed.list pull.image.ok.list
+/bin/rm -f pull.image.failed.list pull.image.ok.list yaml.image.ok.list
 
 # export OCP_RELEASE=${BUILDNUMBER}
 # export LOCAL_REG='registry.redhat.ren'
