@@ -78,7 +78,7 @@ docker.io_image(){
         yaml_image=$docker_image
         yaml_local_image="${LOCAL_REG}/docker.io/${docker_image}"
         # echo $image_url
-        docker_image+="docker.io/${docker_image}:latest"
+        docker_image+="${docker_image}:latest"
 
     elif [[ $docker_image =~ ^.*:.* ]]; then
         # echo "docker with tag: $docker_image"
@@ -88,11 +88,12 @@ docker.io_image(){
         yaml_image=$(echo $docker_image | sed -r 's/:.*$//')
         yaml_local_image=$(echo $local_image_url | sed -r 's/:.*$//')
 
-        docker_image="docker.io/${docker_image}"
+        docker_image="${docker_image}"
 
     fi
 
-    if oc image mirror $docker_image $local_image_url; then
+    # if oc image mirror $docker_image $local_image_url; then
+    if skopeo copy "docker://"$docker_image "docker://"$local_image_url; then
         echo -e "${docker_image}" >> pull.image.ok.list
         echo -e "${yaml_image}\t${yaml_local_image}" >> yaml.image.ok.list
     else
@@ -109,9 +110,9 @@ done < install.image.list
 
 while read -r line; do
 
-    delimiter="\t"
-    declare -a array=($(echo $line | tr "$delimiter" " "))
-    url=${array[0]}
+    # delimiter="\t"
+    # declare -a array=($(echo $line | tr "$delimiter" " "))
+    # url=${array[0]}
 
     docker.io_image $url
 
