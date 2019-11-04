@@ -99,7 +99,7 @@ docker.io_image(){
 
     # if oc image mirror $docker_image $local_image_url; then
     if skopeo copy "docker://"$docker_image "docker://"$local_image_url; then
-        echo -e "${docker_image}" >> pull.image.ok.list
+        echo -e "${docker_image}\t${local_image_url}" >> pull.image.ok.list
         echo -e "${yaml_image}\t${yaml_local_image}" >> yaml.image.ok.list
     else
         echo "$docker_image" >> pull.image.failed.list

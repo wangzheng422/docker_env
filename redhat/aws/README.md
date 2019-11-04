@@ -18,10 +18,12 @@ subscription-manager repos \
     --enable="rhel-7-server-extras-rpms" \
     --enable="rhel-7-server-supplementary-rpms" \
     --enable="rhel-7-server-ose-3.11-rpms" \
+    --enable="rhel-7-server-ose-4.2-rpms" \
     --enable="rhel-7-server-ansible-2.6-rpms" \
+    --enable="rhel-7-server-ansible-2.8-rpms" \
     --enable="rhel-7-server-3scale-amp-2.5-rpms" \
     --enable="rhel-7-server-cnv-1.4-tech-preview-rpms" \
-    --enable="rhel-7-server-optional-rpms"
+    --enable="rhel-7-server-optional-rpms" 
 
 subscription-manager repos --enable="rhel-7-server-openstack-14-rpms"
 
