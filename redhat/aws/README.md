@@ -55,6 +55,19 @@ yum -y install deltarpm
 yum -y update
 ```
 
+## ocp 4.2
+```bash
+cat << EOF > /etc/yum.repos.d/ocp.4.2.repo
+[ocp4.2]
+name=ocp4.2
+baseurl=https://mirror.openshift.com/pub/openshift-v4/dependencies/rpms/4.2-beta/
+enabled=1
+gpgcheck=0
+
+EOF
+
+```
+
 ## epel
 
 ```bash
@@ -69,7 +82,7 @@ yum-config-manager --disable epel
 
 ## gpu
 
-这个暂时不做吧
+这个要在centos上面做，rhel上面会报证书的错误，以前是不会的，新的rhel版本会报错。
 
 ```bash
 yum install -y https://developer.download.nvidia.com/compute/cuda/repos/rhel7/x86_64/cuda-repo-rhel7-10.1.243-1.x86_64.rpm
@@ -110,6 +123,8 @@ reposync -n -d -l -m -r rhel-7-server-openstack-14-rpms
 createrepo ./
 
 # reposync -r rhel-7-server-e4s-optional-rpms -n -d -l -m
+
+# repotrack -p ./tmp/  openshift-hyperkube-4.2.0
 
 tar -cvf - yum/ | pigz -c > yum.tgz
 ```
