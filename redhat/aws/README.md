@@ -89,6 +89,8 @@ yum install -y https://developer.download.nvidia.com/compute/cuda/repos/rhel7/x8
 
 # curl -so /etc/yum.repos.d/nvidia-container-runtime.repo https://nvidia.github.io/nvidia-container-runtime/centos7/nvidia-container-runtime.repo
 
+# 以下好像在rhel上不会报错。
+
 distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
 curl -s -L https://nvidia.github.io/nvidia-container-runtime/$distribution/nvidia-container-runtime.repo | \
   sudo tee /etc/yum.repos.d/nvidia-container-runtime.repo
@@ -127,6 +129,8 @@ createrepo ./
 # repotrack -p ./tmp/  openshift-hyperkube-4.2.0
 
 tar -cvf - yum/ | pigz -c > yum.tgz
+
+tar -cvf - data/ | pigz -c > rhel-data.tgz
 ```
 
 ## build the ftp server

@@ -1,0 +1,134 @@
+#!/usr/bin/env bash
+
+set -e
+set -x
+
+# export OCP_RELEASE=${BUILDNUMBER}
+# export LOCAL_REG='registry.redhat.ren'
+# export LOCAL_REPO='ocp4/openshift4'
+# export UPSTREAM_REPO='openshift-release-dev'
+# export LOCAL_SECRET_JSON="pull-secret.json"
+# export OPENSHIFT_INSTALL_RELEASE_IMAGE_OVERRIDE=${LOCAL_REG}/${LOCAL_REPO}:${OCP_RELEASE}
+# export RELEASE_NAME="ocp-release"
+
+# /bin/rm -rf ./operator/yaml/
+# mkdir -p ./operator/yaml/
+cat << EOF > ./image.registries.conf
+unqualified-search-registries = ["registry.access.redhat.com", "docker.io"]
+
+EOF
+
+yaml_docker_image(){
+
+    docker_image=$1
+    local_image=$2
+    num=$3
+    # echo $docker_image
+
+cat << EOF >> ./image.registries.conf
+[[registry]]
+  location = "${docker_image}"
+  insecure = false
+  blocked = false
+  mirror-by-digest-only = false
+  prefix = ""
+
+  [[registry.mirror]]
+    location = "${local_image}"
+    insecure = true
+EOF
+
+}
+
+declare -i num=1
+
+while read -r line; do
+
+    docker_image=$(echo $line | awk  '{split($0,a,"\t"); print a[1]}')
+    local_image=$(echo $line | awk  '{split($0,a,"\t"); print a[2]}')
+
+    echo $docker_image
+    echo $local_image
+
+    yaml_docker_image $docker_image $local_image $num
+    num=${num}+1;
+
+done < yaml.image.ok.list.uniq
+
+
+cat << EOF >> ./image.registries.conf
+
+[[registry]]
+  location = "quay.io/openshift-release-dev/ocp-release"
+  insecure = false
+  blocked = false
+  mirror-by-digest-only = true
+  prefix = ""
+
+  [[registry.mirror]]
+    location = "registry.redhat.ren/ocp4/openshift4"
+    insecure = true
+
+[[registry]]
+  location = "quay.io/openshift-release-dev/ocp-v4.0-art-dev"
+  insecure = false
+  blocked = false
+  mirror-by-digest-only = true
+  prefix = ""
+
+  [[registry.mirror]]
+    location = "registry.redhat.ren/ocp4/openshift4"
+    insecure = true
+
+[[registry]]
+  location = "registry.redhat.ren"
+  insecure = true
+  blocked = false
+  mirror-by-digest-only = false
+  prefix = ""
+
+EOF
+
+config_source=$(cat ./image.registries.conf | python3 -c "import sys, urllib.parse; print(urllib.parse.quote(''.join(sys.stdin.readlines())))"  )
+
+cat <<EOF > 99-worker-container-registries.yaml
+apiVersion: machineconfiguration.openshift.io/v1
+kind: MachineConfig
+metadata:
+  labels:
+    machineconfiguration.openshift.io/role: worker
+  name: 99-worker-container-registries
+spec:
+  config:
+    ignition:
+      version: 2.2.0
+    storage:
+      files:
+      - contents:
+          source: data:text/plain,${config_source}
+          verification: {}
+        filesystem: root
+        mode: 420
+        path: /etc/containers/registries.conf
+EOF
+
+cat <<EOF > 99-master-container-registries.yaml
+apiVersion: machineconfiguration.openshift.io/v1
+kind: MachineConfig
+metadata:
+  labels:
+    machineconfiguration.openshift.io/role: master
+  name: 99-master-container-registries
+spec:
+  config:
+    ignition:
+      version: 2.2.0
+    storage:
+      files:
+      - contents:
+          source: data:text/plain,${config_source}
+          verification: {}
+        filesystem: root
+        mode: 420
+        path: /etc/containers/registries.conf
+EOF

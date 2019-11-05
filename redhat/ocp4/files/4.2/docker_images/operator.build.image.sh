@@ -5,14 +5,26 @@ set -x
 
 cd /data/ocp4/operator/
 
+#####################################
+# for redhat
+
 tar zxf manifests.tgz
 
-podman build --no-cache -f /data/ocp4/custom-registry.Dockerfile -t registry.redhat.ren/ocp-operator/custom-registry:all ./
+/bin/rm -rf ./manifests/certified-operators.*
+/bin/rm -rf ./manifests/community-operators.*
 
-podman push registry.redhat.ren/ocp-operator/custom-registry:all 
+podman build --no-cache -f /data/ocp4/custom-registry.Dockerfile -t registry.redhat.ren/ocp-operator/custom-registry:redhat ./
 
-podman image save registry.redhat.ren/ocp-operator/custom-registry:all | pigz -c > custom-registry.all.tgz
+podman push registry.redhat.ren/ocp-operator/custom-registry:redhat
 
+podman image save registry.redhat.ren/ocp-operator/custom-registry:redhat | pigz -c > custom-registry.redhat.tgz
+
+##################################
+# for certifiyed
+
+tar zxf manifests.tgz
+
+/bin/rm -rf ./manifests/redhat-operators.*
 /bin/rm -rf ./manifests/community-operators.*
 
 podman build --no-cache -f /data/ocp4/custom-registry.Dockerfile -t registry.redhat.ren/ocp-operator/custom-registry:certified ./
@@ -21,13 +33,19 @@ podman push registry.redhat.ren/ocp-operator/custom-registry:certified
 
 podman image save registry.redhat.ren/ocp-operator/custom-registry:certified | pigz -c > custom-registry.certified.tgz
 
+####################################
+# for community
+
+tar zxf manifests.tgz
+
+/bin/rm -rf ./manifests/redhat-operators.*
 /bin/rm -rf ./manifests/certified-operators.*
 
-podman build --no-cache -f /data/ocp4/custom-registry.Dockerfile -t registry.redhat.ren/ocp-operator/custom-registry:redhat ./
+podman build --no-cache -f /data/ocp4/custom-registry.Dockerfile -t registry.redhat.ren/ocp-operator/custom-registry:community ./
 
-podman push registry.redhat.ren/ocp-operator/custom-registry:redhat
+podman push registry.redhat.ren/ocp-operator/custom-registry:community 
 
-podman image save registry.redhat.ren/ocp-operator/custom-registry:redhat | pigz -c > custom-registry.redhat.tgz
+podman image save registry.redhat.ren/ocp-operator/custom-registry:community | pigz -c > custom-registry.community.tgz
 
 cd /data/ocp4
 
