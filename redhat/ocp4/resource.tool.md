@@ -56,4 +56,10 @@ date +%s%N | cut -b1-13
 
 
 pigz -dc registry.tgz | tar xf -
+
+# https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/7/html/installation_guide/sect-making-usb-media
+diskutil list
+diskutil unmountDisk /dev/disk3
+dd if=./rhel-server-7.6-x86_64-dvd.iso of=/dev/rdisk3 bs=10m
+
 ```

@@ -3,6 +3,8 @@
 set -e
 set -x
 
+export LOCAL_REG='registry.redhat.ren'
+
 # export OCP_RELEASE=${BUILDNUMBER}
 # export LOCAL_REG='registry.redhat.ren'
 # export LOCAL_REPO='ocp4/openshift4'
@@ -66,7 +68,7 @@ cat << EOF >> ./image.registries.conf
   prefix = ""
 
   [[registry.mirror]]
-    location = "registry.redhat.ren/ocp4/openshift4"
+    location = "${LOCAL_REG}/ocp4/openshift4"
     insecure = true
 
 [[registry]]
@@ -77,11 +79,11 @@ cat << EOF >> ./image.registries.conf
   prefix = ""
 
   [[registry.mirror]]
-    location = "registry.redhat.ren/ocp4/openshift4"
+    location = "${LOCAL_REG}/ocp4/openshift4"
     insecure = true
 
 [[registry]]
-  location = "registry.redhat.ren"
+  location = "${LOCAL_REG}"
   insecure = true
   blocked = false
   mirror-by-digest-only = false
