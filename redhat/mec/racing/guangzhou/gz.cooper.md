@@ -14,23 +14,25 @@ docker push registry.crmi.cn:5021/zhuowang/mobilesoldier:v0.2
 tar zvxf ocean-1.4.2.tgz
 cd ocean-1.4.2/installs
 
-rm -rf ../lib
-tar zxvf lib.tar.gz -C ../
+mkdir -p /data/zw
 
-rm -rf ../ext
-tar zxvf ext.tar.gz -C ../
+rm -rf /data/zw/lib
+tar zxvf lib.tar.gz -C /data/zw/
 
-rm -rf ../Feature_config
-tar zxvf Feature_config.tar.gz -C ../
+rm -rf /data/zw/ext
+tar zxvf ext.tar.gz -C /data/zw/
 
-rm -rf ../Recog_config/
-tar -zxvf Recog_config.tar.gz -C ../
+rm -rf /data/zw/Feature_config
+tar zxvf Feature_config.tar.gz -C /data/zw/
 
-rm -rf ../recogdata/
-tar -zxvf recogdata.tar.gz -C ../
+rm -rf /data/zw/Recog_config/
+tar -zxvf Recog_config.tar.gz -C /data/zw/
 
-rm -rf ../snapdata/
-tar -zxvf snapdata.tar.gz -C ../ 
+rm -rf /data/zw/recogdata/
+tar -zxvf recogdata.tar.gz -C /data/zw/
+
+rm -rf /data/zw/snapdata/
+tar -zxvf snapdata.tar.gz -C /data/zw/ 
 
 docker load -i zookeeper-1.4.2.tar 
 docker tag zookeeper registry.crmi.cn:5021/zhuowang/zookeeper
@@ -53,6 +55,7 @@ docker tag nginx:1.4.2 registry.crmi.cn:5021/zhuowang/nginx:1.4.2
 docker push registry.crmi.cn:5021/zhuowang/nginx:1.4.2
 
 docker load -i ocean-1.4.2.tar
+docker tag ocean:1.4.2 registry.crmi.cn:5021/zhuowang/ocean:1.4.2
 docker push registry.crmi.cn:5021/zhuowang/ocean:1.4.2
 
 docker load -i ocean-manager-1.4.2.tar 
@@ -78,5 +81,6 @@ docker push registry.crmi.cn:5021/zhuowang/facego-gpu-t4:0806
 
 sed -i "s/127.0.0.1/$local_ip/g" $dir/ext/xqplatform_config/system.xml
 
+mkdir -p /data/zw/mysql /data/zw/nasdata /data/zw/nasdata_2 /data/zw/nasdata
 
 ```
