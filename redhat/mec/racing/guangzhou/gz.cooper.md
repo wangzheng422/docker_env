@@ -89,5 +89,7 @@ oc adm policy add-scc-to-user privileged -z mysvcacct -n zhuowang
 oc adm policy add-scc-to-user anyuid -z mysvcacct -n zhuowang
 
 oc apply -f zhuowang-dp.yaml
+
 oc delete -f zhuowang-dp.yaml
+
 ```
