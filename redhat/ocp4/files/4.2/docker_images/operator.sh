@@ -88,6 +88,20 @@ tar zcf manifests.tgz manifests/
 
 cd /data/ocp4
 
-find ./operator -type f | xargs egrep "(containerImage: |image: |value: )" | sed 's/\\n/\n/g'| sed 's/^.*containerImage: //' | sed 's/^.*image: //' | sed 's/^.*value: //' | egrep "^.*\.(io|com|org|net)/.*:.*" | sed s/"'"//g | sed 's/\"//g' | sort | uniq  > /data/ocp4/operator.image.list
+# find ./operator -type f | xargs egrep "(containerImage: |image: |value: )" | sed 's/\\n/\n/g'| sed 's/^.*containerImage: //' | sed 's/^.*image: //' | sed 's/^.*value: //' | egrep "^.*\.(io|com|org|net)/.*:.*" | sed s/"'"//g | sed 's/\"//g' | sort | uniq  > /data/ocp4/operator.image.list
 
-find ./operator -type f | xargs egrep "(containerImage: |image: |value: )" | sed 's/\\n/\n/g'| sed 's/^.*image: //' | sed 's/^.*value: //' | egrep -v "^.*\.(io|com|org|net)/.*:.*"| egrep  "^[[:alnum:]]*/.*:[[:print:]]*$" | sed s/"'"//g | sed 's/\"//g' | sort | uniq  >> /data/ocp4/operator.image.list
+# find ./operator -type f | xargs egrep "(containerImage: |image: |value: )" | sed 's/\\n/\n/g'| sed 's/^.*image: //' | sed 's/^.*value: //' | egrep -v "^.*\.(io|com|org|net)/.*:.*"| egrep  "^[[:alnum:]]*/.*:[[:print:]]*$" | sed s/"'"//g | sed 's/\"//g' | sort | uniq  >> /data/ocp4/operator.image.list
+
+# find ./manifests -type f | xargs egrep -h "=[[:alnum:]|\.]+\.(io|com|org|net)/[[:graph:]]+$" | grep -v "apiVersion:" | grep -v "version:" 
+
+# find ./manifests -type f | xargs egrep -h " [[:alnum:]|\.]+\.(io|com|org|net)/[[:graph:]]+$" | grep -v "apiVersion:" | grep -v "version:" 
+
+find ./manifests -type f | xargs egrep -oh " [[:alnum:]|\.]+/[[:graph:]]+:[[:graph:]]+$" | sed 's/\\n/\n/g' | egrep -o "[[:alnum:]|\.]+/[[:graph:]]+:[[:graph:]]+$" | grep -v "\*\*" > /data/ocp4/operator.image.list
+
+find ./manifests -type f | xargs egrep -oh "=[[:alnum:]|\.]+/[[:graph:]]+:[[:graph:]]+$" | egrep -o "[[:alnum:]|\.]+/[[:graph:]]+:[[:graph:]]+$" >> /data/ocp4/operator.image.list
+
+find ./manifests -type f | xargs egrep -oh " [[:alnum:]|\.]+\.(io|com|org|net)/[[:graph:]]+$" | sed 's/\\n/\n/g' | grep -v "/v1" | grep -v "github.com" | grep -v "discovery.3scale.net" | egrep -o "[[:alnum:]|\.]+\.(io|com|org|net)/[[:graph:]]+$" >> /data/ocp4/operator.image.list
+
+find ./manifests -type f | xargs egrep -oh "=[[:alnum:]|\.]+/[[:graph:]]+$" | sed 's/\\n/\n/g'  | egrep -o "[[:alnum:]|\.]+/[[:graph:]]+$" >> /data/ocp4/operator.image.list
+
+cat /data/ocp4/operator.image.list | sort | uniq > /data/ocp4/operator.image.list
