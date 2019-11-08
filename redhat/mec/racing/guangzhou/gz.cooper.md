@@ -79,8 +79,15 @@ docker tag facego-gpu-t4:0806 registry.crmi.cn:5021/zhuowang/facego-gpu-t4:0806
 docker push registry.crmi.cn:5021/zhuowang/facego-gpu-t4:0806
 
 
-sed -i "s/127.0.0.1/$local_ip/g" $dir/ext/xqplatform_config/system.xml
+# sed -i "s/127.0.0.1/$local_ip/g" $dir/ext/xqplatform_config/system.xml
 
 mkdir -p /data/zw/mysql /data/zw/nasdata /data/zw/nasdata_2 /data/zw/nasdata
 
+oc new-project zhuowang
+oc create serviceaccount mysvcacct -n zhuowang
+oc adm policy add-scc-to-user privileged -z mysvcacct -n zhuowang
+oc adm policy add-scc-to-user anyuid -z mysvcacct -n zhuowang
+
+oc apply -f zhuowang-dp.yaml
+oc delete -f zhuowang-dp.yaml
 ```
