@@ -27,13 +27,7 @@ while read -r line; do
 
 done < operator.image.list
 
-while read -r line; do
-
-    shorten_image $line
-
-done < pull.image.ok.list
-
-cat yaml.image.ok.list | sort | uniq > yaml.image.ok.list.uniq
+cat yaml.image.ok.list | sort | uniq > yaml.image.ok.list
 
 
 

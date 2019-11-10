@@ -47,6 +47,11 @@ podman push registry.redhat.ren/ocp-operator/custom-registry:community
 
 podman image save registry.redhat.ren/ocp-operator/custom-registry:community | pigz -c > custom-registry.community.tgz
 
+#####################################
+## restore
+
+tar zxf manifests.tgz
+
 cd /data/ocp4
 
 # find ./operator -type f | xargs grep "image: " | sed 's/^.*image: //' | sort | uniq | grep -e '^.*\/.*:.*' | grep -v '\\n' | sed s/"'"//g | sed 's/\"//g' | sort | uniq >  /data/ocp4/operator.image.list
