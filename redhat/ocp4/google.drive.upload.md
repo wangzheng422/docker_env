@@ -21,7 +21,9 @@ go get github.com/google/skicka
 install skicka /usr/local/bin/skicka
 skicka init
 skicka -no-browser-auth ls
-
+skicka ls "/wzh/wangzheng.share/shared_docs/2019.11/ocp 4.2.2/"
+skicka upload ./ocp4.tgz  "/wzh/wangzheng.share/shared_docs/2019.11/ocp 4.2.2/"
+skicka upload ./registry.tgz  "/wzh/wangzheng.share/shared_docs/2019.11/ocp 4.2.2/"
 
 ```
 
