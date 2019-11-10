@@ -55,7 +55,7 @@ while read -r line; do
     yaml_docker_image $docker_image $local_image $num
     num=${num}+1;
 
-done < yaml.image.ok.list
+done < yaml.image.ok.list.uniq
 
 
 cat << EOF >> ./image.registries.conf

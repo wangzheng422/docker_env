@@ -17,5 +17,11 @@ gdrive list
 
 gdrive upload ***.tgz
 
+go get github.com/google/skicka
+install skicka /usr/local/bin/skicka
+skicka init
+skicka -no-browser-auth ls
+
+
 ```
 

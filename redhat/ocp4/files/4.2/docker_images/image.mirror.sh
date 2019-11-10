@@ -25,9 +25,9 @@ while read -r line; do
 
     mirror_image $line
 
-done < operator.image.list
+done < operator.image.list.uniq
 
-cat yaml.image.ok.list | sort | uniq > yaml.image.ok.list
+cat yaml.image.ok.list | sort | uniq > yaml.image.ok.list.uniq
 
 
 
