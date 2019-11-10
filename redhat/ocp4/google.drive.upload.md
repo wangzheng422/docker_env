@@ -25,5 +25,8 @@ skicka ls "/wzh/wangzheng.share/shared_docs/2019.11/ocp 4.2.2/"
 skicka upload ./ocp4.tgz  "/wzh/wangzheng.share/shared_docs/2019.11/ocp 4.2.2/"
 skicka upload ./registry.tgz  "/wzh/wangzheng.share/shared_docs/2019.11/ocp 4.2.2/"
 
+
+rsync --progress -arz 149.28.95.3:/data/registry /data/
+
 ```
 
