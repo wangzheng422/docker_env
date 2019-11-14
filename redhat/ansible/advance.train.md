@@ -1,3 +1,6 @@
+awx is opensource version of ansible tower
+
+https://github.com/ansible/awx
 
 ```bash
 
@@ -56,7 +59,7 @@ curl http://frontend1.${GUID}.example.opentlc.com/
 
 ###########################3
 ## tower
-ssh -i ~/.ssh/id_rsa.redhat -tt zhengwan-redhat.com@bastion.2b40.example.opentlc.com byobu=
+ssh -i ~/.ssh/id_rsa.redhat -tt zhengwan-redhat.com@bastion.2b40.example.opentlc.com byobu
 
 mkhomedir_helper zhengwan-redhat.com
 
@@ -334,6 +337,193 @@ ansible support2.${GUID}.internal -m service -a "name=postgresql-9.6 state=start
 
 ansible-galaxy install samdoran.pgsql_replication -p roles
 
+vim roles/samdoran.pgsql_replication/tasks/master.yml
+# loop: "{{ pgsqlrep_replica_address }}"
+# vars:
+#   pgsqlrep_replica_address: "{{ groups[pgsqlrep_group_name] | map('extract', hostvars, 'ansible_all_ipv4_addresses') | flatten }}"
+# notify: restart postgresql
+
+cat << EOF > pg_inventory
+[tower]
+tower1.2b40.internal public_host_name=tower1.2b40.example.opentlc.com ssh_host=tower2.2b40.internal
+tower2.2b40.internal public_host_name=tower2.2b40.example.opentlc.com ssh_host=tower1.2b40.internal
+tower3.2b40.internal public_host_name=tower3.2b40.example.opentlc.com ssh_host=tower3.2b40.internal
+
+[database]
+support1.2b40.internal ssh_host=support2.2b40.internal  pgsqlrep_role=master
+
+[database_replica]
+support2.${GUID}.internal pgsqlrep_role=replica
+
+[isolated_group_ThreeTierApp]
+bastion.3a84.example.opentlc.com ansible_user='ec2-user' ansible_ssh_private_key_file='~/.ssh/openstack.pem'
+
+[isolated_group_ThreeTierApp:vars]
+controller=tower
+
+[all:vars]
+ansible_become=true
+admin_password='root'
+
+pg_host='support1.2b40.internal'
+pg_port='5432'
+
+pg_database='awx'
+pg_username='awx'
+pg_password='root'
+
+rabbitmq_vhost=tower
+rabbitmq_use_long_name=true
+
+rabbitmq_username=tower
+rabbitmq_password='root'
+rabbitmq_cookie=cookiemonster
+
+# Isolated Tower nodes automatically generate an RSA key for authentication;
+# To disable this behavior, set this value to false
+# isolated_key_generation=true
+EOF
+
+cat << EOF > pgsql_replication.yml
+- name: Configure PostgreSQL streaming replication
+  hosts: database_replica
+
+  tasks:
+    - name: Find recovery.conf
+      find:
+        paths: /var/lib/pgsql
+        recurse: yes
+        patterns: recovery.conf
+      register: recovery_conf_path
+
+    - name: Remove recovery.conf
+      file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ recovery_conf_path.files }}"
+
+    - name: Add replica to database group
+      add_host:
+        name: "{{ inventory_hostname }}"
+        groups: database
+      tags:
+        - always
+
+    - import_role:
+        name: nginx
+      vars:
+        nginx_exec_vars_only: yes
+
+    - import_role:
+        name: repos_el
+      when: ansible_os_family == "RedHat"
+
+    - import_role:
+        name: packages_el
+      vars:
+        packages_el_install_tower: no
+        packages_el_install_postgres: yes
+      when: ansible_os_family == "RedHat"
+
+    - debug:
+        msg: "postgres_username: {{ pg_username }}"
+    
+    - debug:
+        msg: "postgres_password: {{ pg_password }}"
+
+    - import_role:
+        name: postgres
+      vars:
+        postgres_allowed_ipv4: "0.0.0.0/0"
+        postgres_allowed_ipv6: "::/0"
+        postgres_username: "{{ pg_username }}"
+        postgres_password: "{{ pg_password }}"
+        postgres_database: "{{ pg_database }}"
+        max_postgres_connections: 1024
+        postgres_shared_memory_size: "{{ (ansible_memtotal_mb*0.3)|int }}"
+        postgres_work_mem: "{{ (ansible_memtotal_mb*0.03)|int }}"
+        postgres_maintenance_work_mem: "{{ (ansible_memtotal_mb*0.04)|int }}"
+      tags:
+        - postgresql_database
+
+    - import_role:
+        name: firewall
+      vars:
+        firewalld_http_port: "{{ nginx_http_port }}"
+        firewalld_https_port: "{{ nginx_https_port }}"
+      tags:
+        - firewall
+      when: ansible_os_family == 'RedHat'
+
+- name: Configure PSQL master server
+  hosts: database[0]
+
+  vars:
+    pgsqlrep_master_address: "{{ hostvars[groups[pgsqlrep_group_name_master][0]].ansible_all_ipv4_addresses[-1] }}"
+    pgsqlrep_replica_address: "{{ hostvars[groups[pgsqlrep_group_name][0]].ansible_all_ipv4_addresses[-1] }}"
+
+  tasks:
+    - import_role:
+        name: samdoran.pgsql_replication
+
+- name: Configure PSQL replica
+  hosts: database_replica
+
+  vars:
+    pgsqlrep_master_address: "{{ hostvars[groups[pgsqlrep_group_name_master][0]].ansible_all_ipv4_addresses[-1] }}"
+    pgsqlrep_replica_address: "{{ hostvars[groups[pgsqlrep_group_name][0]].ansible_all_ipv4_addresses[-1] }}"
+
+  tasks:
+    - import_role:
+        name: samdoran.pgsql_replication
+EOF
+
+ansible-playbook -b -i pg_inventory pgsql_replication.yml -e pgsqlrep_password=r3dh4t1!
+
+ansible support1.${GUID}.internal -m shell -a "psql -c 'select application_name, state, sync_priority, sync_state from pg_stat_replication;'" --become-user postgres
+
+cat << EOF > postgres_failover.yml
+- name: Gather facts
+  hosts: all
+  become: yes
+
+- name: Failover PostgreSQL
+  hosts: database_replica
+  become: yes
+
+  tasks:
+    - name: Get the current PostgreSQL Version
+      import_role:
+        name: samdoran.pgsql_replication
+        tasks_from: pgsql_version.yml
+
+    - name: Promote secondary PostgreSQL server to primary
+      command: /usr/pgsql-{{ pgsql_version }}/bin/pg_ctl promote
+      become_user: postgres
+      environment:
+        PGDATA: /var/lib/pgsql/{{ pgsql_version }}/data
+      ignore_errors: yes
+
+- name: Update Ansible Tower database configuration
+  hosts: tower
+  become: yes
+
+  tasks:
+    - name: Update Tower postgres.py
+      lineinfile:
+        dest: /etc/tower/conf.d/postgres.py
+        regexp: "^(.*'HOST':)"
+        line: "\\\\1 '{{ hostvars[groups['database_replica'][0]].ansible_default_ipv4.address }}',"
+        backrefs: yes
+      notify: restart tower
+
+  handlers:
+    - name: restart tower
+      command: ansible-tower-service restart
+EOF
+
+ansible-playbook -b -i pg_inventory postgres_failover.yml -e pgsqlrep_password=r3dh4t1!
+
 ```
 
 ```
@@ -404,4 +594,11 @@ ansible_become=false
 
 - debug:
    var: domain_list
+
+
+#######################################
+###   pgsql_replication.yml
+
+
+
 ```

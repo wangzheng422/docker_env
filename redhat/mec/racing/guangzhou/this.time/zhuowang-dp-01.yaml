@@ -1,0 +1,1588 @@
+apiVersion: apps.openshift.io/v1
+kind: DeploymentConfig
+metadata:
+  labels:
+    app: nginx-oc-front
+  name: nginx-oc-front
+  namespace: zhuowang
+spec:
+  replicas: 1
+  selector:
+    app: nginx-oc-front
+    deploymentconfig: nginx-oc-front
+  template:
+    metadata:
+      labels:
+        app: nginx-oc-front
+        deploymentconfig: nginx-oc-front
+    spec:
+      containers:
+        - image: registry.crmi.cn:5021/zhuowang/haipenge/centos-7-nginx-rtmp:latest
+          imagePullPolicy: Always
+          name: nginx-oc-front
+          command: ['/bin/bash']
+          args: ["-c","/usr/local/nginx/nginx && tail -f /dev/null"]
+          ports:
+            - containerPort: 9999
+              protocol: TCP
+          volumeMounts:
+            - mountPath: /zpc/ocean-front_1.4.2/static/config.js
+              name: volume-9bucr
+              subPath: config.js
+            - mountPath: /zpc/nginx_1.13.12/nginx_1.13.12/conf/nginx.conf
+              name: volume-0gcbr
+              subPath: nginx.conf
+      serviceAccountName: mysvcacct
+      volumes:
+        - configMap:
+            defaultMode: 422
+            name: nginx-oc-front-config
+          name: volume-9bucr
+        - configMap:
+            defaultMode: 422
+            name: nginx-oc-front-nginxconfig
+          name: volume-0gcbr
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: nginx-oc-front
+  name: nginx-oc-front
+  namespace: zhuowang
+spec:
+  externalTrafficPolicy: Cluster
+  ports:
+    - name: tcp-9999
+      port: 9999
+      protocol: TCP
+      targetPort: 9999
+  selector:
+    deploymentconfig: nginx-oc-front
+  type: NodePort
+---
+apiVersion: apps.openshift.io/v1
+kind: DeploymentConfig
+metadata:
+  name: zw-api-oc
+  namespace: zhuowang
+spec:
+  replicas: 1
+  selector:
+    zw-api-oc: 'true'
+  template:
+    metadata:
+      labels:
+        zw-api-oc: 'true'
+    spec:
+      containers:
+        - env:
+            - name: nginx_img_url
+              value: zw-nginx-oc
+            - name: key_ocean_ip
+              value: localhost
+            - name: mysql_ip
+              value: zw-mysql-oc
+            - name: kafka_address
+              value: 'zw-kaf1:9092'
+            - name: zookeeper_address
+              value: 'zw-zk1:2181'
+            - name: engine_ip
+              value: zw-facego
+            - name: orc_ip
+              value: 192.168.40.116
+            - name: orc_live_ip
+              value: 192.168.40.116
+            - name: redis_ip
+              value: zw-redisp
+            - name: ftp_ip
+              value: 192.168.40.116
+          image: 'registry.crmi.cn:5021/zhuowang/ocean:1.4.2'
+          imagePullPolicy: Always
+          name: zw-api-oc
+          ports:
+            - containerPort: 11006
+              protocol: TCP
+          volumeMounts:
+            - mountPath: /home/nasdata
+              name: nasdata
+      dnsPolicy: ClusterFirst
+      nodeSelector:
+        kubernetes.io/hostname: node-otii.crmi.cn
+      restartPolicy: Always
+      serviceAccountName: mysvcacct
+      volumes:
+        - hostPath:
+            path: /data/zw/nasdata
+            type: ''
+          name: nasdata
+  triggers:
+    - type: ConfigChange
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: zw-api-oc
+  namespace: zhuowang
+spec:
+  externalTrafficPolicy: Cluster
+  ports:
+    - nodePort: 32261
+      port: 11006
+      protocol: TCP
+      targetPort: 11006
+  selector:
+    zw-api-oc: 'true'
+  type: NodePort
+---
+apiVersion: apps.openshift.io/v1
+kind: DeploymentConfig
+metadata:
+  name: zw-facego
+  namespace: zhuowang
+spec:
+  replicas: 1
+  selector:
+    zw-facego: 'true'
+  template:
+    metadata:
+      labels:
+        zw-facego: 'true'
+    spec:
+      containers:
+        - env:
+            - name: NVIDIA_VISIBLE_DEVICES
+              value: all
+            - name: NVIDIA_DRIVER_CAPABILITIES
+              value: 'compute,utility'
+            - name: NVIDIA_REQUIRE_CUDA
+              value: cuda>=5.0
+          image: 'registry.crmi.cn:5021/zhuowang/facego-gpu-t4:0806'
+          imagePullPolicy: Always
+          name: zw-facego
+          ports:
+            - containerPort: 7100
+              protocol: TCP
+            - containerPort: 23011
+              protocol: TCP
+            - containerPort: 20000
+              protocol: TCP
+            - containerPort: 23000
+              protocol: TCP
+          volumeMounts:
+            - mountPath: /usr/tmp/FaceGo-GPU/data
+              name: recogdata
+            - mountPath: /usr/tmp/FaceGo-GPU/facedb
+              name: facedb
+            - mountPath: /usr/tmp/FaceGo-Snap/data
+              name: snapdata
+            - mountPath: /usr/tmp/FaceGo-Feature/AlgorithmFeature/config
+              name: feature-config
+            - mountPath: /usr/tmp/FaceGo-GPU/facewarehouse_gpu/algosdk/config
+              name: recog-config
+          securityContext:
+            allowPrivilegeEscalation: true
+            # capabilities:
+            #   drop: ["ALL"]
+            seLinuxOptions:
+              type: nvidia_container_t
+      nodeSelector:
+        kubernetes.io/hostname: node-otii.crmi.cn
+      restartPolicy: Always
+      serviceAccountName: mysvcacct
+      volumes:
+        - hostPath:
+            path: /data/zw/recogdata/data
+          name: recogdata
+        - hostPath:
+            path: /data/zw/recogdata/facedb
+          name: facedb
+        - hostPath:
+            path: /data/zw/snapdata
+          name: snapdata
+        - hostPath:
+            path: /data/zw/Feature_config
+          name: feature-config
+        - hostPath:
+            path: /data/zw/Recog_config
+          name: recog-config
+  triggers:
+    - type: ConfigChange
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: zw-facego
+  namespace: zhuowang
+spec:
+  externalTrafficPolicy: Cluster
+  ports:
+    - port: 8100
+      protocol: TCP
+      targetPort: 7100
+      name: http
+    - port: 23011
+      protocol: TCP
+      targetPort: 23011
+      name: http1
+    - port: 20000
+      protocol: TCP
+      targetPort: 20000
+      name: webpush
+    - port: 23000
+      protocol: TCP
+      targetPort: 23000
+      name: tcp-23000
+  selector:
+    zw-facego: 'true'
+  type: NodePort
+---
+apiVersion: apps.openshift.io/v1
+kind: DeploymentConfig
+metadata:
+  name: zw-kaf1
+  namespace: zhuowang
+spec:
+  replicas: 1
+  selector:
+    zw-kaf1: 'true'
+  template:
+    metadata:
+      labels:
+        zw-kaf1: 'true'
+    spec:
+      containers:
+        - env:
+            - name: KAFKA_ZOOKEEPER_CONNECT
+              value: 'zw-zk1:2181'
+            - name: KAFKA_ADVERTISED_HOST_NAME
+              value: zw-kaf1
+          image: 'registry.crmi.cn:5021/zhuowang/kafka:1.4.2'
+          imagePullPolicy: Always
+          name: zw-kaf1
+          ports:
+            - containerPort: 9092
+              protocol: TCP
+      nodeSelector:
+        kubernetes.io/hostname: node-otii.crmi.cn
+      restartPolicy: Always
+      serviceAccountName: mysvcacct
+  triggers:
+    - type: ConfigChange
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: zw-kaf1
+  namespace: zhuowang
+spec:
+  ports:
+    - port: 9092
+      protocol: TCP
+      targetPort: 9092
+  selector:
+    zw-kaf1: 'true'
+  type: ClusterIP
+---
+apiVersion: apps.openshift.io/v1
+kind: DeploymentConfig
+metadata:
+  name: zw-mobilesoldierservice
+  namespace: zhuowang
+spec:
+  replicas: 1
+  selector:
+    zw-mobilesoldierservice: 'true'
+  template:
+    metadata:
+      labels:
+        zw-mobilesoldierservice: 'true'
+    spec:
+      containers:
+        - env:
+            - name: appid
+              value: a54fce347adf4ca88f740c0eb230e4e3
+            - name: appsecret
+              value: $2a$10$dJDxml5rWVC4EanD7TbsgOfqTwcr/tcq5DAGR6KIwBrqo4GuPUHte
+            - name: oceanaddress
+              value: 'http://zw-api-oc:11006'
+            - name: mqttserverurl
+              value: 'tcp://localhost:1883'
+            - name: subaddress
+              value: 'http://zw-mobilesoldierservice:18080'
+          image: 'registry.crmi.cn:5021/zhuowang/mobilesoldier:v0.2 '
+          imagePullPolicy: Always
+          name: zw-mobilesoldierservice
+          ports:
+            - containerPort: 1883
+              protocol: TCP
+            - containerPort: 10554
+              protocol: TCP
+            - containerPort: 18080
+              protocol: TCP
+      dnsPolicy: ClusterFirst
+      nodeSelector:
+        kubernetes.io/hostname: node-otii.crmi.cn
+      restartPolicy: Always
+      serviceAccountName: mysvcacct
+  triggers:
+    - type: ConfigChange
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: zw-mobilesoldierservice
+  namespace: zhuowang
+spec:
+  externalTrafficPolicy: Cluster
+  ports:
+    - name: shouji
+      port: 18080
+      protocol: TCP
+      targetPort: 18080
+    - name: rtsp
+      port: 10554
+      protocol: TCP
+      targetPort: 10554
+    - name: mqtt
+      port: 1883
+      protocol: TCP
+      targetPort: 1883
+  selector:
+    zw-mobilesoldierservice: 'true'
+  type: NodePort
+---
+apiVersion: apps.openshift.io/v1
+kind: DeploymentConfig
+metadata:
+  name: zw-mysql-oc
+  namespace: zhuowang
+spec:
+  replicas: 1
+  selector:
+    zw-mysql-oc: 'true'
+  template:
+    metadata:
+      labels:
+        zw-mysql-oc: 'true'
+    spec:
+      containers:
+        - image: 'registry.crmi.cn:5021/zhuowang/mysql:1.4.2'
+          imagePullPolicy: Always
+          name: zw-mysql-oc
+          ports:
+            - containerPort: 3306
+              protocol: TCP
+          securityContext:
+            privileged: true
+          volumeMounts:
+            - mountPath: /var/lib/mysql
+              name: mysql
+      dnsPolicy: ClusterFirst
+      nodeSelector:
+        kubernetes.io/hostname: node-otii.crmi.cn
+      restartPolicy: Always
+      serviceAccountName: mysvcacct
+      volumes:
+        - hostPath:
+            path: /data/zw/mysql
+            type: ''
+          name: mysql
+  triggers:
+    - type: ConfigChange
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: zw-mysql-oc
+  namespace: zhuowang
+spec:
+  ports:
+    - port: 3306
+      protocol: TCP
+      targetPort: 3306
+  selector:
+    zw-mysql-oc: 'true'
+  type: ClusterIP
+---
+apiVersion: apps.openshift.io/v1
+kind: DeploymentConfig
+metadata:
+  name: zw-nginx-oc
+  namespace: zhuowang
+spec:
+  replicas: 1
+  selector:
+    zw-nginx-oc: 'true'
+  template:
+    metadata:
+      labels:
+        zw-nginx-oc: 'true'
+    spec:
+      containers:
+        - env:
+            - name: key_ocean
+              value: 192.168.40.116
+            - name: key_facebigdata
+              value: 192.168.40.116
+            - name: key_ocean_manage
+              value: 192.168.40.116
+            - name: ocean_entry_http
+              value: 192.168.40.116
+            - name: key_ocean_socket_ip
+              value: 192.168.40.116
+          image: 'registry.crmi.cn:5021/zhuowang/nginx:1.4.2'
+          imagePullPolicy: Always
+          name: zw-nginx-oc
+          volumeMounts:
+            - mountPath: /home/nasdata
+              name: nasdata
+            - mountPath: /zpc/nginx_1.13.12/nginx_1.13.12/conf/nginx.conf
+              name: volume-sbwbx
+              subPath: nginx.conf
+      dnsPolicy: ClusterFirst
+      nodeSelector:
+        kubernetes.io/hostname: node-otii.crmi.cn
+      restartPolicy: Always
+      serviceAccountName: mysvcacct
+      volumes:
+        - hostPath:
+            path: /data/zw/nasdata
+            type: ''
+          name: nasdata
+        - configMap:
+            defaultMode: 422
+            name: zw-nginx-config
+          name: volume-sbwbx
+  triggers:
+    - type: ConfigChange
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: zw-nginx-oc
+  namespace: zhuowang
+spec:
+  ports:
+    - name: pic
+      port: 10005
+      protocol: TCP
+      targetPort: 10005
+    - name: ocean-manager
+      port: 10001
+      protocol: TCP
+      targetPort: 10001
+    - name: ocean-api
+      port: 10006
+      protocol: TCP
+      targetPort: 10006
+  selector:
+    zw-nginx-oc: 'true'
+  type: ClusterIP
+---
+apiVersion: apps.openshift.io/v1
+kind: DeploymentConfig
+metadata:
+  name: zw-ocean-entry-http
+  namespace: zhuowang
+spec:
+  replicas: 1
+  selector:
+    zw-ocean-entry-http: 'true'
+  template:
+    metadata:
+      labels:
+        zw-ocean-entry-http: 'true'
+    spec:
+      containers:
+        - env:
+            - name: nginx_img_url
+              value: zw-nginx-oc
+            - name: mysql_ip
+              value: zw-mysql-oc
+            - name: kafka_address
+              value: 'zw-kaf1:9092'
+            - name: zookeeper_address
+              value: 'zw-zk1:2181'
+            - name: engine_ip
+              value: zw-facego
+            - name: orc_ip
+              value: 192.168.40.116
+            - name: orc_live_ip
+              value: 192.168.40.116
+            - name: redis_ip
+              value: zw-redisp
+            - name: ocean_entry_http_ip
+              value: 127.0.0.1
+            - name: FaceGo_ip
+              value: zw-facego
+            - name: key_FaceGo_ip
+              value: zw-facego
+          image: 'registry.crmi.cn:5021/zhuowang/ocean-entry-http:1.4.2'
+          imagePullPolicy: Always
+          name: zw-ocean-entry-http
+          ports:
+            - containerPort: 11013
+              protocol: TCP
+          volumeMounts:
+            - mountPath: /home/nasdata
+              name: nasdata
+      dnsPolicy: ClusterFirst
+      nodeSelector:
+        kubernetes.io/hostname: node-otii.crmi.cn
+      restartPolicy: Always
+      serviceAccountName: mysvcacct
+      volumes:
+        - hostPath:
+            path: /data/zw/nasdata_2
+            type: ''
+          name: nasdata
+  triggers:
+    - type: ConfigChange
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: zw-ocean-entry-http
+  namespace: zhuowang
+spec:
+  ports:
+    - port: 11013
+      protocol: TCP
+      targetPort: 11013
+  selector:
+    zw-ocean-entry-http: 'true'
+  type: ClusterIP
+---
+apiVersion: apps.openshift.io/v1
+kind: DeploymentConfig
+metadata:
+  name: zw-ocean-manager
+  namespace: zhuowang
+spec:
+  replicas: 1
+  selector:
+    zw-ocean-manager: 'true'
+  template:
+    metadata:
+      labels:
+        zw-ocean-manager: 'true'
+    spec:
+      containers:
+        - env:
+            - name: nginx_img_url
+              value: zw-nginx-oc
+            - name: mysql_ip
+              value: zw-mysql-oc
+            - name: kafka_address
+              value: 'zw-kaf1:9092'
+            - name: zookeeper_address
+              value: 'zw-zk1:2181'
+            - name: engine_ip
+              value: zw-facego
+            - name: orc_ip
+              value: 192.168.40.116
+            - name: orc_live_ip
+              value: 192.168.40.116
+            - name: redis_ip
+              value: zw-redisp
+            - name: FaceGo_ip
+              value: zw-facego
+            - name: key_FaceGo_ip
+              value: zw-facego
+          image: 'registry.crmi.cn:5021/zhuowang/ocean-manager:1.4.2'
+          imagePullPolicy: Always
+          name: zw-ocean-manager
+          ports:
+            - containerPort: 11007
+              hostPort: 11007
+              protocol: TCP
+          volumeMounts:
+            - mountPath: /home/nasdata
+              name: nasdata
+      dnsPolicy: ClusterFirst
+      nodeSelector:
+        kubernetes.io/hostname: node-otii.crmi.cn
+      restartPolicy: Always
+      serviceAccountName: mysvcacct
+      volumes:
+        - hostPath:
+            path: /data/zw/nasdata_2
+            type: ''
+          name: nasdata
+  triggers:
+    - type: ConfigChange
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: zw-ocean-manager
+  namespace: zhuowang
+spec:
+  ports:
+    - name: web1
+      port: 11001
+      protocol: TCP
+      targetPort: 11001
+    - name: web
+      port: 11007
+      protocol: TCP
+      targetPort: 11007
+  selector:
+    zw-ocean-manager: 'true'
+  type: ClusterIP
+---
+apiVersion: apps.openshift.io/v1
+kind: DeploymentConfig
+metadata:
+  name: zw-ocean-socket
+  namespace: zhuowang
+spec:
+  replicas: 1
+  selector:
+    zw-ocean-socket: 'true'
+  template:
+    metadata:
+      labels:
+        zw-ocean-socket: 'true'
+    spec:
+      containers:
+        - env:
+            - name: nginx_img_url
+              value: zw-nginx-oc
+            - name: mysql_ip
+              value: zw-mysql-oc
+            - name: kafka_address
+              value: 'zw-kaf1:9092'
+            - name: zookeeper_address
+              value: 'zw-zk1:2181'
+            - name: engine_ip
+              value: zw-facego
+            - name: redis_ip
+              value: zw-redisp
+            - name: FaceGo_ip
+              value: zw-facego
+            - name: key_FaceGo_ip
+              value: zw-facego
+          image: 'registry.crmi.cn:5021/zhuowang/ocean-socket:1.4.2'
+          imagePullPolicy: Always
+          name: zw-ocean-socket
+          ports:
+            - containerPort: 11011
+              protocol: TCP
+          volumeMounts:
+            - mountPath: /home/nasdata
+              name: nasdata
+      dnsPolicy: ClusterFirst
+      nodeSelector:
+        kubernetes.io/hostname: node-otii.crmi.cn
+      restartPolicy: Always
+      serviceAccountName: mysvcacct
+      volumes:
+        - hostPath:
+            path: /data/zw/nasdata_2
+            type: ''
+          name: nasdata
+  triggers:
+    - type: ConfigChange
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: zw-ocean-socket
+  namespace: zhuowang
+spec:
+  externalTrafficPolicy: Cluster
+  ports:
+    - port: 11011
+      protocol: TCP
+      targetPort: 11011
+  selector:
+    zw-ocean-socket: 'true'
+  type: NodePort
+---
+apiVersion: apps.openshift.io/v1
+kind: DeploymentConfig
+metadata:
+  name: zw-redisp
+  namespace: zhuowang
+spec:
+  replicas: 1
+  selector:
+    zw-redisp: 'true'
+  template:
+    metadata:
+      labels:
+        zw-redisp: 'true'
+    spec:
+      containers:
+        - args:
+            - '--requirepass'
+            - Anfang@123!
+          image: 'registry.crmi.cn:5021/zhuowang/redis:1.4.2'
+          imagePullPolicy: Always
+          name: zw-redisp
+          ports:
+            - containerPort: 6379
+              protocol: TCP
+      dnsPolicy: ClusterFirst
+      nodeSelector:
+        kubernetes.io/hostname: node-otii.crmi.cn
+      restartPolicy: Always
+      serviceAccountName: mysvcacct
+  triggers:
+    - type: ConfigChange
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: zw-redisp
+  namespace: zhuowang
+spec:
+  ports:
+    - port: 6379
+      protocol: TCP
+      targetPort: 6379
+  selector:
+    zw-redisp: 'true'
+  type: ClusterIP
+---
+apiVersion: apps.openshift.io/v1
+kind: DeploymentConfig
+metadata:
+  name: zw-zk1
+  namespace: zhuowang
+spec:
+  replicas: 1
+  selector:
+    zw-zk1: 'true'
+  template:
+    metadata:
+      labels:
+        zw-zk1: 'true'
+    spec:
+      containers:
+        - image: 'registry.crmi.cn:5021/zhuowang/zookeeper:latest'
+          imagePullPolicy: Always
+          name: zw-zk1
+          ports:
+            - containerPort: 2181
+              protocol: TCP
+      dnsPolicy: ClusterFirst
+      nodeSelector:
+        kubernetes.io/hostname: node-otii.crmi.cn
+      restartPolicy: Always
+      serviceAccountName: mysvcacct
+  triggers:
+    - type: ConfigChange
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: zw-zk1
+  namespace: zhuowang
+spec:
+  ports:
+    - port: 2181
+      protocol: TCP
+      targetPort: 2181
+  selector:
+    zw-zk1: 'true'
+  type: ClusterIP
+---
+apiVersion: apps.openshift.io/v1
+kind: DeploymentConfig
+metadata:
+  name: zw-xqplatform
+  namespace: zhuowang
+spec:
+  replicas: 1
+  selector:
+    zw-xqplatform: 'true'
+  template:
+    metadata:
+      labels:
+        zw-xqplatform: 'true'
+    spec:
+      containers:
+        - env:
+            - name: XQ_CONFIG_FILE
+              value: "/home/xqplatform/config/system.xml"
+            - name: mysql_ip
+              value: zw-mysql-oc
+            - name: kafka_address
+              value: 'zw-kaf1:9092'
+            - name: zookeeper_address
+              value: 'zw-zk1:2181'
+            - name: engine_ip
+              value: zw-facego
+            - name: orc_ip
+              value: 192.168.40.116
+            - name: orc_live_ip
+              value: 192.168.40.116
+            - name: redis_ip
+              value: zw-redisp
+            - name: ocean_entry_http_ip
+              value: 127.0.0.1
+            - name: FaceGo_ip
+              value: zw-facego
+            - name: key_FaceGo_ip
+              value: zw-facego
+          image: 'registry.crmi.cn:5021/zhuowang/xqplatform:20190927'
+          imagePullPolicy: Always
+          name: zw-xqplatform
+          ports:
+            - containerPort: 12345
+              protocol: TCP
+            - containerPort: 12346
+              protocol: TCP
+          volumeMounts:
+            - mountPath: /home/xqplatform/log
+              name: xqplatform-log
+            - mountPath: /home/xqplatform/config
+              name: xqplatform-config
+            - mountPath: /home/ssdb/var
+              name: ssdb-var
+      dnsPolicy: ClusterFirst
+      nodeSelector:
+        kubernetes.io/hostname: node-otii.crmi.cn
+      restartPolicy: Always
+      serviceAccountName: mysvcacct
+      volumes:
+        - hostPath:
+            path: /data/zw/ext/xqplatform_log
+          name: xqplatform-log
+        - hostPath:
+            path: /data/zw/ext/xqplatform_config
+          name: xqplatform-config
+        - hostPath:
+            path: /data/zw/ext/ssdb_var
+          name: ssdb-var
+  triggers:
+    - type: ConfigChange
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: zw-xqplatform
+  namespace: zhuowang
+spec:
+  ports:
+    - port: 12345
+      protocol: TCP
+      targetPort: 12345
+      name: tcp-12345
+    - port: 12346
+      protocol: TCP
+      targetPort: 12346
+      name: tcp-12346
+  selector:
+    zw-xqplatform: 'true'
+  type: ClusterIP
+---
+
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: zw-facego
+  namespace: zhuowang
+spec:
+  port:
+    targetPort: http
+  to:
+    kind: Service
+    name: zw-facego
+
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: zw-ocean-socket
+  namespace: zhuowang
+spec:
+  to:
+    kind: Service
+    name: zw-ocean-socket
+
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: zw-nginx-oc
+  namespace: zhuowang
+spec:
+  port:
+    targetPort: pic
+  to:
+    kind: Service
+    name: zw-nginx-oc
+
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  labels:
+    app: nginx-oc-front
+  name: nginx-oc-front
+  namespace: zhuowang
+spec:
+  port:
+    targetPort: 10001-tcp
+  to:
+    kind: Service
+    name: nginx-oc-front
+
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: zw-ocean-manager
+  namespace: zhuowang
+spec:
+  port:
+    targetPort: web1
+  to:
+    kind: Service
+    name: zw-ocean-manager
+
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: zw-api-oc
+  namespace: zhuowang
+spec:
+  to:
+    kind: Service
+    name: zw-api-oc
+
+
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: zw-rtmp-server
+  namespace: zhuowang
+spec:
+  to:
+    kind: Service
+    name: zw-rtmp-server
+
+
+
+
+
+
+
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: extra-conf-gpu
+  namespace: zhuowang
+data:
+  extra_conf_gpu.txt: |+
+    #配置文件中的路径不能有空格
+    detect_dir=./models_gpu/faceDetector3_27    #检测模型文件夹 (gpuid >= 0 时有效)
+    detect_face_model=./models_gpu/faceDetector3_27/faceDetector3.mdl                  #检测人脸的模型 (gpuid < 0 时有效)
+    key_point_dir=./models_gpu/FacialPoint9 #关键点模型文件夹
+    hash_model=./models_gpu/recoModels_hash_0129_to_fude/CWR_Config2.5s_x_h.xml
+    recog_model=./models_gpu/recoModels_190402_rt_pa_tensor/CWR_Config3.0_1_1.xml
+
+    age_and_gender_dir=age_and_gender/CWR_Config2.0.xml                  #年龄和性别模型路径, 该路径为关键点模型文件夹下的相对路径
+    ageGroup_and_nationality_dir=age_group_20180903/CWR_Config2.4.xml    #年龄段和国籍检测模型路径, 该路径为关键点模型文件夹下的相对路径
+    face_classfication_dir=Skin_Race/faceRace_181011/cw_race_config.xml  #注意：该模型只能用 CPU。
+
+
+    detect_age_and_gender=1          #是否开启年龄性别判断，     1表示开启，0表示关闭
+    detect_ageGroup_and_nationality=0 #是否开启年龄段和国籍判断， 1表示开启，0表示关闭
+    detect_face_classfication=1      #是否开启人种检测判断，     1表示开启，0表示关闭
+
+    #人脸质量分开关：None, All, Img, Skin, Pose, EyeOpen, MouthOpen, BlackFrameGlass, SunGlass, Occlusion
+    #使用 '|' 合并多个选项，例如: EyeOpen | MouthOpen | SunGlass (大小写不限)
+    #这些开关影响一些返回的分数是否有效，请参考库的头文件。
+    #face_quality_switches=Img|Skin|Pose|Occlusion|SunGlass|BlackFrameGlass #(3.0.9)人脸质量分开关，默认值: ALL
+    face_quality_switches=ALL #(3.0.9)人脸质量分开关，默认值: ALL
+
+    auto_detect_idcard=1 #是否开启判断证件照，1开启，0关闭
+    skip_idcard_quality_detection=0 #是否跳过证件照质量分检测，1开启，0关闭
+
+
+    raceThreshold = 0.99   # 人种分类阈值
+
+    hashPassRate=0.04 #hash 初筛选通过率, 取值范围 0 到 1.  例如 0.04 的哈希通过率表示使用哈希特征进行筛选后, 只保留 4% 的特征进行后续操作
+
+    rerank_model=./models_gpu/ranker.xml  #rerank 模型文件
+    rerank=0          #hash 初筛选后，是否启用 Ltr-Rerank ; 0-不用。1-启用（需配置 hash 模型）。
+
+    selectFace=2      #(3.0.5) 选人脸策略：0-禁用，1-最大，2-居中，3-关键点可见度。
+    maxFaceCount=30   #(3.0.5) 单张图片最大人脸数 [1, 40]; 1 - 等效于禁用选人脸策略。
+
+    featureContainsQuality=0 #(3.0.7) 特征中是否包含人脸质量分。0-不包含，1-包含（默认）。
+    featureIsSymmetry=1      #(3.0.7) 是否使用对称特征。0-非对称特征，1-对称特征（默认）。
+
+    detectBatchSize = 16 # 人脸检测一次操作的图像, 推荐最大值: 16
+    featureBatchSize = 8  # 特征提取一次操作的图像, 推荐最大值: 8
+
+    nDetectThread=3  #人脸检测线程数
+    nFeatureThread=1 #特征提取线程数
+    GpuID=0
+    # GpuID=1
+
+
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-oc-front-config
+  namespace: zhuowang
+data:
+  config.js: |+
+    window.g = {
+        sys_SysTitle: '视图汇聚分析平台', // 系统名称
+        sys_Copyright: 'Copyright  2019 重庆中科云从科技有限公司. All Rights Reserved. CloudWalk Technology Co., Ltd.', // 版权声明
+        sys_authExpires: '为避免影响系统正常使用，请及时联系云从工作人员：400-151-5992', // 授权到期
+        sys_aboutSystem: '视图汇聚分析平台', // 关于系统
+        sys_version: '1.4.2', // 系统版本
+        sys_defApp: '0', // 默认加载appId
+        sys_monitor_logoShow: true, // 登录页显示logo
+        webApi_socket: 'ws://zw-ocean-socket-zhuowang.apps.sigma.cmri/ocean/', // webSocket地址
+        webApi_base: 'http://zw-ocean-manager-zhuowang.apps.sigma.cmri/ocean/', // 基础数据接口
+        webApi_ocean: 'http://zw-ocean-manager-zhuowang.apps.sigma.cmri/ocean/',
+        webApi_dic: 'http://zw-ocean-manager-zhuowang.apps.sigma.cmri/ocean/dic/data/ext/list', // 字典获取接口
+        imgHead_url: 'http://zw-nginx-oc-zhuowang.apps.sigma.cmri/', // 图片前缀
+        webApi_dpcs: ''
+    };
+
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-oc-front-nginxconfig
+  namespace: zhuowang
+data:
+  nginx.conf: |+
+    user root;
+    #worker_processes  auto;
+    worker_processes  10;
+    events {
+        worker_connections  1024;
+    }
+
+    http {
+        client_max_body_size 600m;
+        include       mime.types;
+        default_type  application/octet-stream;
+        sendfile        on;
+        keepalive_timeout  65;
+        access_log off;
+        error_log /dev/null;
+
+        upstream ocean-server{
+            server 10.0.75.1:11006 weight=10;
+        }
+        upstream facebigdata-server{
+            server 10.128.129.219:11002 weight=10;
+        }
+        upstream ocean-manage-server{
+            server 10.128.128.219:11007 weight=10;
+        }
+        upstream ocean-entry-http-server{
+            server 10.128.129.219:11013 weight=10;
+        }
+
+        server{
+                    listen 10013;
+                    location /{
+                    proxy_pass http://ocean-entry-http-server;
+                    expires 30d;
+                    }
+        }
+
+        server{
+                    listen 10007;
+                    location /{
+                    proxy_pass http://ocean-manage-server;
+                    expires 30d;
+                    }
+        }
+
+        server{
+                    listen 10001;
+                    location /{
+                    root /zpc/ocean-front_1.4.2;
+                    autoindex on;
+                    }
+        }
+
+        server{
+                    listen 10000;
+                    location /{
+                    alias key_cloudwalk-origin-cli.path/cloudwalk-origin-cli/;
+                    autoindex on;
+                    }
+        }
+
+        server{
+                    listen 10002;
+                    location /{
+                    proxy_pass http://facebigdata-server;
+                    proxy_connect_timeout 300s;
+                    proxy_send_timeout 300s;
+                    proxy_read_timeout 300s;
+                    expires 30d;
+                    }
+        }
+
+        server{
+                    listen 10006;
+                    location /{
+                    proxy_pass http://ocean-server;
+                    expires 30d;
+                    }
+        }
+
+
+
+
+
+        server {
+                    listen 10004;
+                    location /{
+                    alias key_cloudwalk-origin-cli.path/ditu/;
+                    autoindex on;
+                    }
+              }
+
+        server{
+            listen 10005;
+
+            location ^~/01/A0{
+                    alias /home/nasdata/a0;
+                    autoindex on;
+            }
+
+            location ^~/01/A1{
+                    alias /home/nasdata/a1;
+                    autoindex on;
+            }
+
+            location ^~/01/A2{
+                    alias /home/nasdata/a2;
+                    autoindex on;
+            }
+        }
+    }
+    stream {
+        upstream ocean-socket {
+            least_conn;
+            server 10.128.129.219:11011 weight=5 max_fails=1 fail_timeout=10s;
+        }
+
+        server {
+            listen 10011 so_keepalive=on;
+            proxy_connect_timeout 3s;
+            proxy_pass ocean-socket;
+        }
+
+    }
+
+
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ocean-manage-config
+  namespace: zhuowang
+data:
+  config.properties: |+
+    cw.system.nginx-img-url=http://:10005
+
+    #服务信息配置
+
+
+    sharding.jdbc.datasource.names=ds0
+    #\u8BBE\u7F6E\u6570\u636E\u6E90\u53C2\u6570
+    sharding.jdbc.datasource.ds0.type=com.zaxxer.hikari.HikariDataSource
+    sharding.jdbc.datasource.ds0.driver-class-name=com.mysql.jdbc.Driver
+    sharding.jdbc.datasource.ds0.jdbc-url=jdbc:mysql://zw-mysql-oc:3306/ocean?characterEncoding=utf8&useSSL=true
+    sharding.jdbc.datasource.ds0.username=root
+    sharding.jdbc.datasource.ds0.password=asdf1@34
+    #\u8BBE\u7F6E\u9ED8\u8BA4\u6570\u636E\u6E90
+    sharding.jdbc.config.sharding.default-data-source-name=ds0
+
+    server.servlet.context-path=/ocean
+    server.port=11007
+
+    #logs config
+    logging.level.root=info
+    logging.path=/home/logs/ocean-manage
+    custom.logging.config.infoMaxHistory=3d
+    custom.logging.config.debugMaxHistory=3d
+    custom.logging.config.errorMaxHistory=3d
+
+    #===================================================模块配置===========================================================#
+    #kafka配置
+    kafka.bootstrap.servers=zw-kaf1:9092
+    kafka.zookeeper.connect=zw-zk1:2181
+
+    #------------nas存储配置 --------------#
+    #当前服务器标识
+    cw.nasstorage.server-deputy=01
+    #多存储路径标识
+    cw.nasstorage.mount-deputy=A0,A1,A2
+    #多物理存储路径
+    cw.nasstorage.mount-path=/home/nasdata/a0/,/home/nasdata/a1/,/home/nasdata/a2/
+    #多存储路径权重(总计为100,权重只能整数)
+    cw.nasstorage.weight=30,30,40
+    #人脸图片存储目录名称
+    cw.nasstorage.folder-facepic=facepic
+    #全景图片存储目录名称
+    cw.nasstorage.folder-fullpic=fullpic
+    #底库人脸分区存储目录数量
+    cw.nasstorage.face-group-sub-dir-count=200
+
+    #------------facego引擎配置 --------------#
+    #引擎访问路径
+    cw.facego.engine.base-url=http://:7100
+    #引擎访问账号
+    cw.facego.engine.app-id=system
+    #引擎访问密码
+    cw.facego.engine.app-secret=12345
+    #特征专用引擎节点
+    cw.facego.engine.feature-url=${cw.facego.engine.base-url}
+    #人脸识别专用引擎节点
+    cw.facego.engine.face-recog-url=${cw.facego.engine.base-url}
+    #人脸抓拍专用引擎节点
+    cw.facego.engine.face-snap-url=${cw.facego.engine.base-url}
+    #人脸工具专用引擎节点
+    cw.facego.engine.face-tool-url=${cw.facego.engine.base-url}
+    #聚类引擎地址
+    cw.facego.engine.cluster-url=http://FaceGo_Cluster_ip:7100
+    #聚类开关
+    cw.facego.engine.cluster-switch=true
+    #OCR专用引擎节点
+    cw.facego.engine.ocr-url=http://key_FaceGo_ocr:20030
+    #活体识别专用引擎节点
+    cw.facego.engine.livedetection-url=http://:20032
+
+    #------------vms引擎配置 --------------#
+    #引擎服务ip
+    cw.vms.engine.ip=
+    #引擎服务端口
+    cw.vms.engine.port=8100
+    #引擎访问账号
+    cw.vms.engine.app-name=admin
+    #引擎访问密码
+    cw.vms.engine.app-password=123456
+    #引擎访问TOKEN
+    cw.vms.engine.app-token=7b9c654b554c685d6d5998b49c9cd29a6e5d734b674f68429cb4d89a929c61766a456d419cb4258dab8eb58e288aa98e79
+
+    #------------Redis配置--------------#
+    # Redis数据库索引（默认为0）
+    spring.redis.database=1
+    # Redis服务器地址
+    spring.redis.host=zw-redisp
+    # Redis服务器连接端口
+    spring.redis.port=6379
+    # Redis服务器连接密码（默认为空）
+    spring.redis.password=Anfang@123!
+    # 连接池最大连接数（使用负值表示没有限制）
+    spring.redis.jedis.pool.max-active=8
+    # 连接池最大阻塞等待时间（使用负值表示没有限制）
+    spring.redis.jedis.pool.max-wait=-1
+    # 连接池中的最大空闲连接
+    spring.redis.jedis.pool.max-idle=8
+    # 连接池中的最小空闲连接
+    spring.redis.jedis.pool.min-idle=0
+    # 连接超时时间（毫秒）
+    spring.redis.timeout=5000
+
+    #Dubbo服务消费者配置
+    dubbo.scan.base-packages=cn.cloudwalk.ocean.web.manager.terminal.controller
+    dubbo.protocol.name=dubbo
+    dubbo.protocol.port=20880
+    dubbo.protocol.status=client
+    dubbo.consumer.timeout=10000
+    ## Dubbo Registry
+    dubbo.registry.address=zookeeper://zw-zk1:2181
+    dubbo.application.qos-enable=false
+    dubbo.config.multiple=true
+    dubbo.consumer.check=false
+    dubbo.registry.check=false
+
+
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ocean-socket-config
+  namespace: zhuowang
+data:
+  config.properties: |+
+    #服务监听信息
+    socket.server.port=11011
+    cw.system.nginx-img-url=http://:10005
+
+    #logs config
+    logging.level.root=info
+    logging.path=/home/logs/ocean-socket
+    custom.logging.config.infoMaxHistory=3d
+    custom.logging.config.debugMaxHistory=3d
+    custom.logging.config.errorMaxHistory=3d
+
+    #======================================================模块配置========================================================#
+    #kafka配置
+    kafka.bootstrap.servers=zw-kaf1:9092
+    kafka.zookeeper.connect=zw-zk1:2181
+
+    #------------------------sharding-jdbc分库分表配置开始-------------------------------#
+    #数据库配置，支持多数据库 中间以逗号分割
+    sharding.jdbc.datasource.names=ds0
+
+    #数据库配置
+
+    sharding.jdbc.datasource.ds0.type=com.zaxxer.hikari.HikariDataSource
+    sharding.jdbc.datasource.ds0.driver-class-name=com.mysql.jdbc.Driver
+    sharding.jdbc.datasource.ds0.jdbc-url=jdbc:mysql://zw-mysql-oc:3306/ocean?characterEncoding=utf8&useSSL=true
+    sharding.jdbc.datasource.ds0.username=root
+    sharding.jdbc.datasource.ds0.password=asdf1@34
+
+    #默认数据库
+    sharding.jdbc.config.sharding.default-data-source-name=ds0
+
+    #是否打印sql执行日志
+    sharding.jdbc.config.sharding.props.sql.show=false
+
+    #------------------------sharding-jdbc分库分表配置结束-------------------------------#
+    schedule.server.zkAddressList=zw-zk1:2181
+    schedule.server.namespace=schedule
+    schedule.server.dbUrl=jdbc:mysql://zw-mysql-oc:3306/ocean?useUnicode=true&characterEncoding=utf-8&useSSL=true
+    schedule.server.dbUserName=root
+    schedule.server.dbPassword=asdf1@34
+    schedule.server.configType=0
+
+    #------------nas存储配置 --------------#
+    #当前服务器标识
+    cw.nasstorage.server-deputy=01
+
+    #多存储路径标识
+    cw.nasstorage.mount-deputy=A0,A1,A2
+
+    #多物理存储路径
+    cw.nasstorage.mount-path=/home/nasdata/a0/,/home/nasdata/a1/,/home/nasdata/a2/
+
+    #多存储路径权重(总计为100,权重只能整数)
+    cw.nasstorage.weight=30,30,40
+
+    #人脸图片存储目录名称
+    cw.nasstorage.folder-facepic=facepic
+
+    #全景图片存储目录名称
+    cw.nasstorage.folder-fullpic=fullpic
+
+    #底库人脸分区存储目录数量
+    cw.nasstorage.face-group-sub-dir-count=200
+
+    #------------facego引擎配置 --------------#
+    #引擎访问路径
+    cw.facego.engine.base-url=http://:7100
+
+    #引擎访问账号
+    cw.facego.engine.app-id=system
+
+    #引擎访问密码
+    cw.facego.engine.app-secret=12345
+
+    #聚类开关
+    cw.facego.engine.cluster-switch=true
+
+    #特征专用引擎节点
+    cw.facego.engine.feature-url=${cw.facego.engine.base-url}
+
+    #人脸识别专用引擎节点
+    cw.facego.engine.face-recog-url=${cw.facego.engine.base-url}
+
+    #人脸抓拍专用引擎节点
+    cw.facego.engine.face-snap-url=${cw.facego.engine.base-url}
+
+    #人脸工具专用引擎节点
+    cw.facego.engine.face-tool-url=${cw.facego.engine.base-url}
+
+    #聚类引擎地址
+    cw.facego.engine.cluster-url=http://FaceGo_Cluster_ip:7100
+
+    #------------Redis配置--------------#
+    # Redis数据库索引（默认为0）
+    spring.redis.database=1  
+
+    # Redis服务器地址
+    spring.redis.host=zw-redisp
+
+    # Redis服务器连接端口
+    spring.redis.port=6379  
+
+    # Redis服务器连接密码（默认为空）
+    spring.redis.password=Anfang@123!
+
+    # 连接池最大连接数（使用负值表示没有限制）
+    spring.redis.jedis.pool.max-active=8  
+
+    # 连接池最大阻塞等待时间（使用负值表示没有限制）
+    spring.redis.jedis.pool.max-wait=-1
+
+    # 连接池中的最大空闲连接
+    spring.redis.jedis.pool.max-idle=8  
+
+    # 连接池中的最小空闲连接
+    spring.redis.jedis.pool.min-idle=0  
+
+    # 连接超时时间（毫秒）
+    spring.redis.timeout=5000
+
+    #抓拍入聚类引擎线程数#
+    cw.cluster.async.corePoolSize=30
+    cw.cluster.async.maxPoolSize=60
+    cw.cluster.async.queueCapacity=60
+
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: zw-nginx-config
+  namespace: zhuowang
+data:
+  nginx.conf: |-
+    # zhengbin update on openshift
+    user root;
+    worker_processes 10;
+    events {
+    worker_connections 1024;
+    }
+
+    http {
+    client_max_body_size 600m;
+    include mime.types;
+    default_type application/octet-stream;
+    sendfile on;
+    keepalive_timeout 65;
+    access_log off;
+    error_log /dev/null;
+
+    upstream ocean-server{
+    server zw-api-oc:11006 weight=10;
+    }
+    upstream facebigdata-server{
+    server 192.168.40.116:11002 weight=10;
+    }
+    upstream ocean-manage-server{
+    server zw-api-oc:11006 weight=10;
+    }
+    upstream ocean-entry-http-server{
+    server 192.168.40.116:11013 weight=10;
+    }
+
+
+    server{
+    listen 10006;
+    server_name localhost;
+    location /{
+    proxy_pass http://ocean-manage-server;
+    expires 30d;
+    }
+    }
+
+    server{
+                    listen 10001;
+                    server_name localhost;
+                    location /{
+    alias key_ocean-front/ocean-front_1.4.2/;
+    autoindex on;
+    }
+    }
+
+    server{
+    listen 10000;
+    server_name localhost;
+    location /{
+    alias key_cloudwalk-origin-cli.path/cloudwalk-origin-cli/;
+    autoindex on;
+    }
+    }
+
+    server{
+    listen 10002;
+    server_name localhost;
+    location /{
+    proxy_pass http://facebigdata-server;
+    proxy_connect_timeout 300s;
+    proxy_send_timeout 300s;
+    proxy_read_timeout 300s;
+    expires 30d;
+    }
+    }
+
+    server{
+    listen 10006;
+    server_name localhost;
+    location /{
+    proxy_pass http://ocean-server;
+    expires 30d;
+    }
+    }
+
+
+
+
+
+    server {
+                    listen 10004;
+                    server_name localhost;
+                    location /{
+                    alias key_cloudwalk-origin-cli.path/ditu/;
+                    autoindex on;
+                    }
+    }
+
+    server{
+            listen 10005;
+            server_name localhost;
+
+            location ^~/01/A0{
+                    alias /home/nasdata/a0;
+                    autoindex on;
+            }
+
+    location ^~/01/A1{
+    alias /home/nasdata/a1;
+    autoindex on;
+    }
+
+    location ^~/01/A2{
+    alias /home/nasdata/a2;
+    autoindex on;
+    }
+    }
+    }
+    stream {
+    upstream ocean-socket {
+    least_conn;
+    server 192.168.40.116:11011 weight=5 max_fails=1 fail_timeout=10s;
+    }
+
+    server {
+    listen 10011 so_keepalive=on;
+    proxy_connect_timeout 3s;
+    proxy_pass ocean-socket;
+    }
+
+    }
+
+
+---
