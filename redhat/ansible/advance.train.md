@@ -524,6 +524,106 @@ EOF
 
 ansible-playbook -b -i pg_inventory postgres_failover.yml -e pgsqlrep_password=r3dh4t1!
 
+
+#########################################
+## openstack
+ssh -i ~/.ssh/id_rsa.redhat -tt zhengwan-redhat.com@workstation-3d80.rhpds.opentlc.com
+
+ssh -i ~/.ssh/id_rsa.redhat -tt	zhengwan-redhat.com@ctrl-3d80.rhpds.opentlc.com
+
+wget http://www.opentlc.com/download/ansible_bootcamp/openstack_keys/openstack.pub
+
+cat openstack.pub  >> /home/cloud-user/.ssh/authorized_keys
+
+yum install -y python-pip git
+pip install openstacksdk ansible -U
+
+mkdir /etc/openstack
+cat << EOF > /etc/openstack/clouds.yaml
+clouds:
+  ospcloud:
+    auth:
+      auth_url: http://192.168.0.20:5000/
+      password: r3dh4t1!
+      project_name: admin
+      username: admin
+    identity_api_version: '3.0'
+    region_name: RegionOne
+ansible:
+  use_hostnames: True
+  expand_hostvars: False
+  fail_on_errors: True
+EOF
+
+ansible localhost -m os_auth -a cloud=ospcloud
+ansible localhost -m os_user_facts -a cloud=ospcloud
+
+cat << EOF > osp_image.yml
+- hosts: localhost
+  become: yes
+
+  tasks:
+  - name: Download RHEL image
+    get_url:
+      url: http://www.opentlc.com/download/osp_advanced_networking/rhel-guest-image-7.2-20151102.0.x86_64.qcow2
+      dest: /root/rhel-guest-image-7.2-20151102.0.x86_64.qcow2
+  - name: Load RHEL image into Glance
+    os_image:
+      cloud: ospcloud
+      name: rhel-guest
+      container_format: bare
+      disk_format: qcow2
+      state: present
+      filename: /root/rhel-guest-image-7.2-20151102.0.x86_64.qcow2
+EOF
+
+ansible-playbook osp_image.yml
+
+git clone https://github.com/prakhar1985/osp-ansible-lab.git
+cd osp-ansible-lab
+
+# ansible-galaxy role install https://github.com/prakhar1985/good_example/tree/master/osp-example/roles/osp-instances
+
+git clone https://github.com/prakhar1985/good_example
+
+cat << EOF > osp_instance.yml
+- hosts: localhost
+  connection: local
+  become: yes
+  gather_facts: false
+  roles:
+    - osp-network
+    - osp-keypair
+    - osp-securitygroup
+    - osp-flavor
+
+
+  tasks:
+##Create Fronend Instance
+  - name: Create frontend instance
+    include_role:
+       name: osp-instances
+       vars_from: frontend.yaml
+###Create App1 server 
+  - name: Create app1 instance
+    include_role:
+       name: osp-instances
+       vars_from: app1.yaml
+##Create App2 server
+  - name: Create app2 instance
+    include_role:
+       name: osp-instances
+       vars_from: app2.yaml
+##Create DB server
+  - name: Create db instance
+    include_role:
+       name: osp-instances
+       vars_from: db.yaml
+EOF
+
+ansible-playbook osp_instance.yml
+
+
 ```
 
 ```
