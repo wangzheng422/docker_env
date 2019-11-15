@@ -625,6 +625,7 @@ ansible-playbook osp_instance.yml
 
 
 ```
+https://github.com/prasanna-holla/ansible_advance_homework
 
 ```
 myapp/
@@ -699,6 +700,26 @@ ansible_become=false
 #######################################
 ###   pgsql_replication.yml
 
+#####################################
+##
+laptop$ cat << EOF >> ssh.cfg
+Host workstation
+  Hostname workstation-${GUID}.rhpds.opentlc.com
+  User cloud-user
 
+ Host 10.10.10.* 192.168.0.* *.rhpds.opentlc.com
+  ProxyJump workstation
+  User cloud-user
+
+Match User cloud-user
+  IdentityFile ~/.ssh/openstack.pem
+
+Host *
+  ForwardAgent yes
+  ControlMaster auto
+  ControlPath /tmp/%h-%r
+  ControlPersist 5m
+  StrictHostKeyChecking no
+EOF
 
 ```
