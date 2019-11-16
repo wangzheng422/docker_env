@@ -625,7 +625,8 @@ ansible-playbook osp_instance.yml
 
 
 ```
-https://github.com/prasanna-holla/ansible_advance_homework
+
+https://github.com/vijay-agrawal/ansible_advance_homework
 
 ```
 myapp/
