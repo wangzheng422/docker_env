@@ -16,6 +16,12 @@ enabled=0
 
 EOF
 
+yum install open-vm-tools
+systemctl start vmware-tools
+
+cd
+tar -cvf - data/ | pigz -c > /mnt/hgfs/ocp.4.2.4/rhel-data.tgz
+
 ```
 
 osx
