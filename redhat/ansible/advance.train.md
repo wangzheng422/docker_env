@@ -582,6 +582,8 @@ ansible-playbook osp_image.yml
 git clone https://github.com/prakhar1985/osp-ansible-lab.git
 cd osp-ansible-lab
 
+ansible-playbook site-osp-setup.yml
+
 # ansible-galaxy role install https://github.com/prakhar1985/good_example/tree/master/osp-example/roles/osp-instances
 
 git clone https://github.com/prakhar1985/good_example
