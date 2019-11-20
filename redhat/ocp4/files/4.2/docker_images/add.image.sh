@@ -9,6 +9,8 @@ export LOCAL_REG='registry.redhat.ren'
 
 source image.mirror.fn.sh
 
+mkdir -p ./image_tar
+
 while read -r line; do
 
     add_image $line

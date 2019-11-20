@@ -113,9 +113,12 @@ add_image() {
     tar_file_name=$(echo ${local_image_url} | cksum | cut -f 1 -d ' ')
     tar_file_name="${tar_file_name}.tar"
 
-    mkdir -p ./image_tar
+    /bin/rm -f ./image_tar/${tar_file_name}
+    /bin/rm -f ./image_tar/${tar_file_name}.gz
 
-    if skopeo copy "docker://"$docker_image "docker-archive://image_tar/"$tar_file_name; then
+    if skopeo copy "docker://"$docker_image "docker-archive:./image_tar/"$tar_file_name; then
+        pigz ./image_tar/$tar_file_name
+        tar_file_name="${tar_file_name}.gz"
         echo -e "${docker_image}\t${tar_file_name}\t${local_image_url}" >> pull.add.image.ok.list
         echo -e "${yaml_image}\t${yaml_local_image}" >> yaml.add.image.ok.list
     else
