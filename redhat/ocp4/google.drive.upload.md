@@ -6,6 +6,28 @@ https://github.com/gdrive-org/gdrive
 
 ```bash
 
+################################
+## skicka
+
+yum install -y golang
+
+go get github.com/google/skicka
+install /root/go/bin/skicka /usr/local/bin/skicka
+skicka init
+skicka -no-browser-auth ls
+skicka ls "/wzh/wangzheng.share/shared_docs/2019.11/ocp 4.2.4/"
+skicka upload ./ocp4.tgz  "/wzh/wangzheng.share/shared_docs/2019.11/ocp 4.2.4/"
+skicka upload ./registry.tgz  "/wzh/wangzheng.share/shared_docs/2019.11/ocp 4.2.4/"
+
+
+rsync --progress --delete -arz 149.28.95.3:/data/registry /data/
+
+rsync --progress --delete -arz 149.28.95.3:/data/ocp4 /data/
+
+```
+
+no use below
+```bash
 wget https://github.com/gdrive-org/gdrive/releases/download/2.1.0/gdrive-linux-x64
 
 mv gdrive-linux-x64 gdrive
@@ -16,19 +38,4 @@ install gdrive /usr/local/bin/gdrive
 gdrive list
 
 gdrive upload ***.tgz
-
-go get github.com/google/skicka
-install skicka /usr/local/bin/skicka
-skicka init
-skicka -no-browser-auth ls
-skicka ls "/wzh/wangzheng.share/shared_docs/2019.11/ocp 4.2.2/"
-skicka upload ./ocp4.tgz  "/wzh/wangzheng.share/shared_docs/2019.11/ocp 4.2.2/"
-skicka upload ./registry.tgz  "/wzh/wangzheng.share/shared_docs/2019.11/ocp 4.2.2/"
-
-
-rsync --progress --delete -arz 149.28.95.3:/data/registry /data/
-
-rsync --progress --delete -arz 149.28.95.3:/data/ocp4 /data/
-
 ```
-

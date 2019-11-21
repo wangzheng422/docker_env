@@ -8,9 +8,11 @@ split_image(){
 
     docker_image=$1
     echo $docker_image
+    var_skip=0
 
     if [[ "$docker_image" =~ ^$ ]] || [[ "$docker_image" =~ ^[[:space:]]+$ ]] || [[ "$docker_image" =~ \#[:print:]*  ]]; then
         # echo "this is comments"
+        var_skip=1
         return;
     elif [[ $docker_image =~ ^.*\.(io|com|org)/.*@sha256:.* ]]; then
         # echo "io, com, org with tag: $docker_image"
@@ -98,11 +100,13 @@ mirror_image() {
     split_image $var_line
 
     # if oc image mirror $docker_image $local_image_url; then
-    if skopeo copy "docker://"$docker_image "docker://"$local_image_url; then
-        echo -e "${docker_image}\t${local_image_url}" >> pull.image.ok.list
-        echo -e "${yaml_image}\t${yaml_local_image}" >> yaml.image.ok.list
-    else
-        echo "$docker_image" >> pull.image.failed.list
+    if [[ $var_skip == 0 ]]; then
+        if skopeo copy "docker://"$docker_image "docker://"$local_image_url; then
+            echo -e "${docker_image}\t${local_image_url}" >> pull.image.ok.list
+            echo -e "${yaml_image}\t${yaml_local_image}" >> yaml.image.ok.list
+        else
+            echo "$docker_image" >> pull.image.failed.list
+        fi
     fi
 }
 
@@ -116,13 +120,15 @@ add_image() {
     /bin/rm -f ./image_tar/${tar_file_name}
     /bin/rm -f ./image_tar/${tar_file_name}.gz
 
-    if skopeo copy "docker://"$docker_image "docker-archive:./image_tar/"$tar_file_name; then
-        pigz ./image_tar/$tar_file_name
-        tar_file_name="${tar_file_name}.gz"
-        echo -e "${docker_image}\t${tar_file_name}\t${local_image_url}" >> pull.add.image.ok.list
-        echo -e "${yaml_image}\t${yaml_local_image}" >> yaml.add.image.ok.list
-    else
-        echo "$docker_image" >> pull.add.image.failed.list
+    if [[ $var_skip == 0 ]]; then
+        if skopeo copy "docker://"$docker_image "docker-archive:./image_tar/"$tar_file_name; then
+            pigz ./image_tar/$tar_file_name
+            tar_file_name="${tar_file_name}.gz"
+            echo -e "${docker_image}\t${tar_file_name}\t${local_image_url}" >> pull.add.image.ok.list
+            echo -e "${yaml_image}\t${yaml_local_image}" >> yaml.add.image.ok.list
+        else
+            echo "$docker_image" >> pull.add.image.failed.list
+        fi
     fi
 }
 
