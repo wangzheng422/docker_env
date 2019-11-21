@@ -16,13 +16,22 @@ install /root/go/bin/skicka /usr/local/bin/skicka
 skicka init
 skicka -no-browser-auth ls
 skicka ls "/wzh/wangzheng.share/shared_docs/2019.11/ocp 4.2.4/"
+cd /data
 skicka upload ./ocp4.tgz  "/wzh/wangzheng.share/shared_docs/2019.11/ocp 4.2.4/"
 skicka upload ./registry.tgz  "/wzh/wangzheng.share/shared_docs/2019.11/ocp 4.2.4/"
 
+##################################
+## rsync
+yum -y install connect-proxy
 
-rsync --progress --delete -arz 149.28.95.3:/data/registry /data/
+cat << EOF > /root/.ssh/config
+Host 45.32.85.251
+    ProxyCommand connect-proxy -S 192.168.253.1:5085 %h %p
+EOF
 
-rsync --progress --delete -arz 149.28.95.3:/data/ocp4 /data/
+rsync -e ssh --progress --delete -arz 45.32.85.251:/data/registry /data/
+
+rsync -e ssh --progress --delete -arz 45.32.85.251:/data/ocp4 /data/
 
 ```
 
