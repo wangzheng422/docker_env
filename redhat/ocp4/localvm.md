@@ -26,6 +26,23 @@ cd /data
 tar -cvf - ocp4/ | pigz -c > /mnt/hgfs/ocp.4.2.4/ocp4.tgz
 tar -cvf - registry/ | pigz -c > /mnt/hgfs/ocp.4.2.4/registry.tgz
 
+######################
+## on kvm host
+systemctl stop docker-distribution
+
+cd /data
+
+rm -rf registry
+# tar zxf registry.tgz
+yum -y install pigz
+
+pigz -dc registry.tgz | tar xf -
+
+systemctl restart docker-distribution
+
+
+oc adm upgrade --to-image=registry.redhat.ren/ocp4/openshift4
+
 ```
 
 osx
