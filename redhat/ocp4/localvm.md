@@ -22,6 +22,10 @@ systemctl start vmware-tools
 cd
 tar -cvf - data/ | pigz -c > /mnt/hgfs/ocp.4.2.4/rhel-data.tgz
 
+cd /data
+tar -cvf - ocp4/ | pigz -c > /mnt/hgfs/ocp.4.2.4/ocp4.tgz
+tar -cvf - registry/ | pigz -c > /mnt/hgfs/ocp.4.2.4/registry.tgz
+
 ```
 
 osx
