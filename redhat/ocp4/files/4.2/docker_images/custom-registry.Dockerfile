@@ -1,4 +1,4 @@
-FROM registry.redhat.io/openshift4/ose-operator-registry:v4.2.0 AS builder
+FROM registry.redhat.io/openshift4/ose-operator-registry:v4.2.5 AS builder
 
 COPY manifests manifests
 
@@ -8,7 +8,7 @@ COPY manifests manifests
 RUN /bin/initializer -o ./bundles.db
 
 # FROM scratch
-FROM registry.redhat.io/openshift4/ose-operator-registry:v4.2.0
+FROM registry.redhat.io/openshift4/ose-operator-registry:v4.2.5
 
 COPY --from=builder /registry/bundles.db /bundles.db
 COPY --from=builder /usr/bin/registry-server /registry-server

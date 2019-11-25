@@ -106,11 +106,11 @@ split_sample_image(){
         # echo "io, com, org with tag: $docker_image"
         domain_part=$(echo $docker_image | cut -d'/' -f1)
         image_part=$(echo $docker_image | sed -r 's/^.*\.(io|com|org)//')
-        local_image="${LOCAL_REG}/${image_part}"
+        local_image="${LOCAL_REG}${image_part}"
         image_part=$(echo $image_part | sed -r 's/@sha256:.*$//')
         sha_part_var=$(echo $image_part | sed -r 's/.*@sha256://')
         sha_part=$(echo ${sha_part_var} | sha1sum | cut -f 1 -d ' ')
-        local_image_url="${LOCAL_REG}/${image_part}:${sha_part}"
+        local_image_url="${LOCAL_REG}${image_part}:${sha_part}"
 
         yaml_image=$(echo $docker_image | sed -r 's/@sha256:.*$//')
         yaml_local_image="${LOCAL_REG}/${image_part}"
@@ -119,8 +119,8 @@ split_sample_image(){
         # echo "io, com, org with tag: $docker_image"
         domain_part=$(echo $docker_image | cut -d'/' -f1)
         image_part=$(echo $docker_image | sed -r 's/^.*\.(io|com|org)//')
-        local_image="${LOCAL_REG}/${image_part}"
-        local_image_url="${LOCAL_REG}/${image_part}"
+        local_image="${LOCAL_REG}${image_part}"
+        local_image_url="${LOCAL_REG}${image_part}"
 
         yaml_image=$(echo $docker_image | sed -r 's/:.*$//')
         yaml_local_image=$(echo $local_image_url | sed -r 's/:.*$//')
@@ -129,8 +129,8 @@ split_sample_image(){
         # echo "io, com, org without tag: $docker_image"
         domain_part=$(echo $docker_image | cut -d'/' -f1)
         image_part=$(echo $docker_image | sed -r 's/^.*\.(io|com|org)//')
-        local_image="${LOCAL_REG}/${image_part}:latest"
-        local_image_url="${LOCAL_REG}/${image_part}:latest"
+        local_image="${LOCAL_REG}${image_part}:latest"
+        local_image_url="${LOCAL_REG}${image_part}:latest"
         # echo $image_url
 
         yaml_image=$docker_image

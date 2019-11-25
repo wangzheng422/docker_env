@@ -5,6 +5,10 @@ https://olivermarshall.net/how-to-upload-a-file-to-google-drive-from-the-command
 https://github.com/gdrive-org/gdrive
 
 ```bash
+############################
+## split and merge
+split -b 10g registry.tgz registry.
+cat registry.?? > registry.tgz
 
 ################################
 ## skicka
