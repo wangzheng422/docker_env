@@ -90,7 +90,56 @@ split_image(){
 
     fi
 
+}
+
+split_sample_image(){
+
+    docker_image=$1
+    echo $docker_image
+    var_skip=0
+
+    if [[ "$docker_image" =~ ^$ ]] || [[ "$docker_image" =~ ^[[:space:]]+$ ]] || [[ "$docker_image" =~ \#[:print:]*  ]]; then
+        # echo "this is comments"
+        var_skip=1
+        return;
+    elif [[ $docker_image =~ ^.*\.(io|com|org)/.*@sha256:.* ]]; then
+        # echo "io, com, org with tag: $docker_image"
+        domain_part=$(echo $docker_image | cut -d'/' -f1)
+        image_part=$(echo $docker_image | sed -r 's/^.*\.(io|com|org)//')
+        local_image="${LOCAL_REG}/${image_part}"
+        image_part=$(echo $image_part | sed -r 's/@sha256:.*$//')
+        sha_part_var=$(echo $image_part | sed -r 's/.*@sha256://')
+        sha_part=$(echo ${sha_part_var} | sha1sum | cut -f 1 -d ' ')
+        local_image_url="${LOCAL_REG}/${image_part}:${sha_part}"
+
+        yaml_image=$(echo $docker_image | sed -r 's/@sha256:.*$//')
+        yaml_local_image="${LOCAL_REG}/${image_part}"
+        # echo $image_url
+    elif [[ $docker_image =~ ^.*\.(io|com|org)/.*:.* ]]; then
+        # echo "io, com, org with tag: $docker_image"
+        domain_part=$(echo $docker_image | cut -d'/' -f1)
+        image_part=$(echo $docker_image | sed -r 's/^.*\.(io|com|org)//')
+        local_image="${LOCAL_REG}/${image_part}"
+        local_image_url="${LOCAL_REG}/${image_part}"
+
+        yaml_image=$(echo $docker_image | sed -r 's/:.*$//')
+        yaml_local_image=$(echo $local_image_url | sed -r 's/:.*$//')
+        # echo $image_url
+    elif [[ $docker_image =~ ^.*\.(io|com|org)/[^:]*  ]]; then
+        # echo "io, com, org without tag: $docker_image"
+        domain_part=$(echo $docker_image | cut -d'/' -f1)
+        image_part=$(echo $docker_image | sed -r 's/^.*\.(io|com|org)//')
+        local_image="${LOCAL_REG}/${image_part}:latest"
+        local_image_url="${LOCAL_REG}/${image_part}:latest"
+        # echo $image_url
+
+        yaml_image=$docker_image
+
+        docker_image+=":latest"
+
+        yaml_local_image="${LOCAL_REG}/${domain_part}${image_part}"
     
+    fi
 
 }
 
@@ -106,6 +155,22 @@ mirror_image() {
             echo -e "${yaml_image}\t${yaml_local_image}" >> yaml.image.ok.list
         else
             echo "$docker_image" >> pull.image.failed.list
+        fi
+    fi
+}
+
+mirror_sample_image() {
+
+    var_line=$1
+    split_sample_image $var_line
+
+    # if oc image mirror $docker_image $local_image_url; then
+    if [[ $var_skip == 0 ]]; then
+        if skopeo copy "docker://"$docker_image "docker://"$local_image_url; then
+            echo -e "${docker_image}\t${local_image_url}" >> pull.sample.image.ok.list
+            echo -e "${yaml_image}\t${yaml_local_image}" >> yaml.sample.image.ok.list
+        else
+            echo "$docker_image" >> pull.sample.image.failed.list
         fi
     fi
 }

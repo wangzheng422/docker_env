@@ -3,7 +3,7 @@
 set -e
 set -x
 
-/bin/rm -f pull.image.failed.list pull.image.ok.list yaml.image.ok.list
+/bin/rm -f pull.image.failed.list pull.image.ok.list yaml.image.ok.list pull.sample.image.ok.list yaml.sample.image.ok.list pull.sample.image.failed.list
 
 # export OCP_RELEASE=${BUILDNUMBER}
 # export LOCAL_REG='registry.redhat.ren'
@@ -20,6 +20,12 @@ source image.mirror.fn.sh
 cat /data/ocp4/operator.image.list >> install.image.list.tmp
 
 cat install.image.list.tmp | sort | uniq > /data/ocp4/install.image.list.tmp.uniq
+
+while read -r line; do
+
+    mirror_sample_image $line
+
+done < sample.image.list
 
 while read -r line; do
 
