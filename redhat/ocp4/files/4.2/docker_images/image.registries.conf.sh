@@ -3,6 +3,8 @@
 set -e
 set -x
 
+parm_file=$1
+
 export LOCAL_REG='registry.redhat.ren'
 
 # export OCP_RELEASE=${BUILDNUMBER}
@@ -55,7 +57,7 @@ while read -r line; do
     yaml_docker_image $docker_image $local_image $num
     num=${num}+1;
 
-done < yaml.image.ok.list.uniq
+done < ${parm_file} # yaml.image.ok.list.uniq
 
 
 cat << EOF >> ./image.registries.conf

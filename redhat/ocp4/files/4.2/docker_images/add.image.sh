@@ -17,9 +17,6 @@ while read -r line; do
 
 done < add.image.list
 
-cat yaml.add.image.ok.list >> yaml.image.ok.list
-
-cat yaml.image.ok.list | sort | uniq > yaml.add.image.ok.list.uniq
 
 
 

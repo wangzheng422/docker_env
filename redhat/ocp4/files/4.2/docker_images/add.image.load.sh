@@ -17,5 +17,12 @@ while read -r line; do
 
 done < pull.add.image.ok.list
 
+/bin/cp -f yaml.image.ok.list yaml.image.ok.list.tmp
+
+cat yaml.add.image.ok.list >> yaml.image.ok.list.tmp
+
+cat yaml.image.ok.list.tmp | sort | uniq > yaml.add.image.ok.list.uniq
+
+
 
 
