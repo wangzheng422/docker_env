@@ -7,7 +7,7 @@ https://github.com/gdrive-org/gdrive
 ```bash
 ############################
 ## split and merge
-split -b 10g registry.tgz registry.
+split -b 10G registry.tgz registry.
 cat registry.?? > registry.tgz
 
 ################################
@@ -19,23 +19,32 @@ go get github.com/google/skicka
 install /root/go/bin/skicka /usr/local/bin/skicka
 skicka init
 skicka -no-browser-auth ls
-skicka ls "/wzh/wangzheng.share/shared_docs/2019.11/ocp 4.2.4/"
+skicka ls "/wzh/wangzheng.share/shared_docs/2019.11/ocp 4.2.7/"
 cd /data
-skicka upload ./ocp4.tgz  "/wzh/wangzheng.share/shared_docs/2019.11/ocp 4.2.4/"
-skicka upload ./registry.tgz  "/wzh/wangzheng.share/shared_docs/2019.11/ocp 4.2.4/"
+mkdir -p /data/upload
+/bin/mv -f *.tgz ./upload/
+/bin/mv -f registry.* ./upload/
+cd /data/upload/
+
+find ./ -maxdepth 1 -type f -exec skicka upload {}  "/wzh/wangzheng.share/shared_docs/2019.11/ocp 4.2.7/" \;
 
 ##################################
 ## rsync
 yum -y install connect-proxy
 
 cat << EOF > /root/.ssh/config
-Host 45.32.85.251
+StrictHostKeyChecking no
+UserKnownHostsFile=/dev/null
+
+Host 66.42.96.69
     ProxyCommand connect-proxy -S 192.168.253.1:5085 %h %p
 EOF
 
-rsync -e ssh --progress --delete -arz 45.32.85.251:/data/registry /data/
+cd /data
 
-rsync -e ssh --progress --delete -arz 45.32.85.251:/data/ocp4 /data/
+rsync -e ssh --progress --delete -arz 66.42.96.69:/data/registry /data/
+
+rsync -e ssh --progress --delete -arz 66.42.96.69:/data/ocp4 /data/
 
 ```
 

@@ -142,4 +142,97 @@ oc create \
      -f kubernetes/catalog-service-template.yml \
      -n $OCP_TUTORIAL_PROJECT
 
+oc create \
+     -f ~/lab/ocp-service-mesh-foundations/catalog/kubernetes/Service.yml \
+     -n $OCP_TUTORIAL_PROJECT
+
+cd ~/lab/ocp-service-mesh-foundations/partner
+
+oc create \
+     -f kubernetes/partner-service-template.yml \
+     -n $OCP_TUTORIAL_PROJECT
+
+oc create \
+     -f ~/lab/ocp-service-mesh-foundations/partner/kubernetes/Service.yml \
+     -n $OCP_TUTORIAL_PROJECT
+
+cd ~/lab/ocp-service-mesh-foundations/gateway
+
+oc create \
+     -f kubernetes/gateway-service-template.yml \
+     -n $OCP_TUTORIAL_PROJECT
+
+oc create \
+     -f ~/lab/ocp-service-mesh-foundations/gateway/kubernetes/Service.yml \
+     -n $OCP_TUTORIAL_PROJECT
+
+echo -en "apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: ingress-gateway
+spec:
+  selector:
+    istio: ingressgateway # use istio default controller
+  servers:
+  - port:
+      number: 80
+      name: http
+      protocol: HTTP
+    hosts:
+    - '*'
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: ingress-gateway
+spec:
+  hosts:
+  - '*'
+  gateways:
+  - ingress-gateway
+  http:
+  - match:
+    - uri:
+        exact: /
+    route:
+    - destination:
+        host: gateway
+        port:
+          number: 8080
+" > $HOME/service-mesh-gw.yaml
+
+oc apply -f $HOME/service-mesh-gw.yaml -n $OCP_TUTORIAL_PROJECT
+
+echo "export GATEWAY_URL=$(oc -n istio-system get route istio-ingressgateway -o jsonpath='{.spec.host}')" >> ~/.bashrc
+
+source ~/.bashrc
+
+echo $GATEWAY_URL
+
+curl $GATEWAY_URL
+
+oc create \
+     -f ~/lab/ocp-service-mesh-foundations/catalog-v2/kubernetes/catalog-service-template.yml \
+     -n $OCP_TUTORIAL_PROJECT
+
+oc get pods -l application=catalog -n $OCP_TUTORIAL_PROJECT -w
+
+oc describe service catalog -n $OCP_TUTORIAL_PROJECT | grep Selector
+
+oc get deploy catalog-v1 -o json -n $OCP_TUTORIAL_PROJECT | jq .spec.template.metadata.labels
+
+oc get deploy catalog-v2 -o json -n $OCP_TUTORIAL_PROJECT | jq .spec.template.metadata.labels
+
+oc create -f ~/lab/ocp-service-mesh-foundations/istiofiles/destination-rule-catalog-v1-v2.yml -n $OCP_TUTORIAL_PROJECT
+
+oc create -f ~/lab/ocp-service-mesh-foundations/istiofiles/virtual-service-catalog-v2.yml -n $OCP_TUTORIAL_PROJECT
+
+oc replace -f ~/lab/ocp-service-mesh-foundations/istiofiles/virtual-service-catalog-v1.yml -n $OCP_TUTORIAL_PROJECT
+
+export KIALI_URL=https://$(oc get route kiali -n istio-system -o template --template='{{.spec.host}}')
+echo $KIALI_URL
+
+cd ~/lab/ocp-service-mesh-foundations
+$HOME/lab/ocp-service-mesh-foundations/scripts/run-all.sh
+
 ```
