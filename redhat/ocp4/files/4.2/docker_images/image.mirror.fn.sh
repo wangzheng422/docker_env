@@ -191,6 +191,7 @@ add_image() {
             echo -e "${yaml_image}\t${yaml_local_image}" >> yaml.add.image.ok.list
         else
             echo "$docker_image" >> pull.add.image.failed.list
+            /bin/rm -f ./image_tar/$tar_file_name
         fi
     fi
 }
