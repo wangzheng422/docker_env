@@ -16,15 +16,17 @@ enabled=0
 
 EOF
 
+# https://access.redhat.com/articles/1282083
 yum install open-vm-tools
-systemctl start vmware-tools
+systemctl enable vmtoolsd.service 
+systemctl start vmtoolsd.service
 
 cd
-tar -cvf - data/ | pigz -c > /mnt/hgfs/ocp.4.2.4/rhel-data.tgz
+tar -cf - data/ | pigz -c > /mnt/hgfs/ocp.4.2.4/rhel-data.tgz
 
 cd /data
-tar -cvf - ocp4/ | pigz -c > /mnt/hgfs/ocp.4.2.4/ocp4.tgz
-tar -cvf - registry/ | pigz -c > /mnt/hgfs/ocp.4.2.4/registry.tgz
+tar -cf - ocp4/ | pigz -c > /mnt/hgfs/ocp.4.2.7/ocp4.tgz
+tar -cf - registry/ | pigz -c > /mnt/hgfs/ocp.4.2.7/registry.tgz
 
 ######################
 ## on kvm host
