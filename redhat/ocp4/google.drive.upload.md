@@ -48,15 +48,25 @@ rsync -e ssh --progress --delete -arz 66.42.96.69:/data/ocp4 /data/
 
 ####################
 ## local mac
+# ls -1a *.list
 var_files=$(cat << EOF
 operator.failed.list
 operator.image.list
 operator.ok.list
+pull.image.failed.list
 pull.image.ok.list
+pull.sample.image.failed.list
+pull.sample.image.ok.list
 yaml.image.ok.list
+yaml.sample.image.ok.list
+install.image.list.tmp.uniq
 yaml.image.ok.list.uniq
 EOF
 )
+
+while read -r line; do
+    scp root@192.168.253.11:/data/ocp4/${line} ./
+done <<< "$var_files"
 
 ```
 
