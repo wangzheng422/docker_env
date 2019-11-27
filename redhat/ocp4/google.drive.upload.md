@@ -46,6 +46,18 @@ rsync -e ssh --progress --delete -arz 66.42.96.69:/data/registry /data/
 
 rsync -e ssh --progress --delete -arz 66.42.96.69:/data/ocp4 /data/
 
+####################
+## local mac
+var_files=$(cat << EOF
+operator.failed.list
+operator.image.list
+operator.ok.list
+pull.image.ok.list
+yaml.image.ok.list
+yaml.image.ok.list.uniq
+EOF
+)
+
 ```
 
 no use below
