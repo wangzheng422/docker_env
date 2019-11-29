@@ -150,7 +150,8 @@ mirror_image() {
 
     # if oc image mirror $docker_image $local_image_url; then
     if [[ $var_skip == 0 ]]; then
-        if skopeo copy "docker://"$docker_image "docker://"$local_image_url; then
+        # if skopeo copy "docker://"$docker_image "docker://"$local_image_url; then
+        if oc image mirror $docker_image $local_image_url; then
             echo -e "${docker_image}\t${local_image_url}" >> pull.image.ok.list
             echo -e "${yaml_image}\t${yaml_local_image}" >> yaml.image.ok.list
         else
@@ -166,7 +167,8 @@ mirror_sample_image() {
 
     # if oc image mirror $docker_image $local_image_url; then
     if [[ $var_skip == 0 ]]; then
-        if skopeo copy "docker://"$docker_image "docker://"$local_image_url; then
+        # if skopeo copy "docker://"$docker_image "docker://"$local_image_url; then
+        if oc image mirror $docker_image $local_image_url; then
             echo -e "${docker_image}\t${local_image_url}" >> pull.sample.image.ok.list
             echo -e "${yaml_image}\t${yaml_local_image}" >> yaml.sample.image.ok.list
         else
