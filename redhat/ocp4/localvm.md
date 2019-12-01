@@ -22,11 +22,11 @@ systemctl enable vmtoolsd.service
 systemctl start vmtoolsd.service
 
 cd
-tar -cf - data/ | pigz -c > /mnt/hgfs/ocp.4.2.4/rhel-data.tgz
+tar -cf - data/ | pigz -c > /mnt/hgfs/ocp.4.2.8/rhel-data.tgz
 
 cd /data
-tar -cf - ocp4/ | pigz -c > /mnt/hgfs/ocp.4.2.7/ocp4.tgz
-tar -cf - registry/ | pigz -c > /mnt/hgfs/ocp.4.2.7/registry.tgz
+tar -cf - ocp4/ | pigz -c > /mnt/hgfs/ocp.4.2.8/ocp4.tgz
+tar -cf - registry/ | pigz -c > /mnt/hgfs/ocp.4.2.8/registry.tgz
 
 ######################
 ## on kvm host
