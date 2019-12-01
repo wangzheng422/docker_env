@@ -32,19 +32,21 @@ find ./ -maxdepth 1 -type f -exec skicka upload {}  "/wzh/wangzheng.share/shared
 ## rsync
 yum -y install connect-proxy
 
+export VULTR_HOST=149.28.74.28
+
 cat << EOF > /root/.ssh/config
 StrictHostKeyChecking no
 UserKnownHostsFile=/dev/null
 
-Host 66.42.96.69
+Host ${VULTR_HOST}
     ProxyCommand connect-proxy -S 192.168.253.1:5085 %h %p
 EOF
 
 cd /data
 
-rsync -e ssh --progress --delete -arz 66.42.96.69:/data/registry /data/
+rsync -e ssh --progress --delete -arz ${VULTR_HOST}:/data/registry /data/
 
-rsync -e ssh --progress --delete -arz 66.42.96.69:/data/ocp4 /data/
+rsync -e ssh --progress --delete -arz ${VULTR_HOST}:/data/ocp4 /data/
 
 ####################
 ## local mac
