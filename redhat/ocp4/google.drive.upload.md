@@ -51,6 +51,10 @@ rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/ocp4 /data/
 ####################
 ## local mac
 # ls -1a *.list
+
+bash
+cd /Users/wzh/Desktop/dev/docker_env/redhat/ocp4/files/4.2/image_lists
+
 var_files=$(cat << EOF
 operator.failed.list
 operator.image.list
