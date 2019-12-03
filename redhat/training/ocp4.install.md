@@ -333,3 +333,292 @@ openshift-install wait-for install-complete --dir $HOME/openstack-upi
 # INFO Login to the console with user: kubeadmin, password: 
 
 ```
+day 2
+```bash
+oc explain MachineSet.spec --recursive=true
+
+oc get nodes
+
+oc describe node d4ed-86v9t-worker-0
+
+oc get machines -n openshift-machine-api
+
+oc get machineset -n openshift-machine-api
+
+oc get machinesets d4ed-86v9t-worker -o yaml -n openshift-machine-api
+
+oc get machineset -n openshift-machine-api
+
+oc scale machineset d4ed-86v9t-worker --replicas=1 -n openshift-machine-api
+
+oc get machineset -n openshift-machine-api
+
+oc get machine -n openshift-machine-api
+
+oc describe machine d4ed-86v9t-worker-8xpmf -n openshift-machine-api
+
+oc get pods -n openshift-machine-api
+
+oc get pod machine-api-controllers-66988fdb78-r2m5p -o json -n openshift-machine-api | jq -r .spec.containers[].name
+
+oc logs machine-api-controllers-66988fdb78-r2m5p -c machine-controller -n openshift-machine-api | grep -i worker
+
+oc scale machineset d4ed-86v9t-worker --replicas=0 -n openshift-machine-api
+
+oc get machines -n openshift-machine-api
+
+oc get machineset d4ed-86v9t-worker -n openshift-machine-api -o yaml
+
+cat << EOF > ~/machine.yaml
+apiVersion: machine.openshift.io/v1beta1
+kind: MachineSet
+metadata:
+  labels:
+    machine.openshift.io/cluster-api-cluster: d4ed-86v9t
+    machine.openshift.io/cluster-api-machine-role: worker
+    machine.openshift.io/cluster-api-machine-type: worker
+  name: general-purpose-1a
+  namespace: openshift-machine-api
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      machine.openshift.io/cluster-api-cluster: d4ed-86v9t
+      machine.openshift.io/cluster-api-machineset: general-purpose-1a
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        machine.openshift.io/cluster-api-cluster: d4ed-86v9t
+        machine.openshift.io/cluster-api-machine-role: worker
+        machine.openshift.io/cluster-api-machine-type: worker
+        machine.openshift.io/cluster-api-machineset: general-purpose-1a
+    spec:
+      metadata:
+        labels:
+          failure-domain.beta.kubernetes.io/region: "east"
+          failure-domain.beta.kubernetes.io/zone: "1a"
+          node-role.kubernetes.io/general-use: ""
+      providerSpec:
+        value:
+          apiVersion: openstackproviderconfig.openshift.io/v1alpha1
+          cloudName: openstack
+          cloudsSecret:
+            name: openstack-cloud-credentials
+            namespace: openshift-machine-api
+          flavor: 4c12g30d
+          image: rhcos-ocp42
+          kind: OpenstackProviderSpec
+          networks:
+          - filter: {}
+            subnets:
+            - filter:
+                name: ded1-ocp-subnet
+          securityGroups:
+          - filter: {}
+            name: ded1-worker_sg
+          serverMetadata:
+            Name: d4ed-86v9t-worker
+            openshiftClusterID: d4ed-86v9t
+          tags:
+          - openshiftClusterID=d4ed-86v9t
+          trunk: true
+          userDataSecret:
+            name: worker-user-data
+EOF
+
+for i in 1a 1b
+do
+ansible localhost -m template -a "src='$HOME/resources/general-ms.yaml.j2' dest='$HOME/worker-ms-$i.yaml'" -e msid=$i
+done
+
+oc create -f worker-ms-1a.yaml -n openshift-machine-api
+oc create -f worker-ms-1b.yaml -n openshift-machine-api
+oc get machineset -n openshift-machine-api
+
+oc scale machineset general-purpose-1a --replicas=1 -n openshift-machine-api
+oc scale machineset general-purpose-1b --replicas=1 -n openshift-machine-api
+
+oc get machines -n openshift-machine-api
+
+oc get nodes
+
+oc adm cordon d4ed-86v9t-worker-0
+oc adm drain d4ed-86v9t-worker-0 --ignore-daemonsets --delete-local-data --force=true
+
+oc adm cordon d4ed-86v9t-worker-1
+oc adm drain d4ed-86v9t-worker-1 --ignore-daemonsets --delete-local-data --force=true
+
+oc get nodes
+
+oc delete node d4ed-86v9t-worker-0 d4ed-86v9t-worker-1
+
+openstack server list --name $INFRA_ID-worker -f value -c ID | xargs openstack server delete
+
+openstack server list -c ID -c Name -c Status
+
+oc get machineset general-purpose-1a -o yaml -n openshift-machine-api > infra-ms.yaml
+
+cat << EOF >~/infra-1a.yaml
+apiVersion: machine.openshift.io/v1beta1
+kind: MachineSet
+metadata:
+  labels:
+    machine.openshift.io/cluster-api-cluster: d4ed-86v9t
+    machine.openshift.io/cluster-api-machine-role: worker
+    machine.openshift.io/cluster-api-machine-type: worker
+  name: infra-1a
+  namespace: openshift-machine-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      machine.openshift.io/cluster-api-cluster: d4ed-86v9t
+      machine.openshift.io/cluster-api-machineset: infra-1a
+  template:
+    metadata:
+      labels:
+        machine.openshift.io/cluster-api-cluster: d4ed-86v9t
+        machine.openshift.io/cluster-api-machine-role: worker
+        machine.openshift.io/cluster-api-machine-type: worker
+        machine.openshift.io/cluster-api-machineset: infra-1a
+    spec:
+      metadata:
+        labels:
+          node-role.kubernetes.io/infra: ""
+          failure-domain.beta.kubernetes.io/region: east
+          failure-domain.beta.kubernetes.io/zone: 1a
+      providerSpec:
+        value:
+          apiVersion: openstackproviderconfig.openshift.io/v1alpha1
+          cloudName: openstack
+          cloudsSecret:
+            name: openstack-cloud-credentials
+            namespace: openshift-machine-api
+          flavor: 4c12g30d
+          image: rhcos-ocp42
+          kind: OpenstackProviderSpec
+          metadata:
+            creationTimestamp: null
+          networks:
+          - filter: {}
+            subnets:
+            - filter:
+                name: d4ed-ocp-subnet
+          securityGroups:
+          - filter: {}
+            name: d4ed-worker_sg
+          serverMetadata:
+            Name: d4ed-86v9t-worker
+            openshiftClusterID: d4ed-86v9t
+          tags:
+          - openshiftClusterID=d4ed-86v9t
+          trunk: true
+          userDataSecret:
+            name: worker-user-data
+EOF
+
+oc create -f infra-1a.yaml
+
+oc get machines -n openshift-machine-api -w
+
+oc get nodes -w
+
+oc explain clusterautoscaler.spec --recursive=true
+
+oc explain clusterautoscaler.spec.balanceSimilarNodeGroups
+
+oc project openshift-machine-api
+
+oc get machineset
+
+echo "
+apiVersion: autoscaling.openshift.io/v1beta1
+kind: MachineAutoscaler
+metadata:
+  name: ma-general-purpose-1a
+  namespace: openshift-machine-api
+spec:
+  minReplicas: 1
+  maxReplicas: 4
+  scaleTargetRef:
+    apiVersion: machine.openshift.io/v1beta1
+    kind: MachineSet
+    name: general-purpose-1a" | oc create -f - -n openshift-machine-api
+
+echo "
+apiVersion: autoscaling.openshift.io/v1beta1
+kind: MachineAutoscaler
+metadata:
+  name: ma-general-purpose-1b
+  namespace: openshift-machine-api
+spec:
+  minReplicas: 1
+  maxReplicas: 4
+  scaleTargetRef:
+    apiVersion: machine.openshift.io/v1beta1
+    kind: MachineSet
+    name: general-purpose-1b" | oc create -f - -n openshift-machine-api
+
+oc get machineautoscaler
+
+echo "
+apiVersion: autoscaling.openshift.io/v1
+kind: ClusterAutoscaler
+metadata:
+  name: default
+spec:
+  balanceSimilarNodeGroups: true
+  podPriorityThreshold: -10
+  resourceLimits:
+    maxNodesTotal: 12
+    cores:
+      min: 24
+      max: 48
+    memory:
+      min: 84
+      max: 156
+  scaleDown:
+    enabled: true
+    delayAfterAdd: 5m
+    delayAfterDelete: 5m
+    delayAfterFailure: 5m
+    unneededTime: 60s" | oc create -f -
+
+oc describe clusterautoscaler default
+
+oc get machinesets -o yaml | grep annotations -A 3
+
+oc get pods
+
+oc logs -f cluster-autoscaler-default-66cdb74d49-gmn6m -n openshift-machine-api
+
+echo '
+apiVersion: batch/v1
+kind: Job
+metadata:
+  generateName: work-queue-
+spec:
+  template:
+    spec:
+      containers:
+      - name: work
+        image: busybox
+        command: ["sleep",  "300"]
+        resources:
+          requests:
+            memory: 500Mi
+            cpu: 300m
+      restartPolicy: Never
+      nodeSelector:
+        node-role.kubernetes.io/general-use: ""
+  parallelism: 50
+  completions: 50' | oc create -f - -n work-queue
+
+oc edit clusterautoscaler default
+
+oc delete machineautoscaler ma-general-purpose-1a ma-general-purpose-1b -n openshift-machine-api
+
+
+
+```
