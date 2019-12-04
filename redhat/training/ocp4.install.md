@@ -1,5 +1,5 @@
 ```bash
-ssh -i ~/.ssh/id_rsa.redhat -tt  zhengwan-redhat.com@bastion.d4ed.blue.osp.opentlc.com tmux
+ssh -i ~/.ssh/id_rsa.redhat -tt  zhengwan-redhat.com@bastion.d4ed.blue.osp.opentlc.com
 
 # on base station
 ansible localhost -m lineinfile -a 'path=$HOME/.bashrc regexp="^export OCP_RELEASE" line="export OCP_RELEASE=4.2.4"'
@@ -619,6 +619,328 @@ oc edit clusterautoscaler default
 
 oc delete machineautoscaler ma-general-purpose-1a ma-general-purpose-1b -n openshift-machine-api
 
+```
+day 3
+```bash
+oc get nodes --show-labels|grep infra
 
+oc get pod -n openshift-ingress-operator
+
+oc get pod -n openshift-ingress -o wide
+
+oc get ingresscontroller default -n openshift-ingress-operator -o yaml
+
+oc patch ingresscontroller default -n openshift-ingress-operator --type=merge --patch='{"spec":{"nodePlacement":{"nodeSelector": {"matchLabels":{"node-role.kubernetes.io/infra":""}}}}}'
+
+oc get nodes|grep infra
+
+oc get pod -o wide -n openshift-ingress
+
+oc describe pod router-default-64ccbf7bb9-r8czx -n openshift-ingress
+
+oc patch ingresscontroller default -n openshift-ingress-operator --type=merge --patch='{"spec":{"replicas": 1}}'
+
+oc scale machineset infra-1a --replicas=2 -n openshift-machine-api
+
+oc get configs.imageregistry.operator.openshift.io/cluster -n openshift-image-registry -o yaml
+
+oc patch configs.imageregistry.operator.openshift.io/cluster -n openshift-image-registry --type=merge --patch '{"spec":{"nodeSelector":{"node-role.kubernetes.io/infra":""}}}'
+
+oc get pod -o wide -n openshift-image-registry --sort-by=".spec.nodeName"
+
+cat <<EOF > $HOME/monitoring-cm.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cluster-monitoring-config
+  namespace: openshift-monitoring
+data:
+  config.yaml: |+
+    alertmanagerMain:
+      nodeSelector:
+        node-role.kubernetes.io/infra: ""
+    prometheusK8s:
+      nodeSelector:
+        node-role.kubernetes.io/infra: ""
+    prometheusOperator:
+      nodeSelector:
+        node-role.kubernetes.io/infra: ""
+    grafana:
+      nodeSelector:
+        node-role.kubernetes.io/infra: ""
+    k8sPrometheusAdapter:
+      nodeSelector:
+        node-role.kubernetes.io/infra: ""
+    kubeStateMetrics:
+      nodeSelector:
+        node-role.kubernetes.io/infra: ""
+    telemeterClient:
+      nodeSelector:
+        node-role.kubernetes.io/infra: ""
+EOF
+
+oc create -f $HOME/monitoring-cm.yaml -n openshift-monitoring
+
+watch oc get pods -n openshift-monitoring -o wide --sort-by=".spec.nodeName"
+
+oc new-project taints
+
+oc new-app openshift/hello-openshift:v3.10 --name=nottainted -n taints
+
+oc get nodes|grep infra
+
+oc adm taint node infra-1a-9v2f2 infra=reserved:NoSchedule
+oc adm taint node infra-1a-9v2f2 infra=reserved:NoExecute
+
+oc delete project taints
+
+oc get pod -n openshift-ingress
+
+oc get pod -n openshift-image-registry
+
+oc scale machineset infra-1a --replicas=1 -n openshift-machine-api
+
+oc patch ingresscontroller default -n openshift-ingress-operator --type=merge --patch='{"spec":{"nodePlacement": {"nodeSelector": {"matchLabels": {"node-role.kubernetes.io/infra": ""}},"tolerations": [{"effect":"NoSchedule","key": "infra","value": "reserved"},{"effect":"NoExecute","key": "infra","value": "reserved"}]}}}'
+
+oc get pod -n openshift-ingress -o wide
+
+oc patch config cluster --type=merge --patch='{"spec":{"nodeSelector": {"node-role.kubernetes.io/infra": ""},"tolerations": [{"effect":"NoSchedule","key": "infra","value": "reserved"},{"effect":"NoExecute","key": "infra","value": "reserved"}]}}'
+
+oc get pod -n openshift-image-registry -o wide
+
+cat <<EOF > $HOME/monitoring-cm.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cluster-monitoring-config
+  namespace: openshift-monitoring
+data:
+  config.yaml: |
+    alertmanagerMain:
+      nodeSelector:
+        node-role.kubernetes.io/infra: ""
+      tolerations:
+      - key: infra
+        value: reserved
+        effect: NoSchedule
+      - key: infra
+        value: reserved
+        effect: NoExecute
+    prometheusK8s:
+      nodeSelector:
+        node-role.kubernetes.io/infra: ""
+      tolerations:
+      - key: infra
+        value: reserved
+        effect: NoSchedule
+      - key: infra
+        value: reserved
+        effect: NoExecute
+    prometheusOperator:
+      nodeSelector:
+        node-role.kubernetes.io/infra: ""
+      tolerations:
+      - key: infra
+        value: reserved
+        effect: NoSchedule
+      - key: infra
+        value: reserved
+        effect: NoExecute
+    grafana:
+      nodeSelector:
+        node-role.kubernetes.io/infra: ""
+      tolerations:
+      - key: infra
+        value: reserved
+        effect: NoSchedule
+      - key: infra
+        value: reserved
+        effect: NoExecute
+    k8sPrometheusAdapter:
+      nodeSelector:
+        node-role.kubernetes.io/infra: ""
+      tolerations:
+      - key: infra
+        value: reserved
+        effect: NoSchedule
+      - key: infra
+        value: reserved
+        effect: NoExecute
+    kubeStateMetrics:
+      nodeSelector:
+        node-role.kubernetes.io/infra: ""
+      tolerations:
+      - key: infra
+        value: reserved
+        effect: NoSchedule
+      - key: infra
+        value: reserved
+        effect: NoExecute
+    telemeterClient:
+      nodeSelector:
+        node-role.kubernetes.io/infra: ""
+      tolerations:
+      - key: infra
+        value: reserved
+        effect: NoSchedule
+      - key: infra
+        value: reserved
+        effect: NoExecute
+EOF
+
+oc apply -f $HOME/monitoring-cm.yaml -n openshift-monitoring
+
+watch oc get pod -n openshift-monitoring -o wide --sort-by=".spec.nodeName"
+
+oc scale machineset general-purpose-1a --replicas=2 -n openshift-machine-api
+oc scale machineset general-purpose-1b --replicas=2 -n openshift-machine-api
+
+oc get nodes
+
+oc new-project scheduler
+
+oc new-app openshift/hello-openshift:v3.10 --name=cache     -n scheduler
+oc new-app openshift/hello-openshift:v3.10 --name=webserver -n scheduler
+
+OC_EDITOR="nano" oc edit dc cache
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+            - key: app
+              operator: In
+              values:
+              - cache
+          topologyKey: kubernetes.io/hostname
+
+oc scale dc cache --replicas=2
+
+oc get pod -o wide|grep Running
+
+OC_EDITOR="nano" oc edit dc webserver
+  affinity:
+    podAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+          - key: app
+            operator: In
+            values:
+            - cache
+        topologyKey: kubernetes.io/hostname
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+      - podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+            - key: app
+              operator: In
+              values:
+              - webserver
+          topologyKey: kubernetes.io/hostname
+        weight: 100
+
+oc scale dc webserver --replicas=2
+
+oc get pod -o wide|grep Running
+
+oc delete all -lapp=cache
+oc delete all -lapp=webserver
+oc delete project scheduler
+oc scale machineset general-purpose-1a --replicas=1 -n openshift-machine-api
+oc scale machineset general-purpose-1b --replicas=1 -n openshift-machine-api
+
+oc patch machineset infra-1a -n openshift-machine-api --type='merge' --patch='{"spec": {"template": {"spec": {"taints": [{"key": "infra","value": "reserved","effect": "NoSchedule"},{"key": "infra","value": "reserved","effect": "NoExecute"}]}}}}'
+
+oc scale machineset infra-1a --replicas=0 -n openshift-machine-api
+
+oc scale machineset infra-1a --replicas=1 -n openshift-machine-api
+
+oc describe node $(oc get nodes|grep infra|awk -c '{print $1}')|grep type=infra
+
+oc get all -n openshift-operators
+
+oc get events -n openshift-operators --sort-by='.lastTimestamp'
+
+oc get all -n openshift-nfd
+
+oc get subscription -n openshift-operators
+
+oc get subscription nfd -o yaml -n openshift-operators
+
+oc get packagemanifests -n openshift-marketplace
+
+oc describe packagemanifests nfd -n openshift-marketplace
+
+cat << EOF > $HOME/nfd-sub.yaml
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: nfd
+  namespace: openshift-operators
+spec:
+  channel: "4.2"
+  installPlanApproval: Automatic
+  name: nfd
+  source: redhat-operators
+  sourceNamespace: openshift-marketplace
+EOF
+oc apply -f $HOME/nfd-sub.yaml
+
+oc get pods -n openshift-operators
+
+cat << EOF > $HOME/nfd-resource.json
+{
+  "apiVersion": "nfd.openshift.io/v1alpha1",
+  "kind": "NodeFeatureDiscovery",
+  "metadata": {
+    "name": "nfd-master-server",
+    "namespace": "openshift-operators"
+  },
+  "spec": {
+    "namespace": "openshift-nfd"
+  }
+}
+EOF
+oc apply -f $HOME/nfd-resource.json
+
+oc get all -n openshift-nfd
+
+oc get node general-purpose-1a-zzsgv -o json | jq .metadata.labels
+
+oc get csv
+
+oc get csv -A
+
+oc get csv nfd.4.2.8-201911190952 -o yaml
+
+oc get csv nfd.4.2.8-201911190952 -o json | jq '.metadata.name'
+oc get csv nfd.4.2.8-201911190952 -o json | jq '.spec.version'
+oc get csv nfd.4.2.8-201911190952 -o json | jq '.spec.customresourcedefinitions.owned[].kind'
+
+oc get packagemanifests | grep servicemesh
+
+oc describe packagemanifest servicemeshoperator
+
+oc get packagemanifests | grep kiali
+
+oc describe packagemanifest kiali-ossm
+
+oc get packagemanifests | grep jaeger
+
+oc describe packagemanifest jaeger-product
+
+oc get csv | grep mesh
+
+oc get csv servicemeshoperator.v1.0.2 -o json | jq '.spec.customresourcedefinitions.owned[].kind'
+
+oc get servicemeshcontrolplane -n istio-system
+
+oc get csv servicemeshoperator.v1.0.2 -o json | jq '.spec.customresourcedefinitions.required[].kind'
+
+oc get csv | grep kiali
 
 ```
