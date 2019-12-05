@@ -944,3 +944,906 @@ oc get csv servicemeshoperator.v1.0.2 -o json | jq '.spec.customresourcedefiniti
 oc get csv | grep kiali
 
 ```
+day 4
+```bash
+oc new-project my-hpa
+
+oc new-app quay.io/gpte-devops-automation/pod-autoscale-lab:rc0 --name=pod-autoscale -n my-hpa
+
+oc expose svc pod-autoscale
+
+echo '---
+kind: LimitRange
+apiVersion: v1
+metadata:
+  name: limits
+spec:
+  limits:
+  - type: Pod
+    max:
+      cpu: 100m
+      memory: 750Mi
+    min:
+      cpu: 10m
+      memory: 5Mi
+  - type: Container
+    max:
+      cpu: 100m
+      memory: 750Mi
+    min:
+      cpu: 10m
+      memory: 5Mi
+    default:
+      cpu: 50m
+      memory: 100Mi
+' | oc create -f - -n my-hpa
+
+oc autoscale dc/pod-autoscale --min 1 --max 5 --cpu-percent=60
+
+oc get hpa pod-autoscale -n my-hpa
+
+oc describe hpa pod-autoscale -n my-hpa
+
+oc rollout latest pod-autoscale -n my-hpa
+
+oc rsh -n my-hpa $(oc get ep pod-autoscale -n my-hpa -o jsonpath='{ .subsets[].addresses[0].targetRef.name }')
+# while true;do true;done
+
+oc delete hpa pod-autoscale -n my-hpa
+
+oc new-project my-prometheus
+
+oc describe subscriptions.operators.coreos.com prometheus -n my-prometheus
+
+# how to control the autoscale timming,
+oc explain kubecontrollermanagers.spec
+```
+click Catalog > Installed Operators > Prometheus Operator
+
+click Create Instance under the Service Monitor API option. Paste the following:
+```yaml
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: pod-autoscale
+  labels:
+    lab: custom-hpa
+spec:
+  namespaceSelector:
+    matchNames:
+      - my-prometheus
+      - my-hpa
+  selector:
+    matchLabels:
+      app: pod-autoscale
+  endpoints:
+  - port: 8080-tcp
+    interval: 30s
+```
+you will create the actual Prometheus instance. In the UI, click Create Instance under the Prometheus API option.
+```yaml
+apiVersion: monitoring.coreos.com/v1
+kind: Prometheus
+metadata:
+  name: my-prometheus
+  labels:
+    prometheus: my-prometheus
+  namespace: my-prometheus
+spec:
+  replicas: 2
+  serviceAccountName: prometheus-k8s
+  securityContext: {}
+  serviceMonitorSelector:
+    matchLabels:
+      lab: custom-hpa
+```
+```bash
+oc expose svc prometheus-operated -n my-prometheus
+
+oc get route prometheus-operated -o jsonpath='{.spec.host}{"\n"}' -n my-prometheus
+
+echo "---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: my-prometheus-hpa
+  namespace: my-hpa
+subjects:
+  - kind: ServiceAccount
+    name: prometheus-k8s
+    namespace: my-prometheus
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: view" | oc create -f -
+
+oc create -f https://raw.githubusercontent.com/redhat-gpte-devopsautomation/ocp_advanced_deployment_resources/master/ocp4_adv_deploy_lab/custom_hpa/custom_adapter_kube_objects.yaml
+
+oc get apiservice v1beta1.custom.metrics.k8s.io
+
+oc get --raw /apis/custom.metrics.k8s.io/v1beta1/ | jq -r '.resources[] | select(.name | contains("pods/http"))'
+
+echo "---
+kind: HorizontalPodAutoscaler
+apiVersion: autoscaling/v2beta1
+metadata:
+  name: pod-autoscale-custom
+  namespace: my-hpa
+spec:
+  scaleTargetRef:
+    kind: DeploymentConfig
+    name: pod-autoscale
+    apiVersion: apps.openshift.io/v1
+  minReplicas: 1
+  maxReplicas: 5
+  metrics:
+    - type: Pods
+      pods:
+        metricName: http_requests
+        targetAverageValue: 500m" | oc create -f -
+
+AUTOSCALE_ROUTE=$(oc get route pod-autoscale -n my-hpa -o jsonpath='{ .spec.host}')
+while true;do curl http://$AUTOSCALE_ROUTE;sleep .5;done
+
+oc describe hpa pod-autoscale-custom -n my-hpa
+oc get pods -n my-hpa
+
+oc new-project my-new-hpa
+
+oc new-app quay.io/gpte-devops-automation/instrumented_app:rc0 -n my-new-hpa
+
+oc expose svc instrumentedapp -n my-new-hpa
+
+curl http://$(oc get route instrumentedapp -n my-new-hpa -o jsonpath='{ .spec.host}')/metrics
+
+```
+Create a new ServiceMonitor
+```yaml
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    lab: custom-hpa
+  name: my-servicemonitor
+  namespace: my-prometheus
+spec:
+  endpoints:
+    - interval: 30s
+      port: 8080-tcp
+  namespaceSelector:
+    matchNames:
+    - my-new-hpa
+  selector:
+    matchLabels:
+      app: instrumentedapp
+```
+```bash
+echo "---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: my-new-hpa
+  namespace: my-new-hpa
+subjects:
+  - kind: ServiceAccount
+    name: prometheus-k8s
+    namespace: my-prometheus
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: view" | oc create -f -
+```
+Verify that you see new metrics in your Prometheus. You can use this query:
+```
+http_requests_total{job="instrumentedapp"}
+```
+```bash
+oc get --raw /apis/custom.metrics.k8s.io/v1beta1/ | jq -r '.resources[] | select(.name | contains("pods/http"))'
+
+echo "---
+kind: HorizontalPodAutoscaler
+apiVersion: autoscaling/v2beta1
+metadata:
+  name: pod-autoscale-custom
+  namespace: my-new-hpa
+spec:
+  scaleTargetRef:
+    kind: DeploymentConfig
+    name: instrumentedapp
+    apiVersion: apps.openshift.io/v1
+  minReplicas: 1
+  maxReplicas: 5
+  metrics:
+    - type: Pods
+      pods:
+        metricName: http_requests
+        targetAverageValue: 50000m" | oc create -f -
+
+oc delete hpa pod-autoscale-custom -n my-hpa
+oc delete hpa pod-autoscale-custom -n my-new-hpa
+oc scale dc instrumentedapp --replicas=1 -n my-new-hpa
+oc scale dc pod-autoscale --replicas=1 -n my-hpa
+
+oc api-resources
+
+oc new-project cakephp-example
+
+oc new-app cakephp-mysql-example
+
+oc get routes
+
+cat <<EOF >allow-same-namespace.yml
+---
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: allow-same-namespace
+spec:
+  podSelector: {}
+  ingress:
+  - from:
+    - podSelector: {}
+EOF
+oc create -n cakephp-example -f allow-same-namespace.yml
+
+oc get namespace openshift-ingress -o yaml
+
+cat <<EOF >allow-openshift-ingress.yml
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-openshift-ingress
+spec:
+  podSelector: {}
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          network.openshift.io/policy-group: ingress
+EOF
+oc create -n cakephp-example -f allow-openshift-ingress.yml
+# oc apply -n cakephp-example -f allow-openshift-ingress.yml
+
+oc patch namespace default --type=merge -p '{"metadata": {"labels": {"network.openshift.io/policy-group": "ingress"}}}'
+
+oc whoami
+
+oc auth can-i update Namespace
+
+oc auth can-i create EgressNetworkPolicy
+
+cd 
+git clone https://github.com/redhat-gpte-devopsautomation/cakephp-ex.git
+
+cd cakephp-ex
+
+oc process --local \
+--param-file=openshift/multi-project-templates/parameters.yml \
+--ignore-unknown-parameters \
+-f openshift/multi-project-templates/cakephp-namespaces.yml \
+| oc apply -f -
+
+oc process --local \
+--param-file=openshift/multi-project-templates/parameters.yml \
+--ignore-unknown-parameters \
+-f openshift/multi-project-templates/cakephp-namespace-init.yml \
+| oc create -f -
+
+oc process --local \
+--param-file=openshift/multi-project-templates/parameters.yml \
+--ignore-unknown-parameters \
+-f openshift/multi-project-templates/cakephp-mysql-persistent.yml \
+| oc apply -f -
+
+oc process --local \
+--param=VERSION=0.1 \
+--param-file=openshift/multi-project-templates/parameters.yml \
+--ignore-unknown-parameters \
+-f openshift/multi-project-templates/cakephp-build.yml \
+| oc apply -f -
+
+oc process --local \
+--param=VERSION=0.1 \
+--param-file=openshift/multi-project-templates/parameters.yml \
+--ignore-unknown-parameters \
+-f openshift/multi-project-templates/cakephp-mysql-frontend.yml \
+| oc apply -f -
+
+for i in $(oc get machine -n openshift-machine-api -o name);do oc patch $i --type=merge -p '{"spec": {"metadata": {"labels": {"failure-domain.beta.kubernetes.io/zone": "nova"}}}}' -n openshift-machine-api;done
+for i in $(oc get machine -n openshift-machine-api -o name);do oc patch $i --type=merge -p '{"spec": {"metadata": {"labels": {"failure-domain.beta.kubernetes.io/region": "regionOne"}}}}' -n openshift-machine-api;done
+for i in $(oc get node -l node-role.kubernetes.io/worker -o name);do oc label $i failure-domain.beta.kubernetes.io/zone-;done
+
+vim openshift/multi-project-templates/cakephp-namespaces.yml
+# @@ -51,11 +51,17 @@ objects:
+#    apiVersion: v1
+#    metadata:
+#      name: ${BUILD_NAMESPACE}
+# +    labels:
+# +      name: ${BUILD_NAMESPACE}
+#  - kind: Namespace
+#    apiVersion: v1
+#    metadata:
+#      name: ${FRONTEND_NAMESPACE}
+# +    labels:
+# +      name: ${FRONTEND_NAMESPACE}
+#  - kind: Namespace
+#    apiVersion: v1
+#    metadata:
+#      name: ${DATABASE_NAMESPACE}
+# +    labels:
+# +      name: ${DATABASE_NAMESPACE}
+
+oc process --local \
+--param-file=openshift/multi-project-templates/parameters.yml \
+--ignore-unknown-parameters \
+-f openshift/multi-project-templates/cakephp-namespaces.yml \
+| oc apply -f -
+
+vim openshift/multi-project-templates/cakephp-mysql-frontend.yml
+#    - apiGroup: rbac.authorization.k8s.io
+#      kind: Group
+#      name: system:serviceaccounts:${FRONTEND_NAMESPACE}
+# +- kind: NetworkPolicy
+# +  apiVersion: networking.k8s.io/v1
+# +  metadata:
+# +    name: deny-by-default
+# +    namespace: ${FRONTEND_NAMESPACE}
+# +  spec:
+# +    podSelector: {}
+# +    policyTypes:
+# +    - Ingress
+# +- kind: NetworkPolicy
+# +  apiVersion: networking.k8s.io/v1
+# +  metadata:
+# +    name: allow-same-namespace
+# +    namespace: ${FRONTEND_NAMESPACE}
+# +  spec:
+# +    podSelector:
+# +    policyTypes:
+# +    - Ingress
+# +    ingress:
+# +    - from:
+# +      - podSelector: {}
+# +- kind: NetworkPolicy
+# +  apiVersion: networking.k8s.io/v1
+# +  metadata:
+# +    name: allow-openshift-ingress
+# +    namespace: ${FRONTEND_NAMESPACE}
+# +  spec:
+# +    podSelector: {}
+# +    ingress:
+# +    - from:
+# +      - namespaceSelector:
+# +          matchLabels:
+# +            network.openshift.io/policy-group: ingress
+oc process --local \
+--param-file=openshift/multi-project-templates/parameters.yml \
+--ignore-unknown-parameters \
+-f openshift/multi-project-templates/cakephp-mysql-frontend.yml \
+| oc apply -f -
+
+
+vim openshift/multi-project-templates/cakephp-mysql-persistent.yml
+# @@ -33,6 +33,13 @@ parameters:
+#      The OpenShift Namespace where the Database deployment and service reside.
+#    required: true
+#    value: cakephp-example-database
+# +- name: FRONTEND_NAMESPACE
+# +  displayName: Frontend Namespace
+# +  description: >-
+# +    The OpenShift Namespace where the Frontend application deployment, route,
+# +    and service reside.
+# +  required: true
+# +  value: cakephp-example-frontend
+#  - name: IMAGE_NAMESPACE
+#    displayName: Image Namespace
+#    description: The OpenShift Namespace where the PHP S2I ImageStream resides.
+# @@ -139,3 +146,53 @@ objects:
+#            resources:
+#              limits:
+#                memory: ${MEMORY_MYSQL_LIMIT}
+# +- kind: NetworkPolicy
+# +  apiVersion: networking.k8s.io/v1
+# +  metadata:
+# +    name: deny-by-default
+# +    namespace: ${DATABASE_NAMESPACE}
+# +  spec:
+# +    podSelector: {}
+# +    policyTypes:
+# +    - Ingress
+# +- kind: NetworkPolicy
+# +  apiVersion: networking.k8s.io/v1
+# +  metadata:
+# +    name: allow-same-namespace
+# +    namespace: ${DATABASE_NAMESPACE}
+# +  spec:
+# +    podSelector:
+# +    policyTypes:
+# +    - Ingress
+# +    ingress:
+# +    - from:
+# +      - podSelector: {}
+# +- kind: NetworkPolicy
+# +  apiVersion: networking.k8s.io/v1
+# +  metadata:
+# +    name: allow-frontend-to-database
+# +    namespace: ${DATABASE_NAMESPACE}
+# +  spec:
+# +    podSelector:
+# +      matchLabels:
+# +        name: ${DATABASE_SERVICE_NAME}
+# +    ingress:
+# +    - from:
+# +      - namespaceSelector:
+# +          matchLabels:
+# +            name: ${FRONTEND_NAMESPACE}
+# +      ports:
+# +      - protocol: TCP
+# +        port: 3306
+oc process --local \
+--param-file=openshift/multi-project-templates/parameters.yml \
+--ignore-unknown-parameters \
+-f openshift/multi-project-templates/cakephp-mysql-persistent.yml \
+| oc apply -f -
+
+cat <<EOF >>openshift/multi-project-templates/cakephp-namespaces.yml
+- kind: EgressNetworkPolicy
+  apiVersion: network.openshift.io/v1
+  metadata:
+    name: default
+    namespace: \${FRONTEND_NAMESPACE}
+  spec:
+    egress:
+    - type: Deny
+      to:
+        cidrSelector: 0.0.0.0/0
+- kind: EgressNetworkPolicy
+  apiVersion: network.openshift.io/v1
+  metadata:
+    name: default
+    namespace: \${DATABASE_NAMESPACE}
+  spec:
+    egress:
+    - type: Deny
+      to:
+        cidrSelector: 0.0.0.0/0
+EOF
+
+oc process --local \
+--param-file=openshift/multi-project-templates/parameters.yml \
+--ignore-unknown-parameters \
+-f openshift/multi-project-templates/cakephp-namespaces.yml \
+| oc apply -f -
+
+oc delete project cakephp-example
+oc delete project cakephp-example-build
+oc delete project cakephp-example-database
+oc delete project cakephp-example-frontend
+
+```
+logging
+```bash
+oc get machineset general-purpose-1a -o yaml -n openshift-machine-api > logging-1a.yaml
+
+cat << EOF >logging-1a.yaml
+apiVersion: machine.openshift.io/v1beta1
+kind: MachineSet
+metadata:
+  labels:
+    machine.openshift.io/cluster-api-cluster: d4ed-86v9t
+    machine.openshift.io/cluster-api-machine-role: worker
+    machine.openshift.io/cluster-api-machine-type: worker
+  name: logging-1a
+  namespace: openshift-machine-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      machine.openshift.io/cluster-api-cluster: d4ed-86v9t
+      machine.openshift.io/cluster-api-machineset: logging-1a
+  template:
+    metadata:
+      labels:
+        machine.openshift.io/cluster-api-cluster: d4ed-86v9t
+        machine.openshift.io/cluster-api-machine-role: worker
+        machine.openshift.io/cluster-api-machine-type: worker
+        machine.openshift.io/cluster-api-machineset: logging-1a
+    spec:
+      metadata:
+        labels:
+          node-role.kubernetes.io/logging: ""
+          failure-domain.beta.kubernetes.io/region: RegionOne
+          failure-domain.beta.kubernetes.io/zone: nova
+      providerSpec:
+        value:
+          apiVersion: openstackproviderconfig.openshift.io/v1alpha1
+          cloudName: openstack
+          cloudsSecret:
+            name: openstack-cloud-credentials
+            namespace: openshift-machine-api
+          flavor: 4c16g30d
+          image: rhcos-ocp42
+          kind: OpenstackProviderSpec
+          metadata: {}
+          networks:
+          - filter: {}
+            subnets:
+            - filter:
+                name: d4ed-ocp-subnet
+          securityGroups:
+          - filter: {}
+            name: d4ed-worker_sg
+          serverMetadata:
+            Name: d4ed-86v9t-worker
+            openshiftClusterID: d4ed-86v9t
+          tags:
+          - openshiftClusterID=d4ed-86v9t
+          trunk: true
+          userDataSecret:
+            name: worker-user-data
+      taints:
+      - key: logging
+        value: reserved
+        effect: NoSchedule
+      - key: logging
+        value: reserved
+        effect: NoExecute
+EOF
+oc create -f logging-1a.yaml
+oc scale machineset logging-1a --replicas=1 -n openshift-machine-api
+
+oc get nodes
+
+mkdir $HOME/cluster-logging
+
+cat << EOF >$HOME/cluster-logging/es_namespace.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: openshift-operators-redhat
+  annotations:
+    openshift.io/node-selector: ""
+  labels:
+    openshift.io/cluster-logging: "true"
+    openshift.io/cluster-monitoring: "true"
+EOF
+
+oc create -f $HOME/cluster-logging/es_namespace.yaml
+
+cat << EOF >$HOME/cluster-logging/cl_namespace.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: openshift-logging
+  annotations:
+    openshift.io/node-selector: ""
+  labels:
+    openshift.io/cluster-logging: "true"
+    openshift.io/cluster-monitoring: "true"
+EOF
+
+oc create -f $HOME/cluster-logging/cl_namespace.yaml
+
+cat << EOF >$HOME/cluster-logging/operator_group.yaml
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: openshift-operators-redhat
+  namespace: openshift-operators-redhat
+spec: {}
+EOF
+
+oc create -f $HOME/cluster-logging/operator_group.yaml
+
+oc get packagemanifest elasticsearch-operator -n openshift-marketplace -o jsonpath='{.status.channels[].name}'
+
+cat << EOF >$HOME/cluster-logging/subscription.yaml
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  generateName: "elasticsearch-"
+  namespace: "openshift-operators-redhat"
+spec:
+  channel: "4.2"
+  installPlanApproval: "Automatic"
+  source: "redhat-operators"
+  sourceNamespace: "openshift-marketplace"
+  name: "elasticsearch-operator"
+EOF
+
+oc create -f $HOME/cluster-logging/subscription.yaml
+
+cat << EOF >$HOME/cluster-logging/rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: prometheus-k8s
+  namespace: openshift-operators-redhat
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - services
+  - endpoints
+  - pods
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: prometheus-k8s
+  namespace: openshift-operators-redhat
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: prometheus-k8s
+subjects:
+- kind: ServiceAccount
+  name: prometheus-k8s
+  namespace: openshift-operators-redhat
+EOF
+
+oc create -f $HOME/cluster-logging/rbac.yaml
+
+oc get pod -n openshift-operators-redhat -o wide
+
+oc logs elasticsearch-operator-646cd66f48-sthrd -n openshift-operators-redhat
+
+oc whoami --show-console
+
+oc get pod -n openshift-logging -o wide
+
+oc logs cluster-logging-operator-754f49dfbb-rh2zp -n openshift-logging
+```
+```yaml
+apiVersion: logging.openshift.io/v1
+kind: ClusterLogging
+metadata:
+  name: instance
+  namespace: openshift-logging
+spec:
+  managementState: Managed
+  logStore:
+    type: elasticsearch
+    elasticsearch:
+      resources:
+        limits:
+          memory: 6Gi
+        requests:
+          memory: 6Gi
+      nodeCount: 1
+      nodeSelector:
+        node-role.kubernetes.io/logging: ""
+      redundancyPolicy: ZeroRedundancy
+      storage:
+        storageClassName: standard
+        size: 50Gi
+      tolerations:
+      - key: logging
+        value: reserved
+        effect: NoSchedule
+      - key: logging
+        value: reserved
+        effect: NoExecute
+  visualization:
+    type: kibana
+    kibana:
+      replicas: 1
+      nodeSelector:
+        node-role.kubernetes.io/logging: ""
+      tolerations:
+      - key: logging
+        value: reserved
+        effect: NoSchedule
+      - key: logging
+        value: reserved
+        effect: NoExecute
+  curation:
+    type: curator
+    curator:
+      schedule: 30 3 * * *
+      nodeSelector:
+        node-role.kubernetes.io/logging: ""
+      tolerations:
+      - key: logging
+        value: reserved
+        effect: NoSchedule
+      - key: logging
+        value: reserved
+        effect: NoExecute
+  collection:
+    logs:
+      type: fluentd
+      fluentd:
+        tolerations:
+        - effect: NoSchedule
+          key: infra
+          value: reserved
+        - effect: NoExecute
+          key: infra
+          value: reserved
+        - key: logging
+          value: reserved
+          effect: NoSchedule
+        - key: logging
+          value: reserved
+          effect: NoExecute
+```
+```bash
+oc get pod -n openshift-logging -o json | jq -r '.items[].spec.containers[].image'
+
+```
+
+
+password
+```bash
+API_HOSTNAME="$(oc whoami --show-server | sed -r 's|.*//(.*):.*|\1|')"
+
+INGRESS_DOMAIN="$(oc get ingresses.config.openshift.io cluster -o jsonpath='{.spec.domain}')"
+
+echo $API_HOSTNAME
+echo $INGRESS_DOMAIN
+
+cd $HOME
+touch $HOME/htpasswd
+htpasswd -Bb $HOME/htpasswd andrew openshift
+htpasswd -Bb $HOME/htpasswd david openshift
+htpasswd -Bb $HOME/htpasswd karla openshift
+
+oc create secret generic htpasswd --from-file=$HOME/htpasswd -n openshift-config
+
+oc apply -f - <<EOF
+apiVersion: config.openshift.io/v1
+kind: OAuth
+metadata:
+  name: cluster
+spec:
+  identityProviders:
+  - name: Local Password
+    mappingMethod: claim
+    type: HTPasswd
+    htpasswd:
+      fileData:
+        name: htpasswd
+EOF
+
+watch oc get pod -n openshift-authentication
+
+oc login -u andrew -p openshift $(oc whoami --show-server)
+
+oc login -u system:admin
+
+oc adm groups new lab-cluster-admins david karla
+
+oc login -u karla -p openshift $(oc whoami --show-server)
+
+oc auth can-i delete node
+
+oc delete secret kubeadmin -n kube-system
+
+#############################
+## internal image registry
+oc patch configs.imageregistry.operator.openshift.io/cluster --type=merge --patch '{"spec":{"defaultRoute":true}}'
+
+oc get route -n openshift-image-registry
+
+oc patch configs.imageregistry.operator.openshift.io/cluster --type=merge --patch '{"spec":{"routes":[{"name":"image-registry", "hostname":"image-registry.'$INGRESS_DOMAIN'"}]}}'
+
+curl https://$(oc get route -n openshift-image-registry image-registry -o jsonpath='{.spec.host}')/healthz --cacert ~/ca/cacert.pem -v
+
+curl https://$(oc get route -n openshift-image-registry image-registry -o jsonpath='{.spec.host}')/healthz --insecure
+
+oc create serviceaccount registry-admin -n openshift-config
+
+oc adm policy add-cluster-role-to-user registry-admin system:serviceaccount:openshift-config:registry-admin
+
+oc create imagestream ubi8 -n openshift
+
+sudo yum install -y skopeo
+
+REGISTRY_ADMIN_TOKEN=$(oc sa get-token -n openshift-config registry-admin)
+echo $REGISTRY_ADMIN_TOKEN
+
+UBI8_IMAGE_REPO=$(oc get is -n openshift ubi8 -o jsonpath='{.status.publicDockerImageRepository}')
+echo $UBI8_IMAGE_REPO
+
+export SSL_CERT_FILE=$HOME/ca/cacert.pem
+
+skopeo copy --dest-creds=-:$REGISTRY_ADMIN_TOKEN --dest-tls-verify=false docker://registry.access.redhat.com/ubi8:latest docker://$UBI8_IMAGE_REPO:latest 
+
+#######################################
+## ssh
+oc get machineconfigs.machineconfiguration.openshift.io
+
+oc get machineconfig 99-worker-ssh -o yaml
+
+oc new-project node-ssh
+
+oc new-build openshift/ubi8:latest --name=node-ssh --dockerfile - <<EOF
+FROM unused
+RUN dnf install -y openssh-clients
+CMD ["sleep", "infinity"]
+EOF
+
+oc create secret generic node-ssh --from-file=id_rsa=$HOME/.ssh/${GUID}key.pem
+
+NODE_SSH_IMAGE=$(oc get imagestream node-ssh -o jsonpath='{.status.dockerImageRepository}')
+echo $NODE_SSH_IMAGE
+oc create deployment node-ssh --image=$NODE_SSH_IMAGE:latest --dry-run -o yaml >$HOME/node-ssh.deployment.yaml
+
+vim $HOME/node-ssh.deployment.yaml
+```
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: node-ssh
+  name: node-ssh
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: node-ssh
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: node-ssh
+    spec:
+      containers:
+      - image: image-registry.openshift-image-registry.svc:5000/node-ssh/node-ssh:latest
+        name: node-ssh
+        resources: {}
+        volumeMounts:
+        - name: node-ssh
+          mountPath: /.ssh
+      volumes:
+      - name: node-ssh
+        secret:
+          secretName: node-ssh
+          defaultMode: 0600
+status: {}
+```
+```bash
+oc apply -f $HOME/node-ssh.deployment.yaml
+
+NODE_SSH_POD=$(oc get pod -l app=node-ssh -o jsonpath='{.items[0].metadata.name}')
+oc exec -it $NODE_SSH_POD -- ssh core@192.168.47.31
+
+ssh-keygen -t rsa -f $HOME/.ssh/node.id_rsa -N ''
+
+cat $HOME/.ssh/node.id_rsa.pub
+
+oc patch machineconfig 99-worker-ssh --type=json --patch="[{\"op\":\"add\", \"path\":\"/spec/config/passwd/users/0/sshAuthorizedKeys/-\", \"value\":\"$(cat $HOME/.ssh/node.id_rsa.pub)\"}]"
+
+watch oc get nodes
+
+oc delete secret node-ssh
+oc create secret generic node-ssh --from-file=id_rsa=$HOME/.ssh/node.id_rsa
+oc delete pod -l app=node-ssh
+
+NODE_SSH_POD=$(oc get pod -l app=node-ssh -o jsonpath='{.items[0].metadata.name}')
+oc exec -it $NODE_SSH_POD -- ssh core@10.0.159.205
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
