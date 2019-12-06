@@ -236,3 +236,12 @@ cd ~/lab/ocp-service-mesh-foundations
 $HOME/lab/ocp-service-mesh-foundations/scripts/run-all.sh
 
 ```
+
+service mesh install and uninstall
+```
+oc get MutatingWebhookConfiguration
+oc get ValidatingWebhookConfiguration
+oc delete ValidatingWebhookConfiguration istio-system.servicemesh-resources.maistra.io
+oc delete ValidatingWebhookConfiguration openshift-operators.servicemesh-resources.maistra.io
+oc get ValidatingWebhookConfiguration
+```

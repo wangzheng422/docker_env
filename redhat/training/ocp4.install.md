@@ -803,45 +803,45 @@ oc new-app openshift/hello-openshift:v3.10 --name=cache     -n scheduler
 oc new-app openshift/hello-openshift:v3.10 --name=webserver -n scheduler
 
 OC_EDITOR="nano" oc edit dc cache
-  affinity:
-    podAntiAffinity:
-      preferredDuringSchedulingIgnoredDuringExecution:
-      - weight: 100
-        podAffinityTerm:
-          labelSelector:
-            matchExpressions:
-            - key: app
-              operator: In
-              values:
-              - cache
-          topologyKey: kubernetes.io/hostname
+  # affinity:
+  #   podAntiAffinity:
+  #     preferredDuringSchedulingIgnoredDuringExecution:
+  #     - weight: 100
+  #       podAffinityTerm:
+  #         labelSelector:
+  #           matchExpressions:
+  #           - key: app
+  #             operator: In
+  #             values:
+  #             - cache
+  #         topologyKey: kubernetes.io/hostname
 
 oc scale dc cache --replicas=2
 
 oc get pod -o wide|grep Running
 
 OC_EDITOR="nano" oc edit dc webserver
-  affinity:
-    podAffinity:
-      requiredDuringSchedulingIgnoredDuringExecution:
-      - labelSelector:
-          matchExpressions:
-          - key: app
-            operator: In
-            values:
-            - cache
-        topologyKey: kubernetes.io/hostname
-    podAntiAffinity:
-      preferredDuringSchedulingIgnoredDuringExecution:
-      - podAffinityTerm:
-          labelSelector:
-            matchExpressions:
-            - key: app
-              operator: In
-              values:
-              - webserver
-          topologyKey: kubernetes.io/hostname
-        weight: 100
+  # affinity:
+  #   podAffinity:
+  #     requiredDuringSchedulingIgnoredDuringExecution:
+  #     - labelSelector:
+  #         matchExpressions:
+  #         - key: app
+  #           operator: In
+  #           values:
+  #           - cache
+  #       topologyKey: kubernetes.io/hostname
+  #   podAntiAffinity:
+  #     preferredDuringSchedulingIgnoredDuringExecution:
+  #     - podAffinityTerm:
+  #         labelSelector:
+  #           matchExpressions:
+  #           - key: app
+  #             operator: In
+  #             values:
+  #             - webserver
+  #         topologyKey: kubernetes.io/hostname
+  #       weight: 100
 
 oc scale dc webserver --replicas=2
 
@@ -1594,11 +1594,13 @@ oc get pod -n openshift-operators-redhat -o wide
 oc logs elasticsearch-operator-646cd66f48-sthrd -n openshift-operators-redhat
 
 oc whoami --show-console
+# create Cluster Logging operator in openshift-logging project
 
 oc get pod -n openshift-logging -o wide
 
 oc logs cluster-logging-operator-754f49dfbb-rh2zp -n openshift-logging
 ```
+craete logging instance in operator
 ```yaml
 apiVersion: logging.openshift.io/v1
 kind: ClusterLogging
@@ -1718,6 +1720,8 @@ oc login -u andrew -p openshift $(oc whoami --show-server)
 oc login -u system:admin
 
 oc adm groups new lab-cluster-admins david karla
+
+oc adm policy add-cluster-role-to-group cluster-admin lab-cluster-admins --rolebinding-name=lab-cluster-admins
 
 oc login -u karla -p openshift $(oc whoami --show-server)
 
