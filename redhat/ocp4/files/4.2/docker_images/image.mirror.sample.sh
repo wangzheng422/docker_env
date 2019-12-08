@@ -15,23 +15,23 @@ set -x
 
 source image.mirror.fn.sh
 
-/bin/cp -f /data/ocp4/install.image.list install.image.list.tmp
+# /bin/cp -f /data/ocp4/install.image.list install.image.list.tmp
 
-cat /data/ocp4/operator.image.list >> install.image.list.tmp
+# cat /data/ocp4/operator.image.list >> install.image.list.tmp
 
-cat install.image.list.tmp | sort | uniq > /data/ocp4/install.image.list.tmp.uniq
-
-# while read -r line; do
-
-#     mirror_sample_image $line
-
-# done < sample.image.list
+# cat install.image.list.tmp | sort | uniq > /data/ocp4/install.image.list.tmp.uniq
 
 while read -r line; do
 
-    mirror_image $line
+    mirror_sample_image $line
 
-done < install.image.list.tmp.uniq
+done < sample.image.list
+
+# while read -r line; do
+
+#     mirror_image $line
+
+# done < install.image.list.tmp.uniq
 
 # while read -r line; do
 #     mirror_image $line
