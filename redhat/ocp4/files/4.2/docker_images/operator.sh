@@ -72,14 +72,14 @@ while read -r line; do
 
     /bin/rm -f manifests/${namespace}.$name/bundle.yaml
 
-    if podman build -f /data/ocp4/custom-registry.Dockerfile -t registry.redhat.ren/ocp-operator/custom-registry ./ ; then
-        echo "$line" >> /data/ocp4/operator.ok.list
-    else
-        echo "$line" >> /data/ocp4/operator.failed.list
-        /bin/rm -rf manifests/${namespace}.$name
-    fi
+    # if podman build -f /data/ocp4/custom-registry.Dockerfile -t registry.redhat.ren/ocp-operator/custom-registry ./ ; then
+    #     echo "$line" >> /data/ocp4/operator.ok.list
+    # else
+    #     echo "$line" >> /data/ocp4/operator.failed.list
+    #     /bin/rm -rf manifests/${namespace}.$name
+    # fi
 
-    podman image prune
+    # podman image prune
 
 done < url.txt
 
