@@ -39,11 +39,11 @@ yum -y install byobu htop glances
 # ssh -tt root@base-pvg.redhat.ren byobu
 
 yum -y install dnsmasq
-cat  > /etc/dnsmasq.d/openshift-cluster.conf << EOF
-local=/redhat.ren/
-address=/yum.redhat.ren/192.168.7.1
-address=/registry.redhat.ren/192.168.7.1
-EOF
+# cat  > /etc/dnsmasq.d/openshift-cluster.conf << EOF
+# local=/redhat.ren/
+# address=/yum.redhat.ren/192.168.7.1
+# address=/registry.redhat.ren/192.168.7.1
+# EOF
 
 systemctl restart dnsmasq.service && systemctl enable dnsmasq.service && systemctl status dnsmasq.service
 
@@ -55,6 +55,7 @@ systemctl restart dnsmasq
 yum -y install ansible bind-utils vim
 
 ansible localhost -m lineinfile -a 'path=/etc/dnsmasq.conf  line="no-resolv"'
+ansible localhost -m lineinfile -a 'path=/etc/dnsmasq.conf  line="addn-hosts=/etc/dnsmasq.hosts"'
 
 mkdir /etc/crts/ && cd /etc/crts
 openssl req \
