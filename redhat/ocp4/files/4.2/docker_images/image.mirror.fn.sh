@@ -194,7 +194,7 @@ add_image() {
     fi
 }
 
-add_image_load(){
+split_image_add_image_load(){
 
     docker_image=$1
     echo $docker_image
@@ -217,7 +217,7 @@ add_image_load(){
         yaml_image=$(echo $docker_image | sed -r 's/@sha256:.*$//')
         yaml_local_image="${LOCAL_REG}/${domain_part}${image_part}"
 
-        docker_image="${MID_REG}/${image_part}"
+        docker_image="${MID_REG}/${domain_part}${image_part}"
         # echo $image_url
     elif [[ $docker_image =~ ^.*\.(io|com|org)/.*:.* ]]; then
         # echo "io, com, org with tag: $docker_image"
@@ -229,7 +229,7 @@ add_image_load(){
         yaml_image=$(echo $docker_image | sed -r 's/:.*$//')
         yaml_local_image=$(echo $local_image_url | sed -r 's/:.*$//')
         # echo $image_url
-        docker_image="${MID_REG}/${image_part}"
+        docker_image="${MID_REG}/${domain_part}${image_part}"
     elif [[ $docker_image =~ ^.*\.(io|com|org)/[^:]*  ]]; then
         # echo "io, com, org without tag: $docker_image"
         domain_part=$(echo $docker_image | cut -d'/' -f1)
@@ -244,7 +244,7 @@ add_image_load(){
 
         yaml_local_image="${LOCAL_REG}/${domain_part}${image_part}"
 
-        docker_image="${MID_REG}/${image_part}:latest"
+        docker_image="${MID_REG}/${domain_part}${image_part}:latest"
     elif [[ $docker_image =~ ^.*/.*@sha256:.* ]]; then
         # echo "docker with tag: $docker_image"
         local_image="${LOCAL_REG}/docker.io/${docker_image}"
@@ -257,7 +257,7 @@ add_image_load(){
         yaml_image=$(echo $docker_image | sed -r 's/@sha256:.*$//')
         yaml_local_image="${LOCAL_REG}/docker.io/${image_part}"
 
-        docker_image="${MID_REG}/${docker_image}"
+        docker_image="${MID_REG}/docker.io/${docker_image}"
     elif [[ $docker_image =~ ^.*/.*:.* ]]; then
         # echo "docker with tag: $docker_image"
         local_image="${LOCAL_REG}/docker.io/${docker_image}"
@@ -266,7 +266,7 @@ add_image_load(){
         yaml_image=$(echo $docker_image | sed -r 's/:.*$//')
         yaml_local_image=$(echo $local_image_url | sed -r 's/:.*$//')
 
-        docker_image="${MID_REG}/${docker_image}"
+        docker_image="${MID_REG}/docker.io/${docker_image}"
     elif [[ $docker_image =~ ^.*/[^:]* ]]; then
         # echo "docker without tag: $docker_image"
         local_image="${LOCAL_REG}/docker.io/${docker_image}:latest"
@@ -277,7 +277,7 @@ add_image_load(){
         # echo $image_url
         docker_image+="${docker_image}:latest"
 
-        docker_image="${MID_REG}/${docker_image}"
+        docker_image="${MID_REG}/docker.io/${docker_image}"
 
     elif [[ $docker_image =~ ^.*:.* ]]; then
         # echo "docker with tag: $docker_image"
@@ -289,7 +289,7 @@ add_image_load(){
 
         docker_image="${docker_image}"
 
-        docker_image="${MID_REG}/${docker_image}"
+        docker_image="${MID_REG}/docker.io/${docker_image}"
 
     fi
 
