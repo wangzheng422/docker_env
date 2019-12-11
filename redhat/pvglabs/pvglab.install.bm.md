@@ -56,6 +56,7 @@ yum -y install ansible bind-utils vim
 
 ansible localhost -m lineinfile -a 'path=/etc/dnsmasq.conf  line="no-resolv"'
 ansible localhost -m lineinfile -a 'path=/etc/dnsmasq.conf  line="addn-hosts=/etc/dnsmasq.hosts"'
+ansible localhost -m lineinfile -a 'path=/etc/dnsmasq.conf  line="resolv-file=/etc/dnsmasq-resolv.conf"'
 
 mkdir /etc/crts/ && cd /etc/crts
 openssl req \
@@ -159,24 +160,78 @@ virt-viewer --domain-name ocp4-aHelper
 virsh start ocp4-aHelper
 virsh list --all
 
-# in helper node
-cat << EOF >>  /etc/hosts
-192.168.7.1 yum.redhat.ren
-EOF
+cd /data/ocp4
+yum -y install wget
 
-mkdir /etc/yum.repos.d.bak
-mv /etc/yum.repos.d/* /etc/yum.repos.d.bak/
-cat << EOF > /etc/yum.repos.d/remote.repo
-[remote]
-name=RHEL FTP
-baseurl=ftp://yum.redhat.ren/data
-enabled=1
-gpgcheck=0
+wget -O ocp4-upi-helpernode-master.zip https://github.com/wangzheng422/ocp4-upi-helpernode/archive/master.zip
 
-EOF
+ansible-playbook -e @vars-static.yaml -e staticips=true tasks/main.yml
 
-yum clean all
-yum repolist
+systemctl restart dnsmasq
 
+/bin/rm -rf *.ign .openshift_install_state.json auth bootstrap master0 master1 master2 worker0 worker1 worker2
+
+openshift-install create ignition-configs --dir=/data/ocp4
+
+/bin/cp -f bootstrap.ign /var/www/html/ignition/bootstrap-static.ign
+
+yum -y install genisoimage libguestfs-tools
+systemctl start libvirtd
+
+export NGINX_DIRECTORY=/data/ocp4
+export RHCOSVERSION=4.2.0
+export VOLID=$(isoinfo -d -i ${NGINX_DIRECTORY}/rhcos-${RHCOSVERSION}-x86_64-installer.iso | awk '/Volume id/ { print $3 }')
+TEMPDIR=$(mktemp -d)
+echo $VOLID
+echo $TEMPDIR
+
+cd ${TEMPDIR}
+# Extract the ISO content using guestfish (to avoid sudo mount)
+guestfish -a ${NGINX_DIRECTORY}/rhcos-${RHCOSVERSION}-x86_64-installer.iso \
+  -m /dev/sda tar-out / - | tar xvf -
+
+# Helper function to modify the config files
+modify_cfg(){
+  for file in "EFI/redhat/grub.cfg" "isolinux/isolinux.cfg"; do
+    # Append the proper image and ignition urls
+    sed -e '/coreos.inst=yes/s|$| coreos.inst.install_dev='"${DISK}"' coreos.inst.image_url='"${URL}"'\/install\/'"${BIOSMODE}"'.raw.gz coreos.inst.ignition_url='"${URL}"'\/ignition\/'"${NODE}"'.ign ip='"${IP}"'::'"${GATEWAY}"':'"${NETMASK}"':'"${FQDN}"':'"${NET_INTERFACE}"':none:'"${DNS}"' nameserver='"${DNS}"'|' ${file} > $(pwd)/${NODE}_${file##*/}
+    # Boot directly in the installation
+    sed -i -e 's/default vesamenu.c32/default linux/g' -e 's/timeout 600/timeout 10/g' $(pwd)/${NODE}_${file##*/}
+  done
+}
+
+URL="http://10.66.208.240:8080/"
+GATEWAY="10.66.208.254"
+NETMASK="255.255.255.0"
+DNS="10.66.208.240"
+
+# BOOTSTRAP
+# TYPE="bootstrap"
+NODE="bootstrap-static"
+IP="10.66.208.243"
+FQDN="bootstrap"
+BIOSMODE="bios"
+NET_INTERFACE="eno1"
+DISK="sda"
+modify_cfg
+
+for node in bootstrap-static; do
+  # Overwrite the grub.cfg and isolinux.cfg files for each node type
+  for file in "EFI/redhat/grub.cfg" "isolinux/isolinux.cfg"; do
+    /bin/cp -f $(pwd)/${node}_${file##*/} ${file}
+  done
+  # As regular user!
+  genisoimage -verbose -rock -J -joliet-long -volset ${VOLID} \
+    -eltorito-boot isolinux/isolinux.bin -eltorito-catalog isolinux/boot.cat \
+    -no-emul-boot -boot-load-size 4 -boot-info-table \
+    -eltorito-alt-boot -efi-boot images/efiboot.img -no-emul-boot \
+    -o ${NGINX_DIRECTORY}/${node}.iso .
+done
+
+# Optionally, clean up
+cd
+rm -Rf ${TEMPDIR}
+
+cd /data/ocp4
 
 ```
