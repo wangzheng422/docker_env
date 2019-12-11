@@ -19,6 +19,12 @@ setsebool -P ftp_home_dir 1
 setsebool -P ftpd_full_access 1
 ls -lZ /var | grep ftp
 
+firewall-cmd --permanent --add-service=ftp
+firewall-cmd --reload
+
+systemctl enable vsftpd
+systemctl start vsftpd
+
 mkdir /etc/yum.repos.d.bak
 mv /etc/yum.repos.d/* /etc/yum.repos.d.bak
 
@@ -194,7 +200,7 @@ guestfish -a ${NGINX_DIRECTORY}/rhcos-${RHCOSVERSION}-x86_64-installer.iso \
 modify_cfg(){
   for file in "EFI/redhat/grub.cfg" "isolinux/isolinux.cfg"; do
     # Append the proper image and ignition urls
-    sed -e '/coreos.inst=yes/s|$| coreos.inst.install_dev='"${DISK}"' coreos.inst.image_url='"${URL}"'\/install\/'"${BIOSMODE}"'.raw.gz coreos.inst.ignition_url='"${URL}"'\/ignition\/'"${NODE}"'.ign ip='"${IP}"'::'"${GATEWAY}"':'"${NETMASK}"':'"${FQDN}"':'"${NET_INTERFACE}"':none:'"${DNS}"' nameserver='"${DNS}"'|' ${file} > $(pwd)/${NODE}_${file##*/}
+    sed -e '/coreos.inst=yes/s|$| coreos.inst.install_dev='"${DISK}"' coreos.inst.image_url='"${URL}"'\/install\/'"${BIOSMODE}"'.raw.gz coreos.inst.ignition_url='"${URL}"'\/ignition\/'"${NODE}"'.ign ip='"${IP}"'::'"${GATEWAY}"':'"${NETMASK}"':'"${FQDN}"':'"${NET_INTERFACE}"':none:'"${DNS}"' rd.driver.pre=ahci,mpt2sas,aacraid,megaraid_sas nameserver='"${DNS}"'|' ${file} > $(pwd)/${NODE}_${file##*/}
     # Boot directly in the installation
     sed -i -e 's/default vesamenu.c32/default linux/g' -e 's/timeout 600/timeout 10/g' $(pwd)/${NODE}_${file##*/}
   done
@@ -234,4 +240,58 @@ rm -Rf ${TEMPDIR}
 
 cd /data/ocp4
 
+```
+```python
+import SimpleHTTPServer
+import SocketServer
+
+PORT = 8000
+
+class ServerHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
+
+    def do_POST(self):
+      content_len = int(self.headers.getheader('content-length', 0))
+      post_body = self.rfile.read(content_len)
+      print post_body
+
+Handler = ServerHandler
+
+httpd = SocketServer.TCPServer(("", PORT), Handler)
+
+print "serving at port", PORT
+httpd.serve_forever()
+```
+```bash
+firewall-cmd --permanent --add-port=8000/tcp
+firewall-cmd --reload
+
+python httpd.py > rdsosreport.txt 2>&1
+
+curl -X POST --data-binary @rdsosreport.txt http://10.66.208.240:8000
+
+yum -y install hwinfo
+hwinfo --block | grep -Ei "driver\:|model\:"
+
+lshw -class storage 
+
+```
+
+```bash
+cat <<EOF >> /etc/hosts
+
+10.66.208.240 yum.redhat.ren
+
+EOF
+
+mkdir /etc/yum.repos.d.bak
+mv /etc/yum.repos.d/* /etc/yum.repos.d.bak
+
+cat << EOF > /etc/yum.repos.d/remote.repo
+[remote]
+name=RHEL FTP
+baseurl=ftp://yum.redhat.ren/data
+enabled=1
+gpgcheck=0
+
+EOF
 ```
