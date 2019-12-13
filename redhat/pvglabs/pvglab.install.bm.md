@@ -181,7 +181,7 @@ openshift-install create ignition-configs --dir=/data/ocp4
 
 /bin/cp -f bootstrap.ign /var/www/html/ignition/bootstrap-static.ign
 
-yum -y install genisoimage libguestfs-tools
+yum -y install genisoimage libguestfs-tools isomd5sum
 systemctl start libvirtd
 
 export NGINX_DIRECTORY=/data/ocp4
@@ -214,10 +214,10 @@ DNS="10.66.208.240"
 # BOOTSTRAP
 # TYPE="bootstrap"
 NODE="bootstrap-static"
-IP="10.66.208.243"
+IP="10.66.208.245"
 FQDN="bootstrap"
 BIOSMODE="bios"
-NET_INTERFACE="eno1"
+NET_INTERFACE="enp1s0f0"
 DISK="sda"
 modify_cfg
 
@@ -227,11 +227,13 @@ for node in bootstrap-static; do
     /bin/cp -f $(pwd)/${node}_${file##*/} ${file}
   done
   # As regular user!
-  genisoimage -verbose -rock -J -joliet-long -volset ${VOLID} \
+  genisoimage -U -r -v -T -J -joliet-long -V "${VOLID}" -volset ${VOLID} -A "${VOLID}" \
     -eltorito-boot isolinux/isolinux.bin -eltorito-catalog isolinux/boot.cat \
     -no-emul-boot -boot-load-size 4 -boot-info-table \
     -eltorito-alt-boot -efi-boot images/efiboot.img -no-emul-boot \
     -o ${NGINX_DIRECTORY}/${node}.iso .
+
+    implantisomd5 ${NGINX_DIRECTORY}/${node}.iso
 done
 
 # Optionally, clean up
