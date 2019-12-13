@@ -2,9 +2,9 @@
 # GUID, is: 2192
 export GUID=2192
 
-ssh -tt zhengwan-redhat.com@bastion.2192.sandbox1572.opentlc.com 
+ssh -tt zhengwan-redhat.com@bastion.f93a.sandbox744.opentlc.com 
 
-ansible localhost -m lineinfile -a 'path=$HOME/.bashrc regexp="^export OCP_RELEASE" line="export OCP_RELEASE=4.2.9"'
+ansible localhost -m lineinfile -a 'path=$HOME/.bashrc regexp="^export OCP_RELEASE" line="export OCP_RELEASE=4.2.10"'
 
 source $HOME/.bashrc
 
@@ -12,7 +12,7 @@ wget https://mirror.openshift.com/pub/openshift-v4/clients/ocp/$OCP_RELEASE/open
 
 sudo tar xzf openshift-client-linux-$OCP_RELEASE.tar.gz -C /usr/local/sbin/ oc kubectl
 
-wget https://mirror.openshift.com/pub/openshift-v4/clients/ocp/latest/openshift-install-linux-$OCP_RELEASE.tar.gz
+wget https://mirror.openshift.com/pub/openshift-v4/clients/ocp/$OCP_RELEASE/openshift-install-linux-$OCP_RELEASE.tar.gz
 
 sudo tar xzf openshift-install-linux-$OCP_RELEASE.tar.gz -C /usr/local/sbin/ openshift-install
 
@@ -60,7 +60,7 @@ platform:
     region: us-west-2
 pullSecret: '{*****************}'
 sshKey: |
-  ssh-rsa *****************
+  ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDCi/8RUbaQKrA1O3pn3g0QvMVQEEx88rhgJJoD5MOeMMP3xtGuiLkTC9xWxrz5eA3tkb+RlWozQ4FlU6sFiFXM3Mu4aRRfdi+1Km9c3dTUnG9cnu0EjSPhRs2zIP/nrSTe/HYn5qMGLchof4ol1BJIMTQFKrgDs21GcIS6dp9v+ckKQvrR6lU1Q81v1H1QO5u4ZpggLc9nhfS2suueO7P1lZ5tIhiM0lm1A3ry9EtoIjHxVhNsBQMdQCth9h0B/GUIP2XCqtw/PgWpLWid995dNMD2XNLuQsx8POrVdS9vnZ+JVrzIXMfiFw8Y+OYGudX5ZZFoibfVubX8/Vcfaizf zhengwan-redhat.com@clientvm.f93a.internal
 
 ```
 ```bash
