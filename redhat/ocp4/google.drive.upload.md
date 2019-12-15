@@ -41,6 +41,8 @@ UserKnownHostsFile=/dev/null
 Host ${VULTR_HOST}
     ProxyCommand connect-proxy -S 192.168.253.1:5085 %h %p
 EOF
+# ProxyJump user@bastion-host-nickname
+# -J user@bastion-host-nickname
 
 cd /data
 

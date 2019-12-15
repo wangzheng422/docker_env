@@ -5,6 +5,9 @@ set -x
 
 cd /data/ocp4/operator/
 
+var_date=$(date '+%Y-%m-%d')
+echo $var_date
+
 #####################################
 # for redhat
 
@@ -13,11 +16,13 @@ tar zxf manifests.tgz
 /bin/rm -rf ./manifests/certified-operators.*
 /bin/rm -rf ./manifests/community-operators.*
 
-podman build --no-cache -f /data/ocp4/custom-registry.Dockerfile -t registry.redhat.ren/ocp-operator/custom-registry:redhat ./
+podman build --no-cache -f /data/ocp4/custom-registry.Dockerfile -t quay.io/wangzheng422/custom-registry-redhat:$var_date ./
 
-podman push registry.redhat.ren/ocp-operator/custom-registry:redhat
+podman push quay.io/wangzheng422/custom-registry-redhat:${var_date}
+podman tag quay.io/wangzheng422/custom-registry-redhat:${var_date} quay.io/wangzheng422/custom-registry-redhat:latest
+podman push quay.io/wangzheng422/custom-registry-redhat:latest
 
-podman image save registry.redhat.ren/ocp-operator/custom-registry:redhat | pigz -c > custom-registry.redhat.tgz
+# podman image save registry.redhat.ren/ocp-operator/custom-registry:redhat | pigz -c > custom-registry.redhat.tgz
 
 ##################################
 # for certifiyed
@@ -27,11 +32,12 @@ tar zxf manifests.tgz
 /bin/rm -rf ./manifests/redhat-operators.*
 /bin/rm -rf ./manifests/community-operators.*
 
-podman build --no-cache -f /data/ocp4/custom-registry.Dockerfile -t registry.redhat.ren/ocp-operator/custom-registry:certified ./
+podman build --no-cache -f /data/ocp4/custom-registry.Dockerfile -t quay.io/wangzheng422/custom-registry-certified:$var_date ./
+podman push quay.io/wangzheng422/custom-registry-certified:$var_date
+podman tag quay.io/wangzheng422/custom-registry-certified:${var_date} quay.io/wangzheng422/custom-registry-certified:latest
+podman push quay.io/wangzheng422/custom-registry-certified:latest
 
-podman push registry.redhat.ren/ocp-operator/custom-registry:certified
-
-podman image save registry.redhat.ren/ocp-operator/custom-registry:certified | pigz -c > custom-registry.certified.tgz
+# podman image save registry.redhat.ren/ocp-operator/custom-registry:certified | pigz -c > custom-registry.certified.tgz
 
 ####################################
 # for community
@@ -41,11 +47,13 @@ tar zxf manifests.tgz
 /bin/rm -rf ./manifests/redhat-operators.*
 /bin/rm -rf ./manifests/certified-operators.*
 
-podman build --no-cache -f /data/ocp4/custom-registry.Dockerfile -t registry.redhat.ren/ocp-operator/custom-registry:community ./
+podman build --no-cache -f /data/ocp4/custom-registry.Dockerfile -t quay.io/wangzheng422/custom-registry-community:$var_date ./
 
-podman push registry.redhat.ren/ocp-operator/custom-registry:community 
+podman push quay.io/wangzheng422/custom-registry-community:$var_date
+podman tag quay.io/wangzheng422/custom-registry-community:${var_date} quay.io/wangzheng422/custom-registry-community:latest
+podman push quay.io/wangzheng422/custom-registry-community:latest
 
-podman image save registry.redhat.ren/ocp-operator/custom-registry:community | pigz -c > custom-registry.community.tgz
+# podman image save registry.redhat.ren/ocp-operator/custom-registry:community | pigz -c > custom-registry.community.tgz
 
 #####################################
 ## restore
