@@ -52,7 +52,7 @@ networking:
   - cidr: 10.128.0.0/14
     hostPrefix: 23
   machineCIDR: 10.0.0.0/16
-  networkType: OpenShiftSDN
+  networkType: OVNKubernetes
   serviceNetwork:
   - 172.30.0.0/16
 platform:
@@ -65,6 +65,8 @@ sshKey: |
 ```
 ```bash
 openshift-install create cluster --dir=$HOME/install --log-level=debug
+
+openshift-install destroy cluster --dir=$HOME/install --log-level=debug
 
 # openshift-install wait-for install-complete --dir $HOME/install
 # openshift-install destroy cluster  --dir=$HOME/install  --log-level=debug
