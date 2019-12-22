@@ -2,7 +2,7 @@
 # GUID, is: 2192
 export GUID=2192
 
-ssh -tt zhengwan-redhat.com@bastion.f93a.sandbox744.opentlc.com 
+ssh -tt zhengwan-redhat.com@bastion.f93a.sandbox744.opentlc.com "bash -c byobu"
 
 ansible localhost -m lineinfile -a 'path=$HOME/.bashrc regexp="^export OCP_RELEASE" line="export OCP_RELEASE=4.2.10"'
 
