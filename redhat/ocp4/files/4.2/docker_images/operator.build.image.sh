@@ -16,7 +16,7 @@ tar zxf manifests.tgz
 /bin/rm -rf ./manifests/certified-operators.*
 /bin/rm -rf ./manifests/community-operators.*
 
-docker build --no-cache -f /data/ocp4/custom-registry.Dockerfile -t docker.io/wangzheng422/custom-registry-redhat:$var_date ./
+docker build --no-cache -f ./custom-registry.Dockerfile -t docker.io/wangzheng422/custom-registry-redhat:$var_date ./
 
 docker push docker.io/wangzheng422/custom-registry-redhat:${var_date}
 # podman tag quay.io/wangzheng422/custom-registry-redhat:${var_date} quay.io/wangzheng422/custom-registry-redhat:latest
@@ -32,7 +32,7 @@ tar zxf manifests.tgz
 /bin/rm -rf ./manifests/redhat-operators.*
 /bin/rm -rf ./manifests/community-operators.*
 
-docker build --no-cache -f /data/ocp4/custom-registry.Dockerfile -t docker.io/wangzheng422/custom-registry-certified:$var_date ./
+docker build --no-cache -f ./custom-registry.Dockerfile -t docker.io/wangzheng422/custom-registry-certified:$var_date ./
 docker push docker.io/wangzheng422/custom-registry-certified:$var_date
 # podman tag quay.io/wangzheng422/custom-registry-certified:${var_date} quay.io/wangzheng422/custom-registry-certified:latest
 # podman push quay.io/wangzheng422/custom-registry-certified:latest
@@ -47,7 +47,7 @@ tar zxf manifests.tgz
 /bin/rm -rf ./manifests/redhat-operators.*
 /bin/rm -rf ./manifests/certified-operators.*
 
-docker build --no-cache -f /data/ocp4/custom-registry.Dockerfile -t docker.io/wangzheng422/custom-registry-community:$var_date ./
+docker build --no-cache -f ./custom-registry.Dockerfile -t docker.io/wangzheng422/custom-registry-community:$var_date ./
 
 docker push docker.io/wangzheng422/custom-registry-community:$var_date
 # podman tag quay.io/wangzheng422/custom-registry-community:${var_date} quay.io/wangzheng422/custom-registry-community:latest

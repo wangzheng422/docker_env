@@ -1,4 +1,4 @@
-FROM registry.redhat.io/openshift4/ose-operator-registry:latest AS builder
+FROM registry.redhat.io/openshift4/ose-operator-registry:latest
 
 COPY manifests manifests
 
@@ -7,15 +7,8 @@ COPY manifests manifests
 
 RUN /bin/initializer -o ./bundles.db
 
-# FROM scratch
-FROM registry.redhat.io/openshift4/ose-operator-registry:latest
-
-COPY --from=builder /registry/bundles.db /bundles.db
-COPY --from=builder /usr/bin/registry-server /registry-server
-COPY --from=builder /bin/grpc_health_probe /bin/grpc_health_probe
-
 EXPOSE 50051
 
-ENTRYPOINT ["/registry-server"]
+ENTRYPOINT ["/usr/bin/registry-server"]
 
-CMD ["--database", "/bundles.db"]
+CMD ["--database", "/registry/bundles.db"]
