@@ -32,13 +32,13 @@ find ./ -maxdepth 1 -type f -exec skicka upload {}  "/wzh/wangzheng.share/shared
 ## rsync
 yum -y install connect-proxy
 
-export VULTR_HOST=149.28.74.28
+export VULTR_HOST=nexus.redhat.ren
 
 cat << EOF > /root/.ssh/config
 StrictHostKeyChecking no
 UserKnownHostsFile=/dev/null
 
-Host ${VULTR_HOST}
+Host *.redhat.ren
     ProxyCommand connect-proxy -S 192.168.253.1:5085 %h %p
 EOF
 # ProxyJump user@bastion-host-nickname
@@ -49,6 +49,8 @@ cd /data
 rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/registry /data/
 
 rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/ocp4 /data/
+
+rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/registry-add /data/
 
 ####################
 ## local mac
