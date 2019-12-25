@@ -151,7 +151,7 @@ mirror_image() {
     # if oc image mirror $docker_image $local_image_url; then
     if [[ $var_skip == 0 ]]; then
         # if skopeo copy "docker://"$docker_image "docker://"$local_image_url; then
-        if oc image mirror $docker_image $local_image_url; then
+        if oc image mirror $docker_image $local_image_url || skopeo copy "docker://"$docker_image "oci://"$local_image_url; then
             echo -e "${docker_image}\t${local_image_url}" >> pull.image.ok.list
             echo -e "${yaml_image}\t${yaml_local_image}" >> yaml.image.ok.list
         else
@@ -168,7 +168,7 @@ mirror_sample_image() {
     # if oc image mirror $docker_image $local_image_url; then
     if [[ $var_skip == 0 ]]; then
         # if skopeo copy "docker://"$docker_image "docker://"$local_image_url; then
-        if oc image mirror $docker_image $local_image_url; then
+        if oc image mirror $docker_image $local_image_url || skopeo copy "docker://"$docker_image "oci://"$local_image_url; then
             echo -e "${docker_image}\t${local_image_url}" >> pull.sample.image.ok.list
             echo -e "${yaml_image}\t${yaml_local_image}" >> yaml.sample.image.ok.list
         else
@@ -185,7 +185,7 @@ add_image() {
     # if oc image mirror $docker_image $local_image_url; then
     if [[ $var_skip == 0 ]]; then
         # if skopeo copy "docker://"$docker_image "docker://"$local_image_url; then
-        if oc image mirror $docker_image $local_image_url; then
+        if oc image mirror $docker_image $local_image_url || skopeo copy "docker://"$docker_image "docker://"$local_image_url; then
             echo -e "${docker_image}\t${local_image_url}" >> pull.add.image.ok.list
             echo -e "${yaml_image}\t${yaml_local_image}" >> yaml.add.image.ok.list
         else
@@ -217,7 +217,7 @@ split_image_add_image_load(){
         yaml_image=$(echo $docker_image | sed -r 's/@sha256:.*$//')
         yaml_local_image="${LOCAL_REG}/${domain_part}${image_part}"
 
-        docker_image="${MID_REG}/${domain_part}${image_part}"
+        docker_image="${MID_REG}/${domain_part}${image_part}:${sha_part}"
         # echo $image_url
     elif [[ $docker_image =~ ^.*\.(io|com|org)/.*:.* ]]; then
         # echo "io, com, org with tag: $docker_image"
@@ -257,7 +257,7 @@ split_image_add_image_load(){
         yaml_image=$(echo $docker_image | sed -r 's/@sha256:.*$//')
         yaml_local_image="${LOCAL_REG}/docker.io/${image_part}"
 
-        docker_image="${MID_REG}/docker.io/${docker_image}"
+        docker_image="${MID_REG}/docker.io/${docker_image}:${sha_part}"
     elif [[ $docker_image =~ ^.*/.*:.* ]]; then
         # echo "docker with tag: $docker_image"
         local_image="${LOCAL_REG}/docker.io/${docker_image}"
@@ -303,7 +303,7 @@ add_image_load() {
     # if oc image mirror $docker_image $local_image_url; then
     if [[ $var_skip == 0 ]]; then
         # if skopeo copy "docker://"$docker_image "docker://"$local_image_url; then
-        if oc image mirror $docker_image $local_image_url; then
+        if oc image mirror $docker_image $local_image_url || skopeo copy "docker://"$docker_image "docker://"$local_image_url; then
             echo -e "${docker_image}\t${local_image_url}" >> pull.add.image.ok.list
             echo -e "${yaml_image}\t${yaml_local_image}" >> yaml.add.image.ok.list
         else

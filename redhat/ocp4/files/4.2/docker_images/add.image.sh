@@ -32,8 +32,8 @@ while read -r line; do
 
 done < add.image.list
 
-cd /data
-tar cf - registry-add/ | pigz -c > registry-add.tgz 
+# cd /data
+# tar cf - registry-add/ | pigz -c > registry-add.tgz 
 
 
 
