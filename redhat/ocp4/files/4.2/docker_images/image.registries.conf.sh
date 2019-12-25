@@ -95,7 +95,7 @@ EOF
 
 config_source=$(cat ./image.registries.conf | python3 -c "import sys, urllib.parse; print(urllib.parse.quote(''.join(sys.stdin.readlines())))"  )
 
-cat <<EOF > 99-worker-container-registries.yaml
+cat <<EOF > 99-worker-zzz-container-registries.yaml
 apiVersion: machineconfiguration.openshift.io/v1
 kind: MachineConfig
 metadata:
@@ -116,7 +116,7 @@ spec:
         path: /etc/containers/registries.conf
 EOF
 
-cat <<EOF > 99-master-container-registries.yaml
+cat <<EOF > 99-master-zzz-container-registries.yaml
 apiVersion: machineconfiguration.openshift.io/v1
 kind: MachineConfig
 metadata:
