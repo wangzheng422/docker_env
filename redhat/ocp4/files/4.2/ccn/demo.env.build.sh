@@ -30,5 +30,5 @@ buildah commit --format=docker onbuild-container docker.io/wangzheng422/nexus-fs
 buildah rm onbuild-container
 buildah push docker.io/wangzheng422/nexus-fs:$var_date
 
-podman image prune -f
+podman image prune
 
