@@ -101,7 +101,7 @@ kind: MachineConfig
 metadata:
   labels:
     machineconfiguration.openshift.io/role: worker
-  name: 99-worker-container-registries
+  name: 99-worker-zzz-container-registries
 spec:
   config:
     ignition:
@@ -122,7 +122,7 @@ kind: MachineConfig
 metadata:
   labels:
     machineconfiguration.openshift.io/role: master
-  name: 99-master-container-registries
+  name: 99-master-zzz-container-registries
 spec:
   config:
     ignition:
