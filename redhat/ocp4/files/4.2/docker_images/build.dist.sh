@@ -3,11 +3,11 @@
 set -e
 set -x
 
-wget https://raw.githubusercontent.com/wangzheng422/docker_env/master/redhat/ocp4/files/4.2/docker_images/image.mirror.fn.sh
-wget https://raw.githubusercontent.com/wangzheng422/docker_env/master/redhat/ocp4/files/4.2/docker_images/image.mirror.install.sh
-wget https://raw.githubusercontent.com/wangzheng422/docker_env/master/redhat/ocp4/files/4.2/docker_images/image.registries.conf.sh
-wget https://raw.githubusercontent.com/wangzheng422/docker_env/master/redhat/ocp4/files/4.2/docker_images/install.image.list
-wget https://raw.githubusercontent.com/wangzheng422/docker_env/master/redhat/ocp4/files/4.2/docker_images/add.image.load.sh
+wget -O image.mirror.fn.sh https://raw.githubusercontent.com/wangzheng422/docker_env/master/redhat/ocp4/files/4.2/docker_images/image.mirror.fn.sh
+wget -O image.mirror.install.sh https://raw.githubusercontent.com/wangzheng422/docker_env/master/redhat/ocp4/files/4.2/docker_images/image.mirror.install.sh
+wget -O image.registries.conf.sh https://raw.githubusercontent.com/wangzheng422/docker_env/master/redhat/ocp4/files/4.2/docker_images/image.registries.conf.sh
+wget -O install.image.list https://raw.githubusercontent.com/wangzheng422/docker_env/master/redhat/ocp4/files/4.2/docker_images/install.image.list
+wget -O add.image.load.sh https://raw.githubusercontent.com/wangzheng422/docker_env/master/redhat/ocp4/files/4.2/docker_images/add.image.load.sh
 
 cat << EOF >>  /etc/hosts
 127.0.0.1 registry.redhat.ren
