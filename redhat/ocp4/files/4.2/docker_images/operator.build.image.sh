@@ -16,9 +16,17 @@ tar zxf manifests.tgz
 /bin/rm -rf ./manifests/certified-operators.*
 /bin/rm -rf ./manifests/community-operators.*
 
-docker build --no-cache -f ./custom-registry.Dockerfile -t docker.io/wangzheng422/custom-registry-redhat:$var_date ./
+# docker build --no-cache -f ./custom-registry.Dockerfile -t docker.io/wangzheng422/custom-registry-redhat:$var_date ./
 
-docker push docker.io/wangzheng422/custom-registry-redhat:${var_date}
+# docker push docker.io/wangzheng422/custom-registry-redhat:${var_date}
+
+buildah from --name onbuild-container registry.redhat.io/openshift4/ose-operator-registry:latest
+buildah copy onbuild-container manifests manifests
+buildah run onbuild-container /bin/initializer -o ./bundles.db
+buildah umount onbuild-container 
+buildah commit --rm --format=docker onbuild-container docker.io/wangzheng422/custom-registry-redhat:${var_date}
+buildah push docker.io/wangzheng422/custom-registry-redhat:${var_date}
+
 # podman tag quay.io/wangzheng422/custom-registry-redhat:${var_date} quay.io/wangzheng422/custom-registry-redhat:latest
 # podman push quay.io/wangzheng422/custom-registry-redhat:latest
 
@@ -32,8 +40,16 @@ tar zxf manifests.tgz
 /bin/rm -rf ./manifests/redhat-operators.*
 /bin/rm -rf ./manifests/community-operators.*
 
-docker build --no-cache -f ./custom-registry.Dockerfile -t docker.io/wangzheng422/custom-registry-certified:$var_date ./
-docker push docker.io/wangzheng422/custom-registry-certified:$var_date
+# docker build --no-cache -f ./custom-registry.Dockerfile -t docker.io/wangzheng422/custom-registry-certified:$var_date ./
+# docker push docker.io/wangzheng422/custom-registry-certified:$var_date
+
+buildah from --name onbuild-container registry.redhat.io/openshift4/ose-operator-registry:latest
+buildah copy onbuild-container manifests manifests
+buildah run onbuild-container /bin/initializer -o ./bundles.db
+buildah umount onbuild-container 
+buildah commit --rm --format=docker onbuild-container docker.io/wangzheng422/custom-registry-certified:$var_date
+buildah push docker.io/wangzheng422/custom-registry-certified:$var_date
+
 # podman tag quay.io/wangzheng422/custom-registry-certified:${var_date} quay.io/wangzheng422/custom-registry-certified:latest
 # podman push quay.io/wangzheng422/custom-registry-certified:latest
 
@@ -47,9 +63,16 @@ tar zxf manifests.tgz
 /bin/rm -rf ./manifests/redhat-operators.*
 /bin/rm -rf ./manifests/certified-operators.*
 
-docker build --no-cache -f ./custom-registry.Dockerfile -t docker.io/wangzheng422/custom-registry-community:$var_date ./
+# docker build --no-cache -f ./custom-registry.Dockerfile -t docker.io/wangzheng422/custom-registry-community:$var_date ./
+# docker push docker.io/wangzheng422/custom-registry-community:$var_date
 
-docker push docker.io/wangzheng422/custom-registry-community:$var_date
+buildah from --name onbuild-container registry.redhat.io/openshift4/ose-operator-registry:latest
+buildah copy onbuild-container manifests manifests
+buildah run onbuild-container /bin/initializer -o ./bundles.db
+buildah umount onbuild-container 
+buildah commit --rm --format=docker onbuild-container docker.io/wangzheng422/custom-registry-community:$var_date
+buildah push docker.io/wangzheng422/custom-registry-community:$var_date
+
 # podman tag quay.io/wangzheng422/custom-registry-community:${var_date} quay.io/wangzheng422/custom-registry-community:latest
 # podman push quay.io/wangzheng422/custom-registry-community:latest
 

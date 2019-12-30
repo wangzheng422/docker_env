@@ -68,6 +68,9 @@ while read -r line; do
         
         cat manifests/${namespace}.$name/bundle.yaml | yq -r .data.packages | sed 's/^..//' > manifests/${namespace}.$name/package.yaml 
 
+        # echo "with bundle: $line" >> /data/ocp4/operator.ok.list
+    # else
+        # echo "ok: $line" >> /data/ocp4/operator.failed.list
     fi  
 
     /bin/rm -f manifests/${namespace}.$name/bundle.yaml
@@ -84,6 +87,7 @@ while read -r line; do
 done < url.txt
 
 cd /data/ocp4/operator
+chown -R 1001:1001 *
 tar zcf manifests.tgz manifests/
 
 cd /data/ocp4
