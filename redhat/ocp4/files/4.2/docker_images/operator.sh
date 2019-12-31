@@ -36,6 +36,8 @@ while read -r line; do
 
     digest=$(curl https://quay.io/cnr/api/v1/packages/$namespace/$name/$release | jq -r ".[] | .content.digest")
 
+    # metadata=$(curl https://quay.io/cnr/api/v1/packages/$namespace/$name/$release | jq -r ".[] | .content.metadata")
+
     curl -XGET https://quay.io/cnr/api/v1/packages/$namespace/$name/blobs/sha256/$digest -o tgz/$namespace.$name.$release.tar.gz
 
     mkdir -p manifests/${namespace}.$name/ 

@@ -24,6 +24,9 @@ buildah from --name onbuild-container registry.redhat.io/openshift4/ose-operator
 buildah copy onbuild-container manifests manifests
 buildah run onbuild-container /bin/initializer -o ./bundles.db
 buildah umount onbuild-container 
+buildah config -p 50051 onbuild-container
+buildah config --entrypoint '["/usr/bin/registry-server"]' onbuild-container
+buildah config --cmd '["--database", "/registry/bundles.db"]' onbuild-container
 buildah commit --rm --format=docker onbuild-container docker.io/wangzheng422/custom-registry-redhat:${var_date}
 buildah push docker.io/wangzheng422/custom-registry-redhat:${var_date}
 
@@ -47,6 +50,9 @@ buildah from --name onbuild-container registry.redhat.io/openshift4/ose-operator
 buildah copy onbuild-container manifests manifests
 buildah run onbuild-container /bin/initializer -o ./bundles.db
 buildah umount onbuild-container 
+buildah config -p 50051 onbuild-container
+buildah config --entrypoint '["/usr/bin/registry-server"]' onbuild-container
+buildah config --cmd '["--database", "/registry/bundles.db"]' onbuild-container
 buildah commit --rm --format=docker onbuild-container docker.io/wangzheng422/custom-registry-certified:$var_date
 buildah push docker.io/wangzheng422/custom-registry-certified:$var_date
 
@@ -70,6 +76,9 @@ buildah from --name onbuild-container registry.redhat.io/openshift4/ose-operator
 buildah copy onbuild-container manifests manifests
 buildah run onbuild-container /bin/initializer -o ./bundles.db
 buildah umount onbuild-container 
+buildah config -p 50051 onbuild-container
+buildah config --entrypoint '["/usr/bin/registry-server"]' onbuild-container
+buildah config --cmd '["--database", "/registry/bundles.db"]' onbuild-container
 buildah commit --rm --format=docker onbuild-container docker.io/wangzheng422/custom-registry-community:$var_date
 buildah push docker.io/wangzheng422/custom-registry-community:$var_date
 
