@@ -4,7 +4,7 @@ set -e
 set -x
 
 export LOCAL_REG='registry.redhat.ren'
-var_date='2019-12-25'
+var_date='2020-01-01'
 
 mkdir -p /data/ccn
 
