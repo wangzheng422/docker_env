@@ -13,7 +13,8 @@ cat << EOF >>  /etc/hosts
 127.0.0.1 registry.redhat.ren
 EOF
 
-mkdir /etc/crts/ && cd /etc/crts
+mkdir -p /etc/crts/
+cd /etc/crts
 openssl req \
    -newkey rsa:2048 -nodes -keyout redhat.ren.key \
    -x509 -days 3650 -out redhat.ren.crt -subj \
