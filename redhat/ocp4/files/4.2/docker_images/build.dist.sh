@@ -3,11 +3,13 @@
 set -e
 set -x
 
-wget -O image.mirror.fn.sh https://raw.githubusercontent.com/wangzheng422/docker_env/master/redhat/ocp4/files/4.2/docker_images/image.mirror.fn.sh
-wget -O image.mirror.install.sh https://raw.githubusercontent.com/wangzheng422/docker_env/master/redhat/ocp4/files/4.2/docker_images/image.mirror.install.sh
-wget -O image.registries.conf.sh https://raw.githubusercontent.com/wangzheng422/docker_env/master/redhat/ocp4/files/4.2/docker_images/image.registries.conf.sh
-wget -O install.image.list https://raw.githubusercontent.com/wangzheng422/docker_env/master/redhat/ocp4/files/4.2/docker_images/install.image.list
-wget -O add.image.load.sh https://raw.githubusercontent.com/wangzheng422/docker_env/master/redhat/ocp4/files/4.2/docker_images/add.image.load.sh
+export BUILDNUMBER=4.2.12
+
+wget -O image.mirror.fn.sh https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/files/4.2/docker_images/image.mirror.fn.sh
+wget -O image.mirror.install.sh https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/files/4.2/docker_images/image.mirror.install.sh
+wget -O image.registries.conf.sh https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/files/4.2/docker_images/image.registries.conf.sh
+wget -O install.image.list https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/files/4.2/docker_images/install.image.list
+wget -O add.image.load.sh https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/files/4.2/docker_images/add.image.load.sh
 
 cat << EOF >>  /etc/hosts
 127.0.0.1 registry.redhat.ren
@@ -53,7 +55,7 @@ cd /data/ocp4
 # wget https://mirror.openshift.com/pub/openshift-v4/clients/ocp/latest-4.2/release.txt
 
 # export BUILDNUMBER=$(cat release.txt | grep 'Name:' | awk '{print $NF}')
-export BUILDNUMBER=4.2.12
+
 echo ${BUILDNUMBER}
 
 wget https://mirror.openshift.com/pub/openshift-v4/clients/ocp/${BUILDNUMBER}/release.txt
