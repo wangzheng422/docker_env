@@ -37,7 +37,7 @@ done < install.image.list.tmp.uniq
 
 cat yaml.image.ok.list | sort | uniq > yaml.image.ok.list.uniq
 
-podman image prune -f
+podman image prune -a
 
 
 
