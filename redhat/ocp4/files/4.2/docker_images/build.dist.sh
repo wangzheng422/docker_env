@@ -48,13 +48,17 @@ systemctl restart docker-distribution
 
 podman login registry.redhat.ren -u a -p a
 
-wget https://mirror.openshift.com/pub/openshift-v4/clients/ocp/latest-4.2/release.txt
+cd /data/ocp4
+# wget https://mirror.openshift.com/pub/openshift-v4/clients/ocp/latest-4.2/release.txt
 
-export BUILDNUMBER=$(cat release.txt | grep 'Name:' | awk '{print $NF}')
+# export BUILDNUMBER=$(cat release.txt | grep 'Name:' | awk '{print $NF}')
+export BUILDNUMBER=4.2.12
 echo ${BUILDNUMBER}
 
-wget https://mirror.openshift.com/pub/openshift-v4/clients/ocp/latest-4.2/openshift-client-linux-${BUILDNUMBER}.tar.gz
-wget https://mirror.openshift.com/pub/openshift-v4/clients/ocp/latest-4.2/openshift-install-linux-${BUILDNUMBER}.tar.gz
+wget https://mirror.openshift.com/pub/openshift-v4/clients/ocp/${BUILDNUMBER}/release.txt
+
+wget https://mirror.openshift.com/pub/openshift-v4/clients/ocp/${BUILDNUMBER}/openshift-client-linux-${BUILDNUMBER}.tar.gz
+wget https://mirror.openshift.com/pub/openshift-v4/clients/ocp/${BUILDNUMBER}/openshift-install-linux-${BUILDNUMBER}.tar.gz
 
 tar -xzf openshift-client-linux-${BUILDNUMBER}.tar.gz -C /usr/local/bin/
 tar -xzf openshift-install-linux-${BUILDNUMBER}.tar.gz -C /usr/local/bin/
@@ -89,8 +93,8 @@ oc adm release mirror -a ${LOCAL_SECRET_JSON} \
 
 # cd /root
 # https://blog.csdn.net/ffzhihua/article/details/85237411
-wget http://mirror.centos.org/centos/7/os/x86_64/Packages/python-rhsm-certificates-1.19.10-1.el7_4.x86_64.rpm
-rpm2cpio python-rhsm-certificates-1.19.10-1.el7_4.x86_64.rpm | cpio -iv --to-stdout ./etc/rhsm/ca/redhat-uep.pem | tee /etc/rhsm/ca/redhat-uep.pem
+# wget http://mirror.centos.org/centos/7/os/x86_64/Packages/python-rhsm-certificates-1.19.10-1.el7_4.x86_64.rpm
+# rpm2cpio python-rhsm-certificates-1.19.10-1.el7_4.x86_64.rpm | cpio -iv --to-stdout ./etc/rhsm/ca/redhat-uep.pem | tee /etc/rhsm/ca/redhat-uep.pem
 
 cd /data/ocp4
 # download additinal images
@@ -113,7 +117,7 @@ pip3 install yq
 bash image.mirror.install.sh
 
 cd /data
-tar cf - registry/ | pigz -c > registry.with.operator.hub.tgz 
+tar cf - registry/ | pigz -c > registry.${BUILDNUMBER}.tgz 
 
 # cd /data/ocp4
 # bash image.mirror.sh
@@ -126,7 +130,7 @@ tar cf - registry/ | pigz -c > registry.with.operator.hub.tgz
 # tar cf - registry/ | pigz -c > registry.full.with.sample.tgz 
 
 cd /data
-tar cf - ocp4/ | pigz -c > ocp4.tgz 
+tar cf - ocp4/ | pigz -c > ocp4.${BUILDNUMBER}.tgz 
 
 # split -b 10G registry.with.operator.image.tgz registry.
 # find /data -maxdepth 1 -type f -exec sha256sum {} \;
