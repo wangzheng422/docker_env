@@ -25,6 +25,7 @@ openssl req \
 cp /etc/crts/redhat.ren.crt /etc/pki/ca-trust/source/anchors/
 update-ca-trust extract
 
+systemctl stop docker-distribution
 /bin/rm -rf /data/registry
 mkdir -p /data/registry
 cat << EOF > /etc/docker-distribution/registry/config.yml
@@ -46,10 +47,9 @@ http:
        key: /etc/crts/redhat.ren.key
 EOF
 # systemctl restart docker
-systemctl enable docker-distribution
+# systemctl enable docker-distribution
 
 systemctl restart docker-distribution
-sleep 3
 
 podman login registry.redhat.ren -u a -p a
 
