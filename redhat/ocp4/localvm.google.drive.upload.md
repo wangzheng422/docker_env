@@ -19,7 +19,7 @@ go get github.com/google/skicka
 install /root/go/bin/skicka /usr/local/bin/skicka
 skicka init
 skicka -no-browser-auth ls
-skicka ls "/wzh/wangzheng.share/shared_docs/2019.11/ocp 4.2.8/"
+skicka ls "/zhengwan.share/shared_docs/2020.01/ocp.ccn/"
 cd /data
 mkdir -p /data/upload
 /bin/mv -f *.tgz ./upload/
@@ -27,6 +27,8 @@ mkdir -p /data/upload
 cd /data/upload/
 
 find ./ -maxdepth 1 -type f -exec skicka upload {}  "/wzh/wangzheng.share/shared_docs/2019.11/ocp 4.2.8/" \;
+
+find ./ -maxdepth 1 -name "*.tgz" -exec skicka upload {}  /"zhengwan.share/shared_docs/2020.01/ocp.ccn/" \;
 
 ##################################
 ## rsync
