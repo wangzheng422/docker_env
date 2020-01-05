@@ -84,7 +84,7 @@ export OCP_RELEASE=${BUILDNUMBER}
 export LOCAL_REG='registry.redhat.ren'
 export LOCAL_REPO='ocp4/openshift4'
 export UPSTREAM_REPO='openshift-release-dev'
-export LOCAL_SECRET_JSON="pull-secret.json"
+export LOCAL_SECRET_JSON="/data/pull-secret.json"
 export OPENSHIFT_INSTALL_RELEASE_IMAGE_OVERRIDE=${LOCAL_REG}/${LOCAL_REPO}:${OCP_RELEASE}
 export RELEASE_NAME="ocp-release"
 
