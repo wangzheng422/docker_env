@@ -3,7 +3,7 @@
 set -e
 set -x
 
-export BUILDNUMBER=4.2.10   
+export BUILDNUMBER="4.2.13"
 
 wget -O image.mirror.fn.sh https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/files/4.2/docker_images/image.mirror.fn.sh
 wget -O image.mirror.install.sh https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/files/4.2/docker_images/image.mirror.install.sh
