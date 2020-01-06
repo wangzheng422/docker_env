@@ -4,6 +4,12 @@ set -e
 set -x
 
 export BUILDNUMBER="4.2.13"
+build_number_list=$(cat << EOF
+4.2.13
+4.2.12
+4.2.10
+EOF
+)
 
 wget -O image.mirror.fn.sh https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/files/4.2/docker_images/image.mirror.fn.sh
 wget -O image.mirror.install.sh https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/files/4.2/docker_images/image.mirror.install.sh
@@ -58,15 +64,37 @@ cd /data/ocp4
 
 # export BUILDNUMBER=$(cat release.txt | grep 'Name:' | awk '{print $NF}')
 
-echo ${BUILDNUMBER}
+install_build() {
+    BUILDNUMBER=$1
+    echo ${BUILDNUMBER}
 
-wget https://mirror.openshift.com/pub/openshift-v4/clients/ocp/${BUILDNUMBER}/release.txt
+    mkdir -p /data/ocp4/${BUILDNUMBER}
+    cd /data/ocp4/${BUILDNUMBER}
 
-wget https://mirror.openshift.com/pub/openshift-v4/clients/ocp/${BUILDNUMBER}/openshift-client-linux-${BUILDNUMBER}.tar.gz
-wget https://mirror.openshift.com/pub/openshift-v4/clients/ocp/${BUILDNUMBER}/openshift-install-linux-${BUILDNUMBER}.tar.gz
+    wget https://mirror.openshift.com/pub/openshift-v4/clients/ocp/${BUILDNUMBER}/release.txt
 
-tar -xzf openshift-client-linux-${BUILDNUMBER}.tar.gz -C /usr/local/bin/
-tar -xzf openshift-install-linux-${BUILDNUMBER}.tar.gz -C /usr/local/bin/
+    wget https://mirror.openshift.com/pub/openshift-v4/clients/ocp/${BUILDNUMBER}/openshift-client-linux-${BUILDNUMBER}.tar.gz
+    wget https://mirror.openshift.com/pub/openshift-v4/clients/ocp/${BUILDNUMBER}/openshift-install-linux-${BUILDNUMBER}.tar.gz
+
+    tar -xzf openshift-client-linux-${BUILDNUMBER}.tar.gz -C /usr/local/bin/
+    tar -xzf openshift-install-linux-${BUILDNUMBER}.tar.gz -C /usr/local/bin/
+
+    export OCP_RELEASE=${BUILDNUMBER}
+    export LOCAL_REG='registry.redhat.ren'
+    export LOCAL_REPO='ocp4/openshift4'
+    export UPSTREAM_REPO='openshift-release-dev'
+    export LOCAL_SECRET_JSON="/data/pull-secret.json"
+    export OPENSHIFT_INSTALL_RELEASE_IMAGE_OVERRIDE=${LOCAL_REG}/${LOCAL_REPO}:${OCP_RELEASE}
+    export RELEASE_NAME="ocp-release"
+
+    oc adm release mirror -a ${LOCAL_SECRET_JSON} \
+    --from=quay.io/${UPSTREAM_REPO}/${RELEASE_NAME}:${OCP_RELEASE} \
+    --to-release-image=${LOCAL_REG}/${LOCAL_REPO}:${OCP_RELEASE} \
+    --to=${LOCAL_REG}/${LOCAL_REPO}
+
+}
+
+cd /data/ocp4
 
 wget --recursive --no-directories --no-parent https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/4.2/latest/
 
@@ -79,20 +107,6 @@ podman save registry.fedoraproject.org/fedora:latest | pigz -c > fedora.tgz
 
 podman pull docker.io/library/registry:2
 podman save docker.io/library/registry:2 | pigz -c > registry.tgz
-
-export OCP_RELEASE=${BUILDNUMBER}
-export LOCAL_REG='registry.redhat.ren'
-export LOCAL_REPO='ocp4/openshift4'
-export UPSTREAM_REPO='openshift-release-dev'
-export LOCAL_SECRET_JSON="/data/pull-secret.json"
-export OPENSHIFT_INSTALL_RELEASE_IMAGE_OVERRIDE=${LOCAL_REG}/${LOCAL_REPO}:${OCP_RELEASE}
-export RELEASE_NAME="ocp-release"
-
-
-oc adm release mirror -a ${LOCAL_SECRET_JSON} \
---from=quay.io/${UPSTREAM_REPO}/${RELEASE_NAME}:${OCP_RELEASE} \
---to-release-image=${LOCAL_REG}/${LOCAL_REPO}:${OCP_RELEASE} \
---to=${LOCAL_REG}/${LOCAL_REPO}
 
 # /bin/rm -f pull-secret.json
 
@@ -122,7 +136,7 @@ pip3 install yq
 bash image.mirror.install.sh
 
 cd /data
-tar cf - registry/ | pigz -c > registry.${BUILDNUMBER}.tgz 
+tar cf - registry/ | pigz -c > registry.tgz 
 
 # cd /data/ocp4
 # bash image.mirror.sh
@@ -135,7 +149,7 @@ tar cf - registry/ | pigz -c > registry.${BUILDNUMBER}.tgz
 # tar cf - registry/ | pigz -c > registry.full.with.sample.tgz 
 
 cd /data
-tar cf - ocp4/ | pigz -c > ocp4.${BUILDNUMBER}.tgz 
+tar cf - ocp4/ | pigz -c > ocp4.tgz 
 
 # split -b 10G registry.with.operator.image.tgz registry.
 # find /data -maxdepth 1 -type f -exec sha256sum {} \;

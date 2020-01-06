@@ -13,6 +13,8 @@ podman stop gogs || true
 podman rm -fv gogs || true
 podman stop nexus || true
 podman rm -fv nexus || true
+podman stop etherpad || true
+podman rm -fv etherpad || true
 
 # restore gogs-fs
 cd /data/ccn
@@ -43,3 +45,16 @@ firewall-cmd --reload
 firewall-cmd --list-all
 
 podman run -d -p 8081:8081 -it --name nexus -v /data/ccn/nexus:/nexus-data:Z ${LOCAL_REG}docker.io/sonatype/nexus3
+
+# cd /data/ccn
+# rm -rf /data/ccn/etherpad
+mkdir -p /data/ccn/etherpad
+
+chown -R 5001 /data/ccn/etherpad
+
+firewall-cmd --permanent --add-port=9001/tcp
+firewall-cmd --reload
+firewall-cmd --list-all
+
+podman run -d -p 9001:9001 -it --name etherpad -v /data/ccn/etherpad:/opt/etherpad-lite/var:z ${LOCAL_REG}docker.io/etherpad/etherpad:1.7.5
+
