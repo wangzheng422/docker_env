@@ -3,7 +3,7 @@
 set -e
 set -x
 
-export BUILDNUMBER="4.2.13"
+# export BUILDNUMBER="4.2.13"
 build_number_list=$(cat << EOF
 4.2.13
 4.2.12
@@ -93,6 +93,10 @@ install_build() {
     --to=${LOCAL_REG}/${LOCAL_REPO}
 
 }
+
+while read -r line; do
+    install_build $line
+done <<< "$build_number_list"
 
 cd /data/ocp4
 
