@@ -1,0 +1,266 @@
+---
+
+apiVersion: operators.coreos.com/v1alpha1
+kind: ClusterServiceVersion
+metadata:
+  name: openshifttemplateservicebrokeroperator.4.1.27-201912030019
+  namespace: placeholder
+  annotations:
+    alm-examples: '[{"apiVersion":"osb.openshift.io/v1","kind":"TemplateServiceBroker","metadata":{"name":"template-service-broker","namespace":"template-service-broker"},"spec":{}}]'
+    olm.skipRange: ">=4.1.0 <4.1.27-201912030019"
+    description: "OpenShift Template Service Broker is an implementation of the [Open Service Broker API](https://github.com/openservicebrokerapi/servicebroker)"
+    capabilities: "Seamless Upgrades"
+    containerImage: "registry.redhat.io/openshift4/ose-template-service-broker@sha256:494be2027c9fe4cf45ee094b14b46c19d79e89eb289145fa5ce54f4a984a9f31"
+spec:
+  displayName: OpenShift Template Service Broker Operator
+  description: |
+    The OpenShift Template Service Broker implements the [Open Service Broker
+    API](https://github.com/openservicebrokerapi/servicebroker/blob/master/spec.md)
+    endpoints:
+    - *Catalog*: returns a list of available templates as OSB API
+      *Service* objects (the templates are read from one or more
+      namespaces configured in the master config).
+    - *Provision*: provision a given template (referred by its UID) into a
+      namespace.  Under the covers, this creates a non-namespaced
+      **BrokerTemplateInstance** object for the template service broker to
+      store state associated with the the instantiation, as well as the
+      **Secret** and **TemplateInstance** objects which are picked up by
+      the **TemplateInstance** controller.  *Provision* is an asynchronous
+      operation: it may return before provisioning is completed, and the
+      provision status can (must) be recovered via the *Last Operation*
+      endpoint (see below).
+    - *Bind*: for a given template, return "credentials" exposed in any
+      created ConfigMap, Secret, Service or Route object (see
+      ExposeAnnotationPrefix and Base64ExposeAnnotationPrefix
+      documentation).  The *Bind* call records the fact that it took
+      place in the appropriate **BrokerTemplateInstance** object.
+    - *Unbind*: this simply removes the metadata previously placed in the
+      **BrokerTemplateInstance** object by a *Bind* call.
+    - *Deprovision*: removes the objects created by the *Provision* call.
+      The garbage collector removes all additional objects created by the
+      **TemplateInstance** controller, hopefully transitively, as
+      documented above.
+    - *Last Operation*: returns the status of the previously run
+      asynchronous operation.  In the template service broker, *Provision*
+      is the only asynchronous operation.
+  keywords: ['template', 'broker', 'open service broker']
+  version: 4.1.27-201912030019
+  maturity: stable
+  maintainers:
+  - name: Red Hat, Inc.
+    email: ansible-service-broker@redhat.com
+  provider:
+    name: Red Hat, Inc.
+  labels:
+    alm-status-descriptors: openshifttemplateservicebrokeroperator.v0.1.0
+    operated-by: openshifttemplateservicebroker
+  selector:
+    matchLabels:
+      operated-by: openshifttemplateservicebroker
+  links:
+    - name: Documentation
+      url: https://docs.okd.io/latest/architecture/service_catalog/template_service_broker.html
+    - name: Source Code
+      url: https://github.com/openshift/origin/tree/master/pkg/templateservicebroker
+  installModes:
+  - type: OwnNamespace
+    supported: true
+  - type: SingleNamespace
+    supported: true
+  - type: MultiNamespace
+    supported: false
+  - type: AllNamespaces
+    supported: false
+  install:
+    strategy: deployment
+    spec:
+      permissions:
+      - serviceAccountName: openshift-template-service-broker-operator
+        rules:
+        - apiGroups:
+          - ""
+          resources:
+          - pods
+          - configmaps
+          - secrets
+          - services
+          - serviceaccounts
+          verbs:
+          - "*"
+        - apiGroups:
+          - apps
+          resources:
+          - deployments
+          verbs:
+          - "*"
+        - apiGroups:
+          - apps.openshift.io
+          resources:
+          - deploymentconfigs
+          verbs:
+          - "*"
+      clusterPermissions:
+      - serviceAccountName: openshift-template-service-broker-operator
+        rules:
+        - apiGroups:
+          - osb.openshift.io
+          resources:
+          - templateservicebrokers
+          - templateservicebrokers/status
+          verbs:
+          - "*"
+        - apiGroups:
+          - servicecatalog.k8s.io
+          resources:
+          - clusterservicebrokers
+          - servicebrokers
+          verbs:
+          - "*"
+        - apiGroups:
+          - rbac.authorization.k8s.io
+          resources:
+          - clusterroles
+          - clusterrolebindings
+          verbs:
+          - create
+          - delete
+          - patch
+          - get
+          - list
+        - apiGroups:
+          - authorization.k8s.io
+          resources:
+          - subjectaccessreviews
+          verbs:
+          - create
+        - apiGroups:
+          - authentication.k8s.io
+          resources:
+          - tokenreviews
+          verbs:
+          - create
+        - apiGroups:
+          - authorization.openshift.io
+          resources:
+          - subjectaccessreviews
+          verbs:
+          - create
+        - apiGroups:
+          - template.openshift.io
+          resources:
+          - brokertemplateinstances
+          verbs:
+          - create
+          - delete
+          - get
+          - update
+        - apiGroups:
+          - template.openshift.io
+          resources:
+          - brokertemplateinstances/finalizers
+          verbs:
+          - update
+        - apiGroups:
+          - template.openshift.io
+          resources:
+          - templateinstances
+          verbs:
+          - assign
+          - create
+          - delete
+          - get
+        - apiGroups:
+          - template.openshift.io
+          resources:
+          - templates
+          verbs:
+          - get
+          - list
+          - watch
+        - apiGroups:
+          - ""
+          resources:
+          - services
+          verbs:
+          - get
+          - list
+          - watch
+        - apiGroups:
+          - ""
+          resources:
+          - secrets
+          verbs:
+          - create
+          - delete
+          - get
+        - apiGroups:
+          - ""
+          resources:
+          - configmaps
+          verbs:
+          - get
+        - apiGroups:
+          - ""
+          resources:
+          - routes
+          verbs:
+          - get
+        - apiGroups:
+          - route.openshift.io
+          resources:
+          - routes
+          verbs:
+          - get
+        - apiGroups:
+          - ""
+          resources:
+          - events
+          verbs:
+          - create
+          - patch
+          - update
+        - nonResourceURLs:
+          - /brokers/template.openshift.io/*
+          verbs:
+          - delete
+          - get
+          - put
+          - update
+      deployments:
+      - name: openshift-template-service-broker-operator
+        spec:
+          replicas: 1
+          selector:
+            matchLabels:
+              name: openshift-template-service-broker-operator-alm-owned
+          template:
+            metadata:
+              name: openshift-template-service-broker-operator-alm-owned
+              labels:
+                name: openshift-template-service-broker-operator-alm-owned
+            spec:
+              serviceAccountName: openshift-template-service-broker-operator
+              containers:
+              - name: openshift-template-service-broker-operator
+                image: registry.redhat.io/openshift4/ose-template-service-broker-operator@sha256:b87968537a5d965aaee8ce8a6f281e5d2eb0ea011d48bdebc365b1d3b79d83dd
+                imagePullPolicy: IfNotPresent
+                env:
+                - name: IMAGE
+                  value: registry.redhat.io/openshift4/ose-template-service-broker@sha256:494be2027c9fe4cf45ee094b14b46c19d79e89eb289145fa5ce54f4a984a9f31
+                - name: OPERATOR_NAME
+                  value: openshift-template-service-broker-operator
+                - name: POD_NAME
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.name
+                - name: WATCH_NAMESPACE
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.namespace
+  customresourcedefinitions:
+    owned:
+    - name: templateservicebrokers.osb.openshift.io
+      version: v1
+      kind: TemplateServiceBroker
+      displayName: Template Service Broker
+      description: An Open Service Broker supporting management of OpenShift templates.
