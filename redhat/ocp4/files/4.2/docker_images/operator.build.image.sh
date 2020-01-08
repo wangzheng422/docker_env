@@ -21,6 +21,7 @@ tar zxf manifests.tgz
 # docker push docker.io/wangzheng422/custom-registry-redhat:${var_date}
 
 buildah from --name onbuild-container registry.redhat.io/openshift4/ose-operator-registry:latest
+buildah copy onbuild-container manifests.tgz manifests.tgz
 buildah copy onbuild-container manifests manifests
 buildah run onbuild-container /bin/initializer -o ./bundles.db
 buildah umount onbuild-container 
@@ -47,6 +48,7 @@ tar zxf manifests.tgz
 # docker push docker.io/wangzheng422/custom-registry-certified:$var_date
 
 buildah from --name onbuild-container registry.redhat.io/openshift4/ose-operator-registry:latest
+buildah copy onbuild-container manifests.tgz manifests.tgz
 buildah copy onbuild-container manifests manifests
 buildah run onbuild-container /bin/initializer -o ./bundles.db
 buildah umount onbuild-container 
@@ -73,6 +75,7 @@ tar zxf manifests.tgz
 # docker push docker.io/wangzheng422/custom-registry-community:$var_date
 
 buildah from --name onbuild-container registry.redhat.io/openshift4/ose-operator-registry:latest
+buildah copy onbuild-container manifests.tgz manifests.tgz
 buildah copy onbuild-container manifests manifests
 buildah run onbuild-container /bin/initializer -o ./bundles.db
 buildah umount onbuild-container 

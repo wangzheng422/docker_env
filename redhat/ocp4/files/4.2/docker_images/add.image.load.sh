@@ -4,7 +4,7 @@ set -e
 set -x
 
 export MID_REG='registry-add.redhat.ren:5000'
-export LOCAL_REG='registry.redhat.ren'
+export LOCAL_REG='registry.redhat.ren:5443'
 
 /bin/rm -f pull.add.image.failed.list pull.add.image.ok.list yaml.add.image.ok.list
 
