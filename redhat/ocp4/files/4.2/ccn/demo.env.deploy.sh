@@ -3,7 +3,7 @@
 set -e
 set -x
 
-export LOCAL_REG='registry.redhat.ren/'
+export LOCAL_REG='registry.redhat.ren:5443/'
 # export LOCAL_REG=''
 var_date='2020-01-01'
 

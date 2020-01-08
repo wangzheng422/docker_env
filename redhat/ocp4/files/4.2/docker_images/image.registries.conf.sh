@@ -5,7 +5,7 @@ set -x
 
 parm_file=$1
 
-export LOCAL_REG='registry.redhat.ren'
+export LOCAL_REG='registry.redhat.ren:5443'
 
 # export OCP_RELEASE=${BUILDNUMBER}
 # export LOCAL_REG='registry.redhat.ren'
@@ -25,7 +25,7 @@ EOF
 yaml_docker_image(){
 
     docker_image=$1
-    local_image=$2
+    local_image=$(echo $2 | sed "s/registry.redhat.ren/${LOCAL_REG}/")
     num=$3
     # echo $docker_image
 
