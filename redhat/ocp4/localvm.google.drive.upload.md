@@ -10,6 +10,12 @@ https://github.com/gdrive-org/gdrive
 split -b 10G registry.tgz registry.
 cat registry.?? > registry.tgz
 
+## for cmcc split and merge on osx
+split -b 2000m ocp4.tgz ocp4.
+split -b 2000m registry.tgz registry.
+split -b 2000m rhel-data.tgz rhel-data.
+
+
 ################################
 ## skicka
 
