@@ -16,6 +16,12 @@ podman rm -fv nexus || true
 podman stop etherpad || true
 podman rm -fv etherpad || true
 
+firewall-cmd --permanent --add-port=10080/tcp
+firewall-cmd --permanent --add-port=8081/tcp
+firewall-cmd --permanent --add-port=9001/tcp
+firewall-cmd --reload
+firewall-cmd --list-all
+
 # restore gogs-fs
 cd /data/ccn
 rm -rf /data/ccn/gogs
@@ -32,17 +38,17 @@ podman cp nexus-fs:/nexus.tgz /data/ccn/
 tar zxf nexus.tgz ./
 podman rm -fv nexus-fs
 
-firewall-cmd --permanent --add-port=10080/tcp
-firewall-cmd --reload
-firewall-cmd --list-all
+# firewall-cmd --permanent --add-port=10080/tcp
+# firewall-cmd --reload
+# firewall-cmd --list-all
 
 podman run -d --name=gogs -p 10022:22 -p 10080:3000 -v /data/ccn/gogs:/data:Z ${LOCAL_REG}docker.io/gogs/gogs
 
 chown -R 200 /data/ccn/nexus
 
-firewall-cmd --permanent --add-port=8081/tcp
-firewall-cmd --reload
-firewall-cmd --list-all
+# firewall-cmd --permanent --add-port=8081/tcp
+# firewall-cmd --reload
+# firewall-cmd --list-all
 
 podman run -d -p 8081:8081 -it --name nexus -v /data/ccn/nexus:/nexus-data:Z ${LOCAL_REG}docker.io/sonatype/nexus3
 
@@ -52,9 +58,9 @@ mkdir -p /data/ccn/etherpad
 
 chown -R 5001 /data/ccn/etherpad
 
-firewall-cmd --permanent --add-port=9001/tcp
-firewall-cmd --reload
-firewall-cmd --list-all
+# firewall-cmd --permanent --add-port=9001/tcp
+# firewall-cmd --reload
+# firewall-cmd --list-all
 
 podman run -d -p 9001:9001 -it --name etherpad -v /data/ccn/etherpad:/opt/etherpad-lite/var:z ${LOCAL_REG}docker.io/etherpad/etherpad:1.7.5
 
