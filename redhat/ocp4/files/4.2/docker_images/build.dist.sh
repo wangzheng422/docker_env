@@ -106,8 +106,8 @@ wget -O ocp4-upi-helpernode-master.zip https://github.com/wangzheng422/ocp4-upi-
 
 # wget -O filetranspiler-master.zip https://github.com/wangzheng422/filetranspiler/archive/master.zip
 
-podman pull docker.io/wangzheng422/filetranspiler
-podman save docker.io/wangzheng422/filetranspiler | pigz -c > filetranspiler.tgz
+podman pull quay.io/wangzheng422/filetranspiler
+podman save quay.io/wangzheng422/filetranspiler | pigz -c > filetranspiler.tgz
 
 podman pull docker.io/library/registry:2
 podman save docker.io/library/registry:2 | pigz -c > registry.tgz

@@ -188,4 +188,7 @@ oc create clusterresourcequota my-cluster-resource-quota --project-label-selecto
 oc adm create-bootstrap-project-template -o yaml > $HOME/project_request_template.yaml
 oc create -f $HOME/project_request_template.yaml -n openshift-config
 oc patch projects.config.openshift.io cluster -p '{"spec": {"projectRequestTemplate": {"name": "project-request"}}}' --type=merge
+
+
+env TZ=Asia/Shanghai date
 ```
