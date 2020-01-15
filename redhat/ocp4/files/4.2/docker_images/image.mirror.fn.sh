@@ -3,6 +3,7 @@
 set -e
 set -x
 
+export STATIC_MID_REG="registry.redhat.ren"
 
 split_image(){
 
@@ -25,7 +26,7 @@ split_image(){
         local_image_url="${LOCAL_REG}/${domain_part}${image_part}:${sha_part}"
 
         yaml_image=$(echo $docker_image | sed -r 's/@sha256:.*$//')
-        yaml_local_image="${LOCAL_REG}/${domain_part}${image_part}"
+        yaml_local_image="${STATIC_MID_REG}/${domain_part}${image_part}"
         # echo $image_url
     elif [[ $docker_image =~ ^.*\.(io|com|org)/.*:.* ]]; then
         # echo "io, com, org with tag: $docker_image"
@@ -35,7 +36,7 @@ split_image(){
         local_image_url="${LOCAL_REG}/${domain_part}${image_part}"
 
         yaml_image=$(echo $docker_image | sed -r 's/:.*$//')
-        yaml_local_image=$(echo $local_image_url | sed -r 's/:.*$//')
+        yaml_local_image="${STATIC_MID_REG}/${domain_part}${image_part}"
         # echo $image_url
     elif [[ $docker_image =~ ^.*\.(io|com|org)/[^:]*  ]]; then
         # echo "io, com, org without tag: $docker_image"
@@ -49,7 +50,7 @@ split_image(){
 
         docker_image+=":latest"
 
-        yaml_local_image="${LOCAL_REG}/${domain_part}${image_part}"
+        yaml_local_image="${STATIC_MID_REG}/${domain_part}${image_part}"
     elif [[ $docker_image =~ ^.*/.*@sha256:.* ]]; then
         # echo "docker with tag: $docker_image"
         local_image="${LOCAL_REG}/docker.io/${docker_image}"
@@ -60,21 +61,22 @@ split_image(){
         
         # echo $image_url
         yaml_image=$(echo $docker_image | sed -r 's/@sha256:.*$//')
-        yaml_local_image="${LOCAL_REG}/docker.io/${image_part}"
+        yaml_local_image="${STATIC_MID_REG}/docker.io/${image_part}"
     elif [[ $docker_image =~ ^.*/.*:.* ]]; then
         # echo "docker with tag: $docker_image"
         local_image="${LOCAL_REG}/docker.io/${docker_image}"
         local_image_url="${LOCAL_REG}/docker.io/${docker_image}"
         # echo $image_url
         yaml_image=$(echo $docker_image | sed -r 's/:.*$//')
-        yaml_local_image=$(echo $local_image_url | sed -r 's/:.*$//')
+        # yaml_local_image=$(echo $local_image_url | sed -r 's/:.*$//')
+        yaml_local_image=$(echo "${STATIC_MID_REG}/docker.io/${docker_image}" | sed -r 's/:.*$//')
     elif [[ $docker_image =~ ^.*/[^:]* ]]; then
         # echo "docker without tag: $docker_image"
         local_image="${LOCAL_REG}/docker.io/${docker_image}:latest"
         local_image_url="${LOCAL_REG}/docker.io/${docker_image}:latest"
 
         yaml_image=$docker_image
-        yaml_local_image="${LOCAL_REG}/docker.io/${docker_image}"
+        yaml_local_image="${STATIC_MID_REG}/docker.io/${docker_image}"
         # echo $image_url
         docker_image+="${docker_image}:latest"
 
@@ -84,7 +86,8 @@ split_image(){
         local_image_url="${LOCAL_REG}/docker.io/${docker_image}"
         # echo $image_url
         yaml_image=$(echo $docker_image | sed -r 's/:.*$//')
-        yaml_local_image=$(echo $local_image_url | sed -r 's/:.*$//')
+        # yaml_local_image=$(echo $local_image_url | sed -r 's/:.*$//')
+        yaml_local_image=$(echo "${STATIC_MID_REG}/docker.io/${docker_image}" | sed -r 's/:.*$//')
 
         docker_image="${docker_image}"
 
@@ -236,7 +239,7 @@ split_image_add_image_load(){
         local_image_url="${LOCAL_REG}/${domain_part}${image_part}:${sha_part}"
 
         yaml_image=$(echo $docker_image | sed -r 's/@sha256:.*$//')
-        yaml_local_image="${LOCAL_REG}/${domain_part}${image_part}"
+        yaml_local_image="${STATIC_MID_REG}/${domain_part}${image_part}"
 
         docker_image="${MID_REG}/${domain_part}${image_part}:${sha_part}"
         # echo $image_url
@@ -248,7 +251,8 @@ split_image_add_image_load(){
         local_image_url="${LOCAL_REG}/${domain_part}${image_part}"
 
         yaml_image=$(echo $docker_image | sed -r 's/:.*$//')
-        yaml_local_image=$(echo $local_image_url | sed -r 's/:.*$//')
+        # yaml_local_image=$(echo $local_image_url | sed -r 's/:.*$//')
+        yaml_local_image="${STATIC_MID_REG}/${yaml_image}"
         # echo $image_url
         docker_image="${MID_REG}/${domain_part}${image_part}"
     elif [[ $docker_image =~ ^.*\.(io|com|org)/[^:]*  ]]; then
@@ -263,7 +267,7 @@ split_image_add_image_load(){
 
         docker_image+=":latest"
 
-        yaml_local_image="${LOCAL_REG}/${domain_part}${image_part}"
+        yaml_local_image="${STATIC_MID_REG}/${domain_part}${image_part}"
 
         docker_image="${MID_REG}/${domain_part}${image_part}:latest"
     elif [[ $docker_image =~ ^.*/.*@sha256:.* ]]; then
@@ -276,7 +280,7 @@ split_image_add_image_load(){
         
         # echo $image_url
         yaml_image=$(echo $docker_image | sed -r 's/@sha256:.*$//')
-        yaml_local_image="${LOCAL_REG}/docker.io/${image_part}"
+        yaml_local_image="${STATIC_MID_REG}/docker.io/${image_part}"
 
         docker_image="${MID_REG}/docker.io/${docker_image}:${sha_part}"
     elif [[ $docker_image =~ ^.*/.*:.* ]]; then
@@ -285,7 +289,8 @@ split_image_add_image_load(){
         local_image_url="${LOCAL_REG}/docker.io/${docker_image}"
         # echo $image_url
         yaml_image=$(echo $docker_image | sed -r 's/:.*$//')
-        yaml_local_image=$(echo $local_image_url | sed -r 's/:.*$//')
+        # yaml_local_image=$(echo $local_image_url | sed -r 's/:.*$//')
+        yaml_local_image="${STATIC_MID_REG}/docker.io/${yaml_image}"
 
         docker_image="${MID_REG}/docker.io/${docker_image}"
     elif [[ $docker_image =~ ^.*/[^:]* ]]; then
@@ -294,7 +299,7 @@ split_image_add_image_load(){
         local_image_url="${LOCAL_REG}/docker.io/${docker_image}:latest"
 
         yaml_image=$docker_image
-        yaml_local_image="${LOCAL_REG}/docker.io/${docker_image}"
+        yaml_local_image="${STATIC_MID_REG}/docker.io/${docker_image}"
         # echo $image_url
         docker_image+="${docker_image}:latest"
 
@@ -306,7 +311,8 @@ split_image_add_image_load(){
         local_image_url="${LOCAL_REG}/docker.io/${docker_image}"
         # echo $image_url
         yaml_image=$(echo $docker_image | sed -r 's/:.*$//')
-        yaml_local_image=$(echo $local_image_url | sed -r 's/:.*$//')
+        # yaml_local_image=$(echo $local_image_url | sed -r 's/:.*$//')
+        yaml_local_image="${STATIC_MID_REG}/docker.io/${yaml_image}"
 
         docker_image="${docker_image}"
 

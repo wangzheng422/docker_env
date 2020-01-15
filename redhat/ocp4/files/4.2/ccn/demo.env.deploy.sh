@@ -5,7 +5,7 @@ set -x
 
 export LOCAL_REG='registry.redhat.ren:5443/'
 # export LOCAL_REG=''
-var_date='2020-01-01'
+var_date='2020-01-14'
 
 mkdir -p /data/ccn
 
@@ -15,6 +15,8 @@ podman stop nexus || true
 podman rm -fv nexus || true
 podman stop etherpad || true
 podman rm -fv etherpad || true
+
+podman image prune -a
 
 firewall-cmd --permanent --add-port=10080/tcp
 firewall-cmd --permanent --add-port=8081/tcp
@@ -42,7 +44,7 @@ podman rm -fv nexus-fs
 # firewall-cmd --reload
 # firewall-cmd --list-all
 
-podman run -d --name=gogs -p 10022:22 -p 10080:3000 -v /data/ccn/gogs:/data:Z ${LOCAL_REG}docker.io/gogs/gogs
+podman run -d --name=gogs -p 10022:22 -p 10080:3000 -v /data/ccn/gogs:/data:Z -v /data/ccn/gogs/resolv.conf:/etc/resolv.conf:Z ${LOCAL_REG}docker.io/gogs/gogs
 
 chown -R 200 /data/ccn/nexus
 
@@ -62,5 +64,5 @@ chown -R 5001 /data/ccn/etherpad
 # firewall-cmd --reload
 # firewall-cmd --list-all
 
-podman run -d -p 9001:9001 -it --name etherpad -v /data/ccn/etherpad:/opt/etherpad-lite/var:z ${LOCAL_REG}docker.io/etherpad/etherpad:1.7.5
+podman run -d -p 9001:9001 -it --name etherpad -v /data/ccn/etherpad:/opt/etherpad-lite/var:z ${LOCAL_REG}docker.io/etherpad/etherpad:latest
 
