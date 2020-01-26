@@ -70,6 +70,7 @@ install_build() {
     BUILDNUMBER=$1
     echo ${BUILDNUMBER}
 
+    rm -rf /data/ocp4/${BUILDNUMBER}
     mkdir -p /data/ocp4/${BUILDNUMBER}
     cd /data/ocp4/${BUILDNUMBER}
 
@@ -90,7 +91,7 @@ install_build() {
     export RELEASE_NAME="ocp-release"
 
     oc adm release mirror -a ${LOCAL_SECRET_JSON} \
-    --from=quay.io/${UPSTREAM_REPO}/${RELEASE_NAME}:${OCP_RELEASE} \
+    --from=quay.io/${UPSTREAM_REPO}/${RELEASE_NAME}:${OCP_RELEASE}-x86_64 \
     --to-release-image=${LOCAL_REG}/${LOCAL_REPO}:${OCP_RELEASE} \
     --to=${LOCAL_REG}/${LOCAL_REPO}
 
