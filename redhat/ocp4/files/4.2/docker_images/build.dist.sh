@@ -5,9 +5,9 @@ set -x
 
 # export BUILDNUMBER="4.2.13"
 build_number_list=$(cat << EOF
+4.2.16
+4.2.14
 4.2.13
-4.2.12
-4.2.10
 EOF
 )
 
