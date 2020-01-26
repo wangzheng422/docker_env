@@ -48,7 +48,7 @@ storage:
     delete:
         enabled: true
 http:
-    addr: :5443
+    addr: :443
     tls:
        certificate: /etc/crts/redhat.ren.crt
        key: /etc/crts/redhat.ren.key
@@ -58,7 +58,7 @@ EOF
 
 systemctl restart docker-distribution
 
-podman login registry.redhat.ren -u a -p a
+# podman login registry.redhat.ren -u a -p a
 
 mkdir -p /data/ocp4
 cd /data/ocp4
@@ -83,7 +83,7 @@ install_build() {
     tar -xzf openshift-install-linux-${BUILDNUMBER}.tar.gz -C /usr/local/bin/
 
     export OCP_RELEASE=${BUILDNUMBER}
-    export LOCAL_REG='registry.redhat.ren:5443'
+    export LOCAL_REG='registry.redhat.ren'
     export LOCAL_REPO='ocp4/openshift4'
     export UPSTREAM_REPO='openshift-release-dev'
     export LOCAL_SECRET_JSON="/data/pull-secret.json"
@@ -103,7 +103,7 @@ done <<< "$build_number_list"
 
 cd /data/ocp4
 
-wget --recursive --no-directories --no-parent https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/4.3/latest/
+# wget --recursive --no-directories --no-parent https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/4.3/latest/
 
 wget -O ocp4-upi-helpernode-master.zip https://github.com/wangzheng422/ocp4-upi-helpernode/archive/master.zip
 
@@ -150,7 +150,7 @@ oc adm catalog build \
 
 oc adm catalog mirror \
     ${LOCAL_REG}/ocp4-operator/redhat-operators:v1 \
-    ${LOCAL_REG}/ocp4-operator
+    ${LOCAL_REG}/operator
 
 cd /data
 tar cf - registry/ | pigz -c > registry.tgz 
