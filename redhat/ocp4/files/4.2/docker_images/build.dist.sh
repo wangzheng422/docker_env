@@ -47,7 +47,7 @@ storage:
     delete:
         enabled: true
 http:
-    addr: :443
+    addr: :5443
     tls:
        certificate: /etc/crts/redhat.ren.crt
        key: /etc/crts/redhat.ren.key
@@ -57,7 +57,7 @@ EOF
 
 systemctl restart docker-distribution
 
-podman login registry.redhat.ren -u a -p a
+podman login registry.redhat.ren:5443 -u a -p a
 
 cd /data/ocp4
 # wget https://mirror.openshift.com/pub/openshift-v4/clients/ocp/latest-4.2/release.txt
@@ -80,7 +80,7 @@ install_build() {
     tar -xzf openshift-install-linux-${BUILDNUMBER}.tar.gz -C /usr/local/bin/
 
     export OCP_RELEASE=${BUILDNUMBER}
-    export LOCAL_REG='registry.redhat.ren'
+    export LOCAL_REG='registry.redhat.ren:5443'
     export LOCAL_REPO='ocp4/openshift4'
     export UPSTREAM_REPO='openshift-release-dev'
     export LOCAL_SECRET_JSON="/data/pull-secret.json"
@@ -124,7 +124,7 @@ cd /data/ocp4
 # scp files/4.2/docker_image/* 
 
 # yum -y install jq python3-pip pigz docker
-pip3 install yq
+# pip3 install yq
 
 # systemctl start docker
 
@@ -158,4 +158,4 @@ tar cf - ocp4/ | pigz -c > ocp4.tgz
 # split -b 10G registry.with.operator.image.tgz registry.
 # find /data -maxdepth 1 -type f -exec sha256sum {} \;
 
-find ./ -maxdepth 1 -name "*.tgz" -exec skicka upload {}  /"zhengwan.share/shared_docs/2020.01/ocp.ccn/" \;
+find ./ -maxdepth 1 -name "*.tgz" -exec skicka upload {}  /"zhengwan.share/shared_docs/2020.01/ocp.cnn.4.2.16/" \;
