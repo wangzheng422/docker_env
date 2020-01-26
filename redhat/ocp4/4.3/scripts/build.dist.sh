@@ -48,7 +48,7 @@ storage:
     delete:
         enabled: true
 http:
-    addr: :443
+    addr: :5443
     tls:
        certificate: /etc/crts/redhat.ren.crt
        key: /etc/crts/redhat.ren.key
@@ -83,7 +83,7 @@ install_build() {
     tar -xzf openshift-install-linux-${BUILDNUMBER}.tar.gz -C /usr/local/bin/
 
     export OCP_RELEASE=${BUILDNUMBER}
-    export LOCAL_REG='registry.redhat.ren'
+    export LOCAL_REG='registry.redhat.ren:5443'
     export LOCAL_REPO='ocp4/openshift4'
     export UPSTREAM_REPO='openshift-release-dev'
     export LOCAL_SECRET_JSON="/data/pull-secret.json"
@@ -146,11 +146,11 @@ cd /data/ocp4
 oc adm catalog build \
     --appregistry-endpoint https://quay.io/cnr \
     --appregistry-org redhat-operators \
-    --to=${LOCAL_REG}/${LOCAL_REPO}/redhat-operators:v1 
+    --to=${LOCAL_REG}/ocp4-operator/redhat-operators:v1 
 
 oc adm catalog mirror \
-    ${LOCAL_REG}/${LOCAL_REPO}/redhat-operators:v1 \
-    ${LOCAL_REG}/${LOCAL_REPO}
+    ${LOCAL_REG}/ocp4-operator/redhat-operators:v1 \
+    ${LOCAL_REG}/ocp4-operator
 
 cd /data
 tar cf - registry/ | pigz -c > registry.tgz 
