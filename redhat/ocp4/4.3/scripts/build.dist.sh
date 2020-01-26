@@ -145,11 +145,11 @@ cd /data/ocp4
 # build operator catalog
 oc adm catalog build \
     --appregistry-endpoint https://quay.io/cnr \
-    --appregistry-org redhat-operators \ 
+    --appregistry-org redhat-operators \
     --to=${LOCAL_REG}/${LOCAL_REPO}/redhat-operators:v1 
 
 oc adm catalog mirror \
-    ${LOCAL_REG}/${LOCAL_REPO}/redhat-operators:v1 \ 
+    ${LOCAL_REG}/${LOCAL_REPO}/redhat-operators:v1 \
     ${LOCAL_REG}/${LOCAL_REPO}
 
 cd /data
