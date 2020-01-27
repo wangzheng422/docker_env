@@ -25,6 +25,7 @@ go get github.com/google/skicka
 install /root/go/bin/skicka /usr/local/bin/skicka
 skicka init
 skicka -no-browser-auth ls
+
 skicka ls "/zhengwan.share/shared_docs/2020.01/ocp.ccn/"
 cd /data
 mkdir -p /data/upload
