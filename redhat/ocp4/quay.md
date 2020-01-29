@@ -10,8 +10,10 @@ https://www.cnblogs.com/ericnie/p/12233269.html
 
 ```bash
 cat << EOF >>  /etc/hosts
-149.28.71.111 registry.redhat.ren clair.redhat.ren
+207.246.103.211 registry.redhat.ren clair.redhat.ren
 EOF
+
+yum install -y podman
 
 rm -rf /data/quay
 mkdir -p /data/quay/storage
