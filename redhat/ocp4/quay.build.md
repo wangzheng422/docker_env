@@ -1,4 +1,4 @@
-# quay.redhat.ren
+# Quay running in local dev mode
 
 https://github.com/zhangchl007/quay
 
@@ -13,7 +13,13 @@ cat << EOF >>  /etc/hosts
 207.246.103.211 registry.redhat.ren clair.redhat.ren
 EOF
 
-yum install -y podman
+yum install -y podman buildah skopeo
+
+podman rm -fv $(podman ps -qa)
+podman volume prune -f
+podman pod rm -fa
+
+podman pod create --name quay -p 5443:8443 
 
 rm -rf /data/quay
 mkdir -p /data/quay/storage
@@ -31,7 +37,7 @@ firewall-cmd --reload
 
 mkdir -p /data/quay/lib/mysql
 chmod 777 /data/quay/lib/mysql
-export MYSQL_CONTAINER_NAME=mysql
+export MYSQL_CONTAINER_NAME=quay-mysql
 export MYSQL_DATABASE=enterpriseregistrydb
 export MYSQL_PASSWORD=zvbk3fzp5f5m2a8j
 export MYSQL_USER=quayuser
@@ -46,35 +52,67 @@ podman run \
     --env MYSQL_DATABASE=${MYSQL_DATABASE} \
     --name ${MYSQL_CONTAINER_NAME} \
     --privileged=true \
-    --publish 3306:3306 \
+    --pod quay \
     -v /data/quay/lib/mysql:/var/lib/mysql/data:Z \
     registry.access.redhat.com/rhscl/mysql-57-rhel7
 
 mkdir -p /data/quay/lib/redis
 chmod 777 /data/quay/lib/redis
-podman run -d --restart=always -p 6379:6379 \
+podman run -d --restart=always \
+    --pod quay \
     --privileged=true \
+    --name quay-redis \
     -v  /data/quay/lib/redis:/var/lib/redis/data:Z \
     registry.access.redhat.com/rhscl/redis-32-rhel7
 
+# test mysql
+# yum install -y mariadb
+# mysql -h registry.redhat.ren -u root --password=q98u335musckfqxe
+
 # quay config
-podman login -u="redhat+quay" ****************
-podman run --privileged=true -p 5443:8443 -d quay.io/redhat/quay:v3.2.0 config ka5tr4g3quzrwkq4
+# podman login -u="redhat+quay" ****************
+podman run --privileged=true \
+    --name quay-config \
+    --pod quay \
+    --add-host mysql:127.0.0.1 \
+    --add-host redis:127.0.0.1 \
+    -d quay.io/redhat/quay:v3.2.0 config ka5tr4g3quzrwkq4
 # login: quayconfig  /  ka5tr4g3quzrwkq4
 # quay admin:  admin   /   5a4ru36a8zfr1gp8
 # clair: security_scanner
-# key id: abdd5f328a99695aa861452d81a22086569a2f7a64baedcfca6c6f4797c48228
+# key id: da5a87dd2cf8e0ac62a56d3611d33a1f4b9f8d7e8a5aed7a4f5612ae549ab82f
 
 # cp quay-config.tar.gz /data/quay/config/
-cd  /data/quay/config/
+cd /data/quay/config/
+# wget https://github.com/wangzheng422/docker_env/raw/dev/redhat/ocp4/files/4.2/quay/quay-config.tar.gz
 tar xvf quay-config.tar.gz
 
-podman run --restart=always -p 5443:8443 -p 5080:8080 \
-   --sysctl net.core.somaxconn=4096 \
-   --privileged=true \
-   -v /data/quay/config:/conf/stack:Z \
-   -v /data/quay/storage:/datastorage:Z \
-   -d quay.io/redhat/quay:v3.2.0
+podman run --restart=always \
+    --sysctl net.core.somaxconn=4096 \
+    --privileged=true \
+    --name quay-master \
+    --pod quay \
+    --add-host mysql:127.0.0.1 \
+    --add-host redis:127.0.0.1 \
+    -v /data/quay/config:/conf/stack:Z \
+    -v /data/quay/storage:/datastorage:Z \
+    -d quay.io/redhat/quay:v3.2.0
+
+
+podman stop quay-master
+podman stop quay-redis
+podman stop quay-mysql
+
+cd /data
+tar zcf quay.tgz quay/
+
+buildah from --name onbuild-container docker.io/library/centos:centos7
+buildah copy onbuild-container quay.tgz /
+buildah umount onbuild-container 
+buildah commit --rm --format=docker onbuild-container docker.io/wangzheng422/quay-fs:3.2.0-init
+# buildah rm onbuild-container
+buildah push docker.io/wangzheng422/quay-fs:3.2.0-init
+
 
 ```
 
