@@ -93,5 +93,5 @@ podman push registry.redhat.ren:4443/admin/test:centos
 ```
 可以看到，安全扫描已经生效。
 
-![](imgs/2020-01-30-14-09-04.png)
-![](imgs/2020-01-30-14-09-44.png)
+![](imgs/2020-01-30-14-34-30.png)
+![](imgs/2020-01-30-14-35-07.png)
