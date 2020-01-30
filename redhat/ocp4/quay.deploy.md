@@ -2,14 +2,16 @@
 
 ```bash
 yum install -y podman buildah skopeo
-firewall-cmd --permanent --zone=public --add-port=5443/tcp
+firewall-cmd --permanent --zone=public --add-port=4443/tcp
 firewall-cmd --reload
+
+podman pod create --name quay -p 4443:8443 
 
 mkdir -p /data/
 
 cd /data
 rm -rf /data/quay
-podman run -d --name quay-fs --entrypoint "tail" ${LOCAL_REG}docker.io/wangzheng422/quay-fs:3.2.0-init -f /dev/null
+podman run -d --name quay-fs --entrypoint "tail" docker.io/wangzheng422/quay-fs:3.2.0-init -f /dev/null
 podman cp quay-fs:/quay.tgz /data/
 tar zxf quay.tgz
 podman rm -fv quay-fs
@@ -52,7 +54,8 @@ podman run --restart=always \
     -v /data/quay/config:/conf/stack:Z \
     -v /data/quay/storage:/datastorage:Z \
     -d quay.io/redhat/quay:v3.2.0
-
+# https://registry.redhat.ren:5443/
+# quay admin:  admin   /   5a4ru36a8zfr1gp8
 
 
 
