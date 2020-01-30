@@ -1,4 +1,4 @@
-# Quay dev version deploy
+# Quay dev with clair deploy
 
 ```bash
 yum install -y podman buildah skopeo

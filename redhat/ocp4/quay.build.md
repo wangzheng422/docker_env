@@ -1,4 +1,4 @@
-# Quay running in local dev mode
+# Quay running in local dev mode with clair
 
 https://github.com/zhangchl007/quay
 
