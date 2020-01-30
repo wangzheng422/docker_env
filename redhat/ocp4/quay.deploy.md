@@ -2,8 +2,16 @@
 
 ```bash
 yum install -y podman buildah skopeo
+cat << EOF >>  /etc/hosts
+45.63.58.108 registry.redhat.ren
+EOF
+# podman login -u="redhat+quay" ****************
 firewall-cmd --permanent --zone=public --add-port=4443/tcp
 firewall-cmd --reload
+
+podman rm -fv $(podman ps -qa)
+podman volume prune -f
+podman pod rm -fa
 
 podman pod create --name quay -p 4443:8443 
 
@@ -51,12 +59,39 @@ podman run --restart=always \
     --pod quay \
     --add-host mysql:127.0.0.1 \
     --add-host redis:127.0.0.1 \
+    --add-host clair:127.0.0.1 \
     -v /data/quay/config:/conf/stack:Z \
     -v /data/quay/storage:/datastorage:Z \
     -d quay.io/redhat/quay:v3.2.0
 # https://registry.redhat.ren:5443/
 # quay admin:  admin   /   5a4ru36a8zfr1gp8
 
+podman run --name clair-postgres --pod quay \
+    -v /data/quay/lib/postgresql/data:/var/lib/postgresql/data \
+    -d docker.io/library/postgres
+sleep 10
 
+
+podman run --restart=always -d \
+    --name clair \
+    -v /data/quay/clair-config:/clair/config \
+    -v /data/quay/clair-config/ca.crt:/etc/pki/ca-trust/source/anchors/ca.crt  \
+    --pod quay \
+    --add-host clair:127.0.0.1 \
+    quay.io/redhat/clair-jwt:v3.2.0
 
 ```
+去quay上创建一个repository，然后push image试试
+```bash
+/bin/cp -f /data/quay/config/extra_ca_certs/redhat.ren.crt /etc/pki/ca-trust/source/anchors/
+update-ca-trust extract
+
+podman login -u admin -p 5a4ru36a8zfr1gp8 registry.redhat.ren:4443
+podman pull docker.io/library/centos
+podman tag docker.io/library/centos registry.redhat.ren:4443/admin/test:centos
+podman push registry.redhat.ren:4443/admin/test:centos
+```
+可以看到，安全扫描已经生效。
+
+![](imgs/2020-01-30-14-09-04.png)
+![](imgs/2020-01-30-14-09-44.png)
