@@ -67,7 +67,7 @@ podman run --restart=always \
     -v /data/quay/config:/conf/stack:Z \
     -v /data/quay/storage:/datastorage:Z \
     -d quay.io/redhat/quay:v3.2.0
-# https://registry.redhat.ren:5443/
+# https://registry.redhat.ren:4443/
 # quay admin:  admin   /   5a4ru36a8zfr1gp8
 
 podman run --name clair-postgres --pod quay \
