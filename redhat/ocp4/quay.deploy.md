@@ -1,5 +1,9 @@
 # Quay dev with clair deploy
+本文描述，在 POC 场景下面，如何部署一个单机的quay，并且搭配一个单机版本的clair，演示安全扫描。
 
+离线的数据，都在 docker.io/wangzheng422/quay-fs:3.2.0-init，文中有描述，如何提取数据和解压缩。
+
+另外需要一些镜像，需要单独的打包。
 ```bash
 yum install -y podman buildah skopeo
 cat << EOF >>  /etc/hosts
@@ -70,7 +74,6 @@ podman run --name clair-postgres --pod quay \
     -v /data/quay/lib/postgresql/data:/var/lib/postgresql/data \
     -d docker.io/library/postgres
 sleep 10
-
 
 podman run --restart=always -d \
     --name clair \
