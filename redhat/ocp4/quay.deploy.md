@@ -5,6 +5,8 @@
 
 另外需要一些镜像，需要单独的打包。
 ```bash
+# customize the ip address to local public ip
+# do not use 127.0.0.1
 yum install -y podman buildah skopeo
 cat << EOF >>  /etc/hosts
 45.63.58.108 registry.redhat.ren
