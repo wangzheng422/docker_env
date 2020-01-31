@@ -1,4 +1,5 @@
 # Quay running in local dev mode with clair
+本文描述如何制作一个单机的quay和单机clair，用于POC演示。制作成果是一个quay-fs镜像，这个镜像传送到POC环境中，按照deploy文档的描述，在POC环境中部署quay+clair.
 
 https://github.com/zhangchl007/quay
 
