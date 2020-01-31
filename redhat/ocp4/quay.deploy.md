@@ -30,10 +30,6 @@ podman cp quay-fs:/quay.tgz /data/
 tar zxf quay.tgz
 podman rm -fv quay-fs
 
-# cert will be /data/quay/config/extra_ca_certs/
-/bin/cp -f /data/quay/config/extra_ca_certs/redhat.ren.crt /etc/pki/ca-trust/source/anchors/
-update-ca-trust extract
-
 export MYSQL_CONTAINER_NAME=quay-mysql
 export MYSQL_DATABASE=enterpriseregistrydb
 export MYSQL_PASSWORD=zvbk3fzp5f5m2a8j

@@ -18,6 +18,15 @@ EOF
 firewall-cmd --permanent --zone=public --add-port=4443/tcp
 firewall-cmd --reload
 
+# prepare certs
+mkdir /etc/crts/ && cd /etc/crts
+openssl req \
+   -newkey rsa:2048 -nodes -keyout redhat.ren.key \
+   -x509 -days 3650 -out redhat.ren.crt -subj \
+   "/C=CN/ST=GD/L=SZ/O=Global Security/OU=IT Department/CN=*.redhat.ren"
+cp /etc/crts/redhat.ren.crt /etc/pki/ca-trust/source/anchors/
+update-ca-trust extract
+
 yum install -y podman buildah skopeo
 
 podman rm -fv $(podman ps -qa)
