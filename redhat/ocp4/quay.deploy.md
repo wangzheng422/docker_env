@@ -1,9 +1,9 @@
 # Quay dev with clair deploy
 本文描述，在 POC 场景下面，如何部署一个单机的quay，并且搭配一个单机版本的clair，演示安全扫描。
 
-离线的数据，都在 docker.io/wangzheng422/quay-fs:3.2.0-init，文中有描述，如何提取数据和解压缩。
+离线的数据，都在 docker.io/wangzheng422/quay-fs:3.2.0-init ，文中有描述，如何提取数据和解压缩。
 
-另外需要一些镜像，需要单独的打包。
+另外需要一些镜像，需要单独的打包，复制到poc环境里面，后续会和ocp4.2离线安装包一起打包。
 ```bash
 # customize the ip address to local public ip
 # do not use 127.0.0.1
@@ -29,6 +29,10 @@ podman run -d --name quay-fs --entrypoint "tail" docker.io/wangzheng422/quay-fs:
 podman cp quay-fs:/quay.tgz /data/
 tar zxf quay.tgz
 podman rm -fv quay-fs
+
+# cert will be /data/quay/config/extra_ca_certs/
+/bin/cp -f /data/quay/config/extra_ca_certs/redhat.ren.crt /etc/pki/ca-trust/source/anchors/
+update-ca-trust extract
 
 export MYSQL_CONTAINER_NAME=quay-mysql
 export MYSQL_DATABASE=enterpriseregistrydb
