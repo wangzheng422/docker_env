@@ -89,7 +89,7 @@ done <<< "$var_files"
 
 ```
 
-no use below
+gdrive below
 ```bash
 wget https://github.com/gdrive-org/gdrive/releases/download/2.1.0/gdrive-linux-x64
 
