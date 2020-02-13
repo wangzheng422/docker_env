@@ -37,6 +37,8 @@ cd /data/upload/
 
 find ./ -maxdepth 1 -name "*.tgz" -exec skicka upload {}  /"zhengwan.share/shared_docs/2020.01/ocp.ccn/" \;
 
+skicka download "/other.deep.folder/A北区SA资料库/Discovery Session/"
+
 ##################################
 ## rsync
 yum -y install connect-proxy

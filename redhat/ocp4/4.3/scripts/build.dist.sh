@@ -15,11 +15,12 @@ EOF
 var_date=$(date '+%Y-%m-%d')
 echo $var_date
 
-# wget -O image.mirror.fn.sh https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/files/4.2/docker_images/image.mirror.fn.sh
-# wget -O image.mirror.install.sh https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/files/4.2/docker_images/image.mirror.install.sh
-# wget -O image.registries.conf.sh https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/files/4.2/docker_images/image.registries.conf.sh
-# wget -O install.image.list https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/files/4.2/docker_images/install.image.list
-# wget -O add.image.load.sh https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/files/4.2/docker_images/add.image.load.sh
+wget -O image.mirror.fn.sh https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/4.3/scripts/image.mirror.fn.sh
+wget -O image.mirror.install.sh https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/4.3/scripts/image.mirror.install.sh
+wget -O image.registries.conf.sh https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/4.3/scripts/image.registries.conf.sh
+wget -O install.image.list https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/4.3/scripts/install.image.list
+wget -O add.image.load.sh https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/4.3/scripts/add.image.load.sh
+wget -O add.image.load.sh https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/4.3/scripts/demos.sh
 
 cat << EOF >>  /etc/hosts
 127.0.0.1 registry.redhat.ren
@@ -143,17 +144,19 @@ cd /data/ocp4
 # podman login -u ****** -p ******** registry.connect.redhat.com
 
 # 以下命令要运行 2-3个小时，耐心等待。。。
-# bash image.mirror.install.sh
+bash image.mirror.install.sh
+
+bash demos.sh
 
 # build operator catalog
-oc adm catalog build \
-    --appregistry-endpoint https://quay.io/cnr \
-    --appregistry-org redhat-operators \
-    --to=${LOCAL_REG}/ocp4-operator/redhat-operators:v1 
+# oc adm catalog build \
+#     --appregistry-endpoint https://quay.io/cnr \
+#     --appregistry-org redhat-operators \
+#     --to=${LOCAL_REG}/ocp4-operator/redhat-operators:v1 
 
-oc adm catalog mirror \
-    ${LOCAL_REG}/ocp4-operator/redhat-operators:v1 \
-    ${LOCAL_REG}/operator
+# oc adm catalog mirror \
+#     ${LOCAL_REG}/ocp4-operator/redhat-operators:v1 \
+#     ${LOCAL_REG}/operator
 
 cd /data
 tar cf - registry/ | pigz -c > registry.tgz 
