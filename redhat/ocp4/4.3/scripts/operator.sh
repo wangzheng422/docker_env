@@ -110,7 +110,7 @@ find ./operator/manifests -type f | xargs egrep -oh " [[:alnum:]|\.]+\.(io|com|o
 
 find ./operator/manifests -type f | xargs egrep -oh "=[[:alnum:]|\.]+/[[:graph:]]+$" | sed 's/\\n/\n/g'  | egrep -o "[[:alnum:]|\.]+/[[:graph:]]+$" | sed "s/'//g" >> /data/ocp4/operator.image.list
 
-cat /data/ocp4/operator.image.list | sort | uniq > /data/ocp4/operator.image.list.uniq
+cat /data/ocp4/operator.image.list | grep "^[[:alnum:]].*[[:alnum:]]$" | sort | uniq > /data/ocp4/operator.image.list.uniq
 
 /bin/cp -f /data/ocp4/operator.image.list.uniq /data/ocp4/operator/operator.image.list.uniq
 
