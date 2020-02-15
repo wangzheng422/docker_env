@@ -158,17 +158,17 @@ bash demos.sh
 oc adm catalog mirror \
     docker.io/wangzheng422/operator-catalog:redhat-2020-02-14 \
     registry.redhat.ren:5443/ocp-operator 
-/bin/cp -f mapping.txt operator-redhat.list
+/bin/cp -f operator-catalog-manifests/mapping.txt operator-redhat.txt
 
 oc adm catalog mirror \
     docker.io/wangzheng422/operator-catalog:certified-2020-02-14 \
     registry.redhat.ren:5443/ocp-operator 
-/bin/cp -f mapping.txt operator-certified.list
+/bin/cp -f operator-catalog-manifests/mapping.txt operator-certified.txt
 
 oc adm catalog mirror \
     docker.io/wangzheng422/operator-catalog:community-2020-02-14 \
     registry.redhat.ren:5443/ocp-operator 
-/bin/cp -f mapping.txt operator-community.list
+/bin/cp -f operator-catalog-manifests/mapping.txt operator-community.txt
 
 cd /data
 tar cf - registry/ | pigz -c > registry.tgz 
