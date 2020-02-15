@@ -144,9 +144,9 @@ cd /data/ocp4
 # podman login -u ****** -p ******** registry.connect.redhat.com
 
 # operator images
-podman run -d --name catalog-fs --entrypoint "tail" docker.io/wangzheng422/operator-catalog:fs-$var_date -f /dev/null
-podman cp catalog-fs:/operator.image.list.uniq /data/ocp4/
-podman rm -fv catalog-fs
+# podman run -d --name catalog-fs --entrypoint "tail" docker.io/wangzheng422/operator-catalog:fs-$var_date -f /dev/null
+# podman cp catalog-fs:/operator.image.list.uniq /data/ocp4/
+# podman rm -fv catalog-fs
 
 # 以下命令要运行 2-3个小时，耐心等待。。。
 bash image.mirror.install.sh
@@ -155,14 +155,20 @@ bash image.mirror.install.sh
 bash demos.sh
 
 # build operator catalog
-# oc adm catalog build \
-#     --appregistry-endpoint https://quay.io/cnr \
-#     --appregistry-org redhat-operators \
-#     --to=${LOCAL_REG}/ocp4-operator/redhat-operators:v1 
+oc adm catalog mirror \
+    docker.io/wangzheng422/operator-catalog:redhat-2020-02-14 \
+    registry.redhat.ren:5443/ocp-operator 
+/bin/cp -f mapping.txt operator-redhat.list
 
-# oc adm catalog mirror \
-#     ${LOCAL_REG}/ocp4-operator/redhat-operators:v1 \
-#     ${LOCAL_REG}/operator
+oc adm catalog mirror \
+    docker.io/wangzheng422/operator-catalog:certified-2020-02-14 \
+    registry.redhat.ren:5443/ocp-operator 
+/bin/cp -f mapping.txt operator-certified.list
+
+oc adm catalog mirror \
+    docker.io/wangzheng422/operator-catalog:community-2020-02-14 \
+    registry.redhat.ren:5443/ocp-operator 
+/bin/cp -f mapping.txt operator-community.list
 
 cd /data
 tar cf - registry/ | pigz -c > registry.tgz 

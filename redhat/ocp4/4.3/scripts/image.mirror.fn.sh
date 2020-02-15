@@ -36,7 +36,7 @@ split_image(){
         local_image_url="${LOCAL_REG}/${domain_part}${image_part}"
 
         yaml_image=$(echo $docker_image | sed -r 's/:.*$//')
-        yaml_local_image="${STATIC_MID_REG}/${domain_part}${image_part}"
+        yaml_local_image="${STATIC_MID_REG}/${yaml_image}"
         # echo $image_url
     elif [[ $docker_image =~ ^.*\.(io|com|org)/[^:]*  ]]; then
         # echo "io, com, org without tag: $docker_image"
