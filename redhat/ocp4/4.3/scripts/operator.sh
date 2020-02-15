@@ -3,6 +3,9 @@
 set -e
 set -x
 
+var_date=$(date '+%Y-%m-%d')
+echo $var_date
+
 cd /data/ocp4
 /bin/rm -rf /data/ocp4/operator
 /bin/rm -f operator.ok.list operator.failed.list
@@ -42,13 +45,14 @@ while read -r line; do
 
     mkdir -p manifests/${namespace}.$name/ 
 
-    string=$(tar --exclude='*/*' -tf tgz/$namespace.$name.$release.tar.gz)
-    case $string in
-        */) echo "end with /"
-            tar --strip 1 -xf tgz/$namespace.$name.$release.tar.gz -C manifests/${namespace}.$name/;;
-        *) echo "end with file"
-            tar -xf tgz/$namespace.$name.$release.tar.gz -C manifests/${namespace}.$name/;;
-    esac
+    # string=$(tar --exclude='*/*' -tf tgz/$namespace.$name.$release.tar.gz)
+    if [ -z "$(tar --exclude='*/*' -tf tgz/$namespace.$name.$release.tar.gz | grep -v \/ ) "]; then
+        # only directory 
+        tar --strip 1 -xf tgz/$namespace.$name.$release.tar.gz -C manifests/${namespace}.$name/
+    else
+        # contains files
+        tar -xf tgz/$namespace.$name.$release.tar.gz -C manifests/${namespace}.$name/
+    fi
 
     if [ -f "manifests/${namespace}.$name/bundle.yaml" ]; then
 
@@ -75,7 +79,7 @@ while read -r line; do
         # echo "ok: $line" >> /data/ocp4/operator.failed.list
     fi  
 
-    /bin/rm -f manifests/${namespace}.$name/bundle.yaml
+    # /bin/rm -f manifests/${namespace}.$name/bundle.yaml
 
     # if podman build -f /data/ocp4/custom-registry.Dockerfile -t registry.redhat.ren/ocp-operator/custom-registry ./ ; then
     #     echo "$line" >> /data/ocp4/operator.ok.list
@@ -117,3 +121,27 @@ cat /data/ocp4/operator.image.list | grep "^[[:alnum:]].*[[:alnum:]]$" | sort | 
 cd /data/ocp4/operator
 chown -R 1001:1001 *
 tar zcf manifests.tgz manifests/
+
+buildah from --name onbuild-container docker.io/library/centos:centos7
+buildah copy onbuild-container manifests.tgz /
+buildah copy onbuild-container operator.image.list.uniq /
+buildah umount onbuild-container 
+buildah commit --rm --format=docker onbuild-container docker.io/wangzheng422/operator-catalog:fs-$var_date
+# buildah rm onbuild-container
+buildah push docker.io/wangzheng422/operator-catalog:fs-$var_date
+
+oc adm catalog build \
+    --appregistry-endpoint https://quay.io/cnr \
+    --appregistry-org redhat-operators \
+    --to=docker.io/wangzheng422/operator-catalog:redhat-$var_date 
+
+oc adm catalog build \
+    --appregistry-endpoint https://quay.io/cnr \
+    --appregistry-org certified-operators \
+    --to=docker.io/wangzheng422/operator-catalog:certified-$var_date  
+
+oc adm catalog build \
+    --appregistry-endpoint https://quay.io/cnr \
+    --appregistry-org community-operators \
+    --to=docker.io/wangzheng422/operator-catalog:community-$var_date  
+

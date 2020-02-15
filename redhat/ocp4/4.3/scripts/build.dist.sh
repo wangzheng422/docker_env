@@ -5,14 +5,12 @@ set -x
 
 # export BUILDNUMBER="4.2.13"
 build_number_list=$(cat << EOF
-4.2.18
-4.2.19
 4.3.1
 4.3.2
 EOF
 )
 
-var_date=$(date '+%Y-%m-%d')
+var_date='2020-02-14'
 echo $var_date
 
 wget -O image.mirror.fn.sh https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/4.3/scripts/image.mirror.fn.sh
@@ -107,7 +105,9 @@ done <<< "$build_number_list"
 
 cd /data/ocp4
 
-# wget --recursive --no-directories --no-parent https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/4.3/latest/
+wget --recursive --no-directories --no-parent https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/4.3/latest/
+
+# wget --recursive --no-directories --no-parent https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/4.2/latest/
 
 wget -O ocp4-upi-helpernode-master.zip https://github.com/wangzheng422/ocp4-upi-helpernode/archive/master.zip
 
@@ -143,9 +143,15 @@ cd /data/ocp4
 # podman login -u ****** -p ******** registry.access.redhat.com
 # podman login -u ****** -p ******** registry.connect.redhat.com
 
+# operator images
+podman run -d --name catalog-fs --entrypoint "tail" docker.io/wangzheng422/operator-catalog:fs-$var_date -f /dev/null
+podman cp catalog-fs:/operator.image.list.uniq /data/ocp4/
+podman rm -fv catalog-fs
+
 # 以下命令要运行 2-3个小时，耐心等待。。。
 bash image.mirror.install.sh
 
+# some github, and so on
 bash demos.sh
 
 # build operator catalog
