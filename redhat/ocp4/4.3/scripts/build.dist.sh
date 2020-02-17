@@ -104,9 +104,9 @@ cd /data/ocp4
 # podman login -u ****** -p ******** registry.connect.redhat.com
 
 # operator images
-# podman run -d --name catalog-fs --entrypoint "tail" docker.io/wangzheng422/operator-catalog:fs-$var_date -f /dev/null
-# podman cp catalog-fs:/operator.image.list.uniq /data/ocp4/
-# podman rm -fv catalog-fs
+podman run -d --name catalog-fs --entrypoint "tail" docker.io/wangzheng422/operator-catalog:fs-$var_date -f /dev/null
+podman cp catalog-fs:/operator.image.list.uniq /data/ocp4/
+podman rm -fv catalog-fs
 
 # 以下命令要运行 2-3个小时，耐心等待。。。
 bash image.mirror.install.sh
