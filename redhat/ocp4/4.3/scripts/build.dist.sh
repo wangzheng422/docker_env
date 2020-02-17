@@ -20,46 +20,6 @@ wget -O install.image.list https://raw.githubusercontent.com/wangzheng422/docker
 wget -O add.image.load.sh https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/4.3/scripts/add.image.load.sh
 wget -O demos.sh https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/4.3/scripts/demos.sh
 
-cat << EOF >>  /etc/hosts
-127.0.0.1 registry.redhat.ren
-EOF
-
-mkdir -p /etc/crts/
-cd /etc/crts
-openssl req \
-   -newkey rsa:2048 -nodes -keyout redhat.ren.key \
-   -x509 -days 3650 -out redhat.ren.crt -subj \
-   "/C=CN/ST=GD/L=SZ/O=Global Security/OU=IT Department/CN=*.redhat.ren"
-
-cp /etc/crts/redhat.ren.crt /etc/pki/ca-trust/source/anchors/
-update-ca-trust extract
-
-systemctl stop docker-distribution
-/bin/rm -rf /data/registry
-mkdir -p /data/registry
-cat << EOF > /etc/docker-distribution/registry/config.yml
-version: 0.1
-log:
-  fields:
-    service: registry
-storage:
-    cache:
-        layerinfo: inmemory
-    filesystem:
-        rootdirectory: /data/registry
-    delete:
-        enabled: true
-http:
-    addr: :5443
-    tls:
-       certificate: /etc/crts/redhat.ren.crt
-       key: /etc/crts/redhat.ren.key
-EOF
-# systemctl restart docker
-# systemctl enable docker-distribution
-
-systemctl restart docker-distribution
-
 # podman login registry.redhat.ren -u a -p a
 
 mkdir -p /data/ocp4
@@ -76,10 +36,10 @@ install_build() {
     mkdir -p /data/ocp4/${BUILDNUMBER}
     cd /data/ocp4/${BUILDNUMBER}
 
-    wget https://mirror.openshift.com/pub/openshift-v4/clients/ocp/${BUILDNUMBER}/release.txt
+    wget -O release.txt https://mirror.openshift.com/pub/openshift-v4/clients/ocp/${BUILDNUMBER}/release.txt
 
-    wget https://mirror.openshift.com/pub/openshift-v4/clients/ocp/${BUILDNUMBER}/openshift-client-linux-${BUILDNUMBER}.tar.gz
-    wget https://mirror.openshift.com/pub/openshift-v4/clients/ocp/${BUILDNUMBER}/openshift-install-linux-${BUILDNUMBER}.tar.gz
+    wget -O openshift-client-linux-${BUILDNUMBER}.tar.gz https://mirror.openshift.com/pub/openshift-v4/clients/ocp/${BUILDNUMBER}/openshift-client-linux-${BUILDNUMBER}.tar.gz
+    wget -O openshift-install-linux-${BUILDNUMBER}.tar.gz https://mirror.openshift.com/pub/openshift-v4/clients/ocp/${BUILDNUMBER}/openshift-install-linux-${BUILDNUMBER}.tar.gz
 
     tar -xzf openshift-client-linux-${BUILDNUMBER}.tar.gz -C /usr/local/bin/
     tar -xzf openshift-install-linux-${BUILDNUMBER}.tar.gz -C /usr/local/bin/
