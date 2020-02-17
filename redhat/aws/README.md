@@ -19,7 +19,8 @@ subscription-manager repos \
     --enable="rhel-7-server-supplementary-rpms" \
     --enable="rhel-7-server-ose-4.2-rpms" \
     --enable="rhel-7-server-ansible-2.8-rpms" \
-    --enable="rhel-7-server-optional-rpms" 
+    --enable="rhel-7-server-optional-rpms" \
+    --enable="rhel-7-server-cnv-2.2-rpms"
     # --enable="rhel-7-server-ose-3.11-rpms" \
     # --enable="rhel-7-server-ansible-2.6-rpms" \
     # --enable="rhel-7-server-3scale-amp-2.5-rpms" \
@@ -54,7 +55,7 @@ yum -y install deltarpm
 yum -y update
 ```
 
-## ocp 4.2
+## ocp 4.2, 4.3
 ```bash
 cat << EOF > /etc/yum.repos.d/ocp.4.2.repo
 [ocp4.2]
@@ -62,7 +63,14 @@ name=ocp4.2
 baseurl=https://mirror.openshift.com/pub/openshift-v4/dependencies/rpms/4.2-beta/
 enabled=1
 gpgcheck=0
+EOF
 
+cat << EOF > /etc/yum.repos.d/ocp.4.3.repo
+[ocp4.3]
+name=ocp4.3
+baseurl=https://mirror.openshift.com/pub/openshift-v4/dependencies/rpms/4.3-beta2/
+enabled=1
+gpgcheck=0
 EOF
 
 ```

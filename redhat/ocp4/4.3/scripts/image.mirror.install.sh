@@ -31,9 +31,9 @@ done < install.image.list.tmp.uniq
 #     mirror_image $line
 # done < install.image.list
 
-while read -r line; do
-    mirror_image $line
-done < operator.image.list.uniq
+# while read -r line; do
+#     mirror_image $line
+# done < operator.image.list.uniq
 
 cat yaml.image.ok.list | sort | uniq > yaml.image.ok.list.uniq
 

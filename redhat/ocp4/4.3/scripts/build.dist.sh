@@ -10,7 +10,7 @@ build_number_list=$(cat << EOF
 EOF
 )
 
-var_date='2020-02-14'
+var_date='2020-02-17'
 echo $var_date
 
 wget -O image.mirror.fn.sh https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/4.3/scripts/image.mirror.fn.sh
@@ -104,9 +104,9 @@ cd /data/ocp4
 # podman login -u ****** -p ******** registry.connect.redhat.com
 
 # operator images
-podman run -d --name catalog-fs --entrypoint "tail" docker.io/wangzheng422/operator-catalog:fs-$var_date -f /dev/null
-podman cp catalog-fs:/operator.image.list.uniq /data/ocp4/
-podman rm -fv catalog-fs
+# podman run -d --name catalog-fs --entrypoint "tail" docker.io/wangzheng422/operator-catalog:fs-$var_date -f /dev/null
+# podman cp catalog-fs:/operator.image.list.uniq /data/ocp4/
+# podman rm -fv catalog-fs
 
 # 以下命令要运行 2-3个小时，耐心等待。。。
 bash image.mirror.install.sh
@@ -116,17 +116,17 @@ bash demos.sh
 
 # build operator catalog
 oc adm catalog mirror \
-    docker.io/wangzheng422/operator-catalog:redhat-2020-02-14 \
+    docker.io/wangzheng422/operator-catalog:redhat-$var_date \
     registry.redhat.ren:5443/ocp-operator 
 /bin/cp -f operator-catalog-manifests/mapping.txt mapping-redhat.txt
 
 oc adm catalog mirror \
-    docker.io/wangzheng422/operator-catalog:certified-2020-02-14 \
+    docker.io/wangzheng422/operator-catalog:certified-$var_date \
     registry.redhat.ren:5443/ocp-operator 
 /bin/cp -f operator-catalog-manifests/mapping.txt mapping-certified.txt
 
 oc adm catalog mirror \
-    docker.io/wangzheng422/operator-catalog:community-2020-02-14 \
+    docker.io/wangzheng422/operator-catalog:community-$var_date \
     registry.redhat.ren:5443/ocp-operator 
 /bin/cp -f operator-catalog-manifests/mapping.txt mapping-community.txt
 
