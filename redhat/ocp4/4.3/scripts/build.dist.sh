@@ -18,7 +18,7 @@ wget -O image.mirror.install.sh https://raw.githubusercontent.com/wangzheng422/d
 wget -O image.registries.conf.sh https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/4.3/scripts/image.registries.conf.sh
 wget -O install.image.list https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/4.3/scripts/install.image.list
 wget -O add.image.load.sh https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/4.3/scripts/add.image.load.sh
-wget -O add.image.load.sh https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/4.3/scripts/demos.sh
+wget -O demos.sh https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/4.3/scripts/demos.sh
 
 cat << EOF >>  /etc/hosts
 127.0.0.1 registry.redhat.ren
@@ -158,17 +158,17 @@ bash demos.sh
 oc adm catalog mirror \
     docker.io/wangzheng422/operator-catalog:redhat-2020-02-14 \
     registry.redhat.ren:5443/ocp-operator 
-/bin/cp -f operator-catalog-manifests/mapping.txt operator-redhat.txt
+/bin/cp -f operator-catalog-manifests/mapping.txt mapping-redhat.txt
 
 oc adm catalog mirror \
     docker.io/wangzheng422/operator-catalog:certified-2020-02-14 \
     registry.redhat.ren:5443/ocp-operator 
-/bin/cp -f operator-catalog-manifests/mapping.txt operator-certified.txt
+/bin/cp -f operator-catalog-manifests/mapping.txt mapping-certified.txt
 
 oc adm catalog mirror \
     docker.io/wangzheng422/operator-catalog:community-2020-02-14 \
     registry.redhat.ren:5443/ocp-operator 
-/bin/cp -f operator-catalog-manifests/mapping.txt operator-community.txt
+/bin/cp -f operator-catalog-manifests/mapping.txt mapping-community.txt
 
 cd /data
 tar cf - registry/ | pigz -c > registry.tgz 
