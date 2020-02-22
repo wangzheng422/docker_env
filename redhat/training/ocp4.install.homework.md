@@ -8,7 +8,7 @@ ansible localhost -m lineinfile -a 'path=$HOME/.bashrc regexp="^export OCP_RELEA
 
 yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
 
-ansible localhost -m lineinfile -a 'path=$HOME/.bashrc regexp="^export OCP_RELEASE" line="export OCP_RELEASE=4.3.2"'
+ansible localhost -m lineinfile -a 'path=$HOME/.bashrc regexp="^export OCP_RELEASE" line="export OCP_RELEASE=4.3.3"'
 
 source $HOME/.bashrc
 
