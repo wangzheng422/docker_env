@@ -35,7 +35,7 @@ done < install.image.list.tmp.uniq
 #     mirror_image $line
 # done < operator.image.list.uniq
 
-cat yaml.image.ok.list | sort | uniq > yaml.image.ok.list.uniq
+# cat yaml.image.ok.list | sort | uniq > yaml.image.ok.list.uniq
 
 podman image prune -a
 

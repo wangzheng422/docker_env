@@ -55,8 +55,13 @@ install_build() {
 
     oc adm release mirror -a ${LOCAL_SECRET_JSON} \
     --from=quay.io/${UPSTREAM_REPO}/${RELEASE_NAME}:${OCP_RELEASE}-x86_64 \
-    --to-release-image=${LOCAL_REG}/${LOCAL_REPO}:${OCP_RELEASE} \
+    --to-release-image=${LOCAL_REG}/${LOCAL_REPO}:${OCP_RELEASE}-x86_64 \
     --to=${LOCAL_REG}/${LOCAL_REPO}
+
+    # oc adm release mirror -a ${LOCAL_SECRET_JSON} \
+    # --from=quay.io/${UPSTREAM_REPO}/${RELEASE_NAME}:${OCP_RELEASE}-s390 \
+    # --to-release-image=${LOCAL_REG}/${LOCAL_REPO}:${OCP_RELEASE}-s390 \
+    # --to=${LOCAL_REG}/${LOCAL_REPO}
 
 }
 
