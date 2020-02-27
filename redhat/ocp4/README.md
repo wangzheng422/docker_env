@@ -191,4 +191,8 @@ oc patch projects.config.openshift.io cluster -p '{"spec": {"projectRequestTempl
 
 
 env TZ=Asia/Shanghai date
+
+oc proxy 8001
+curl localhost:8001/openapi/v2 | jq
+
 ```

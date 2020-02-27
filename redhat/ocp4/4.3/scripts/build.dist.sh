@@ -11,14 +11,18 @@ build_number_list=$(cat << EOF
 EOF
 )
 
-var_date='2020-02-17'
+export var_date='2020-02-17'
 echo $var_date
+
+# export MIRROR_DIR='/data/mirror_dir'
+# mkdir -p ${MIRROR_DIR}
 
 wget -O image.mirror.fn.sh https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/4.3/scripts/image.mirror.fn.sh
 wget -O image.mirror.install.sh https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/4.3/scripts/image.mirror.install.sh
 wget -O image.registries.conf.sh https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/4.3/scripts/image.registries.conf.sh
 wget -O install.image.list https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/4.3/scripts/install.image.list
 wget -O add.image.load.sh https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/4.3/scripts/add.image.load.sh
+wget -O add.image.load.sh https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/4.3/scripts/add.image.sh
 wget -O demos.sh https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/4.3/scripts/demos.sh
 
 # podman login registry.redhat.ren -u a -p a
@@ -42,8 +46,8 @@ install_build() {
     wget -O openshift-client-linux-${BUILDNUMBER}.tar.gz https://mirror.openshift.com/pub/openshift-v4/clients/ocp/${BUILDNUMBER}/openshift-client-linux-${BUILDNUMBER}.tar.gz
     wget -O openshift-install-linux-${BUILDNUMBER}.tar.gz https://mirror.openshift.com/pub/openshift-v4/clients/ocp/${BUILDNUMBER}/openshift-install-linux-${BUILDNUMBER}.tar.gz
 
-    tar -xzf openshift-client-linux-${BUILDNUMBER}.tar.gz -C /usr/local/bin/
-    tar -xzf openshift-install-linux-${BUILDNUMBER}.tar.gz -C /usr/local/bin/
+    tar -xzf openshift-client-linux-${BUILDNUMBER}.tar.gz -C /usr/local/sbin/
+    tar -xzf openshift-install-linux-${BUILDNUMBER}.tar.gz -C /usr/local/sbin/
 
     export OCP_RELEASE=${BUILDNUMBER}
     export LOCAL_REG='registry.redhat.ren:5443'
@@ -57,6 +61,10 @@ install_build() {
     --from=quay.io/${UPSTREAM_REPO}/${RELEASE_NAME}:${OCP_RELEASE}-x86_64 \
     --to-release-image=${LOCAL_REG}/${LOCAL_REPO}:${OCP_RELEASE}-x86_64 \
     --to=${LOCAL_REG}/${LOCAL_REPO}
+
+    # oc adm release mirror -a ${LOCAL_SECRET_JSON} \
+    # --from=quay.io/${UPSTREAM_REPO}/${RELEASE_NAME}:${OCP_RELEASE}-x86_64 \
+    # --to-dir=${MIRROR_DIR}
 
     # oc adm release mirror -a ${LOCAL_SECRET_JSON} \
     # --from=quay.io/${UPSTREAM_REPO}/${RELEASE_NAME}:${OCP_RELEASE}-s390 \

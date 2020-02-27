@@ -18,6 +18,10 @@ export MID_REG="registry.redhat.ren"
 
 # /bin/rm -rf ./operator/yaml/
 # mkdir -p ./operator/yaml/
+
+cat pull.image.ok.list ${parm_file} mapping-*.txt | sed 's/\/.*$//g' | egrep "^.*\.(io|com|org|net)$"  | sort | uniq > mirror.domain.list
+# cat pull.image.ok.list ${parm_file} mapping-*.txt | sed 's/\/.*$//g' | sort | uniq > mirror.domain.list
+
 cat << EOF > ./image.registries.conf
 unqualified-search-registries = ["registry.access.redhat.com", "docker.io"]
 
@@ -26,21 +30,27 @@ EOF
 yaml_docker_image(){
 
     docker_image=$1
-    local_image=$(echo $2 | sed "s/${MID_REG}/${LOCAL_REG}/")
-    num=$3
+    # local_image=$(echo $2 | sed "s/${MID_REG}/${LOCAL_REG}/")
+    num=$2
     # echo $docker_image
 
 cat << EOF >> ./image.registries.conf
+
 [[registry]]
   location = "${docker_image}"
   insecure = false
   blocked = false
   mirror-by-digest-only = false
-  prefix = ""
+  prefix = "${docker_image}"
 
   [[registry.mirror]]
-    location = "${local_image}"
+    location = "${LOCAL_REG}/${docker_image}"
     insecure = true
+  
+  [[registry.mirror]]
+    location = "${LOCAL_REG}/ocp-operator"
+    insecure = true
+
 EOF
 
 }
@@ -49,16 +59,19 @@ declare -i num=1
 
 while read -r line; do
 
-    docker_image=$(echo $line | awk  '{split($0,a,"\t"); print a[1]}')
-    local_image=$(echo $line | awk  '{split($0,a,"\t"); print a[2]}')
+    # docker_image=$(echo $line | awk  '{split($0,a,"\t"); print a[1]}')
+    # local_image=$(echo $line | awk  '{split($0,a,"\t"); print a[2]}')
+
+    docker_image=$line
 
     echo $docker_image
-    echo $local_image
+    # echo $local_image
 
-    yaml_docker_image $docker_image $local_image $num
+    # yaml_docker_image $docker_image $local_image $num
+    yaml_docker_image $docker_image $num
     num=${num}+1;
 
-done < ${parm_file} # yaml.image.ok.list.uniq
+done < mirror.domain.list
 
 
 cat << EOF >> ./image.registries.conf
