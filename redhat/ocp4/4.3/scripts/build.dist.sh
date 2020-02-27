@@ -18,11 +18,17 @@ echo $var_date
 # mkdir -p ${MIRROR_DIR}
 
 wget -O image.mirror.fn.sh https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/4.3/scripts/image.mirror.fn.sh
+
 wget -O image.mirror.install.sh https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/4.3/scripts/image.mirror.install.sh
+
 wget -O image.registries.conf.sh https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/4.3/scripts/image.registries.conf.sh
+
 wget -O install.image.list https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/4.3/scripts/install.image.list
+
 wget -O add.image.load.sh https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/4.3/scripts/add.image.load.sh
-wget -O add.image.load.sh https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/4.3/scripts/add.image.sh
+
+wget -O add.image.sh https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/4.3/scripts/add.image.sh
+
 wget -O demos.sh https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/4.3/scripts/demos.sh
 
 # podman login registry.redhat.ren -u a -p a

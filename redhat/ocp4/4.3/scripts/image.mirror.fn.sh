@@ -125,6 +125,7 @@ mirror_image() {
                 buildah rm onbuild-container
                 buildah push ${local_image_url}
                 echo -e "${docker_image}\t${local_image_url}" >> pull.image.ok.list
+                echo -e "${docker_image}\t${local_image_url}" >> pull.image.docker.ok.list
                 # echo -e "${yaml_image}\t${yaml_local_image}" >> yaml.image.ok.list
                 # echo -e "${domain_part}" >> yaml.image.ok.list
             else
