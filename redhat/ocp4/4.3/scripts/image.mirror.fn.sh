@@ -344,10 +344,9 @@ add_image_load() {
 
 add_image_load_oci_file() {
 
-    delimiter="\t"
-    declare -a array=($(echo $1 | tr "$delimiter" " "))
-    docker_image=${array[0]}
-    file_name=${array[1]}
+
+    docker_image=$1
+    file_name=$2
 
     split_image $docker_image
 
