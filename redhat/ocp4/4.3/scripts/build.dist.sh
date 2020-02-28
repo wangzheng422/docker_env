@@ -168,7 +168,7 @@ tar cf - ocp4/ | pigz -c > ocp4.tgz
 
 # split -b 10G registry.with.operator.image.tgz registry.
 # find /data -maxdepth 1 -type f -exec sha256sum {} \;
-echo $build_number_list > versions.txt
+echo "$build_number_list" > versions.txt
 find /data -maxdepth 1 -type f -exec sha256sum {} \; > checksum.txt
 
 # find ./ -maxdepth 1 -name "*.tgz" -exec skicka upload {}  /"zhengwan.share/shared_docs/2020.01/ocp.ccn/" \;

@@ -201,7 +201,7 @@ add_image_file() {
                 buildah unmount onbuild-container
                 buildah commit --format=docker onbuild-container ${docker_image}
                 buildah rm onbuild-container
-                buildah push {docker_image} docker-archive://${MIRROR_DIR}/docker/$sha_part
+                buildah push ${docker_image} docker-archive:/${MIRROR_DIR}/docker/$sha_part
                 echo -e "${docker_image}\t${MIRROR_DIR}/docker/$sha_part" >> pull.add.image.docker.ok.list
                 # echo -e "${yaml_image}\t${yaml_local_image}" >> yaml.add.image.ok.list
                 # echo -e "${domain_part}" >> yaml.add.image.ok.list
@@ -328,6 +328,24 @@ add_image_load() {
 
     var_line=$1
     split_image_add_image_load $var_line
+
+    # if oc image mirror $docker_image $local_image_url; then
+    if [[ $var_skip == 0 ]]; then
+        # if skopeo copy "docker://"$docker_image "docker://"$local_image_url; then
+        if oc image mirror $docker_image $local_image_url; then
+            echo -e "${docker_image}\t${local_image_url}" >> pull.add.image.ok.list
+            # echo -e "${yaml_image}\t${yaml_local_image}" >> yaml.add.image.ok.list
+            # echo -e "${domain_part}" >> yaml.add.image.ok.list
+        else
+            echo "$docker_image" >> pull.add.image.failed.list
+        fi
+    fi
+}
+
+add_image_load_file() {
+
+    var_line=$1
+    split_image_add_image_load_oci_file $var_line
 
     # if oc image mirror $docker_image $local_image_url; then
     if [[ $var_skip == 0 ]]; then

@@ -3,10 +3,10 @@
 set -e
 set -x
 
-export MID_REG='registry-add.redhat.ren:5000'
+# export MID_REG='registry-add.redhat.ren:5000'
 export LOCAL_REG='registry.redhat.ren:5443'
 
-/bin/rm -f pull.add.image.failed.list pull.add.image.ok.list yaml.add.image.ok.list
+/bin/rm -f pull.add.image.failed.list pull.add.image*.ok.list yaml.add.image.ok.list
 
 source image.mirror.fn.sh
 
@@ -24,9 +24,15 @@ source image.mirror.fn.sh
 
 while read -r line; do
 
-    add_image_load $line
+    add_image_load_oci_file $line
 
-done < add.image.list
+done < pull.add.image.ok.list
+
+while read -r line; do
+
+    add_image_load_docker_file $line
+
+done < pull.add.image.docker.ok.list
 
 
 # /bin/cp -f yaml.image.ok.list yaml.image.ok.list.tmp
