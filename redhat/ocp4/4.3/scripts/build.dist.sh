@@ -150,6 +150,8 @@ oc adm catalog mirror \
     registry.redhat.ren:5443/ocp-operator 
 /bin/cp -f operator-catalog-manifests/mapping.txt mapping-community.txt
 
+bash image.registries.conf.sh
+
 cd /data
 tar cf - registry/ | pigz -c > registry.tgz 
 
