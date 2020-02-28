@@ -342,15 +342,19 @@ add_image_load() {
     fi
 }
 
-add_image_load_file() {
+add_image_load_oci_file() {
 
-    var_line=$1
-    split_image_add_image_load_oci_file $var_line
+    delimiter="\t"
+    declare -a array=($(echo $1 | tr "$delimiter" " "))
+    docker_image=${array[0]}
+    file_name=${array[1]}
+
+    split_image $docker_image
 
     # if oc image mirror $docker_image $local_image_url; then
     if [[ $var_skip == 0 ]]; then
         # if skopeo copy "docker://"$docker_image "docker://"$local_image_url; then
-        if oc image mirror $docker_image $local_image_url; then
+        if oc image mirror --from-dir=${MIRROR_DIR}/oci/ file://${file_name} $local_image_url ; then
             echo -e "${docker_image}\t${local_image_url}" >> pull.add.image.ok.list
             # echo -e "${yaml_image}\t${yaml_local_image}" >> yaml.add.image.ok.list
             # echo -e "${domain_part}" >> yaml.add.image.ok.list
@@ -360,32 +364,6 @@ add_image_load_file() {
     fi
 }
 
-# add_image() {
-#     var_line=$1
-#     split_image $var_line
-
-#     tar_file_name=$(echo ${docker_image} | sha1sum | cut -f 1 -d ' ')
-#     tar_file_name="${tar_file_name}.tar"
-
-#     if [[ $var_skip == 0 ]]; then
-#         if [[ ! -f ./image_tar/${tar_file_name}.gz ]]; then
-#             /bin/rm -f ./image_tar/${tar_file_name}
-#             if skopeo copy "docker://"$docker_image "docker-archive:./image_tar/"$tar_file_name; then
-#                 pigz ./image_tar/$tar_file_name
-#                 tar_file_name="${tar_file_name}.gz"
-#                 echo -e "${docker_image}\t${tar_file_name}\t${local_image_url}" >> pull.add.image.ok.list
-#                 echo -e "${yaml_image}\t${yaml_local_image}" >> yaml.add.image.ok.list
-#             else
-#                 echo "$docker_image" >> pull.add.image.failed.list
-#                 /bin/rm -f ./image_tar/$tar_file_name
-#             fi
-#         else
-#             tar_file_name="${tar_file_name}.gz"
-#             echo -e "${docker_image}\t${tar_file_name}\t${local_image_url}" >> pull.add.image.ok.list
-#             echo -e "${yaml_image}\t${yaml_local_image}" >> yaml.add.image.ok.list
-#         fi
-#     fi
-# }
 
 
 

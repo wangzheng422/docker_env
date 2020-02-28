@@ -40,7 +40,7 @@ done < add.image.list
 /bin/cp -f pull.add.image.docker.ok.list ${MIRROR_DIR}/
 
 cd /data
-tar cf - ${MIRROR_DIR}/ | pigz -c > mirror_dir.tgz 
+tar cf - mirror_dir/ | pigz -c > mirror_dir.tgz 
 
 
 
