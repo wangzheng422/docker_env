@@ -11,7 +11,7 @@ build_number_list=$(cat << EOF
 EOF
 )
 
-export var_date='2020-02-17'
+export var_date='2020-02-29'
 echo $var_date
 
 # export MIRROR_DIR='/data/mirror_dir'
