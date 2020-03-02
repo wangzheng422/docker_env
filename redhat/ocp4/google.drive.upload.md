@@ -45,6 +45,8 @@ yum -y install connect-proxy
 
 export VULTR_HOST=nexus.redhat.ren
 
+export VULTR_HOST=bastion.81a9.example.opentlc.com
+
 cat << EOF > /root/.ssh/config
 StrictHostKeyChecking no
 UserKnownHostsFile=/dev/null
@@ -57,9 +59,9 @@ EOF
 
 cd /data
 
-rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/registry /data/
+rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/registry ./
 
-rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/ocp4 /data/
+rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/ocp4 ./
 
 rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/registry-add /data/
 
