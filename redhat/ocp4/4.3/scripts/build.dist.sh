@@ -67,6 +67,8 @@ install_build() {
     --to-release-image=${LOCAL_REG}/${LOCAL_REPO}:${OCP_RELEASE} \
     --to=${LOCAL_REG}/${LOCAL_REPO}
 
+    # oc adm release extract --command=openshift-install "${LOCAL_REG}/${LOCAL_REPO}:${OCP_RELEASE}"
+
     # oc adm release mirror -a ${LOCAL_SECRET_JSON} \
     # --from=quay.io/${UPSTREAM_REPO}/${RELEASE_NAME}:${OCP_RELEASE}-x86_64 \
     # --to-dir=${MIRROR_DIR}
