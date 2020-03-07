@@ -65,16 +65,18 @@ install_build() {
 
     oc adm release mirror -a ${LOCAL_SECRET_JSON} \
     --from=quay.io/${UPSTREAM_REPO}/${RELEASE_NAME}:${OCP_RELEASE}-x86_64 \
-    --to-release-image=${LOCAL_REG}/${LOCAL_REPO}:${OCP_RELEASE}-x86_64 \
+    --to-release-image=${LOCAL_REG}/${LOCAL_REPO}:${OCP_RELEASE} \
     --to=${LOCAL_REG}/${LOCAL_REPO}
 
     # oc adm release mirror -a ${LOCAL_SECRET_JSON} \
     # --from=quay.io/${UPSTREAM_REPO}/${RELEASE_NAME}:${OCP_RELEASE}-x86_64 \
     # --to-dir=${MIRROR_DIR}
 
+    # oc image mirror --dir=mirror file://ocp4/openshift4/release:* registry.redhat.ren:5443/ocp4/openshift4 --registry-config=/root/merged_pullsecret.json
+
     # oc adm release mirror -a ${LOCAL_SECRET_JSON} \
     # --from=quay.io/${UPSTREAM_REPO}/${RELEASE_NAME}:${OCP_RELEASE}-s390 \
-    # --to-release-image=${LOCAL_REG}/${LOCAL_REPO}:${OCP_RELEASE}-s390 \
+    # --to-release-image=${LOCAL_REG}/${LOCAL_REPO}:${OCP_RELEASE} \
     # --to=${LOCAL_REG}/${LOCAL_REPO}
 
 }
