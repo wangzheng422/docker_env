@@ -45,13 +45,15 @@ yum -y install connect-proxy
 
 export VULTR_HOST=nexus.redhat.ren
 
-export VULTR_HOST=bastion.81a9.example.opentlc.com
+export VULTR_HOST=bastion.1b26.example.opentlc.com
 
 cat << EOF > /root/.ssh/config
 StrictHostKeyChecking no
 UserKnownHostsFile=/dev/null
 
-Host *.redhat.ren
+Host *.redhat.ren 
+    ProxyCommand connect-proxy -S 192.168.253.1:5085 %h %p
+Host *.opentlc.com 
     ProxyCommand connect-proxy -S 192.168.253.1:5085 %h %p
 EOF
 # ProxyJump user@bastion-host-nickname

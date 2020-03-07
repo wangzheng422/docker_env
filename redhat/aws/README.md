@@ -9,7 +9,7 @@ subscription-manager register --username **** --password ********
 
 subscription-manager list --available --all
 
-subscription-manager attach --pool=8a85f99a684d00130168825ec15b1bf4
+subscription-manager attach --pool=8a85f99a6fa01382016fc16b7c045e16
 
 subscription-manager repos --disable="*"
 
@@ -17,10 +17,10 @@ subscription-manager repos \
     --enable="rhel-7-server-rpms" \
     --enable="rhel-7-server-extras-rpms" \
     --enable="rhel-7-server-supplementary-rpms" \
-    --enable="rhel-7-server-ose-4.2-rpms" \
     --enable="rhel-7-server-ansible-2.8-rpms" \
     --enable="rhel-7-server-optional-rpms" \
     --enable="rhel-7-server-cnv-2.2-rpms"
+    # --enable="rhel-7-server-ose-4.2-rpms" \
     # --enable="rhel-7-server-ose-3.11-rpms" \
     # --enable="rhel-7-server-ansible-2.6-rpms" \
     # --enable="rhel-7-server-3scale-amp-2.5-rpms" \
@@ -29,6 +29,7 @@ subscription-manager repos \
 
 # subscription-manager repos --enable="rhel-7-server-e4s-optional-rpms"
 # subscription-manager repos --disable="rhel-7-server-e4s-optional-rpms"
+# subscription-manager repos --disable="rhel-7-server-ose-4.2-rpms"
 
 subscription-manager repos --list-enabled
 
@@ -92,7 +93,7 @@ yum-config-manager --disable epel
 这个要在centos上面做，rhel上面会报证书的错误，以前是不会的，新的rhel版本会报错。
 
 ```bash
-yum install -y https://developer.download.nvidia.com/compute/cuda/repos/rhel7/x86_64/cuda-repo-rhel7-10.1.243-1.x86_64.rpm
+yum install -y https://developer.download.nvidia.com/compute/cuda/repos/rhel7/x86_64/cuda-repo-rhel7-10.2.89-1.x86_64.rpm
 
 # curl -so /etc/yum.repos.d/nvidia-container-runtime.repo https://nvidia.github.io/nvidia-container-runtime/centos7/nvidia-container-runtime.repo
 
@@ -102,18 +103,25 @@ distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
 curl -s -L https://nvidia.github.io/nvidia-container-runtime/$distribution/nvidia-container-runtime.repo | \
   sudo tee /etc/yum.repos.d/nvidia-container-runtime.repo
 
-curl -s -L https://nvidia.github.io/nvidia-container-runtime/rhel7.6/nvidia-container-runtime.repo | \
-  sudo tee /etc/yum.repos.d/nvidia-container-runtime.repo
+# curl -s -L https://nvidia.github.io/nvidia-container-runtime/rhel7.6/nvidia-container-runtime.repo | \
+#   sudo tee /etc/yum.repos.d/nvidia-container-runtime.repo
 
 # update key
-DIST=$(sed -n 's/releasever=//p' /etc/yum.conf)
-DIST=${DIST:-$(. /etc/os-release; echo $VERSION_ID)}
-DIST=7Server
-sudo sudo rpm -e gpg-pubkey-f796ecb0
-sudo gpg --homedir /var/lib/yum/repos/$(uname -m)/$DIST/*/gpgdir --delete-key f796ecb0
-sudo gpg --homedir /var/lib/yum/repos/$(uname -m)/latest/nvidia-docker/gpgdir --delete-key f796ecb0
-sudo gpg --homedir /var/lib/yum/repos/$(uname -m)/latest/nvidia-container-runtime/gpgdir --delete-key f796ecb0
-sudo gpg --homedir /var/lib/yum/repos/$(uname -m)/latest/libnvidia-container/gpgdir --delete-key f796ecb0
+# DIST=$(sed -n 's/releasever=//p' /etc/yum.conf)
+# DIST=${DIST:-$(. /etc/os-release; echo $VERSION_ID)}
+# DIST=7Server
+# sudo sudo rpm -e gpg-pubkey-f796ecb0
+# sudo gpg --homedir /var/lib/yum/repos/$(uname -m)/$DIST/*/gpgdir --delete-key f796ecb0
+# sudo gpg --homedir /var/lib/yum/repos/$(uname -m)/latest/nvidia-docker/gpgdir --delete-key f796ecb0
+# sudo gpg --homedir /var/lib/yum/repos/$(uname -m)/latest/nvidia-container-runtime/gpgdir --delete-key f796ecb0
+# sudo gpg --homedir /var/lib/yum/repos/$(uname -m)/latest/libnvidia-container/gpgdir --delete-key f796ecb0
+# sudo yum makecache
+
+# this is for rhel 7.7
+DIST="7Server"
+sudo gpg --homedir /var/lib/yum/repos/x86_64/$DIST/libnvidia-container/gpgdir --delete-key f796ecb0
+sudo gpg --homedir /var/lib/yum/repos/x86_64/$DIST/nvidia-container-runtime/gpgdir --delete-key F796ECB0
+# sudo gpg --homedir /var/lib/yum/repos/x86_64/$DIST/nvidia-docker/gpgdir --delete-key F796ECB0
 sudo yum makecache
 
 # change /etc/yum.repos.d/nvidia-container-runtime.repo repo_gpgcheck=0

@@ -5,6 +5,9 @@ set -x
 
 /bin/rm -f pull.add.image.failed.list pull.add.image*.ok.list yaml.add.image.ok.list
 
+touch pull.add.image.ok.list
+touch pull.add.image.docker.ok.list
+
 export MIRROR_DIR='/data/mirror_dir'
 /bin/rm -rf ${MIRROR_DIR}
 mkdir -p ${MIRROR_DIR}/oci
@@ -34,7 +37,7 @@ while read -r line; do
 
     add_image_file $line
 
-done < add.image.list
+done <<< $( cat add.image.list | sort | uniq )
 
 /bin/cp -f pull.add.image.ok.list ${MIRROR_DIR}/
 /bin/cp -f pull.add.image.docker.ok.list ${MIRROR_DIR}/
