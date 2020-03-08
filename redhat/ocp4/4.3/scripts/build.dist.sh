@@ -4,9 +4,13 @@ set -e
 set -x
 
 # export BUILDNUMBER="4.2.13"
+# lastest   4.3.1
+# stable    4.3.1
+# fast      4.3.1
+# candidate 4.3.5
 build_number_list=$(cat << EOF
-4.3.2
-4.3.3
+4.3.5
+4.3.1
 EOF
 )
 
