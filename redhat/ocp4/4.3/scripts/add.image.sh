@@ -9,7 +9,7 @@ touch pull.add.image.ok.list
 touch pull.add.image.docker.ok.list
 
 export MIRROR_DIR='/data/mirror_dir'
-/bin/rm -rf ${MIRROR_DIR}
+# /bin/rm -rf ${MIRROR_DIR}
 mkdir -p ${MIRROR_DIR}/oci
 mkdir -p ${MIRROR_DIR}/docker
 export LOCAL_REG=''
@@ -37,7 +37,7 @@ while read -r line; do
 
     add_image_file $line
 
-done <<< $( cat add.image.list | sort | uniq )
+done < add.image.list
 
 /bin/cp -f pull.add.image.ok.list ${MIRROR_DIR}/
 /bin/cp -f pull.add.image.docker.ok.list ${MIRROR_DIR}/

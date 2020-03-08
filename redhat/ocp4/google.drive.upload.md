@@ -61,11 +61,11 @@ EOF
 
 cd /data
 
-rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/registry ./
+rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/registry /data/
 
-rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/ocp4 ./
+rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/ocp4 /data/
 
-rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/registry-add /data/
+rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/mirror_dir ./
 
 ####################
 ## local mac
