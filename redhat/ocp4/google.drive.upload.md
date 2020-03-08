@@ -61,7 +61,7 @@ EOF
 
 cd /data
 
-rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/registry /data/
+rsync -e ssh --info=progress2 -P --delete -h -arz ${VULTR_HOST}:/data/registry /data/
 
 rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/ocp4 /data/
 
