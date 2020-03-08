@@ -3,6 +3,8 @@
 set -e
 set -x
 
+parm_file=$1
+
 /bin/rm -f pull.add.image.failed.list pull.add.image*.ok.list yaml.add.image.ok.list
 
 touch pull.add.image.ok.list
@@ -37,7 +39,7 @@ while read -r line; do
 
     add_image_file $line
 
-done < add.image.list
+done < ${parm_file}  # add.image.list
 
 /bin/cp -f pull.add.image.ok.list ${MIRROR_DIR}/
 /bin/cp -f pull.add.image.docker.ok.list ${MIRROR_DIR}/
