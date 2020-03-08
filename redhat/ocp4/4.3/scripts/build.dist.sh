@@ -9,8 +9,8 @@ set -x
 # fast      4.3.1
 # candidate 4.3.5
 build_number_list=$(cat << EOF
-4.3.5
 4.3.1
+4.3.5
 EOF
 )
 
