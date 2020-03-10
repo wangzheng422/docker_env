@@ -44,6 +44,7 @@ skicka download "/other.deep.folder/A北区SA资料库/Discovery Session/"
 yum -y install connect-proxy
 
 export VULTR_HOST=nexus.redhat.ren
+export VULTR_HOST=base-pvg.redhat.ren
 
 export VULTR_HOST=bastion.1b26.example.opentlc.com
 
@@ -66,6 +67,8 @@ rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/registry /dat
 rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/ocp4 /data/
 
 rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/mirror_dir ./
+
+rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/remote/4.3.3/is.samples/mirror_dir ./
 
 ####################
 ## local mac
