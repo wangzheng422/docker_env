@@ -98,9 +98,9 @@ echo $(oc get secret apicast-configuration-url-secret -o yaml -n $GW_PROJECT | g
 
 echo "export INCIDENT_SERVICE_API_KEY=1223b617d556a8114dc933a6c57ed81d" >> $HOME/.bashrc
 
-echo "export SYSTEM_PROVIDER_URL=$(oc get routes -n $API_MANAGER_NS | grep admin | grep $OCP_USER_ID | awk '{print $2}')" >> $HOME/.bashrc
+echo "export SYSTEM_PROVIDER_URL=$(oc get routes -n ${API_MANAGER_NS} | grep admin | grep $ERDEMO_USER | awk '{print $2}')" >> $HOME/.bashrc
 
-echo "export API_ADMIN_ACCESS_TOKEN=$(oc get secret apicast-configuration-url-secret -o yaml -n $GW_PROJECT | grep password | awk '{print $2}' | base64 -d | cut -d'@' -f1 | cut -d'/' -f3)" >> $HOME/.bashrc
+echo "export API_ADMIN_ACCESS_TOKEN=$(oc get secret apicast-configuration-url-secret -o yaml -n ${GW_PROJECT} | grep password | awk '{print $2}' | base64 -d | cut -d'@' -f1 | cut -d'/' -f3)" >> $HOME/.bashrc
 
 curl -v https://$(oc get route -n $API_MANAGER_NS | grep $OCP_USER_ID | grep prod | awk '{print $2}')/incidents?user_key=$INCIDENT_SERVICE_API_KEY
 
@@ -1877,8 +1877,452 @@ oc patch deployment prometheus -p '{"spec":{"template":{"metadata":{"annotations
 
 # ingress:request_duration_seconds:histogram_quantile{destination_workload=~"^$ERDEMO_USER-incident-service.*"}.
 
+echo "---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: incident-service-virtualservice
+spec:
+  gateways:
+    - erd-wildcard-gateway.$SM_CP_NS.svc.cluster.local
+  hosts:
+    - incident-service.$ERDEMO_USER.apps.$SUBDOMAIN_BASE
+  http:
+    - match:
+        - uri:
+            prefix: /incidents
+      route:
+        - destination:
+            host: $ERDEMO_USER-incident-service.$ERDEMO_NS.svc.cluster.local
+            port:
+              number: 8080
+            subset: v1
+          weight: 20
+        - destination:
+            host: $ERDEMO_USER-incident-service.$ERDEMO_NS.svc.cluster.local
+            port:
+              number: 8080
+            subset: v2
+          weight: 80
+      fault:
+        delay:
+          fixedDelay: 2s
+          percentage:
+            value: 30
+" | oc apply -f - -n $ERDEMO_NS
 
+while :; do curl -k https://incident-service.$ERDEMO_USER.apps.$SUBDOMAIN_BASE/incidents; sleep 1; done
 
+###############################################################33
+## Observability Lab: Kiali
+##
 
+echo -en "\n\nhttps://$(oc get route kiali -o template --template={{.spec.host}} -n $SM_CP_NS)\n\n"
+
+while :; do curl -k https://incident-service.$ERDEMO_USER.apps.$SUBDOMAIN_BASE/incidents; sleep 1; done
+
+while :; do curl -k https://incident-service.$ERDEMO_USER.apps.$SUBDOMAIN_BASE/responders/available; sleep 1; done
+
+# spec:
+#   template:
+#     metadata:
+#       annotations:
+#         kiali.io/runtimes: 'springboot-jvm,springboot-jvm-pool'
+#         prometheus.io/path: /actuator/prometheus
+#         prometheus.io/port: '8080'
+#         prometheus.io/scheme: http
+#         prometheus.io/scrape: 'true'
+#         sidecar.istio.io/inject: 'true'
+
+while :; do curl -k https://incident-service.$ERDEMO_USER.apps.$SUBDOMAIN_BASE/incidents; sleep 1; done
+
+oc patch policy incident-service-mtls --type='json' -p '[{"op":"replace","path":"/spec/peers/0/mtls/mode", "value": "PERMISSIVE"}]' -n $ERDEMO_NS
+
+#################################################################
+## Mixer Adapter Report and Check Lab
+## 
+
+echo "---
+apiVersion: config.istio.io/v1alpha2
+kind: instance
+metadata:
+  name: access-log
+spec:
+  compiledTemplate: logentry
+  params:
+    severity: '\"info\"'
+    timestamp: request.time
+    variables:
+      method: request.method | \"\"
+      host: request.host | \"\"
+      sourceIp: source.ip | ip(\"0.0.0.0\")
+      responseSize: response.size | 0
+      forwardedFor: 'request.headers[\"x-forwarded-for\"] | \"unknown\"'
+      user: source.user | \"unknown\"
+      userAgent: 'request.headers[\"user-agent\"] | \"unknown\"'
+      destination: 'destination.labels[\"app\"] | destination.workload.name | \"unknown\"'
+      responseCode: response.code | 0
+      url: request.path | \"\"
+      protocol: context.protocol | \"\"
+      source: 'source.labels[\"app\"] | source.workload.name | \"unknown\"'
+      latency: response.duration | \"0ms\"
+    monitored_resource_type: '\"UNSPECIFIED\"'
+" | oc create -f - -n $ERDEMO_NS
+
+echo "---
+apiVersion: config.istio.io/v1alpha2
+kind: handler
+metadata:
+  name: access-log-handler
+spec:
+  compiledAdapter: stdio
+  params:
+    severity_levels:
+      info: 0 # Params.Level.INFO
+    outputAsJson: true
+" | oc create -f - -n $ERDEMO_NS
+
+echo "---
+apiVersion: config.istio.io/v1alpha2
+kind: rule
+metadata:
+  name: access-log-stdio
+spec:
+  match: context.protocol == \"http\" # match for http requests
+  actions:
+   - handler: access-log-handler
+     instances:
+     - access-log
+" | oc create -f - -n $ERDEMO_NS
+
+curl -k https://incident-service.$ERDEMO_USER.apps.$SUBDOMAIN_BASE/incidents
+
+oc edit servicemeshcontrolplane full-install -n $SM_CP_NS
+    # global:
+    #   disablePolicyChecks: false
+
+echo "---
+apiVersion: config.istio.io/v1alpha2
+kind: instance
+metadata:
+  name: requestcountquota
+spec:
+  compiledTemplate: quota
+  params:
+    dimensions:
+      sourceIp: 'request.headers[\"x-forwarded-for\"] | \"unknown\"'
+      source: 'source.labels[\"app\"] | source.workload.name | \"unknown\"'
+      destination: 'destination.labels[\"app\"] | destination.service.name | \"unknown\"'
+" | oc create -f - -n $SM_CP_NS
+
+echo "---
+apiVersion: config.istio.io/v1alpha2
+kind: handler
+metadata:
+  name: quotahandler
+spec:
+  compiledAdapter: memquota
+  params:
+    quotas:
+    - name: requestcountquota.instance.$SM_CP_NS
+      maxAmount: 500
+      validDuration: 1s
+      overrides:
+      # The following override applies to 'incident-service' if called from outside the mesh
+      - dimensions:
+          source: istio-ingressgateway
+          destination: $ERDEMO_USER-incident-service
+        maxAmount: 1
+        validDuration: 5s
+" | oc create -f - -n $SM_CP_NS
+
+echo "---
+apiVersion: config.istio.io/v1alpha2
+kind: rule
+metadata:
+  name: quota
+spec:
+  actions:
+  - handler: quotahandler
+    instances:
+    - requestcountquota
+" | oc create -f - -n $SM_CP_NS
+
+echo "---
+apiVersion: config.istio.io/v1alpha2
+kind: QuotaSpec
+metadata:
+  name: request-count
+spec:
+  rules:
+  - quotas:
+    - charge: 1
+      quota: requestcountquota
+" | oc create -f - -n $SM_CP_NS
+
+echo "---
+apiVersion: config.istio.io/v1alpha2
+kind: QuotaSpecBinding
+metadata:
+  name: request-count
+spec:
+  quotaSpecs:
+  - name: request-count
+    namespace: $SM_CP_NS
+  services:
+  - name: $ERDEMO_USER-incident-service
+    namespace: $ERDEMO_NS
+" | oc create -f - -n $SM_CP_NS
+
+curl -k https://incident-service.$ERDEMO_USER.apps.$SUBDOMAIN_BASE/incidents
+
+echo "---
+apiVersion: "config.istio.io/v1alpha2"
+kind: instance
+metadata:
+  name: deny-curl
+spec:
+  compiledTemplate: checknothing
+" | oc create -f - -n $SM_CP_NS
+
+curl -k https://incident-service.$ERDEMO_USER.apps.$SUBDOMAIN_BASE/incidents
+
+echo "---
+apiVersion: "config.istio.io/v1alpha2"
+kind: instance
+metadata:
+  name: deny-curl
+spec:
+  compiledTemplate: checknothing
+" | oc create -f - -n $SM_CP_NS
+
+echo "---
+apiVersion: config.istio.io/v1alpha2
+kind: handler
+metadata:
+  name: deny-curl-handler
+spec:
+  compiledAdapter: denier
+  params:
+    status:
+      code: 7 # google.rpc.Code enum "PERMISSION_DENIED"
+      message: not allowed
+" | oc create -f - -n $SM_CP_NS
+
+echo "---
+apiVersion: config.istio.io/v1alpha2
+kind: rule
+metadata:
+  name: incident-service-deny-curl
+spec:
+  match: match(request.headers[\"user-agent\"], \"curl*\") && source.labels[\"istio\"] == \"ingressgateway\" && destination.labels[\"app\"] == \"$ERDEMO_USER-incident-service\"
+  actions:
+   - handler: deny-curl-handler
+     instances:
+     - deny-curl
+" | oc create -f - -n $SM_CP_NS
+
+curl -k -v https://incident-service.$ERDEMO_USER.apps.$SUBDOMAIN_BASE/incidents
+
+####################################################################
+## API Mgmt Mixer Plugin Lab
+##
+
+oc login -u $ERDEMO_USER -p $OCP_PASSWD
+
+oc scale dc/prod-apicast --replicas=0 -n $GW_PROJECT
+
+oc edit servicemeshcontrolplane full-install -n $SM_CP_NS
+    # global:
+    #   disablePolicyChecks: false
+
+oc patch smcp/full-install -n $SM_CP_NS --type=json -p \
+'[
+    {
+        "op": "replace",
+        "path": "/spec/threeScale/enabled",
+        "value": true
+    },
+    {
+        "op": "add",
+        "path": "/spec/threeScale/image",
+        "value": "3scale-istio-adapter-rhel8"
+    },
+    {
+        "op": "add",
+        "path": "/spec/threeScale/tag",
+        "value": "1.0.0"
+    },
+    {
+        "op": "add",
+        "path": "/spec/threeScale/PARAM_THREESCALE_LISTEN_ADDR",
+        "value": 3333
+    },
+    {
+        "op": "add",
+        "path": "/spec/threeScale/PARAM_THREESCALE_LOG_LEVEL",
+        "value": "debug"
+    },
+    {
+        "op": "add",
+        "path": "/spec/threeScale/PARAM_THREESCALE_LOG_JSON",
+        "value": true
+    },
+    {
+        "op": "add",
+        "path": "/spec/threeScale/PARAM_THREESCALE_LOG_GRPC",
+        "value": false
+    },
+    {
+        "op": "add",
+        "path": "/spec/threeScale/PARAM_THREESCALE_REPORT_METRICS",
+        "value": true
+    },
+    {
+        "op": "add",
+        "path": "/spec/threeScale/PARAM_THREESCALE_METRICS_PORT",
+        "value": 8080
+    },
+    {
+        "op": "add",
+        "path": "/spec/threeScale/PARAM_THREESCALE_CACHE_TTL_SECONDS",
+        "value": 300
+    },
+    {
+        "op": "add",
+        "path": "/spec/threeScale/PARAM_THREESCALE_CACHE_REFRESH_SECONDS",
+        "value": 180
+    },
+    {
+        "op": "add",
+        "path": "/spec/threeScale/PARAM_THREESCALE_CACHE_ENTRIES_MAX",
+        "value": 1000
+    },
+    {
+        "op": "add",
+        "path": "/spec/threeScale/PARAM_THREESCALE_CACHE_REFRESH_RETRIES",
+        "value": 1
+    },
+    {
+        "op": "add",
+        "path": "/spec/threeScale/PARAM_THREESCALE_ALLOW_INSECURE_CONN",
+        "value": false
+    },
+    {
+        "op": "add",
+        "path": "/spec/threeScale/PARAM_THREESCALE_CLIENT_TIMEOUT_SECONDS",
+        "value": 10
+    },
+    {
+        "op": "add",
+        "path": "/spec/threeScale/PARAM_THREESCALE_GRPC_CONN_MAX_SECONDS",
+        "value": 60
+    }
+]'
+
+oc get adapters.config.istio.io -n $SM_CP_NS
+
+oc get templates.config.istio.io -n $SM_CP_NS
+
+git clone \
+      --branch v1.0.0 \
+      https://github.com/3scale/istio-integration \
+      $HOME/lab/istio-integration
+
+less $HOME/lab/istio-integration/istio/threescale-adapter-config.yaml | more
+
+sed -i "s/service_id: .*/service_id: \"$INCIDENT_SERVICE_ID\"/" \
+      $HOME/lab/istio-integration/istio/threescale-adapter-config.yaml
+
+sed -i "s/system_url: .*/system_url: \"https:\/\/$SYSTEM_PROVIDER_URL\"/" \
+      $HOME/lab/istio-integration/istio/threescale-adapter-config.yaml
+
+sed -i "s/access_token: .*/access_token: \"$API_ADMIN_ACCESS_TOKEN\"/" \
+      $HOME/lab/istio-integration/istio/threescale-adapter-config.yaml
+
+sed -i "s/match: .*/match: destination.service.name == \"$ERDEMO_USER-incident-service\"/" \
+      $HOME/lab/istio-integration/istio/threescale-adapter-config.yaml
+
+oc create -f $HOME/lab/istio-integration/istio/threescale-adapter-config.yaml -n $SM_CP_NS
+
+oc delete rule.config.istio.io threescale -n $SM_CP_NS
+oc delete instance.config.istio.io threescale-authorization -n $SM_CP_NS
+oc delete handler.config.istio.io threescale -n $SM_CP_NS
+
+oc get handler threescale -n $SM_CP_NS -o yaml
+
+echo "---
+apiVersion: config.istio.io/v1alpha2
+kind: rule
+metadata:
+  name: incident-service-deny-curl
+spec:
+  match: match(request.headers[\"user-agent\"], \"curl*\") && source.labels[\"istio\"] == \"ingressgateway\" && destination.labels[\"app\"] == \"$ERDEMO_USER-incident-service\"
+  actions:
+   - handler: deny-curl-handler
+     instances:
+     - deny-curl
+" | oc delete -f - -n $SM_CP_NS
+
+curl -k -v https://incident-service.$ERDEMO_USER.apps.$SUBDOMAIN_BASE/incidents
+
+curl -v -k \
+       `echo "https://"$(oc get route incident-service-gateway -n $SM_CP_NS -o template --template {{.spec.host}})"/incidents?user_key=$INCIDENT_SERVICE_API_KEY"`
+
+# oc delete servicerole incident-service-ingress -n $ERDEMO_NS
+# oc delete servicerolebinding incident-service-ingress -n $ERDEMO_NS
+
+oc patch rule.config.istio.io threescale \
+       --type=json \
+       --patch '[{"op": "add", "path": "/spec/match", "value":"destination.service.name == \"'$ERDEMO_USER'-incident-service\" && source.namespace != \"'$ERDEMO_NS'\" && request.method == \"POST\" && request.path.startsWith(\"/incidents\")"  }]' \
+       -n $SM_CP_NS
+
+oc get rule.config.istio.io threescale -n $SM_CP_NS -o yaml
+
+oc edit rule.config.istio.io threescale -n $SM_CP_NS
+
+oc logs  `oc get pod -n $SM_CP_NS | grep "istio-policy" | awk '{print $1}'` -c mixer -n $SM_CP_NS
+
+curl -v -k \
+       `echo "https://"$(oc get route incident-service-gateway -n $SM_CP_NS -o template --template {{.spec.host}})"/incidents"`
+
+curl -v -k \
+       -X POST \
+       -H "Content-Type: application/json" \
+       `echo "https://"$(oc get route incident-service-gateway -n $SM_CP_NS -o template --template {{.spec.host}})"/incidents"` \
+       -d '{
+  "lat": "34.14338",
+  "lon": "-77.86569",
+  "numberOfPeople": 3,
+  "medicalNeeded": "true",
+  "victimName": "victim",
+  "victimPhoneNumber": "111-111-111"
+}'
+
+echo "---
+apiVersion: rbac.istio.io/v1alpha1
+kind: ServiceRole
+metadata:
+  name: incident-service-ingress
+spec:
+  rules:
+    - services: [\"$ERDEMO_USER-incident-service.$ERDEMO_NS.svc.cluster.local\"]
+      methods: [\"*\"]
+" > sr-incident-service-ingress.yml
+
+oc create -f sr-incident-service-ingress.yml -n $ERDEMO_NS
+
+curl -v -k \
+       -X POST \
+       -H "Content-Type: application/json" \
+       `echo "https://"$(oc get route incident-service-gateway -n $SM_CP_NS -o template --template {{.spec.host}})"/incidents?user_key=$INCIDENT_SERVICE_API_KEY"` \
+       -d '{
+  "lat": "34.14338",
+  "lon": "-77.86569",
+  "numberOfPeople": 3,
+  "medicalNeeded": "true",
+  "victimName": "victim",
+  "victimPhoneNumber": "111-111-111"
+}'
 
 ```
