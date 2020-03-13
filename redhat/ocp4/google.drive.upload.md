@@ -39,6 +39,8 @@ find ./ -maxdepth 1 -name "*.tgz" -exec skicka upload {}  /"zhengwan.share/share
 
 skicka download "/other.deep.folder/A北区SA资料库/Discovery Session/"
 
+find ./ -maxdepth 1 -name "*.mp4" -exec skicka upload {}  "/zhengwan.share/shared_docs/2020.03/GPTE Advanced Service Mesh/" \;
+
 ##################################
 ## rsync
 yum -y install connect-proxy
