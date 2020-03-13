@@ -72,6 +72,10 @@ rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/mirror_dir ./
 
 rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/remote/4.3.3/is.samples/mirror_dir ./
 
+# sync to base-pvg
+
+
+
 ####################
 ## local mac
 # ls -1a *.list
