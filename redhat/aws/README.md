@@ -21,6 +21,7 @@ subscription-manager repos \
     --enable="rhel-7-server-ose-4.2-rpms" \
     --enable="rhel-7-server-ose-4.3-rpms" \
     --enable="rhel-7-server-optional-rpms" \
+    --enable="rhel-server-rhscl-7-rpms" \
     --enable="rhel-7-server-cnv-2.2-rpms"
     # --enable="rhel-7-server-ose-4.2-rpms" \
     # --enable="rhel-7-server-ose-3.11-rpms" \
@@ -42,6 +43,15 @@ yum -y install ansible-2.6.17-1.el7ae openshift-ansible
 
 systemctl enable docker
 systemctl start docker
+
+# stick to rhel7.6
+subscription-manager release --list
+
+subscription-manager release --set=7.6
+
+yum clean all
+
+subscription-manager release --show
 ```
 
 yum proxy
@@ -106,8 +116,9 @@ distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
 curl -s -L https://nvidia.github.io/nvidia-container-runtime/$distribution/nvidia-container-runtime.repo | \
   sudo tee /etc/yum.repos.d/nvidia-container-runtime.repo
 
-# curl -s -L https://nvidia.github.io/nvidia-container-runtime/rhel7.6/nvidia-container-runtime.repo | \
-#   sudo tee /etc/yum.repos.d/nvidia-container-runtime.repo
+# for rhel7.6
+curl -s -L https://nvidia.github.io/nvidia-container-runtime/rhel7.6/nvidia-container-runtime.repo | \
+  sudo tee /etc/yum.repos.d/nvidia-container-runtime.repo
 
 # update key
 # DIST=$(sed -n 's/releasever=//p' /etc/yum.conf)
@@ -125,6 +136,13 @@ DIST="7Server"
 sudo gpg --homedir /var/lib/yum/repos/x86_64/$DIST/libnvidia-container/gpgdir --delete-key f796ecb0
 sudo gpg --homedir /var/lib/yum/repos/x86_64/$DIST/nvidia-container-runtime/gpgdir --delete-key F796ECB0
 # sudo gpg --homedir /var/lib/yum/repos/x86_64/$DIST/nvidia-docker/gpgdir --delete-key F796ECB0
+sudo yum makecache
+
+# this is for rhel 7.6
+DIST="7.6"
+sudo gpg --homedir /var/lib/yum/repos/x86_64/$DIST/libnvidia-container/gpgdir --delete-key f796ecb0
+sudo gpg --homedir /var/lib/yum/repos/x86_64/$DIST/nvidia-container-runtime/gpgdir --delete-key F796ECB0
+sudo gpg --homedir /var/lib/yum/repos/x86_64/$DIST/nvidia-docker/gpgdir --delete-key F796ECB0
 sudo yum makecache
 
 # change /etc/yum.repos.d/nvidia-container-runtime.repo repo_gpgcheck=0
