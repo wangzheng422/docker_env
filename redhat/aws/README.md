@@ -21,7 +21,6 @@ subscription-manager repos \
     --enable="rhel-7-server-ose-4.2-rpms" \
     --enable="rhel-7-server-ose-4.3-rpms" \
     --enable="rhel-7-server-optional-rpms" \
-    --enable="rhel-server-rhscl-7-rpms" \
     --enable="rhel-7-server-cnv-2.2-rpms"
     # --enable="rhel-7-server-ose-4.2-rpms" \
     # --enable="rhel-7-server-ose-3.11-rpms" \
@@ -30,10 +29,11 @@ subscription-manager repos \
     # --enable="rhel-7-server-cnv-1.4-tech-preview-rpms" \
 
 # subscription-manager repos --enable="rhel-7-server-openstack-14-rpms"
-
+# subscription-manager repos --enable="rhel-7-server-optional-rpms"
 # subscription-manager repos --enable="rhel-7-server-e4s-optional-rpms"
 # subscription-manager repos --disable="rhel-7-server-e4s-optional-rpms"
 # subscription-manager repos --disable="rhel-7-server-ose-4.2-rpms"
+subscription-manager repos --disable="rhel-server-rhscl-7-rpms"
 
 subscription-manager repos --list-enabled
 
@@ -48,6 +48,8 @@ systemctl start docker
 subscription-manager release --list
 
 subscription-manager release --set=7.6
+
+subscription-manager release --set=7Server
 
 yum clean all
 
@@ -156,6 +158,7 @@ sudo yum makecache
 mkdir -p /data/yum
 cd /data/yum
 reposync -n -d -l -m
+reposync -d -l -m
 yum repolist
 reposync -n -d -l -m -r rhel-7-server-openstack-14-rpms
 createrepo ./

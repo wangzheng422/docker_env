@@ -116,14 +116,18 @@ find ./operator/manifests -type f | xargs egrep -oh "=[[:alnum:]|\.]+/[[:graph:]
 
 cat /data/ocp4/operator.image.list | grep "^[[:alnum:]].*[[:alnum:]]$" | sort | uniq > /data/ocp4/operator.image.list.uniq
 
-/bin/cp -f /data/ocp4/operator.image.list.uniq /data/ocp4/operator/operator.image.list.uniq
+# /bin/cp -f /data/ocp4/operator.image.list.uniq /data/ocp4/operator/operator.image.list.uniq
 
-cd /data/ocp4/operator
-chown -R 1001:1001 *
-tar zcf manifests.tgz manifests/
+# cd /data/ocp4/operator
+# chown -R 1001:1001 *
+# tar zcf manifests.tgz manifests/
+
+cd /data/ocp4/
+chown -R 1001:1001 operator
+tar zcf operator.tgz operator/
 
 buildah from --name onbuild-container docker.io/library/centos:centos7
-buildah copy onbuild-container manifests.tgz /
+buildah copy onbuild-container operator.tgz /
 buildah copy onbuild-container operator.image.list.uniq /
 buildah umount onbuild-container 
 buildah commit --rm --format=docker onbuild-container docker.io/wangzheng422/operator-catalog:fs-$var_date

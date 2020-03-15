@@ -107,7 +107,7 @@ cat << EOF >> ./image.registries.conf
 
 EOF
 
-config_source=$(cat ./image.registries.conf | python3 -c "import sys, urllib.parse; print(urllib.parse.quote(''.join(sys.stdin.readlines())))"  )
+config_source=$(cat ./image.registries.conf | python3.4 -c "import sys, urllib.parse; print(urllib.parse.quote(''.join(sys.stdin.readlines())))"  )
 
 cat <<EOF > 99-worker-zzz-container-registries.yaml
 apiVersion: machineconfiguration.openshift.io/v1

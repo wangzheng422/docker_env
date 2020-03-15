@@ -33,6 +33,7 @@ cd install
 openshift-install create install-config --dir $HOME/install
 ```
 edit install-config.yaml
+vi install-config.yaml
 ```yaml
 apiVersion: v1
 baseDomain: sandbox1572.opentlc.com

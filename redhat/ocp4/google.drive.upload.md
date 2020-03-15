@@ -46,6 +46,7 @@ find ./ -maxdepth 1 -name "*.mp4" -exec skicka upload {}  "/zhengwan.share/share
 yum -y install connect-proxy
 
 export VULTR_HOST=nexus.redhat.ren
+
 export VULTR_HOST=base-pvg.redhat.ren
 
 export VULTR_HOST=bastion.1b26.example.opentlc.com
