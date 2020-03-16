@@ -71,13 +71,17 @@ rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/ocp4 /data/
 
 rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/mirror_dir ./
 
-rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/remote/4.3.3/is.samples/mirror_dir ./
+
 
 # sync to base-pvg
 rsync -e ssh --info=progress2 -P --delete -arz  /root/data ${VULTR_HOST}:/var/ftp/
 
 rsync -e ssh --info=progress2 -P --delete -arz ./mirror_dir ${VULTR_HOST}:/data/remote/4.3.3/is.samples/
 
+# sync from base-pvg
+rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/var/ftp/data /root/
+
+rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/remote/4.3.3/is.samples/mirror_dir ./
 
 ####################
 ## local mac

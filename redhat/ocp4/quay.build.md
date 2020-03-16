@@ -11,6 +11,8 @@ https://www.cnblogs.com/ericnie/p/12233269.html
 
 https://access.redhat.com/documentation/en-us/red_hat_quay/3/html-single/manage_red_hat_quay/index#quay-security-scanner
 
+https://access.redhat.com/solutions/3533201
+
 ```bash
 cat << EOF >>  /etc/hosts
 45.63.58.108 registry.redhat.ren

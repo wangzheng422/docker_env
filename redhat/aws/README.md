@@ -161,6 +161,7 @@ reposync -n -d -l -m
 reposync -d -l -m
 yum repolist
 reposync -n -d -l -m -r rhel-7-server-openstack-14-rpms
+reposync -n -d -l -m -r rhel-7-server-optional-rpms
 createrepo ./
 
 # reposync -r rhel-7-server-e4s-optional-rpms -n -d -l -m
