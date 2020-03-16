@@ -3,11 +3,11 @@
 https://docs.google.com/spreadsheets/d/1rbvWpaNhuxRQh4CKwxsRfOPkoi400LPZEIeKpHk7jvg/edit#gid=1272334359
 
 ```bash
+node hardware.list.js
+
 cat result.json | jq -r " .[] | [ .vendor, .hardware, .product ] | @csv " > result.csv
 
 ```
-
-
 
 弯路
 

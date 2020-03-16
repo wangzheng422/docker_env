@@ -4,6 +4,7 @@ https://console-openshift-console.apps.cluster-5064.5064.sandbox1845.opentlc.com
 username: admin
 password: r3dh4t1!
 
+```bash
 ###################################################
 ## shell script for Automation script 
 
@@ -24,3 +25,4 @@ cat test | jq -r .items[].metadata.name | xargs -I DEMO oc patch deploy DEMO -p 
 
 ## end of script
 ########################################################
+```
