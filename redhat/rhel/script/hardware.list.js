@@ -22,11 +22,24 @@ const fs = require('fs');
                 if ( elements[i].className == "list-result ng-scope" ) {
                     let vendor = elements[i].querySelector('div.vendor > a > div:nth-child(2)');
 
+                    let var_image = elements[i].querySelector('div.vendor > a > div.logo-container.ng-binding > img');
+
+                    let vendor_image = "";
+                    if ( var_image != null ) {
+                        vendor_image = var_image.src ;
+                    }
+
                     let hardware = elements[i].querySelector('div.details > h3 > a');
     
                     let product = elements[i].querySelector('div.details > div.list-result-meta');
     
-                    data.push({"vendor": vendor.innerText, "hardware": hardware.innerText, "product": product.innerText});
+                    data.push({
+                        "vendor": vendor.innerText, 
+                        "hardware": hardware.innerText, 
+                        "product": product.innerText,
+                        "vendor_image": vendor_image,
+                        "hardware_url": hardware.href
+                    });
 
                 }
             }
