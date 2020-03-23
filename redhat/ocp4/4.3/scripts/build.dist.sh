@@ -103,6 +103,10 @@ podman save quay.io/wangzheng422/filetranspiler | pigz -c > filetranspiler.tgz
 podman pull docker.io/library/registry:2
 podman save docker.io/library/registry:2 | pigz -c > registry.tgz
 
+oc image mirror docker.io/wangzheng422/operator-catalog:redhat-${var_date} ${LOCAL_REG}/docker.io/wangzheng422/operator-catalog:redhat-${var_date}
+oc image mirror docker.io/wangzheng422/operator-catalog:certified-${var_date} ${LOCAL_REG}/docker.io/wangzheng422/operator-catalog:certified-${var_date}
+oc image mirror docker.io/wangzheng422/operator-catalog:community-${var_date} ${LOCAL_REG}/docker.io/wangzheng422/operator-catalog:community-${var_date}
+
 # /bin/rm -f pull-secret.json
 
 # cd /root
