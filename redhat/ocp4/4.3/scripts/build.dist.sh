@@ -6,12 +6,12 @@ set -x
 # export BUILDNUMBER="4.2.13"
 # stable 4.3.5
 build_number_list=$(cat << EOF
-4.3.1
 4.3.5
+4.3.8
 EOF
 )
 
-export var_date='2020-02-29'
+export var_date='2020-03-23'
 echo $var_date
 
 # export MIRROR_DIR='/data/mirror_dir'
