@@ -49,7 +49,7 @@ export VULTR_HOST=nexus.redhat.ren
 
 export VULTR_HOST=base-pvg.redhat.ren
 
-export VULTR_HOST=bastion.1b26.example.opentlc.com
+export VULTR_HOST=bastion.833e.example.opentlc.com
 
 cat << EOF > /root/.ssh/config
 StrictHostKeyChecking no
@@ -71,7 +71,14 @@ rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/ocp4 /data/
 
 rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/mirror_dir ./
 
+# copy to local disk
+cd /root
+tar -cvf - data/ | pigz -c > /mnt/hgfs/ocp/rhel-data-7.7.tgz
 
+cd /data
+tar -cvf - ocp4/ | pigz -c > /mnt/hgfs/ocp/ocp.4.3.8.tgz
+tar -cvf - registry/ | pigz -c > /mnt/hgfs/ocp/registry.4.3.8.tgz
+tar -cvf - is.samples/ | pigz -c > /mnt/hgfs/ocp/is.samples.4.3.5.tgz
 
 # sync to base-pvg
 rsync -e ssh --info=progress2 -P --delete -arz  /root/data ${VULTR_HOST}:/var/ftp/
