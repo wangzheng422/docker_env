@@ -49,6 +49,8 @@ export VULTR_HOST=nexus.redhat.ren
 
 export VULTR_HOST=base-pvg.redhat.ren
 
+export VULTR_HOST=vcdn.redhat.ren
+
 export VULTR_HOST=bastion.833e.example.opentlc.com
 
 cat << EOF > /root/.ssh/config
@@ -89,6 +91,11 @@ rsync -e ssh --info=progress2 -P --delete -arz ./mirror_dir ${VULTR_HOST}:/data/
 rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/var/ftp/data /root/
 
 rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/remote/4.3.3/is.samples/mirror_dir ./
+
+# sync to vcdn.redhat.ren
+rsync -e ssh --info=progress2 -P --delete -arz  /root/data ${VULTR_HOST}:/data/rhel-data
+
+rsync -e ssh --info=progress2 -P --delete -arz /data/registry ${VULTR_HOST}:/data/
 
 ####################
 ## local mac
