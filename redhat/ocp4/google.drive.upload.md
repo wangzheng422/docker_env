@@ -97,6 +97,11 @@ rsync -e ssh --info=progress2 -P --delete -arz  /root/data ${VULTR_HOST}:/data/r
 
 rsync -e ssh --info=progress2 -P --delete -arz /data/registry ${VULTR_HOST}:/data/
 
+rsync -e ssh --info=progress2 -P --delete -arz /data/ocp4 ${VULTR_HOST}:/data/
+
+rsync -e ssh --info=progress2 -P --delete -arz /data/is.samples ${VULTR_HOST}:/data/
+
+
 ####################
 ## local mac
 # ls -1a *.list
