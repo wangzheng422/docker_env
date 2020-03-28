@@ -16,6 +16,13 @@ rsync -e ssh --info=progress2 -P --delete -arz /data/registry ${VULTR_HOST}:/dat
 
 rsync -e ssh --info=progress2 -P --delete -arz /data/ocp4 ${VULTR_HOST}:/data/
 
+rsync -e ssh --info=progress2 -P --delete -arz /data/is.samples ${VULTR_HOST}:/data/
+
+cd /data
+tar -cvf - registry/ | pigz -c > registry.tgz
+tar -cvf - ocp4/ | pigz -c > ocp4.tgz
+tar -cvf - data/ | pigz -c > rhel-data.tgz
+
 ######################################################
 # on helper
 
@@ -58,12 +65,17 @@ yum -y install fail2ban
 cat << EOF > /etc/fail2ban/jail.d/wzh.conf
 [sshd]
 enabled = true
+
+[recidive]
+enabled = true
+
 EOF
 
 systemctl enable fail2ban
 systemctl restart fail2ban
 
-fail2ban-client status
+fail2ban-client status sshd
+fail2ban-client status recidive
 systemctl status fail2ban
 tail -F /var/log/fail2ban.log
 
@@ -109,12 +121,17 @@ yum -y install fail2ban
 cat << EOF > /etc/fail2ban/jail.d/wzh.conf
 [sshd]
 enabled = true
+
+[recidive]
+enabled = true
+
 EOF
 
 systemctl enable fail2ban
 systemctl restart fail2ban
 
-fail2ban-client status
+fail2ban-client status sshd
+fail2ban-client status recidive
 systemctl status fail2ban
 tail -F /var/log/fail2ban.log
 
@@ -160,12 +177,17 @@ yum -y install fail2ban
 cat << EOF > /etc/fail2ban/jail.d/wzh.conf
 [sshd]
 enabled = true
+
+[recidive]
+enabled = true
+
 EOF
 
 systemctl enable fail2ban
 systemctl restart fail2ban
 
-fail2ban-client status
+fail2ban-client status sshd
+fail2ban-client status recidive
 systemctl status fail2ban
 tail -F /var/log/fail2ban.log
 
@@ -262,12 +284,17 @@ yum -y install fail2ban
 cat << EOF > /etc/fail2ban/jail.d/wzh.conf
 [sshd]
 enabled = true
+
+[recidive]
+enabled = true
+
 EOF
 
 systemctl enable fail2ban
 systemctl restart fail2ban
 
-fail2ban-client status
+fail2ban-client status sshd
+fail2ban-client status recidive
 systemctl status fail2ban
 tail -F /var/log/fail2ban.log
 
@@ -313,12 +340,17 @@ yum -y install fail2ban
 cat << EOF > /etc/fail2ban/jail.d/wzh.conf
 [sshd]
 enabled = true
+
+[recidive]
+enabled = true
+
 EOF
 
 systemctl enable fail2ban
 systemctl restart fail2ban
 
-fail2ban-client status
+fail2ban-client status sshd
+fail2ban-client status recidive
 systemctl status fail2ban
 tail -F /var/log/fail2ban.log
 
