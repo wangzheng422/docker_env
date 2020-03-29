@@ -230,6 +230,12 @@ lsblk | grep disk | awk '{print $1}' | xargs -I DEMO echo -n "DEMO "
 iostat -h -m -x sda sdb sdc sdd sde sdf sdg sdh sdi sdj sdk sdl sdm 5
 iostat -m -x dm-24 5
 
+yum install -y chrony
+systemctl enable chronyd
+systemctl restart chronyd
+systemctl status chronyd
+chronyc tracking
+
 ######################################################
 # master1
 
@@ -285,6 +291,12 @@ systemctl restart sshd
 passwd
 
 useradd -m wzh
+
+yum install -y chrony
+systemctl enable chronyd
+systemctl restart chronyd
+systemctl status chronyd
+chronyc tracking
 
 ######################################################
 # master2
@@ -430,6 +442,12 @@ lsblk | grep disk | awk '{print $1}' | xargs -I DEMO echo -n "DEMO "
 iostat -m -x sda sdb sdc sdd sde sdf sdg sdh sdi sdj sdk sdl sdm 5
 iostat -m -x dm-12 5
 
+yum install -y chrony
+systemctl enable chronyd
+systemctl restart chronyd
+systemctl status chronyd
+chronyc tracking
+
 ######################################################
 # infra1
 
@@ -523,11 +541,18 @@ lsblk | grep disk | awk '{print $1}' | xargs -I DEMO echo -n "DEMO "
 iostat -m -x sda sdb sdc sdd sde sdf sdg sdh sdi sdj sdk sdl sdm 5
 iostat -m -x dm-12 5
 
+yum install -y chrony
+systemctl enable chronyd
+systemctl restart chronyd
+systemctl status chronyd
+chronyc tracking
+
 ```
 
 ## install ocp
 
-helper node
+### helper node
+
 ```bash
 # on macbook
 mkdir -p /Users/wzh/Documents/redhat/tools/redhat.ren/etc
@@ -618,5 +643,135 @@ yum -y install ansible-2.8.10 git unzip podman python36
 cd /data/ocp4/ocp4-upi-helpernode
 ansible-playbook -e @vars-static.yaml -e staticips=true tasks/main.yml
 
+# upload install-config.yaml to helper /data/ocp4
+cd /data/ocp4
+
+/bin/rm -rf *.ign .openshift_install_state.json auth bootstrap master0 master1 master2 worker0 worker1 worker2
+
+openshift-install create ignition-configs --dir=/data/ocp4
+
+/bin/cp -f bootstrap.ign /var/www/html/ignition/bootstrap-static.ign
+/bin/cp -f master.ign /var/www/html/ignition/master-0.ign
+/bin/cp -f master.ign /var/www/html/ignition/master-1.ign
+/bin/cp -f master.ign /var/www/html/ignition/master-2.ign
+/bin/cp -f worker.ign /var/www/html/ignition/worker-0.ign
+/bin/cp -f worker.ign /var/www/html/ignition/worker-1.ign
+/bin/cp -f worker.ign /var/www/html/ignition/worker-2.ign
+
+chmod 644 /var/www/html/ignition/*
+
+########################################################
+# on helper node, create iso
+yum -y install genisoimage libguestfs-tools
+systemctl start libvirtd
+
+export NGINX_DIRECTORY=/data/ocp4
+export RHCOSVERSION=4.3.0
+export VOLID=$(isoinfo -d -i ${NGINX_DIRECTORY}/rhcos-${RHCOSVERSION}-x86_64-installer.iso | awk '/Volume id/ { print $3 }')
+TEMPDIR=$(mktemp -d)
+echo $VOLID
+echo $TEMPDIR
+
+cd ${TEMPDIR}
+# Extract the ISO content using guestfish (to avoid sudo mount)
+guestfish -a ${NGINX_DIRECTORY}/rhcos-${RHCOSVERSION}-x86_64-installer.iso \
+  -m /dev/sda tar-out / - | tar xvf -
+
+# Helper function to modify the config files
+modify_cfg(){
+  for file in "EFI/redhat/grub.cfg" "isolinux/isolinux.cfg"; do
+    # Append the proper image and ignition urls
+    sed -e '/coreos.inst=yes/s|$| coreos.inst.install_dev=vda coreos.inst.image_url='"${URL}"'\/install\/'"${BIOSMODE}"'.raw.gz coreos.inst.ignition_url='"${URL}"'\/ignition\/'"${NODE}"'.ign ip='"${IP}"'::'"${GATEWAY}"':'"${NETMASK}"':'"${FQDN}"':'"${NET_INTERFACE}"':none:'"${DNS}"' nameserver='"${DNS}"'|' ${file} > $(pwd)/${NODE}_${file##*/}
+    # Boot directly in the installation
+    sed -i -e 's/default vesamenu.c32/default linux/g' -e 's/timeout 600/timeout 10/g' $(pwd)/${NODE}_${file##*/}
+  done
+}
+
+URL="http://117.177.241.16:8080/"
+GATEWAY="117.177.241.1"
+NETMASK="255.255.255.0"
+DNS="117.177.241.16"
+
+# BOOTSTRAP
+# TYPE="bootstrap"
+NODE="bootstrap-static"
+IP="117.177.241.243"
+FQDN="vm-bootstrap"
+BIOSMODE="bios"
+NET_INTERFACE="ens3"
+modify_cfg
+
+# MASTERS
+# TYPE="master"
+# MASTER-0
+NODE="master-0"
+IP="117.177.241.240"
+FQDN="vm-master0"
+BIOSMODE="bios"
+NET_INTERFACE="ens3"
+modify_cfg
+
+# MASTER-1
+NODE="master-1"
+IP="117.177.241.241"
+FQDN="vm-master1"
+BIOSMODE="bios"
+NET_INTERFACE="ens3"
+modify_cfg
+
+# MASTER-2
+NODE="master-2"
+IP="117.177.241.242"
+FQDN="vm-master2"
+BIOSMODE="bios"
+NET_INTERFACE="ens3"
+modify_cfg
+
+# WORKERS
+NODE="worker-0"
+IP="117.177.241.244"
+FQDN="vm-worker0"
+BIOSMODE="bios"
+NET_INTERFACE="ens3"
+modify_cfg
+
+NODE="worker-1"
+IP="117.177.241.245"
+FQDN="vm-worker1"
+BIOSMODE="bios"
+NET_INTERFACE="ens3"
+modify_cfg
+
+
+# Generate the images, one per node as the IP configuration is different...
+# https://github.com/coreos/coreos-assembler/blob/master/src/cmd-buildextend-installer#L97-L103
+for node in master-0 master-1 master-2 worker-0 worker-1 worker-2 bootstrap-static; do
+  # Overwrite the grub.cfg and isolinux.cfg files for each node type
+  for file in "EFI/redhat/grub.cfg" "isolinux/isolinux.cfg"; do
+    /bin/cp -f $(pwd)/${node}_${file##*/} ${file}
+  done
+  # As regular user!
+  genisoimage -verbose -rock -J -joliet-long -volset ${VOLID} \
+    -eltorito-boot isolinux/isolinux.bin -eltorito-catalog isolinux/boot.cat \
+    -no-emul-boot -boot-load-size 4 -boot-info-table \
+    -eltorito-alt-boot -efi-boot images/efiboot.img -no-emul-boot \
+    -o ${NGINX_DIRECTORY}/${node}.iso .
+done
+
+# Optionally, clean up
+cd /data/ocp4
+rm -Rf ${TEMPDIR}
+
+cd ${NGINX_DIRECTORY}
+
+# mkdir -p /data/ocp4
+# mkdir -p /data/kvm
+scp master-0.iso root@117.177.241.17:/data/ocp4/
+
+scp master-*.iso root@117.177.241.21:/data/ocp4/
+scp worker-*.iso root@117.177.241.21:/data/ocp4/
+scp bootstrap-*.iso root@117.177.241.21:/data/ocp4/
 
 ```
+
+### bootstrap node
