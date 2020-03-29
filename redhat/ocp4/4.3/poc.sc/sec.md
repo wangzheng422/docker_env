@@ -22,6 +22,7 @@ cd /data
 tar -cvf - registry/ | pigz -c > registry.tgz
 tar -cvf - ocp4/ | pigz -c > ocp4.tgz
 tar -cvf - data/ | pigz -c > rhel-data.tgz
+tar -cvf - is.samples/ | pigz -c > /data_hdd/down/is.samples.tgz
 
 ######################################################
 # on helper
@@ -90,6 +91,46 @@ passwd
 
 useradd -m wzh
 
+lsblk | grep 446 | awk '{print $1}' | xargs -I DEMO echo -n "/dev/DEMO "
+# /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm
+lsblk | grep 446 | awk '{print $1}' | wc -l
+# 12
+
+# https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html/configuring_and_managing_logical_volumes/assembly_configure-mange-raid-configuring-and-managing-logical-volumes
+yum install -y lvm2
+
+pvcreate -y /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm
+
+vgcreate datavg /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm
+
+vgs
+
+lvcreate --type raid10 -l 100%FREE --stripes 6 -n datalv datavg
+
+umount /data_hdd
+lvremove /dev/datavg/datalv
+
+mkfs.xfs /dev/datavg/datalv
+
+lvdisplay /dev/datavg/datalv -m
+
+mkdir -p /data
+
+cp /etc/fstab /etc/fstab.bak
+
+cat << EOF >> /etc/fstab
+/dev/datavg/datalv /data                   xfs     defaults        0 0
+
+EOF
+
+mount -a
+
+yum install -y sysstat
+lsblk | grep disk | awk '{print $1}' | xargs -I DEMO echo -n "DEMO "
+# sda sdb sdc sdd sde sdf sdg sdh sdi sdj sdk sdl sdm
+iostat -h -m -x sda sdb sdc sdd sde sdf sdg sdh sdi sdj sdk sdl sdm 5
+iostat -m -x dm-24 5
+
 ######################################################
 # bootstrap
 
@@ -145,6 +186,43 @@ systemctl restart sshd
 passwd
 
 useradd -m wzh
+
+lsblk | grep 446 | awk '{print $1}' | xargs -I DEMO echo -n "/dev/DEMO "
+# /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm
+lsblk | grep 446 | awk '{print $1}' | wc -l
+# 12
+
+# https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html/configuring_and_managing_logical_volumes/assembly_configure-mange-raid-configuring-and-managing-logical-volumes
+yum install -y lvm2
+
+pvcreate -y /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm
+
+vgcreate datavg /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm
+
+vgs
+
+lvcreate --type raid10 -l 100%FREE --stripes 6 -n datalv datavg
+
+mkfs.xfs /dev/datavg/datalv
+
+lvdisplay /dev/datavg/datalv -m
+
+mkdir -p /data
+
+cp /etc/fstab /etc/fstab.bak
+
+cat << EOF >> /etc/fstab
+/dev/datavg/datalv /data                   xfs     defaults        0 0
+
+EOF
+
+mount -a
+
+yum install -y sysstat
+lsblk | grep disk | awk '{print $1}' | xargs -I DEMO echo -n "DEMO "
+# sda sdb sdc sdd sde sdf sdg sdh sdi sdj sdk sdl sdm
+iostat -h -m -x sda sdb sdc sdd sde sdf sdg sdh sdi sdj sdk sdl sdm 5
+iostat -m -x dm-24 5
 
 ######################################################
 # master1
@@ -309,6 +387,43 @@ passwd
 
 useradd -m wzh
 
+lsblk | grep 446 | awk '{print $1}' | xargs -I DEMO echo -n "/dev/DEMO "
+# /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm
+lsblk | grep 446 | awk '{print $1}' | wc -l
+# 12
+
+# https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html/configuring_and_managing_logical_volumes/assembly_configure-mange-raid-configuring-and-managing-logical-volumes
+yum install -y lvm2
+
+pvcreate -y /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm
+
+vgcreate datavg /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm
+
+vgs
+
+lvcreate --type raid0 -l 100%FREE --stripes 12 -n datalv datavg
+
+mkfs.xfs /dev/datavg/datalv
+
+lvdisplay /dev/datavg/datalv -m
+
+mkdir -p /data
+
+cp /etc/fstab /etc/fstab.bak
+
+cat << EOF >> /etc/fstab
+/dev/datavg/datalv /data                   xfs     defaults        0 0
+
+EOF
+
+mount -a
+
+yum install -y sysstat
+lsblk | grep disk | awk '{print $1}' | xargs -I DEMO echo -n "DEMO "
+# sda sdb sdc sdd sde sdf sdg sdh sdi sdj sdk sdl sdm
+iostat -m -x sda sdb sdc sdd sde sdf sdg sdh sdi sdj sdk sdl sdm 5
+iostat -m -x dm-12 5
+
 ######################################################
 # infra1
 
@@ -364,6 +479,51 @@ systemctl restart sshd
 passwd
 
 useradd -m wzh
+
+lsblk | grep 446 | awk '{print $1}' | xargs -I DEMO echo -n "/dev/DEMO "
+# /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm
+lsblk | grep 446 | awk '{print $1}' | wc -l
+# 12
+
+# https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html/configuring_and_managing_logical_volumes/assembly_configure-mange-raid-configuring-and-managing-logical-volumes
+yum install -y lvm2
+
+pvcreate -y /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm
+
+vgcreate datavg /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm
+
+vgs
+
+lvcreate --type raid0 -l 100%FREE --stripes 12 -n datalv datavg
+
+mkfs.xfs /dev/datavg/datalv
+
+lvdisplay /dev/datavg/datalv -m
+
+mkdir -p /data
+
+cp /etc/fstab /etc/fstab.bak
+
+cat << EOF >> /etc/fstab
+/dev/datavg/datalv /data                   xfs     defaults        0 0
+
+EOF
+
+mount -a
+
+yum install -y sysstat
+lsblk | grep disk | awk '{print $1}' | xargs -I DEMO echo -n "DEMO "
+# sda sdb sdc sdd sde sdf sdg sdh sdi sdj sdk sdl sdm
+iostat -m -x sda sdb sdc sdd sde sdf sdg sdh sdi sdj sdk sdl sdm 5
+iostat -m -x dm-12 5
+
+```
+
+## install ocp
+
+helper node
+```bash
+
 
 
 ```
