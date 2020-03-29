@@ -131,6 +131,12 @@ lsblk | grep disk | awk '{print $1}' | xargs -I DEMO echo -n "DEMO "
 iostat -h -m -x sda sdb sdc sdd sde sdf sdg sdh sdi sdj sdk sdl sdm 5
 iostat -m -x dm-24 5
 
+yum install -y chrony
+systemctl enable chronyd
+systemctl restart chronyd
+systemctl status chronyd
+chronyc tracking
+
 ######################################################
 # bootstrap
 
@@ -523,6 +529,87 @@ iostat -m -x dm-12 5
 
 helper node
 ```bash
+# on macbook
+mkdir -p /Users/wzh/Documents/redhat/tools/redhat.ren/etc
+mkdir -p /Users/wzh/Documents/redhat/tools/redhat.ren/lib
+mkdir -p /Users/wzh/Documents/redhat/tools/ocpsc.redhat.ren/etc
+mkdir -p /Users/wzh/Documents/redhat/tools/ocpsc.redhat.ren/lib
+mkdir -p /Users/wzh/Documents/redhat/tools/apps.ocpsc.redhat.ren/etc
+mkdir -p /Users/wzh/Documents/redhat/tools/apps.ocpsc.redhat.ren/lib
+
+cd /Users/wzh/Documents/redhat/tools/redhat.ren/
+docker run -it --rm --name certbot \
+            -v "/Users/wzh/Documents/redhat/tools/redhat.ren/etc:/etc/letsencrypt" \
+            -v "/Users/wzh/Documents/redhat/tools/redhat.ren/lib:/var/lib/letsencrypt" \
+            certbot/certbot certonly  -d "*.redhat.ren" --manual --preferred-challenges dns-01  --server https://acme-v02.api.letsencrypt.org/directory
+
+cp ./etc/archive/redhat.ren/fullchain4.pem redhat.ren.crt
+cp ./etc/archive/redhat.ren/privkey4.pem redhat.ren.key
+
+cd /Users/wzh/Documents/redhat/tools/ocpsc.redhat.ren/
+docker run -it --rm --name certbot \
+            -v "/Users/wzh/Documents/redhat/tools/ocpsc.redhat.ren/etc:/etc/letsencrypt" \
+            -v "/Users/wzh/Documents/redhat/tools/ocpsc.redhat.ren/lib:/var/lib/letsencrypt" \
+            certbot/certbot certonly  -d "*.ocpsc.redhat.ren" --manual --preferred-challenges dns-01  --server https://acme-v02.api.letsencrypt.org/directory
+
+cp ./etc/archive/ocpsc.redhat.ren/fullchain1.pem ocpsc.redhat.ren.crt
+cp ./etc/archive/ocpsc.redhat.ren/privkey1.pem ocpsc.redhat.ren.key
+
+
+cd /Users/wzh/Documents/redhat/tools/apps.ocpsc.redhat.ren/
+docker run -it --rm --name certbot \
+            -v "/Users/wzh/Documents/redhat/tools/apps.ocpsc.redhat.ren/etc:/etc/letsencrypt" \
+            -v "/Users/wzh/Documents/redhat/tools/apps.ocpsc.redhat.ren/lib:/var/lib/letsencrypt" \
+            certbot/certbot certonly  -d "*.apps.ocpsc.redhat.ren" --manual --preferred-challenges dns-01  --server https://acme-v02.api.letsencrypt.org/directory
+
+cp ./etc/archive/apps.ocpsc.redhat.ren/fullchain1.pem apps.ocpsc.redhat.ren.crt
+cp ./etc/archive/apps.ocpsc.redhat.ren/privkey1.pem apps.ocpsc.redhat.ren.key
+
+# scp these keys to helper
+# /data/cert/*
+
+# on helper node
+yum -y install podman docker-distribution pigz skopeo httpd-tools
+
+# https://access.redhat.com/solutions/3175391
+htpasswd -cbB /etc/docker-distribution/registry_passwd admin ***************
+
+cat << EOF > /etc/docker-distribution/registry/config.yml
+version: 0.1
+log:
+  fields:
+    service: registry
+storage:
+    cache:
+        layerinfo: inmemory
+    filesystem:
+        rootdirectory: /data/registry
+    delete:
+        enabled: true
+http:
+    addr: :5443
+    tls:
+       certificate: /data/cert/redhat.ren.crt
+       key: /data/cert/redhat.ren.key
+auth:
+  htpasswd:
+    realm: basic‑realm
+    path: /etc/docker-distribution/registry_passwd
+EOF
+# systemctl restart docker
+systemctl stop docker-distribution
+systemctl enable docker-distribution
+systemctl restart docker-distribution
+# 
+
+firewall-cmd --permanent --add-port=5443/tcp
+firewall-cmd --reload
+
+podman login registry.redhat.ren:5443 -u admin -p *******************
+
+yum install -y docker
+systemctl start docker
+docker login registry.redhat.ren:5443 -u admin
 
 
 
