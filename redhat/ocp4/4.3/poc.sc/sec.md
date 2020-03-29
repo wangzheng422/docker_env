@@ -568,6 +568,7 @@ cp ./etc/archive/apps.ocpsc.redhat.ren/privkey1.pem apps.ocpsc.redhat.ren.key
 # scp these keys to helper
 # /data/cert/*
 
+####################################################
 # on helper node
 yum -y install podman docker-distribution pigz skopeo httpd-tools
 
@@ -611,6 +612,11 @@ yum install -y docker
 systemctl start docker
 docker login registry.redhat.ren:5443 -u admin
 
+# upload vars-static.yaml to helper
+yum -y install ansible-2.8.10 git unzip podman python36
+
+cd /data/ocp4/ocp4-upi-helpernode
+ansible-playbook -e @vars-static.yaml -e staticips=true tasks/main.yml
 
 
 ```
