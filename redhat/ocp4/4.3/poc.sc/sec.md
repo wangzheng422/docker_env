@@ -852,7 +852,6 @@ cat <<EOF > /etc/sysconfig/network-scripts/ifcfg-br0
 TYPE=Bridge
 BOOTPROTO=static
 IPADDR=117.177.241.21
-NETMASK=255.255.255.0
 GATEWAY=117.177.241.1
 ONBOOT=yes
 DEFROUTE=yes
