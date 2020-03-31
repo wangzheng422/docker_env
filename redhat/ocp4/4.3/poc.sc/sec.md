@@ -1022,6 +1022,20 @@ bash add.image.load.sh /data_ssd/is.samples/mirror_dir/
 # https://docs.openshift.com/container-platform/4.3/openshift_images/managing_images/using-image-pull-secrets.html#images-update-global-pull-secret_using-image-pull-secrets
 oc set data secret/pull-secret -n openshift-config --from-file=.dockerconfigjson=/data/pull-secret.json
 
+# https://docs.openshift.com/container-platform/4.3/networking/ingress-operator.html#nw-ingress-controller-tls-profiles_configuring-ingress
+oc --namespace openshift-ingress-operator get ingresscontrollers
+
+oc --namespace openshift-ingress create secret tls custom-certs-default --cert=/data/cert/apps.ocpsc.redhat.ren.crt --key=/data/cert/apps.ocpsc.redhat.ren.key
+
+oc patch --type=merge --namespace openshift-ingress-operator ingresscontrollers/default \
+  --patch '{"spec":{"defaultCertificate":{"name":"custom-certs-default"}}}'
+
+oc get --namespace openshift-ingress-operator ingresscontrollers/default \
+  --output jsonpath='{.spec.defaultCertificate}'
+
+# create infra node
+# https://access.redhat.com/solutions/4287111
+
 ```
 
 ### bootstrap node
