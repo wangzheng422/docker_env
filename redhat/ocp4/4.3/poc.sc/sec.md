@@ -1,3 +1,9 @@
+# poc for sc
+
+## rhel host maintain
+
+### aliyun host
+
 ```bash
 
 ssh-copy-id root@
@@ -24,6 +30,11 @@ tar -cvf - ocp4/ | pigz -c > ocp4.tgz
 tar -cvf - data/ | pigz -c > rhel-data.tgz
 tar -cvf - is.samples/ | pigz -c > /data_hdd/down/is.samples.tgz
 
+```
+
+### helper host
+
+```bash
 ######################################################
 # on helper
 
@@ -166,6 +177,11 @@ EOF
 
 # https://access.redhat.com/products/red-hat-insights/#getstarted
 
+```
+
+### bootstrap host
+
+```bash
 ######################################################
 # bootstrap
 
@@ -265,6 +281,11 @@ systemctl restart chronyd
 systemctl status chronyd
 chronyc tracking
 
+```
+
+### master0 host
+
+```bash
 #####################################################
 # master0
 
@@ -364,8 +385,11 @@ cat << EOF >> /etc/fstab
 EOF
 
 mount -a
+```
 
+### master1 host
 
+```bash
 ######################################################
 # master1
 
@@ -436,8 +460,11 @@ cat << EOF >> /etc/fstab
 EOF
 
 mount -a
+```
 
+### master2 host
 
+```bash
 ######################################################
 # master2
 
@@ -541,7 +568,11 @@ systemctl enable chronyd
 systemctl restart chronyd
 systemctl status chronyd
 chronyc tracking
+```
 
+### infra0 host
+
+```bash
 ######################################################
 # infra0
 
@@ -641,7 +672,11 @@ systemctl enable chronyd
 systemctl restart chronyd
 systemctl status chronyd
 chronyc tracking
+```
 
+### infra1 host
+
+```bash
 ######################################################
 # infra1
 
@@ -983,6 +1018,9 @@ oc get csr
 openshift-install wait-for install-complete
 
 bash add.image.load.sh /data_ssd/is.samples/mirror_dir/
+
+# https://docs.openshift.com/container-platform/4.3/openshift_images/managing_images/using-image-pull-secrets.html#images-update-global-pull-secret_using-image-pull-secrets
+oc set data secret/pull-secret -n openshift-config --from-file=.dockerconfigjson=/data/pull-secret.json
 
 ```
 
