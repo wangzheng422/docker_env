@@ -137,6 +137,32 @@ systemctl restart chronyd
 systemctl status chronyd
 chronyc tracking
 
+firewall-cmd --get-zones
+# block dmz drop external home internal public trusted work
+firewall-cmd --zone=public --list-all
+
+firewall-cmd --permanent --zone=public --remove-port=2049/tcp
+
+firewall-cmd --permanent --zone=public --add-rich-rule='rule family="ipv4" port port="2049" protocol="tcp" source address="117.177.241.0/24" accept'
+
+firewall-cmd --reload
+
+cd /data_ssd/
+scp *.tgz root@117.177.241.17:/data_hdd/down/
+
+# https://access.redhat.com/solutions/3341191
+# subscription-manager register --org=ORG ID --activationkey= Key Name
+/var/log/rhsm/rhsm.log
+
+subscription-manager config --rhsm.manage_repos=0
+cp /etc/yum/pluginconf.d/subscription-manager.conf /etc/yum/pluginconf.d/subscription-manager.conf.orig
+cat << EOF  > /etc/yum/pluginconf.d/subscription-manager.conf
+[main]
+enabled=0
+EOF
+
+# https://access.redhat.com/products/red-hat-insights/#getstarted
+
 ######################################################
 # bootstrap
 
@@ -236,6 +262,85 @@ systemctl restart chronyd
 systemctl status chronyd
 chronyc tracking
 
+#####################################################
+# master0
+
+mkdir /etc/yum.repos.d.bak
+mv /etc/yum.repos.d/* /etc/yum.repos.d.bak
+
+cat << EOF > /etc/yum.repos.d/remote.repo
+[remote]
+name=RHEL FTP
+baseurl=ftp://117.177.241.16/data
+enabled=1
+gpgcheck=0
+
+EOF
+
+yum clean all
+yum repolist
+
+yum -y update
+
+hostnamectl set-hostname master0.hsc.redhat.ren
+
+nmcli connection modify em1 ipv4.dns 117.177.241.16
+nmcli connection reload
+nmcli connection up em1
+
+yum -y install fail2ban
+
+cat << EOF > /etc/fail2ban/jail.d/wzh.conf
+[sshd]
+enabled = true
+
+EOF
+
+systemctl enable fail2ban
+systemctl restart fail2ban
+
+fail2ban-client status sshd
+fail2ban-client status recidive
+systemctl status fail2ban
+tail -F /var/log/fail2ban.log
+
+cat << EOF > /etc/fail2ban/jail.d/wzh.conf
+[sshd]
+enabled = true
+
+[recidive]
+enabled = true
+
+EOF
+
+cp /etc/ssh/sshd_config /etc/ssh/sshd_config.BAK
+sed -i 's/#UseDNS yes/UseDNS no/g' /etc/ssh/sshd_config
+
+diff /etc/ssh/sshd_config /etc/ssh/sshd_config.BAK
+
+systemctl restart sshd
+
+passwd
+
+useradd -m wzh
+
+yum install -y chrony
+systemctl enable chronyd
+systemctl restart chronyd
+systemctl status chronyd
+chronyc tracking
+
+mkdir -p /data_hdd
+mkfs.xfs -f /dev/sdb
+
+cat << EOF >> /etc/fstab
+/dev/sdb /data_hdd                   xfs     defaults        0 0
+EOF
+
+
+mount -a
+
+
 ######################################################
 # master1
 
@@ -297,6 +402,16 @@ systemctl enable chronyd
 systemctl restart chronyd
 systemctl status chronyd
 chronyc tracking
+
+mkdir -p /data_hdd
+mkfs.xfs -f /dev/sdb
+
+cat << EOF >> /etc/fstab
+/dev/sdb /data_hdd                   xfs     defaults        0 0
+EOF
+
+mount -a
+
 
 ######################################################
 # master2
@@ -554,6 +669,7 @@ chronyc tracking
 ### helper node
 
 ```bash
+############################################################
 # on macbook
 mkdir -p /Users/wzh/Documents/redhat/tools/redhat.ren/etc
 mkdir -p /Users/wzh/Documents/redhat/tools/redhat.ren/lib
@@ -771,6 +887,20 @@ scp master-*.iso root@117.177.241.17:/data/ocp4/
 scp master-*.iso root@117.177.241.21:/data/ocp4/
 scp worker-*.iso root@117.177.241.21:/data/ocp4/
 scp bootstrap-*.iso root@117.177.241.21:/data/ocp4/
+
+# after you create and boot master vm, worker vm, you can track the result
+export KUBECONFIG=/data/ocp4/auth/kubeconfig
+echo "export KUBECONFIG=/data/ocp4/auth/kubeconfig" >> ~/.bashrc
+source ~/.bashrc
+oc get nodes
+
+openshift-install wait-for bootstrap-complete --log-level debug
+
+oc get csr
+
+openshift-install wait-for install-complete
+
+bash add.image.load.sh /data_ssd/is.samples/mirror_dir/
 
 ```
 
@@ -999,6 +1129,10 @@ virt-install --name=ocp4-master1 --vcpus=20 --ram=200704 \
 --disk path=/data/kvm/ocp4-master1.qcow2,bus=virtio,size=200 \
 --os-variant rhel8.0 --network bridge=br0,model=virtio \
 --boot menu=on --cdrom /data/ocp4/master-1.iso 
+
+virsh list --all
+
+virsh start ocp4-master1
 
 
 ```
