@@ -330,13 +330,35 @@ systemctl restart chronyd
 systemctl status chronyd
 chronyc tracking
 
+lsblk | grep 446 | awk '{print $1}' | xargs -I DEMO echo -n "/dev/DEMO "
+# /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm
+lsblk | grep 446 | awk '{print $1}' | wc -l
+# 12
+
+# https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html/configuring_and_managing_logical_volumes/assembly_configure-mange-raid-configuring-and-managing-logical-volumes
+yum install -y lvm2
+
+pvcreate -y /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm
+
+vgcreate datavg /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm
+
+vgs
+
+lvcreate --type raid0 -l 100%FREE --stripes 12 -n datalv datavg
+
+mkfs.xfs /dev/datavg/datalv
+
+lvdisplay /dev/datavg/datalv -m
+
+mkdir -p /data
 mkdir -p /data_hdd
-mkfs.xfs -f /dev/sdb
+
+cp /etc/fstab /etc/fstab.bak
 
 cat << EOF >> /etc/fstab
-/dev/sdb /data_hdd                   xfs     defaults        0 0
-EOF
+/dev/datavg/datalv /data_hdd                  xfs     defaults        0 0
 
+EOF
 
 mount -a
 
@@ -449,6 +471,15 @@ EOF
 systemctl enable fail2ban
 systemctl restart fail2ban
 
+cat << EOF > /etc/fail2ban/jail.d/wzh.conf
+[sshd]
+enabled = true
+
+[recidive]
+enabled = true
+
+EOF
+
 fail2ban-client status
 systemctl status fail2ban
 tail -F /var/log/fail2ban.log
@@ -463,6 +494,50 @@ systemctl restart sshd
 passwd
 
 useradd -m wzh
+
+lsblk | grep 446 | awk '{print $1}' | xargs -I DEMO echo -n "/dev/DEMO "
+# /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm
+lsblk | grep 446 | awk '{print $1}' | wc -l
+# 12
+
+# https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html/configuring_and_managing_logical_volumes/assembly_configure-mange-raid-configuring-and-managing-logical-volumes
+yum install -y lvm2
+
+pvcreate -y /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm
+
+vgcreate datavg /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm
+
+vgs
+
+lvcreate --type raid0 -l 100%FREE --stripes 12 -n datalv datavg
+
+mkfs.xfs /dev/datavg/datalv
+
+lvdisplay /dev/datavg/datalv -m
+
+mkdir -p /data
+mkdir -p /data_hdd
+
+cp /etc/fstab /etc/fstab.bak
+
+cat << EOF >> /etc/fstab
+/dev/datavg/datalv /data_hdd                   xfs     defaults        0 0
+
+EOF
+
+mount -a
+
+yum install -y sysstat
+lsblk | grep disk | awk '{print $1}' | xargs -I DEMO echo -n "DEMO "
+# sda sdb sdc sdd sde sdf sdg sdh sdi sdj sdk sdl sdm
+iostat -m -x sda sdb sdc sdd sde sdf sdg sdh sdi sdj sdk sdl sdm 5
+iostat -m -x dm-12 5
+
+yum install -y chrony
+systemctl enable chronyd
+systemctl restart chronyd
+systemctl status chronyd
+chronyc tracking
 
 ######################################################
 # infra0
@@ -541,11 +616,12 @@ mkfs.xfs /dev/datavg/datalv
 lvdisplay /dev/datavg/datalv -m
 
 mkdir -p /data
+mkdir -p /data_hdd
 
 cp /etc/fstab /etc/fstab.bak
 
 cat << EOF >> /etc/fstab
-/dev/datavg/datalv /data                   xfs     defaults        0 0
+/dev/datavg/datalv /data_hdd                   xfs     defaults        0 0
 
 EOF
 
@@ -640,11 +716,12 @@ mkfs.xfs /dev/datavg/datalv
 lvdisplay /dev/datavg/datalv -m
 
 mkdir -p /data
+mkdir -p /data_hdd
 
 cp /etc/fstab /etc/fstab.bak
 
 cat << EOF >> /etc/fstab
-/dev/datavg/datalv /data                   xfs     defaults        0 0
+/dev/datavg/datalv /data_hdd                   xfs     defaults        0 0
 
 EOF
 
