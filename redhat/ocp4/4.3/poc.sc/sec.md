@@ -147,6 +147,9 @@ firewall-cmd --permanent --zone=public --add-rich-rule='rule family="ipv4" port 
 
 firewall-cmd --reload
 
+showmount -a
+exportfs -s
+
 cd /data_ssd/
 scp *.tgz root@117.177.241.17:/data_hdd/down/
 
@@ -965,6 +968,8 @@ scp master-*.iso root@117.177.241.21:/data/ocp4/
 scp worker-*.iso root@117.177.241.21:/data/ocp4/
 scp bootstrap-*.iso root@117.177.241.21:/data/ocp4/
 
+scp master-*.iso root@117.177.241.18:/data/ocp4/
+
 # after you create and boot master vm, worker vm, you can track the result
 export KUBECONFIG=/data/ocp4/auth/kubeconfig
 echo "export KUBECONFIG=/data/ocp4/auth/kubeconfig" >> ~/.bashrc
@@ -1285,7 +1290,7 @@ IPV6_ADDR_GEN_MODE=stable-privacy
 NAME=em1
 DEVICE=em1
 ONBOOT=yes
-# IPADDR=117.177.241.17
+# IPADDR=117.177.241.18
 # PREFIX=24
 # GATEWAY=117.177.241.1
 IPV6_PRIVACY=no
@@ -1296,7 +1301,7 @@ EOF
 cat <<EOF > /etc/sysconfig/network-scripts/ifcfg-br0 
 TYPE=Bridge
 BOOTPROTO=static
-IPADDR=117.177.241.17
+IPADDR=117.177.241.18
 GATEWAY=117.177.241.1
 DNS1=117.177.241.16
 ONBOOT=yes
@@ -1308,14 +1313,17 @@ EOF
 
 systemctl restart network
 
-virt-install --name=ocp4-master1 --vcpus=20 --ram=200704 \
---disk path=/data/kvm/ocp4-master1.qcow2,bus=virtio,size=200 \
+mkdir -p /data/ocp4
+mkdir -p /data/kvm
+
+virt-install --name=ocp4-master0 --vcpus=20 --ram=200704 \
+--disk path=/data/kvm/ocp4-master0.qcow2,bus=virtio,size=200 \
 --os-variant rhel8.0 --network bridge=br0,model=virtio \
 --boot menu=on --cdrom /data/ocp4/master-1.iso 
 
 virsh list --all
 
-virsh start ocp4-master1
+virsh start ocp4-master0
 
 
 
