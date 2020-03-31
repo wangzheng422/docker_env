@@ -1111,6 +1111,9 @@ virt-install --name=ocp4-worker1 --vcpus=4 --ram=32768 \
 --boot menu=on --cdrom /data/ocp4/worker-1.iso 
 
 
+tar -cvf - ocp4-master0.qcow2 | pigz -c > /data/kvm/ocp4-master0.qcow2.tgz
+rsync -e "ssh -c chacha20-poly1305@openssh.com" --info=progress2 -P -arz  /data/kvm/ocp4-master0.qcow2.tgz root@117.177.241.18:/data/kvm/
+
 ```
 
 ### master1 node
@@ -1316,17 +1319,127 @@ systemctl restart network
 mkdir -p /data/ocp4
 mkdir -p /data/kvm
 
+pigz -dc ocp4-master0.qcow2.tgz | tar xf -
+
 virt-install --name=ocp4-master0 --vcpus=20 --ram=200704 \
 --disk path=/data/kvm/ocp4-master0.qcow2,bus=virtio,size=200 \
 --os-variant rhel8.0 --network bridge=br0,model=virtio \
---boot menu=on --cdrom /data/ocp4/master-1.iso 
+--boot menu=on 
 
 virsh list --all
 
 virsh start ocp4-master0
 
+```
 
+### master2 node
 
+```bash
+########################################################
+# master0 
+yum -y install tigervnc-server tigervnc gnome-terminal gnome-session gnome-classic-session gnome-terminal nautilus-open-terminal control-center liberation-mono-fonts google-noto-sans-cjk-fonts google-noto-sans-fonts fonts-tweak-tool
 
+yum install -y    qgnomeplatform   xdg-desktop-portal-gtk   NetworkManager-libreswan-gnome   PackageKit-command-not-found   PackageKit-gtk3-module   abrt-desktop   at-spi2-atk   at-spi2-core   avahi   baobab   caribou   caribou-gtk2-module   caribou-gtk3-module   cheese   compat-cheese314   control-center   dconf   empathy   eog   evince   evince-nautilus   file-roller   file-roller-nautilus   firewall-config   firstboot   fprintd-pam   gdm   gedit   glib-networking   gnome-bluetooth   gnome-boxes   gnome-calculator   gnome-classic-session   gnome-clocks   gnome-color-manager   gnome-contacts   gnome-dictionary   gnome-disk-utility   gnome-font-viewer   gnome-getting-started-docs   gnome-icon-theme   gnome-icon-theme-extras   gnome-icon-theme-symbolic   gnome-initial-setup   gnome-packagekit   gnome-packagekit-updater   gnome-screenshot   gnome-session   gnome-session-xsession   gnome-settings-daemon   gnome-shell   gnome-software   gnome-system-log   gnome-system-monitor   gnome-terminal   gnome-terminal-nautilus   gnome-themes-standard   gnome-tweak-tool   nm-connection-editor   orca   redhat-access-gui   sane-backends-drivers-scanners   seahorse   setroubleshoot   sushi   totem   totem-nautilus   vinagre   vino   xdg-user-dirs-gtk   yelp
+
+yum install -y    cjkuni-uming-fonts   dejavu-sans-fonts   dejavu-sans-mono-fonts   dejavu-serif-fonts   gnu-free-mono-fonts   gnu-free-sans-fonts   gnu-free-serif-fonts   google-crosextra-caladea-fonts   google-crosextra-carlito-fonts   google-noto-emoji-fonts   jomolhari-fonts   khmeros-base-fonts   liberation-mono-fonts   liberation-sans-fonts   liberation-serif-fonts   lklug-fonts   lohit-assamese-fonts   lohit-bengali-fonts   lohit-devanagari-fonts   lohit-gujarati-fonts   lohit-kannada-fonts   lohit-malayalam-fonts   lohit-marathi-fonts   lohit-nepali-fonts   lohit-oriya-fonts   lohit-punjabi-fonts   lohit-tamil-fonts   lohit-telugu-fonts   madan-fonts   nhn-nanum-gothic-fonts   open-sans-fonts   overpass-fonts   paktype-naskh-basic-fonts   paratype-pt-sans-fonts   sil-abyssinica-fonts   sil-nuosu-fonts   sil-padauk-fonts   smc-meera-fonts   stix-fonts   thai-scalable-waree-fonts   ucs-miscfixed-fonts   vlgothic-fonts   wqy-microhei-fonts   wqy-zenhei-fonts
+
+vncpasswd
+
+cat << EOF > ~/.vnc/xstartup
+#!/bin/sh
+unset SESSION_MANAGER
+unset DBUS_SESSION_BUS_ADDRESS
+gnome-session &
+EOF
+chmod +x ~/.vnc/xstartup
+
+vncserver :1 -geometry 1280x800
+# 如果你想停掉vnc server，这么做
+vncserver -kill :1
+
+firewall-cmd --permanent --add-port=6001/tcp
+firewall-cmd --permanent --add-port=5901/tcp
+firewall-cmd --reload
+
+# 配置kvm环境
+yum -y install qemu-kvm libvirt libvirt-python libguestfs-tools virt-install virt-viewer virt-manager
+
+systemctl enable libvirtd
+systemctl start libvirtd
+
+brctl show
+virsh net-list
+
+cat << EOF >  /data/virt-net.xml
+<network>
+  <name>br0</name>
+  <forward mode='bridge'>
+    <bridge name='br0'/>
+  </forward>
+</network>
+EOF
+
+virsh net-define --file virt-net.xml
+virsh net-dumpxml br0
+# virsh net-undefine openshift4
+# virsh net-destroy openshift4
+virsh net-autostart br0
+virsh net-start br0
+
+cp /etc/sysconfig/network-scripts/ifcfg-em1 /etc/sysconfig/network-scripts/ifcfg-em1.orig
+
+cat << EOF > /etc/sysconfig/network-scripts/ifcfg-em1
+TYPE=Ethernet
+PROXY_METHOD=none
+BROWSER_ONLY=no
+BOOTPROTO=none
+DEFROUTE=yes
+IPV4_FAILURE_FATAL=no
+IPV6INIT=yes
+IPV6_AUTOCONF=yes
+IPV6_DEFROUTE=yes
+IPV6_FAILURE_FATAL=no
+IPV6_ADDR_GEN_MODE=stable-privacy
+NAME=em1
+DEVICE=em1
+ONBOOT=yes
+# IPADDR=117.177.241.22
+# PREFIX=24
+# GATEWAY=117.177.241.1
+IPV6_PRIVACY=no
+# DNS1=117.177.241.16
+BRIDGE=br0
+EOF
+
+cat <<EOF > /etc/sysconfig/network-scripts/ifcfg-br0 
+TYPE=Bridge
+BOOTPROTO=static
+IPADDR=117.177.241.22
+GATEWAY=117.177.241.1
+DNS1=117.177.241.16
+ONBOOT=yes
+DEFROUTE=yes
+NAME=br0
+DEVICE=br0
+PREFIX=24
+EOF
+
+systemctl restart network
+
+mkdir -p /data/ocp4
+mkdir -p /data/kvm
+
+pigz -dc ocp4-master2.qcow2.tgz | tar xf -
+
+virt-install --name=ocp4-master2 --vcpus=20 --ram=200704 \
+--disk path=/data/kvm/ocp4-master2.qcow2,bus=virtio,size=200 \
+--os-variant rhel8.0 --network bridge=br0,model=virtio \
+--boot menu=on 
+
+virsh list --all
+
+virsh start ocp4-master2
 
 ```
+
+
