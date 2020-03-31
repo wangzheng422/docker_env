@@ -1114,6 +1114,9 @@ virt-install --name=ocp4-worker1 --vcpus=4 --ram=32768 \
 tar -cvf - ocp4-master0.qcow2 | pigz -c > /data/kvm/ocp4-master0.qcow2.tgz
 rsync -e "ssh -c chacha20-poly1305@openssh.com" --info=progress2 -P -arz  /data/kvm/ocp4-master0.qcow2.tgz root@117.177.241.18:/data/kvm/
 
+tar -cvf - ocp4-master2.qcow2 | pigz -c > /data/kvm/ocp4-master2.qcow2.tgz
+rsync -e "ssh -c chacha20-poly1305@openssh.com" --info=progress2 -P -arz  /data/kvm/ocp4-master2.qcow2.tgz root@117.177.241.22:/data/kvm/
+
 ```
 
 ### master1 node
@@ -1336,7 +1339,7 @@ virsh start ocp4-master0
 
 ```bash
 ########################################################
-# master0 
+# master2 
 yum -y install tigervnc-server tigervnc gnome-terminal gnome-session gnome-classic-session gnome-terminal nautilus-open-terminal control-center liberation-mono-fonts google-noto-sans-cjk-fonts google-noto-sans-fonts fonts-tweak-tool
 
 yum install -y    qgnomeplatform   xdg-desktop-portal-gtk   NetworkManager-libreswan-gnome   PackageKit-command-not-found   PackageKit-gtk3-module   abrt-desktop   at-spi2-atk   at-spi2-core   avahi   baobab   caribou   caribou-gtk2-module   caribou-gtk3-module   cheese   compat-cheese314   control-center   dconf   empathy   eog   evince   evince-nautilus   file-roller   file-roller-nautilus   firewall-config   firstboot   fprintd-pam   gdm   gedit   glib-networking   gnome-bluetooth   gnome-boxes   gnome-calculator   gnome-classic-session   gnome-clocks   gnome-color-manager   gnome-contacts   gnome-dictionary   gnome-disk-utility   gnome-font-viewer   gnome-getting-started-docs   gnome-icon-theme   gnome-icon-theme-extras   gnome-icon-theme-symbolic   gnome-initial-setup   gnome-packagekit   gnome-packagekit-updater   gnome-screenshot   gnome-session   gnome-session-xsession   gnome-settings-daemon   gnome-shell   gnome-software   gnome-system-log   gnome-system-monitor   gnome-terminal   gnome-terminal-nautilus   gnome-themes-standard   gnome-tweak-tool   nm-connection-editor   orca   redhat-access-gui   sane-backends-drivers-scanners   seahorse   setroubleshoot   sushi   totem   totem-nautilus   vinagre   vino   xdg-user-dirs-gtk   yelp
