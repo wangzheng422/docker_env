@@ -1019,6 +1019,9 @@ openshift-install wait-for install-complete
 
 bash add.image.load.sh /data_ssd/is.samples/mirror_dir/
 
+oc apply -f ./99-worker-zzz-container-registries.yaml -n openshift-config
+oc apply -f ./99-master-zzz-container-registries.yaml -n openshift-config
+
 ```
 
 ### helper node day1 oper
@@ -1049,10 +1052,104 @@ ssh root@infra-1.ocpsc.redhat.ren
 
 # disable firewalld on infra-0, infra-1
 
+yum -y install openshift-ansible openshift-clients jq
 
+# create rhel-ansible-host
+cat <<EOF > /data/ocp4/rhel-ansible-host
+[all:vars]
+ansible_user=root 
+#ansible_become=True 
+
+openshift_kubeconfig_path="/data/ocp4/auth/kubeconfig" 
+
+[new_workers] 
+infra-0.ocpsc.redhat.ren
+infra-1.ocpsc.redhat.ren
+
+EOF
+
+ansible-playbook -i /data/ocp4/rhel-ansible-host /usr/share/ansible/openshift-ansible/playbooks/scaleup.yml
+
+# then remove old vm-worker0, vm-worker1
+oc get nodes -o wide
+oc adm cordon vm-worker-0.ocpsc.redhat.ren
+oc adm cordon vm-worker-1.ocpsc.redhat.ren
+oc adm drain vm-worker-0.ocpsc.redhat.ren --force --delete-local-data --ignore-daemonsets
+oc adm drain vm-worker-1.ocpsc.redhat.ren --force --delete-local-data --ignore-daemonsets  
+oc delete nodes vm-worker-0.ocpsc.redhat.ren
+oc delete nodes vm-worker-1.ocpsc.redhat.ren
+oc get nodes -o wide
+
+# create nfs storage and enable image operator
+bash ocp4-upi-helpernode/files/nfs-provisioner-setup.sh
+
+oc patch configs.imageregistry.operator.openshift.io cluster -p '{"spec":{"managementState": "Managed","storage":{"pvc":{"claim":""}}}}' --type=merge
+
+# create operator catalog
+oc patch OperatorHub cluster --type json \
+    -p '[{"op": "add", "path": "/spec/disableAllDefaultSources", "value": true}]'
+
+cat <<EOF > redhat-operator-catalog.yaml
+apiVersion: operators.coreos.com/v1alpha1
+kind: CatalogSource
+metadata:
+  name: redhat-operator-catalog
+  namespace: openshift-marketplace
+spec:
+  displayName: Redhat Operator Catalog
+  sourceType: grpc
+  image: registry.redhat.ren:5443/docker.io/wangzheng422/operator-catalog:redhat-2020-03-23
+  publisher: Red Hat
+EOF
+oc create -f redhat-operator-catalog.yaml
 
 # create infra node
 # https://access.redhat.com/solutions/4287111
+oc get node
+
+oc label node infra0.hsc.redhat.ren node-role.kubernetes.io/infra=""
+oc label node infra1.hsc.redhat.ren node-role.kubernetes.io/infra=""
+
+oc patch ingresscontroller default -n openshift-ingress-operator --type=merge --patch='{"spec":{"nodePlacement":{"nodeSelector": {"matchLabels":{"node-role.kubernetes.io/infra":""}}}}}'
+
+oc patch configs.imageregistry.operator.openshift.io/cluster -n openshift-image-registry --type=merge --patch '{"spec":{"nodeSelector":{"node-role.kubernetes.io/infra":""}}}'
+
+oc get pod -o wide -n openshift-image-registry --sort-by=".spec.nodeName"
+
+cat <<EOF > /data/ocp4/monitoring-cm.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cluster-monitoring-config
+  namespace: openshift-monitoring
+data:
+  config.yaml: |+
+    alertmanagerMain:
+      nodeSelector:
+        node-role.kubernetes.io/infra: ""
+    prometheusK8s:
+      nodeSelector:
+        node-role.kubernetes.io/infra: ""
+    prometheusOperator:
+      nodeSelector:
+        node-role.kubernetes.io/infra: ""
+    grafana:
+      nodeSelector:
+        node-role.kubernetes.io/infra: ""
+    k8sPrometheusAdapter:
+      nodeSelector:
+        node-role.kubernetes.io/infra: ""
+    kubeStateMetrics:
+      nodeSelector:
+        node-role.kubernetes.io/infra: ""
+    telemeterClient:
+      nodeSelector:
+        node-role.kubernetes.io/infra: ""
+EOF
+
+oc create -f /data/ocp4/monitoring-cm.yaml -n openshift-monitoring
+
+oc get pods -n openshift-monitoring -o wide --sort-by=".spec.nodeName"
 
 
 ```
