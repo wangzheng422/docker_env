@@ -1019,6 +1019,12 @@ openshift-install wait-for install-complete
 
 bash add.image.load.sh /data_ssd/is.samples/mirror_dir/
 
+```
+
+### helper node day1 oper
+
+```bash
+
 # https://docs.openshift.com/container-platform/4.3/openshift_images/managing_images/using-image-pull-secrets.html#images-update-global-pull-secret_using-image-pull-secrets
 oc set data secret/pull-secret -n openshift-config --from-file=.dockerconfigjson=/data/pull-secret.json
 
@@ -1033,8 +1039,21 @@ oc patch --type=merge --namespace openshift-ingress-operator ingresscontrollers/
 oc get --namespace openshift-ingress-operator ingresscontrollers/default \
   --output jsonpath='{.spec.defaultCertificate}'
 
+##################################################3
+# add rhel hw node, and remove vm worker node
+ssh-copy-id root@infra-0.ocpsc.redhat.ren
+ssh root@infra-0.ocpsc.redhat.ren
+
+ssh-copy-id root@infra-1.ocpsc.redhat.ren
+ssh root@infra-1.ocpsc.redhat.ren
+
+# disable firewalld on infra-0, infra-1
+
+
+
 # create infra node
 # https://access.redhat.com/solutions/4287111
+
 
 ```
 
@@ -1498,3 +1517,20 @@ virsh start ocp4-master2
 ```
 
 
+
+### infra0 node
+
+```bash
+systemctl disable firewalld.service
+systemctl stop firewalld.service
+
+```
+
+### infra1 node
+
+```bash
+systemctl disable firewalld.service
+systemctl stop firewalld.service
+
+
+```
