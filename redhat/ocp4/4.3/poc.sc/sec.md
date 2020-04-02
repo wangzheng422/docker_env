@@ -1151,6 +1151,41 @@ oc create -f /data/ocp4/monitoring-cm.yaml -n openshift-monitoring
 
 oc get pods -n openshift-monitoring -o wide --sort-by=".spec.nodeName"
 
+###########################################
+## add user for zte
+cd /data/ocp4
+touch /data/ocp4/htpasswd
+htpasswd -B /data/ocp4/htpasswd zteca
+htpasswd -B /data/ocp4/htpasswd zteadm
+
+oc create secret generic htpasswd --from-file=/data/ocp4/htpasswd -n openshift-config
+
+oc apply -f - <<EOF
+apiVersion: config.openshift.io/v1
+kind: OAuth
+metadata:
+  name: cluster
+spec:
+  identityProviders:
+  - name: Local Password
+    mappingMethod: claim
+    type: HTPasswd
+    htpasswd:
+      fileData:
+        name: htpasswd
+EOF
+
+watch oc get pod -n openshift-authentication
+
+oc adm policy add-cluster-role-to-user cluster-admin  zteca
+
+oc new-project zte
+oc adm policy add-role-to-user admin zteadm -n zte
+
+```
+
+### helper node quay
+```bash
 
 ```
 
