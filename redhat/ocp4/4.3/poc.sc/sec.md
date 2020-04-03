@@ -1245,10 +1245,17 @@ podman run --restart=always \
 
 # https://registry.redhat.ren:4443/
 
-
 podman run --name clair-postgres --pod quay \
-    -v /data/quay/lib/postgresql/data:/var/lib/postgresql/data \
-    -d docker.io/library/postgres
+    -v /data/quay/lib/postgresql/data:/var/lib/postgresql/data:Z \
+    -d registry.redhat.ren:5443/docker.io/library/postgres
+
+podman run --restart=always -d \
+    --name clair \
+    -v /data/quay/clair-config:/clair/config \
+    -v /data/quay/clair-config/ca.crt:/etc/pki/ca-trust/source/anchors/ca.crt  \
+    --pod quay \
+    --add-host clair:127.0.0.1 \
+    registry.redhat.ren:5443/quay.io/redhat/clair-jwt:v3.2.1
 
 ```
 

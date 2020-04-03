@@ -80,7 +80,7 @@ podman run --restart=always \
 # quay admin:  admin   /   5a4ru36a8zfr1gp8
 
 podman run --name clair-postgres --pod quay \
-    -v /data/quay/lib/postgresql/data:/var/lib/postgresql/data \
+    -v /data/quay/lib/postgresql/data:/var/lib/postgresql/data:Z \
     -d docker.io/library/postgres
 sleep 10
 
