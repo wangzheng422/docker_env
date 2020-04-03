@@ -166,7 +166,7 @@ scp *.tgz root@117.177.241.17:/data_hdd/down/
 
 # https://access.redhat.com/solutions/3341191
 # subscription-manager register --org=ORG ID --activationkey= Key Name
-/var/log/rhsm/rhsm.log
+cat /var/log/rhsm/rhsm.log
 
 subscription-manager config --rhsm.manage_repos=0
 cp /etc/yum/pluginconf.d/subscription-manager.conf /etc/yum/pluginconf.d/subscription-manager.conf.orig
@@ -176,6 +176,12 @@ enabled=0
 EOF
 
 # https://access.redhat.com/products/red-hat-insights/#getstarted
+subscription-manager register --auto-attach
+yum --disableplugin=subscription-manager install insights-client
+insights-client --register
+
+yum --disableplugin=subscription-manager install ncdu
+
 
 ```
 
@@ -1181,6 +1187,13 @@ oc adm policy add-cluster-role-to-user cluster-admin  zteca
 
 oc new-project zte
 oc adm policy add-role-to-user admin zteadm -n zte
+
+oc get clusterrolebinding.rbac
+
+oc get clusterrole.rbac
+
+oc adm policy add-cluster-role-to-user cluster-reader  zteadm
+oc adm policy remove-cluster-role-from-user cluster-reader  zteadm
 
 ```
 
