@@ -1186,6 +1186,69 @@ oc adm policy add-role-to-user admin zteadm -n zte
 
 ### helper node quay
 ```bash
+# on helper node
+firewall-cmd --permanent --zone=public --add-port=4443/tcp
+firewall-cmd --reload
+
+podman pod create --infra-image registry.redhat.ren:5443/gcr.io/google_containers/pause-amd64:3.0 --name quay -p 4443:8443 
+
+cd /data
+rm -rf /data/quay
+podman run -d --name quay-fs --entrypoint "tail" registry.redhat.ren:5443/docker.io/wangzheng422/quay-fs:3.2.0-init -f /dev/null
+podman cp quay-fs:/quay.tgz /data/
+tar zxf quay.tgz
+podman rm -fv quay-fs
+
+export MYSQL_CONTAINER_NAME=quay-mysql
+export MYSQL_DATABASE=enterpriseregistrydb
+export MYSQL_PASSWORD=zvbk3fzp5f5m2a8j
+export MYSQL_USER=quayuser
+export MYSQL_ROOT_PASSWORD=q98u335musckfqxe
+
+podman run \
+    --detach \
+    --restart=always \
+    --env MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD} \
+    --env MYSQL_USER=${MYSQL_USER} \
+    --env MYSQL_PASSWORD=${MYSQL_PASSWORD} \
+    --env MYSQL_DATABASE=${MYSQL_DATABASE} \
+    --name ${MYSQL_CONTAINER_NAME} \
+    --privileged=true \
+    --pod quay \
+    -v /data/quay/lib/mysql:/var/lib/mysql/data:Z \
+    registry.redhat.ren:5443/registry.access.redhat.com/rhscl/mysql-57-rhel7
+
+podman run -d --restart=always \
+    --pod quay \
+    --privileged=true \
+    --name quay-redis \
+    -v  /data/quay/lib/redis:/var/lib/redis/data:Z \
+    registry.redhat.ren:5443/registry.access.redhat.com/rhscl/redis-32-rhel7
+
+sleep 10
+
+/bin/cp -f /data/cert/redhat.ren.crt /data/quay/config/extra_ca_certs/redhat.ren.crt
+/bin/cp -f /data/cert/redhat.ren.crt /data/quay/config/ssl.cert
+/bin/cp -f /data/cert/redhat.ren.key /data/quay/config/ssl.key
+
+podman run --restart=always \
+    --sysctl net.core.somaxconn=4096 \
+    --privileged=true \
+    --name quay-master \
+    --pod quay \
+    --add-host mysql:127.0.0.1 \
+    --add-host redis:127.0.0.1 \
+    --add-host clair:127.0.0.1 \
+    -v /data/quay/config:/conf/stack:Z \
+    -v /data/quay/storage:/datastorage:Z \
+    -d registry.redhat.ren:5443/quay.io/redhat/quay:v3.2.1
+
+# https://registry.redhat.ren:4443/
+
+
+podman run --name clair-postgres --pod quay \
+    -v /data/quay/lib/postgresql/data:/var/lib/postgresql/data \
+    -d docker.io/library/postgres
 
 ```
 
