@@ -191,6 +191,8 @@ chcon -R -t public_content_t  /var/ftp/yum
 # semanage fcontext --delete --type public_content_t "/var/ftp/yum(/.*)?"
 chcon -t default_t /data
 
+# mount --bind /home/data/rhel-data/data /var/ftp/data
+
 firewall-cmd --permanent --add-service=ftp
 firewall-cmd --reload
 ```
