@@ -785,6 +785,70 @@ chronyc tracking
 
 ```
 
+### worker-0 host
+
+```bash
+
+mkdir /etc/yum.repos.d.bak
+mv /etc/yum.repos.d/* /etc/yum.repos.d.bak
+
+cat << EOF > /etc/yum.repos.d/remote.repo
+[remote]
+name=RHEL FTP
+baseurl=ftp://117.177.241.16/data
+enabled=1
+gpgcheck=0
+
+EOF
+
+yum clean all
+yum --disableplugin=subscription-manager  repolist
+
+yum -y update
+
+hostnamectl set-hostname worker-0.ocpsc.redhat.ren
+
+nmcli connection modify em1 ipv4.dns 117.177.241.16
+nmcli connection reload
+nmcli connection up em1
+
+yum -y install fail2ban
+
+cat << EOF > /etc/fail2ban/jail.d/wzh.conf
+[sshd]
+enabled = true
+
+EOF
+
+systemctl enable fail2ban
+systemctl restart fail2ban
+
+cat << EOF > /etc/fail2ban/jail.d/wzh.conf
+[sshd]
+enabled = true
+
+[recidive]
+enabled = true
+
+EOF
+
+fail2ban-client status sshd
+fail2ban-client status recidive
+systemctl status fail2ban
+tail -F /var/log/fail2ban.log
+
+cp /etc/ssh/sshd_config /etc/ssh/sshd_config.BAK
+sed -i 's/#UseDNS yes/UseDNS no/g' /etc/ssh/sshd_config
+
+diff /etc/ssh/sshd_config /etc/ssh/sshd_config.BAK
+
+systemctl restart sshd
+
+passwd
+
+useradd -m wzh
+
+```
 ## install ocp
 
 ### helper node
