@@ -808,9 +808,9 @@ yum -y update
 
 hostnamectl set-hostname worker-0.ocpsc.redhat.ren
 
-nmcli connection modify em1 ipv4.dns 117.177.241.16
+nmcli connection modify enp3s0f0 ipv4.dns 117.177.241.16
 nmcli connection reload
-nmcli connection up em1
+nmcli connection up enp3s0f0
 
 yum -y install fail2ban
 
@@ -848,7 +848,52 @@ passwd
 
 useradd -m wzh
 
+lsblk | grep 446 | awk '{print $1}' | xargs -I DEMO echo -n "/dev/DEMO "
+# /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk
+lsblk | grep 446 | awk '{print $1}' | wc -l
+# 11
+
+yum install -y lvm2
+
+pvcreate -y /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk 
+
+vgcreate datavg /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk
+
+vgs
+
+lvcreate --type raid0 -l 100%FREE --stripes 10 -n datalv datavg
+
+mkfs.xfs /dev/datavg/datalv
+
+lvdisplay /dev/datavg/datalv -m
+
+mkdir -p /data
+
+cp /etc/fstab /etc/fstab.bak
+
+cat << EOF >> /etc/fstab
+/dev/datavg/datalv /data                  xfs     defaults        0 0
+
+EOF
+
+mount -a
+
+yum install -y sysstat
+lsblk | grep disk | awk '{print $1}' | xargs -I DEMO echo -n "DEMO "
+# sda sdb sdc sdd sde sdf sdg sdh sdi sdj sdk sdl sdm
+iostat -m -x sda sdb sdc sdd sde sdf sdg sdh sdi sdj sdk 5
+iostat -m -x dm-10 5
+
+yum install -y chrony
+systemctl enable chronyd
+systemctl restart chronyd
+systemctl status chronyd
+chronyc tracking
+
+systemctl disable --now firewalld.service
+
 ```
+
 ## install ocp
 
 ### helper node
@@ -1258,6 +1303,31 @@ oc get clusterrole.rbac
 
 oc adm policy add-cluster-role-to-user cluster-reader  zteadm
 oc adm policy remove-cluster-role-from-user cluster-reader  zteadm
+
+#########################################
+# add more rhel-ansible-host
+
+# scp vars_static.yaml to helper
+
+
+cat <<EOF > /data/ocp4/rhel-ansible-host
+[all:vars]
+ansible_user=root 
+#ansible_become=True 
+
+openshift_kubeconfig_path="/data/ocp4/auth/kubeconfig" 
+
+[workers] 
+infra-0.ocpsc.redhat.ren
+infra-1.ocpsc.redhat.ren
+
+[new_workers]
+mycluster-rhel7-2.example.com
+
+EOF
+
+ansible-playbook -i /data/ocp4/rhel-ansible-host /usr/share/ansible/openshift-ansible/playbooks/scaleup.yml
+
 
 ```
 
