@@ -155,6 +155,7 @@ firewall-cmd --zone=public --list-all
 firewall-cmd --permanent --zone=public --remove-port=2049/tcp
 
 firewall-cmd --permanent --zone=public --add-rich-rule='rule family="ipv4" port port="2049" protocol="tcp" source address="117.177.241.0/24" accept'
+firewall-cmd --permanent --zone=public --add-rich-rule='rule family="ipv4" port port="2049" protocol="tcp" source address="39.137.101.0/24" accept'
 
 firewall-cmd --reload
 
@@ -1308,7 +1309,10 @@ oc adm policy remove-cluster-role-from-user cluster-reader  zteadm
 # add more rhel-ansible-host
 
 # scp vars_static.yaml to helper
+cd /data/ocp4/ocp4-upi-helpernode
+ansible-playbook -e @vars-static.yaml -e staticips=true tasks/main.yml
 
+ssh-copy-id root@worker-0.ocpsc.redhat.ren
 
 cat <<EOF > /data/ocp4/rhel-ansible-host
 [all:vars]
@@ -1322,7 +1326,7 @@ infra-0.ocpsc.redhat.ren
 infra-1.ocpsc.redhat.ren
 
 [new_workers]
-mycluster-rhel7-2.example.com
+worker-0.ocpsc.redhat.ren
 
 EOF
 
