@@ -93,7 +93,7 @@ podman run --privileged=true \
     --add-host clair:127.0.0.1 \
     -d quay.io/redhat/quay:v3.2.0 config ka5tr4g3quzrwkq4
 # login: quayconfig  /  ka5tr4g3quzrwkq4
-# quay admin:  admin   /   5a4ru36a8zfr1gp8
+
 # clair: security_scanner
 # key id: 5b9c2160f3acefa7690edd93fbe013d9cf8e951815dfeb0828ae72c144159e1c
 
