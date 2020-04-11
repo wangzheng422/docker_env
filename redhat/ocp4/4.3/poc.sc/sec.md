@@ -157,6 +157,8 @@ firewall-cmd --permanent --zone=public --remove-port=2049/tcp
 firewall-cmd --permanent --zone=public --add-rich-rule='rule family="ipv4" port port="2049" protocol="tcp" source address="117.177.241.0/24" accept'
 firewall-cmd --permanent --zone=public --add-rich-rule='rule family="ipv4" port port="2049" protocol="tcp" source address="39.137.101.0/24" accept'
 
+# firewall-cmd --permanent --zone=public --add-port=4443/tcp
+
 firewall-cmd --reload
 
 showmount -a
@@ -897,7 +899,7 @@ systemctl disable --now firewalld.service
 
 ## install ocp
 
-### helper node
+### helper node day1
 
 ```bash
 ############################################################
@@ -1400,17 +1402,35 @@ podman run --name clair-postgres --pod quay \
     -v /data/quay/lib/postgresql/data:/var/lib/postgresql/data:Z \
     -d registry.redhat.ren:5443/docker.io/library/postgres
 
+# change /data/quay/clair-config/config.yaml
+# https://registry.redhat.ren:4443 -> https://registry.redhat.ren:8443
 podman run --restart=always -d \
     --name clair \
-    -v /data/quay/clair-config:/clair/config \
+    -v /data/quay/clair-config:/clair/config:Z \
     -v /data/quay/clair-config/ca.crt:/etc/pki/ca-trust/source/anchors/ca.crt  \
     --pod quay \
-    --add-host clair:127.0.0.1 \
+    --add-host registry.redhat.ren:127.0.0.1 \
     registry.redhat.ren:5443/quay.io/redhat/clair-jwt:v3.2.1
+
+# stop and restart
+podman stop quay-master
+podman stop quay-redis
+podman stop quay-mysql
+
+podman rm quay-master
+podman rm quay-redis
+podman rm quay-mysql
+
+podman rm clair
+podman rm clair-postgres
+
+podman pod ps
+podman pod stop quay
+podman pod rm quay
 
 ```
 
-### bootstrap node
+### bootstrap node day1
 
 ```bash
 ##########################################################3
@@ -1543,7 +1563,7 @@ rsync -e "ssh -c chacha20-poly1305@openssh.com" --info=progress2 -P -arz  /data/
 
 ```
 
-### master1 node
+### master1 node day1
 
 ```bash
 ##########################################################3
@@ -1649,7 +1669,7 @@ virsh start ocp4-master1
 
 ```
 
-### master0 node
+### master0 node day1
 
 ```bash
 ########################################################
@@ -1759,7 +1779,7 @@ virsh start ocp4-master0
 
 ```
 
-### master2 node
+### master2 node day1
 
 ```bash
 ########################################################
@@ -1871,7 +1891,7 @@ virsh start ocp4-master2
 
 
 
-### infra0 node
+### infra0 node day1
 
 ```bash
 systemctl disable firewalld.service
@@ -1879,7 +1899,7 @@ systemctl stop firewalld.service
 
 ```
 
-### infra1 node
+### infra1 node day1
 
 ```bash
 systemctl disable firewalld.service
@@ -1887,3 +1907,30 @@ systemctl stop firewalld.service
 
 
 ```
+
+### worker-0 day2 oper
+
+```bash
+
+podman login registry.redhat.ren:4443 -u zteadm
+
+# localhost/ottcache-img:6.01.05.01T03
+skopeo copy docker-archive:ZXCDN-OTT-IAS-IMGV6.01.05.01_TEST.tar docker://registry.redhat.ren:4443/zteadm/ottcache-img:6.01.05.01T03
+
+# localhost/slbl7-img:6.01.05.01T03
+skopeo copy docker-archive:ZXCDN-OTT-SLBL7-IMGV6.01.05.01_TEST.tar docker://registry.redhat.ren:4443/zteadm/slbl7-img:6.01.05.01T03
+
+# localhost/webcache-img:v6.01.04.03
+skopeo copy docker-archive:ZXCDN-CACHE-WEBCACHE-IMGV6.01.04.03.tar docker://registry.redhat.ren:4443/zteadm/webcache-img:v6.01.04.03
+
+# localhost/pg-img:v1.01.01.01
+skopeo copy docker-archive:ZXCDN-PG-IMGV1.01.01.01.tar docker://registry.redhat.ren:4443/zteadm/pg-img:v1.01.01.01
+
+# localhost/slb-img:v6.01.04.03
+skopeo copy docker-archive:ZXCDN-CACHE-SLB-IMGV6.01.04.03.tar docker://registry.redhat.ren:4443/zteadm/slb-img:v6.01.04.03
+
+
+```
+
+### 
+
