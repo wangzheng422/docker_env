@@ -85,9 +85,19 @@ oc get pod -o json | jq -r '.items[].spec.containers[].image' | sort | uniq
 oc project calico-system
 
 oc get pod -o json | jq -r '.items[].spec.containers[].image' | sort | uniq
+# calico/ctl:v3.13.2
 # docker.io/calico/kube-controllers:v3.13.2
 # docker.io/calico/node:v3.13.2
 # docker.io/calico/typha:v3.13.2
+
+oc apply -f calicoctl.yaml
+
+oc exec calicoctl -n calico-system -it -- /calicoctl get node -o wide
+
+oc exec calicoctl -n calico-system -it -- /calicoctl ipam show --show-blocks
+
+oc exec calicoctl -n calico-system -it -- /calicoctl get ipPool -o wide
+
 
 ```
 
