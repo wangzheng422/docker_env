@@ -1929,6 +1929,10 @@ skopeo copy docker-archive:ZXCDN-PG-IMGV1.01.01.01.tar docker://registry.redhat.
 # localhost/slb-img:v6.01.04.03
 skopeo copy docker-archive:ZXCDN-CACHE-SLB-IMGV6.01.04.03.tar docker://registry.redhat.ren:4443/zteadm/slb-img:v6.01.04.03
 
+d if=/dev/zero of=/data/testfile bs=1G count=10
+# 10+0 records in
+# 10+0 records out
+# 10737418240 bytes (11 GB) copied, 6.85688 s, 1.6 GB/s
 
 ```
 
