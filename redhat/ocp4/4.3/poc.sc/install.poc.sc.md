@@ -1929,10 +1929,47 @@ skopeo copy docker-archive:ZXCDN-PG-IMGV1.01.01.01.tar docker://registry.redhat.
 # localhost/slb-img:v6.01.04.03
 skopeo copy docker-archive:ZXCDN-CACHE-SLB-IMGV6.01.04.03.tar docker://registry.redhat.ren:4443/zteadm/slb-img:v6.01.04.03
 
-d if=/dev/zero of=/data/testfile bs=1G count=10
+# io speed test
+dd if=/dev/zero of=/data/testfile bs=1G count=10
 # 10+0 records in
 # 10+0 records out
 # 10737418240 bytes (11 GB) copied, 6.85688 s, 1.6 GB/s
+
+dd if=/dev/zero of=/data/testfile bs=1G count=10 oflag=direct
+# 10+0 records in
+# 10+0 records out
+# 10737418240 bytes (11 GB) copied, 3.98098 s, 2.7 GB/s
+
+dd if=/dev/zero of=/data/testfile bs=5M count=9999
+# 9999+0 records in
+# 9999+0 records out
+# 52423557120 bytes (52 GB) copied, 27.8529 s, 1.9 GB/s
+
+dd if=/dev/zero of=/data/testfile bs=5M count=9999 oflag=direct
+# 9999+0 records in
+# 9999+0 records out
+# 52423557120 bytes (52 GB) copied, 16.1121 s, 3.3 GB/s
+
+# secure for anti-scan
+cat << EOF >> /etc/rc.local
+
+iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+iptables -A INPUT -s 127.0.0.1 -j ACCEPT
+iptables -A INPUT -s 223.87.20.0/24 -j ACCEPT
+iptables -A INPUT -s 117.177.241.0/24 -j ACCEPT
+iptables -A INPUT -s 39.134.200.0/24 -j ACCEPT
+iptables -A INPUT -s 112.44.102.224/27 -j ACCEPT
+iptables -A INPUT -s 47.93.86.113 -j ACCEPT
+iptables -A INPUT -p tcp -j REJECT
+iptables -A INPUT -p udp -j REJECT
+
+EOF
+
+chmod +x /etc/rc.d/rc.local
+systemctl enable rc-local
+
+# systemctl start rc-local
+
 
 ```
 
