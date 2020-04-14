@@ -1953,13 +1953,17 @@ dd if=/dev/zero of=/data/testfile bs=5M count=9999 oflag=direct
 # secure for anti-scan
 cat << EOF >> /etc/rc.local
 
+ipset create my-allow-set hash:net
+ipset add my-allow-set 127.0.0.1/32
+ipset add my-allow-set 223.87.20.0/24
+ipset add my-allow-set 117.177.241.0/24
+ipset add my-allow-set 39.134.200.0/24
+ipset add my-allow-set 192.168.7.0/24
+ipset add my-allow-set 112.44.102.224/27
+ipset add my-allow-set 47.93.86.113/32
+
 iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
-iptables -A INPUT -s 127.0.0.1 -j ACCEPT
-iptables -A INPUT -s 223.87.20.0/24 -j ACCEPT
-iptables -A INPUT -s 117.177.241.0/24 -j ACCEPT
-iptables -A INPUT -s 39.134.200.0/24 -j ACCEPT
-iptables -A INPUT -s 112.44.102.224/27 -j ACCEPT
-iptables -A INPUT -s 47.93.86.113 -j ACCEPT
+iptables -A INPUT -m set --set my-allow-set src -j ACCEPT
 iptables -A INPUT -p tcp -j REJECT
 iptables -A INPUT -p udp -j REJECT
 
