@@ -185,6 +185,41 @@ insights-client --register
 
 yum --disableplugin=subscription-manager install ncdu
 
+####################################
+# anti scan
+firewall-cmd --permanent --zone=public --remove-rich-rule='rule family="ipv4" port port="2049" protocol="tcp" source address="117.177.241.0/24" accept'
+firewall-cmd --permanent --zone=public --remove-rich-rule='rule family="ipv4" port port="2049" protocol="tcp" source address="39.137.101.0/24" accept'
+
+firewall-cmd --permanent --new-ipset=my-allow-list --type=hash:net
+firewall-cmd --permanent --get-ipsets
+
+cat > /root/iplist.txt <<EOL
+127.0.0.1/32
+223.87.20.0/24
+117.177.241.0/24
+39.134.200.0/24
+39.134.201.0/24
+39.137.101.0/24
+192.168.7.0/24
+112.44.102.224/27
+47.93.86.113/32
+EOL
+
+firewall-cmd --permanent --ipset=my-allow-list --add-entries-from-file=iplist.txt
+
+firewall-cmd --permanent --ipset=my-allow-list --get-entries
+
+firewall-cmd --permanent --zone=trusted --add-source=ipset:my-allow-list 
+firewall-cmd --reload
+
+firewall-cmd --list-all
+firewall-cmd --get-active-zones
+
+firewall-cmd --zone=block --change-interface=em1
+
+firewall-cmd --set-default-zone=block
+firewall-cmd --runtime-to-permanent
+firewall-cmd --reload
 
 ```
 
@@ -1561,6 +1596,36 @@ rsync -e "ssh -c chacha20-poly1305@openssh.com" --info=progress2 -P -arz  /data/
 tar -cvf - ocp4-master2.qcow2 | pigz -c > /data/kvm/ocp4-master2.qcow2.tgz
 rsync -e "ssh -c chacha20-poly1305@openssh.com" --info=progress2 -P -arz  /data/kvm/ocp4-master2.qcow2.tgz root@117.177.241.22:/data/kvm/
 
+# anti scan
+firewall-cmd --permanent --new-ipset=my-allow-list --type=hash:net
+firewall-cmd --permanent --get-ipsets
+
+cat > /root/iplist.txt <<EOL
+127.0.0.1/32
+223.87.20.0/24
+117.177.241.0/24
+39.134.200.0/24
+39.134.201.0/24
+39.137.101.0/24
+192.168.7.0/24
+112.44.102.224/27
+47.93.86.113/32
+EOL
+
+firewall-cmd --permanent --ipset=my-allow-list --add-entries-from-file=iplist.txt
+
+firewall-cmd --permanent --ipset=my-allow-list --get-entries
+
+firewall-cmd --permanent --zone=trusted --add-source=ipset:my-allow-list 
+firewall-cmd --reload
+
+firewall-cmd --list-all
+firewall-cmd --get-active-zones
+
+firewall-cmd --set-default-zone=block
+firewall-cmd --runtime-to-permanent
+firewall-cmd --reload
+
 ```
 
 ### master1 node day1
@@ -1666,6 +1731,35 @@ virsh list --all
 
 virsh start ocp4-master1
 
+# anti scan
+firewall-cmd --permanent --new-ipset=my-allow-list --type=hash:net
+firewall-cmd --permanent --get-ipsets
+
+cat > /root/iplist.txt <<EOL
+127.0.0.1/32
+223.87.20.0/24
+117.177.241.0/24
+39.134.200.0/24
+39.134.201.0/24
+39.137.101.0/24
+192.168.7.0/24
+112.44.102.224/27
+47.93.86.113/32
+EOL
+
+firewall-cmd --permanent --ipset=my-allow-list --add-entries-from-file=iplist.txt
+
+firewall-cmd --permanent --ipset=my-allow-list --get-entries
+
+firewall-cmd --permanent --zone=trusted --add-source=ipset:my-allow-list 
+firewall-cmd --reload
+
+firewall-cmd --list-all
+firewall-cmd --get-active-zones
+
+firewall-cmd --set-default-zone=block
+firewall-cmd --runtime-to-permanent
+firewall-cmd --reload
 
 ```
 
@@ -1777,6 +1871,36 @@ virsh list --all
 
 virsh start ocp4-master0
 
+# anti scan
+firewall-cmd --permanent --new-ipset=my-allow-list --type=hash:net
+firewall-cmd --permanent --get-ipsets
+
+cat > /root/iplist.txt <<EOL
+127.0.0.1/32
+223.87.20.0/24
+117.177.241.0/24
+39.134.200.0/24
+39.134.201.0/24
+39.137.101.0/24
+192.168.7.0/24
+112.44.102.224/27
+47.93.86.113/32
+EOL
+
+firewall-cmd --permanent --ipset=my-allow-list --add-entries-from-file=iplist.txt
+
+firewall-cmd --permanent --ipset=my-allow-list --get-entries
+
+firewall-cmd --permanent --zone=trusted --add-source=ipset:my-allow-list 
+firewall-cmd --reload
+
+firewall-cmd --list-all
+firewall-cmd --get-active-zones
+
+firewall-cmd --set-default-zone=block
+firewall-cmd --runtime-to-permanent
+firewall-cmd --reload
+
 ```
 
 ### master2 node day1
@@ -1887,15 +2011,69 @@ virsh list --all
 
 virsh start ocp4-master2
 
+# anti scan
+firewall-cmd --permanent --new-ipset=my-allow-list --type=hash:net
+firewall-cmd --permanent --get-ipsets
+
+cat > /root/iplist.txt <<EOL
+127.0.0.1/32
+223.87.20.0/24
+117.177.241.0/24
+39.134.200.0/24
+39.134.201.0/24
+39.137.101.0/24
+192.168.7.0/24
+112.44.102.224/27
+47.93.86.113/32
+EOL
+
+firewall-cmd --permanent --ipset=my-allow-list --add-entries-from-file=iplist.txt
+
+firewall-cmd --permanent --ipset=my-allow-list --get-entries
+
+firewall-cmd --permanent --zone=trusted --add-source=ipset:my-allow-list 
+firewall-cmd --reload
+
+firewall-cmd --list-all
+firewall-cmd --get-active-zones
+
+firewall-cmd --set-default-zone=block
+firewall-cmd --runtime-to-permanent
+firewall-cmd --reload
+
 ```
-
-
 
 ### infra0 node day1
 
 ```bash
 systemctl disable firewalld.service
 systemctl stop firewalld.service
+
+# secure for anti-scan
+cat << EOF >> /etc/rc.local
+
+ipset create my-allow-set hash:net
+ipset add my-allow-set 127.0.0.1/32
+ipset add my-allow-set 223.87.20.0/24
+ipset add my-allow-set 117.177.241.0/24
+ipset add my-allow-set 39.134.200.0/24
+ipset add my-allow-set 39.134.201.0/24
+ipset add my-allow-set 39.137.101.0/24
+ipset add my-allow-set 192.168.7.0/24
+ipset add my-allow-set 112.44.102.224/27
+ipset add my-allow-set 47.93.86.113/32
+
+iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+iptables -A INPUT -m set --match-set my-allow-set src -j ACCEPT
+iptables -A INPUT -p tcp -j REJECT
+iptables -A INPUT -p udp -j REJECT
+
+EOF
+
+chmod +x /etc/rc.d/rc.local
+systemctl enable rc-local
+
+# systemctl restart rc-local
 
 ```
 
@@ -1905,6 +2083,31 @@ systemctl stop firewalld.service
 systemctl disable firewalld.service
 systemctl stop firewalld.service
 
+# secure for anti-scan
+cat << EOF >> /etc/rc.local
+
+ipset create my-allow-set hash:net
+ipset add my-allow-set 127.0.0.1/32
+ipset add my-allow-set 223.87.20.0/24
+ipset add my-allow-set 117.177.241.0/24
+ipset add my-allow-set 39.134.200.0/24
+ipset add my-allow-set 39.134.201.0/24
+ipset add my-allow-set 39.137.101.0/24
+ipset add my-allow-set 192.168.7.0/24
+ipset add my-allow-set 112.44.102.224/27
+ipset add my-allow-set 47.93.86.113/32
+
+iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+iptables -A INPUT -m set --match-set my-allow-set src -j ACCEPT
+iptables -A INPUT -p tcp -j REJECT
+iptables -A INPUT -p udp -j REJECT
+
+EOF
+
+chmod +x /etc/rc.d/rc.local
+systemctl enable rc-local
+
+# systemctl restart rc-local
 
 ```
 
@@ -1958,12 +2161,14 @@ ipset add my-allow-set 127.0.0.1/32
 ipset add my-allow-set 223.87.20.0/24
 ipset add my-allow-set 117.177.241.0/24
 ipset add my-allow-set 39.134.200.0/24
+ipset add my-allow-set 39.134.201.0/24
+ipset add my-allow-set 39.137.101.0/24
 ipset add my-allow-set 192.168.7.0/24
 ipset add my-allow-set 112.44.102.224/27
 ipset add my-allow-set 47.93.86.113/32
 
 iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
-iptables -A INPUT -m set --set my-allow-set src -j ACCEPT
+iptables -A INPUT -m set --match-set my-allow-set src -j ACCEPT
 iptables -A INPUT -p tcp -j REJECT
 iptables -A INPUT -p udp -j REJECT
 
@@ -1972,7 +2177,7 @@ EOF
 chmod +x /etc/rc.d/rc.local
 systemctl enable rc-local
 
-# systemctl start rc-local
+# systemctl restart rc-local
 
 
 ```
