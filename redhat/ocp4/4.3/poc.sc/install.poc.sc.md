@@ -960,12 +960,11 @@ yum install -y byobu htop iostat
 
 yum -y update
 
-hostnamectl set-hostname worker-1.ocpsc.redhat.ren
+hostnamectl set-hostname worker-2.ocpsc.redhat.ren
 
 nmcli connection modify eno1 ipv4.dns 117.177.241.16
 nmcli connection reload
 nmcli connection up eno1
-
 
 yum -y install fail2ban
 
@@ -1048,6 +1047,119 @@ systemctl status chronyd
 chronyc tracking
 
 systemctl disable --now firewalld.service
+```
+
+### worker-2 host
+
+```bash
+
+mkdir /etc/yum.repos.d.bak
+mv /etc/yum.repos.d/* /etc/yum.repos.d.bak
+
+cat << EOF > /etc/yum.repos.d/remote.repo
+[remote]
+name=RHEL FTP
+baseurl=ftp://117.177.241.16/data
+enabled=1
+gpgcheck=0
+
+EOF
+
+yum clean all
+yum --disableplugin=subscription-manager  repolist
+
+yum install -y byobu htop iostat
+
+yum -y update
+
+hostnamectl set-hostname worker-2.ocpsc.redhat.ren
+
+nmcli connection modify eno1 ipv4.dns 117.177.241.16
+nmcli connection reload
+nmcli connection up eno1
+
+yum -y install fail2ban
+
+cat << EOF > /etc/fail2ban/jail.d/wzh.conf
+[sshd]
+enabled = true
+
+EOF
+
+systemctl enable fail2ban
+systemctl restart fail2ban
+
+cat << EOF > /etc/fail2ban/jail.d/wzh.conf
+[sshd]
+enabled = true
+
+[recidive]
+enabled = true
+
+EOF
+
+systemctl restart fail2ban
+
+fail2ban-client status sshd
+fail2ban-client status recidive
+systemctl status fail2ban
+tail -F /var/log/fail2ban.log
+
+cp /etc/ssh/sshd_config /etc/ssh/sshd_config.BAK
+sed -i 's/#UseDNS yes/UseDNS no/g' /etc/ssh/sshd_config
+
+diff /etc/ssh/sshd_config /etc/ssh/sshd_config.BAK
+
+systemctl restart sshd
+
+passwd
+
+useradd -m wzh
+
+lsblk | grep 5.5 | awk '{print $1}' | xargs -I DEMO echo -n "/dev/DEMO "
+# /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk
+lsblk | grep 5.5 | awk '{print $1}' | wc -l
+# 24
+
+yum install -y lvm2
+
+pvcreate -y /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx
+
+vgcreate datavg /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx
+
+vgs
+
+lvcreate --type raid0 -l 100%FREE --stripes 24 -n datalv datavg
+
+mkfs.xfs /dev/datavg/datalv
+
+lvdisplay /dev/datavg/datalv -m
+
+mkdir -p /data
+
+cp /etc/fstab /etc/fstab.bak
+
+cat << EOF >> /etc/fstab
+/dev/datavg/datalv /data                  xfs     defaults        0 0
+
+EOF
+
+mount -a
+
+yum install -y sysstat
+lsblk | grep disk | awk '{print $1}' | xargs -I DEMO echo -n "DEMO "
+# sda sdb sdc sdd sde sdf sdg sdh sdi sdj sdk sdl sdm
+iostat -m -x sda sdb sdc sdd sde sdf sdg sdh sdi sdj sdk 5
+iostat -m -x dm-10 5
+
+yum install -y chrony
+systemctl enable chronyd
+systemctl restart chronyd
+systemctl status chronyd
+chronyc tracking
+
+systemctl disable --now firewalld.service
+
 ```
 
 ## install ocp
