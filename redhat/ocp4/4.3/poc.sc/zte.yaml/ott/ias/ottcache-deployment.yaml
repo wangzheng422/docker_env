@@ -1,0 +1,172 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: deployment-ottcache-001
+  namespace: zxcdn
+  annotations:
+    k8s.v1.cni.cncf.io/networks: ott-network
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ottcache
+  template:
+    metadata:
+      labels:
+        app: ottcache  
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: 'infra1.hsc.redhat.ren'
+      restartPolicy: Always
+
+      containers:
+          - name: ottcache-001-main
+            image: ottcache-img:6.01.05.01T03
+            imagePullPolicy: IfNotPresent
+            command: ["/usr/sbin/init"]
+            
+            volumeMounts:
+             - name: init-config-volumes
+               mountPath: /home/init/init.conf  
+               subPath: init.conf  
+          
+             - name: init-config-volumes
+               mountPath: /home/zte_node/log_exporter/ztetool.ini 
+               subPath: ztetool.ini
+               
+             - name: dshm
+               mountPath: /dev/shm
+               
+             - name: host-time
+               mountPath: /etc/localtime
+          
+             - name: host-resolv
+               mountPath: /etc/resolv.conf
+         
+             - name: host-zoneinfo
+               mountPath: /usr/share/zoneinfo
+               
+             - name: ottcache-config-volumes
+               mountPath: /home/persistence
+
+             - name: ottcache-redis-db-volumes
+               mountPath: /home/zxcdn/ottcache/redis/db
+               
+             - name: ottcache-nginx-log-volumes
+               mountPath: /home/zxcdn/ottcache/nginx/logs
+               
+             - name: ottcache-tomcat-log-volumes
+               mountPath: /home/zxcdn/ottcache/tomcat/logs/
+
+             - name: zxagent-log-volumes
+               mountPath: /home/zxagent/log
+               
+             - name: logexporter-log-volumes
+               mountPath: /home/zte_node/log/
+               
+             - name: ottcache-mnt-zxdfs-volumes
+               mountPath: /mnt/zxdfs    
+             
+            #livenessProbe:
+            #   httpGet:
+            #     path: /GetCDNLoadInfoAll
+            #     port: 6610
+            #   initialDelaySeconds: 60
+            #   periodSeconds: 30
+              
+            resources:
+              requests:
+                cpu: 4.0
+                memory: 10Gi
+              limits:
+                cpu: 4.0
+                memory: 10Gi
+            securityContext:
+              privileged: true
+              
+          - name: ottcache-001-pg
+            image: pg-img:2.01.01.01
+            imagePullPolicy: IfNotPresent
+            env:
+            - name: ROOTPATH
+              value: "/mnt"
+            command: [ "/home/start.sh" ]
+            volumeMounts:
+             - name: pg-root
+               mountPath: /mnt
+
+             - name: host-time
+               mountPath: /etc/localtime
+
+             - name: host-resolv
+               mountPath: /etc/resolv.conf
+         
+             - name: host-zoneinfo
+               mountPath: /usr/share/zoneinfo
+          
+            resources:
+              requests:
+                cpu: 1.0
+                memory: 2048Mi
+              limits:
+                cpu: 1.0
+                memory: 2048Mi
+            securityContext:
+              privileged: true
+              
+     volumes:
+          - name: init-config-volumes
+            configMap:
+              name: ottcache-001-config
+
+          - name: dshm
+            emptyDir:
+              medium: Memory
+                   
+          - name: host-time
+            hostPath:
+              path: /etc/localtime
+         
+          - name: host-resolv
+            hostPath:
+              path: /etc/resolv.conf
+         
+          - name: host-zoneinfo
+            hostPath:
+              path: /usr/share/zoneinfo
+              
+          - name: ottcache-config-volumes
+            hostPath:
+              path: /home/docker/ztecdn/pod-ottcache-001/config
+              
+          - name: ottcache-redis-db-volumes
+            hostPath:
+              path: /home/docker/ztecdn/pod-ottcache-001/redis/db
+         
+          - name: ottcache-nginx-log-volumes
+            hostPath:
+              path: /home/docker/ztecdn/pod-ottcache-001/nginx/logs
+         
+          - name: ottcache-tomcat-log-volumes
+            hostPath:
+              path: /home/docker/ztecdn/pod-ottcache-001/tomcat/logs
+         
+          - name: sshd-log-volumes
+            hostPath:
+              path: /home/docker/ztecdn/pod-ottcache-001/sshd/logs
+              
+          - name: zxagent-log-volumes
+            hostPath:
+              path: /home/docker/ztecdn/pod-ottcache-001/zxagent/logs
+              
+          - name: logexporter-log-volumes
+            hostPath:
+              path: /home/docker/ztecdn/pod-ottcache-001/logexporter/logs
+              
+          - name: ottcache-mnt-zxdfs-volumes
+            hostPath:
+              path: /mnt/zxdfs
+              
+          - name: pg-root
+            hostPath:
+              path: /home/docker/ztecdn/pod-ottcache-001/pg/data
