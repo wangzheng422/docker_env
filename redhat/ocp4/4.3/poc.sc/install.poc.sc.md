@@ -1663,6 +1663,38 @@ EOF
 
 ansible-playbook -i /data/ocp4/rhel-ansible-host /usr/share/ansible/openshift-ansible/playbooks/scaleup.yml
 
+#########################################
+# add more rhel-ansible-host
+cat << EOF  > /etc/yum/pluginconf.d/subscription-manager.conf
+[main]
+enabled=0
+EOF
+# scp vars_static.yaml to helper
+cd /data/ocp4/ocp4-upi-helpernode
+ansible-playbook -e @vars-static.yaml -e staticips=true tasks/main.yml
+
+ssh-copy-id root@worker-1.ocpsc.redhat.ren
+ssh-copy-id root@worker-2.ocpsc.redhat.ren
+
+cat <<EOF > /data/ocp4/rhel-ansible-host
+[all:vars]
+ansible_user=root 
+#ansible_become=True 
+
+openshift_kubeconfig_path="/data/ocp4/auth/kubeconfig" 
+
+[workers] 
+infra-0.ocpsc.redhat.ren
+infra-1.ocpsc.redhat.ren
+worker-0.ocpsc.redhat.ren
+
+[new_workers]
+worker-1.ocpsc.redhat.ren
+worker-2.ocpsc.redhat.ren
+
+EOF
+
+ansible-playbook -i /data/ocp4/rhel-ansible-host /usr/share/ansible/openshift-ansible/playbooks/scaleup.yml
 
 ```
 
