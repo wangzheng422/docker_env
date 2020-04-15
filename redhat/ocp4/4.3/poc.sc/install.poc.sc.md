@@ -185,6 +185,11 @@ insights-client --register
 
 yum --disableplugin=subscription-manager install ncdu
 
+```
+
+### helper host day 2 
+
+```bash
 ####################################
 # anti scan
 firewall-cmd --permanent --zone=public --remove-rich-rule='rule family="ipv4" port port="2049" protocol="tcp" source address="117.177.241.0/24" accept'
@@ -223,6 +228,25 @@ firewall-cmd --zone=block --change-interface=em1
 firewall-cmd --set-default-zone=block
 firewall-cmd --runtime-to-permanent
 firewall-cmd --reload
+
+# setup time server
+/bin/cp -f /etc/chrony.conf /etc/chrony.conf.bak
+
+cat << EOF > /etc/chrony.conf
+server 0.rhel.pool.ntp.org iburst
+server 1.rhel.pool.ntp.org iburst
+server 2.rhel.pool.ntp.org iburst
+server 3.rhel.pool.ntp.org iburst
+driftfile /var/lib/chrony/drift
+makestep 1.0 3
+rtcsync
+logdir /var/log/chrony
+allow 39.134.0.0/16
+EOF
+
+systemctl restart chronyd
+systemctl status chronyd
+chronyc tracking
 
 ```
 
@@ -1047,6 +1071,27 @@ systemctl status chronyd
 chronyc tracking
 
 systemctl disable --now firewalld.service
+
+# setup time server
+/bin/cp -f /etc/chrony.conf /etc/chrony.conf.bak
+
+cat << EOF > /etc/chrony.conf
+server 117.177.241.16 iburst
+server 0.rhel.pool.ntp.org iburst
+server 1.rhel.pool.ntp.org iburst
+server 2.rhel.pool.ntp.org iburst
+server 3.rhel.pool.ntp.org iburst
+driftfile /var/lib/chrony/drift
+makestep 1.0 3
+rtcsync
+logdir /var/log/chrony
+EOF
+
+systemctl restart chronyd
+systemctl status chronyd
+chronyc tracking
+chronyc sources -v
+
 ```
 
 ### worker-2 host
@@ -1160,6 +1205,25 @@ chronyc tracking
 
 systemctl disable --now firewalld.service
 
+# setup time server
+/bin/cp -f /etc/chrony.conf /etc/chrony.conf.bak
+
+cat << EOF > /etc/chrony.conf
+server 117.177.241.16 iburst
+server 0.rhel.pool.ntp.org iburst
+server 1.rhel.pool.ntp.org iburst
+server 2.rhel.pool.ntp.org iburst
+server 3.rhel.pool.ntp.org iburst
+driftfile /var/lib/chrony/drift
+makestep 1.0 3
+rtcsync
+logdir /var/log/chrony
+EOF
+
+systemctl restart chronyd
+systemctl status chronyd
+chronyc tracking
+chronyc sources -v
 ```
 
 ## install ocp
