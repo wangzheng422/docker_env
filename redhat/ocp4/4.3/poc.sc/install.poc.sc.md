@@ -2529,5 +2529,97 @@ ipset add my-allow-set 61.132.54.2/32
 
 ```
 
-### 
+### worker-1 day2 oper
 
+```bash
+cat << EOF > /etc/rc.local
+#!/bin/bash
+# THIS FILE IS ADDED FOR COMPATIBILITY PURPOSES
+#
+# It is highly advisable to create own systemd services or udev rules
+# to run scripts during boot instead of using this file.
+#
+# In contrast to previous versions due to parallel execution during boot
+# this script will NOT be run after all other services.
+#
+# Please note that you must run 'chmod +x /etc/rc.d/rc.local' to ensure
+# that this script will be executed during boot.
+
+touch /var/lock/subsys/local
+
+ipset create my-allow-set hash:net
+ipset add my-allow-set 127.0.0.1/32
+ipset add my-allow-set 223.87.20.0/24
+ipset add my-allow-set 117.177.241.0/24
+ipset add my-allow-set 39.134.200.0/24
+ipset add my-allow-set 39.134.201.0/24
+ipset add my-allow-set 39.137.101.0/24
+ipset add my-allow-set 192.168.7.0/24
+ipset add my-allow-set 112.44.102.224/27
+ipset add my-allow-set 47.93.86.113/32
+ipset add my-allow-set 221.226.0.75/32
+ipset add my-allow-set 210.21.236.182/32
+ipset add my-allow-set 61.132.54.2/32
+
+iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+iptables -A INPUT -m set --match-set my-allow-set src -j ACCEPT
+iptables -A INPUT -p tcp -j REJECT
+iptables -A INPUT -p udp -j REJECT
+
+EOF
+
+chmod +x /etc/rc.d/rc.local
+systemctl enable rc-local
+
+# systemctl restart rc-local
+
+```
+
+### worker-2 day2 oper
+
+```bash
+cat << EOF > /etc/rc.local
+#!/bin/bash
+# THIS FILE IS ADDED FOR COMPATIBILITY PURPOSES
+#
+# It is highly advisable to create own systemd services or udev rules
+# to run scripts during boot instead of using this file.
+#
+# In contrast to previous versions due to parallel execution during boot
+# this script will NOT be run after all other services.
+#
+# Please note that you must run 'chmod +x /etc/rc.d/rc.local' to ensure
+# that this script will be executed during boot.
+
+touch /var/lock/subsys/local
+
+ipset create my-allow-set hash:net
+ipset add my-allow-set 127.0.0.1/32
+ipset add my-allow-set 223.87.20.0/24
+ipset add my-allow-set 117.177.241.0/24
+ipset add my-allow-set 39.134.200.0/24
+ipset add my-allow-set 39.134.201.0/24
+ipset add my-allow-set 39.137.101.0/24
+ipset add my-allow-set 192.168.7.0/24
+ipset add my-allow-set 112.44.102.224/27
+ipset add my-allow-set 47.93.86.113/32
+ipset add my-allow-set 221.226.0.75/32
+ipset add my-allow-set 210.21.236.182/32
+ipset add my-allow-set 61.132.54.2/32
+
+iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+iptables -A INPUT -m set --match-set my-allow-set src -j ACCEPT
+iptables -A INPUT -p tcp -j REJECT
+iptables -A INPUT -p udp -j REJECT
+
+EOF
+
+chmod +x /etc/rc.d/rc.local
+systemctl enable rc-local
+
+# systemctl restart rc-local
+
+```
+
+
+### 
