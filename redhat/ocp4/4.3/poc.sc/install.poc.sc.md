@@ -203,6 +203,9 @@ cat > /root/iplist.txt <<EOL
 192.168.7.0/24
 112.44.102.224/27
 47.93.86.113/32
+221.226.0.75/32
+210.21.236.182/32
+61.132.54.2/32
 EOL
 
 firewall-cmd --permanent --ipset=my-allow-list --add-entries-from-file=iplist.txt
@@ -870,6 +873,8 @@ enabled = true
 
 EOF
 
+systemctl restart fail2ban
+
 fail2ban-client status sshd
 fail2ban-client status recidive
 systemctl status fail2ban
@@ -930,6 +935,119 @@ chronyc tracking
 
 systemctl disable --now firewalld.service
 
+```
+
+### worker-1 host
+
+```bash
+
+mkdir /etc/yum.repos.d.bak
+mv /etc/yum.repos.d/* /etc/yum.repos.d.bak
+
+cat << EOF > /etc/yum.repos.d/remote.repo
+[remote]
+name=RHEL FTP
+baseurl=ftp://117.177.241.16/data
+enabled=1
+gpgcheck=0
+
+EOF
+
+yum clean all
+yum --disableplugin=subscription-manager  repolist
+
+yum install -y byobu htop iostat
+
+yum -y update
+
+hostnamectl set-hostname worker-1.ocpsc.redhat.ren
+
+nmcli connection modify eno1 ipv4.dns 117.177.241.16
+nmcli connection reload
+nmcli connection up eno1
+
+
+yum -y install fail2ban
+
+cat << EOF > /etc/fail2ban/jail.d/wzh.conf
+[sshd]
+enabled = true
+
+EOF
+
+systemctl enable fail2ban
+systemctl restart fail2ban
+
+cat << EOF > /etc/fail2ban/jail.d/wzh.conf
+[sshd]
+enabled = true
+
+[recidive]
+enabled = true
+
+EOF
+
+systemctl restart fail2ban
+
+fail2ban-client status sshd
+fail2ban-client status recidive
+systemctl status fail2ban
+tail -F /var/log/fail2ban.log
+
+cp /etc/ssh/sshd_config /etc/ssh/sshd_config.BAK
+sed -i 's/#UseDNS yes/UseDNS no/g' /etc/ssh/sshd_config
+
+diff /etc/ssh/sshd_config /etc/ssh/sshd_config.BAK
+
+systemctl restart sshd
+
+passwd
+
+useradd -m wzh
+
+lsblk | grep 5.5 | awk '{print $1}' | xargs -I DEMO echo -n "/dev/DEMO "
+# /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk
+lsblk | grep 5.5 | awk '{print $1}' | wc -l
+# 24
+
+yum install -y lvm2
+
+pvcreate -y /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx
+
+vgcreate datavg /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx
+
+vgs
+
+lvcreate --type raid0 -l 100%FREE --stripes 24 -n datalv datavg
+
+mkfs.xfs /dev/datavg/datalv
+
+lvdisplay /dev/datavg/datalv -m
+
+mkdir -p /data
+
+cp /etc/fstab /etc/fstab.bak
+
+cat << EOF >> /etc/fstab
+/dev/datavg/datalv /data                  xfs     defaults        0 0
+
+EOF
+
+mount -a
+
+yum install -y sysstat
+lsblk | grep disk | awk '{print $1}' | xargs -I DEMO echo -n "DEMO "
+# sda sdb sdc sdd sde sdf sdg sdh sdi sdj sdk sdl sdm
+iostat -m -x sda sdb sdc sdd sde sdf sdg sdh sdi sdj sdk 5
+iostat -m -x dm-10 5
+
+yum install -y chrony
+systemctl enable chronyd
+systemctl restart chronyd
+systemctl status chronyd
+chronyc tracking
+
+systemctl disable --now firewalld.service
 ```
 
 ## install ocp
@@ -1448,6 +1566,8 @@ podman run --restart=always -d \
     registry.redhat.ren:5443/quay.io/redhat/clair-jwt:v3.2.1
 
 # stop and restart
+podman stop clair
+podman stop clair-postgres
 podman stop quay-master
 podman stop quay-redis
 podman stop quay-mysql
@@ -2154,7 +2274,20 @@ dd if=/dev/zero of=/data/testfile bs=5M count=9999 oflag=direct
 # 52423557120 bytes (52 GB) copied, 16.1121 s, 3.3 GB/s
 
 # secure for anti-scan
-cat << EOF >> /etc/rc.local
+cat << EOF > /etc/rc.local
+#!/bin/bash
+# THIS FILE IS ADDED FOR COMPATIBILITY PURPOSES
+#
+# It is highly advisable to create own systemd services or udev rules
+# to run scripts during boot instead of using this file.
+#
+# In contrast to previous versions due to parallel execution during boot
+# this script will NOT be run after all other services.
+#
+# Please note that you must run 'chmod +x /etc/rc.d/rc.local' to ensure
+# that this script will be executed during boot.
+
+touch /var/lock/subsys/local
 
 ipset create my-allow-set hash:net
 ipset add my-allow-set 127.0.0.1/32
@@ -2166,6 +2299,9 @@ ipset add my-allow-set 39.137.101.0/24
 ipset add my-allow-set 192.168.7.0/24
 ipset add my-allow-set 112.44.102.224/27
 ipset add my-allow-set 47.93.86.113/32
+ipset add my-allow-set 221.226.0.75/32
+ipset add my-allow-set 210.21.236.182/32
+ipset add my-allow-set 61.132.54.2/32
 
 iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
 iptables -A INPUT -m set --match-set my-allow-set src -j ACCEPT
@@ -2179,6 +2315,9 @@ systemctl enable rc-local
 
 # systemctl restart rc-local
 
+ipset add my-allow-set 221.226.0.75/32
+ipset add my-allow-set 210.21.236.182/32
+ipset add my-allow-set 61.132.54.2/32
 
 ```
 
