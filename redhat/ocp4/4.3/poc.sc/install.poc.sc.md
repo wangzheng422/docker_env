@@ -726,7 +726,7 @@ mkdir -p /data_hdd
 cp /etc/fstab /etc/fstab.bak
 
 cat << EOF >> /etc/fstab
-/dev/datavg/datalv /data_hdd                   xfs     defaults        0 0
+/dev/datavg/datalv /data                   xfs     defaults        0 0
 
 EOF
 
@@ -830,7 +830,7 @@ mkdir -p /data_hdd
 cp /etc/fstab /etc/fstab.bak
 
 cat << EOF >> /etc/fstab
-/dev/datavg/datalv /data_hdd                   xfs     defaults        0 0
+/dev/datavg/datalv /data                   xfs     defaults        0 0
 
 EOF
 
