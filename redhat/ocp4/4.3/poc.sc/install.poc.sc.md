@@ -1767,6 +1767,8 @@ oc apply -f 45-wzh-service.yaml -n openshift-config
 
 ```
 
+
+
 ### helper node quay
 ```bash
 # on helper node
@@ -1859,6 +1861,31 @@ podman rm clair-postgres
 podman pod ps
 podman pod stop quay
 podman pod rm quay
+
+```
+
+### helper node zte oper
+
+```bash
+cd /data/ocp4/zte
+
+oc project zxcdn
+oc adm policy add-role-to-user admin zteadm -n zxcdn
+
+oc create serviceaccount -n zxcdn zxcdn-app
+oc adm policy add-scc-to-user privileged -z zxcdn-app -n zxcdn
+
+# oc adm policy remove-scc-from-user privileged -z  zxcdn-app
+
+oc get networks.operator.openshift.io cluster -o yaml
+
+oc apply -f zte-macvlan.yaml
+
+oc apply -f slbl7-configmap.yaml  
+# oc apply -f slbl7-deployment.yaml 
+oc apply -f slbl7-pod.yaml
+
+
 
 ```
 
