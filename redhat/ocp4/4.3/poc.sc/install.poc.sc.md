@@ -1885,6 +1885,8 @@ oc apply -f slbl7-configmap.yaml
 # oc apply -f slbl7-deployment.yaml 
 oc apply -f slbl7-pod.yaml
 
+oc apply -f ottcache-configmap.yaml  
+oc apply -f ottcache-pod.yaml
 
 
 ```
