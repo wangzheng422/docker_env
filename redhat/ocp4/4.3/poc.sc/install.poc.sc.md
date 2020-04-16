@@ -1698,6 +1698,75 @@ ansible-playbook -i /data/ocp4/rhel-ansible-host /usr/share/ansible/openshift-an
 
 ```
 
+### helper node day 2 sec
+
+```bash
+
+cat << EOF > wzh.script
+#!/bin/bash
+
+iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+iptables -A INPUT -s 127.0.0.1/32 -j ACCEPT
+iptables -A INPUT -s 223.87.20.0/24 -j ACCEPT
+iptables -A INPUT -s 117.177.241.0/24 -j ACCEPT
+iptables -A INPUT -s 39.134.200.0/24 -j ACCEPT
+iptables -A INPUT -s 39.134.201.0/24 -j ACCEPT
+iptables -A INPUT -s 39.137.101.0/24 -j ACCEPT
+iptables -A INPUT -s 192.168.7.0/24 -j ACCEPT
+iptables -A INPUT -s 112.44.102.224/27 -j ACCEPT
+iptables -A INPUT -s 47.93.86.113/32 -j ACCEPT
+iptables -A INPUT -p tcp -j REJECT
+iptables -A INPUT -p udp -j REJECT
+
+EOF
+
+var_local=$(cat ./wzh.script | python3 -c "import sys, urllib.parse; print(urllib.parse.quote(''.join(sys.stdin.readlines())))"  )
+
+cat <<EOF > 45-wzh-service.yaml
+apiVersion: machineconfiguration.openshift.io/v1
+kind: MachineConfig
+metadata:
+  labels:
+    machineconfiguration.openshift.io/role: master
+  name: 45-wzh-service
+spec:
+  config:
+    ignition:
+      version: 2.2.0
+    storage:
+      files:
+      - contents:
+          source: data:text/plain,${var_local}
+          verification: {}
+        filesystem: root
+        mode: 0755
+        path: /etc/rc.d/wzh.local
+    systemd:
+      units:
+      - name: wzh.service
+        enabled: true
+        contents: |
+          [Unit]
+          Description=/etc/rc.d/wzh.local Compatibility
+          Documentation=zhengwan@redhat.com
+          ConditionFileIsExecutable=/etc/rc.d/wzh.local
+          After=network.target
+
+          [Service]
+          Type=oneshot
+          User=root
+          Group=root
+          ExecStart=/bin/bash -c /etc/rc.d/wzh.local
+
+          [Install]
+          WantedBy=multi-user.target
+
+EOF
+oc apply -f 45-wzh-service.yaml -n openshift-config
+
+
+```
+
 ### helper node quay
 ```bash
 # on helper node
