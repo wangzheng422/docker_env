@@ -248,6 +248,8 @@ systemctl restart chronyd
 systemctl status chronyd
 chronyc tracking
 
+useradd -m zte
+
 ```
 
 ### bootstrap host
@@ -1888,6 +1890,7 @@ oc apply -f slbl7-pod.yaml
 oc apply -f ottcache-configmap.yaml  
 oc apply -f ottcache-pod.yaml
 
+oc delete -f ottcache-pod.yaml
 
 ```
 
