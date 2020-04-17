@@ -1890,6 +1890,7 @@ oc apply -f slbl7-pod.yaml
 oc apply -f ottcache-configmap.yaml  
 oc apply -f ottcache-pod.yaml
 
+oc delete -f slbl7-pod.yaml
 oc delete -f ottcache-pod.yaml
 
 ```
