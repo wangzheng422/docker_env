@@ -252,6 +252,7 @@ useradd -m zte
 
 ```
 
+
 ### bootstrap host
 
 ```bash
@@ -1897,6 +1898,143 @@ oc delete -f ottcache-pod.yaml
 
 ```
 
+### helper host add vm-router
+```bash
+
+cd /data/ocp4/ocp4-upi-helpernode
+ansible-playbook -e @vars-static.yaml -e staticips=true tasks/config.files.yml
+
+# upload install-config.yaml to helper /data/ocp4
+cd /data/ocp4
+
+/bin/cp -f worker.ign /var/www/html/ignition/router-0.ign
+/bin/cp -f worker.ign /var/www/html/ignition/router-1.ign
+/bin/cp -f worker.ign /var/www/html/ignition/router-2.ign
+/bin/cp -f worker.ign /var/www/html/ignition/router-3.ign
+/bin/cp -f worker.ign /var/www/html/ignition/router-4.ign
+/bin/cp -f worker.ign /var/www/html/ignition/router-5.ign
+/bin/cp -f worker.ign /var/www/html/ignition/router-6.ign
+/bin/cp -f worker.ign /var/www/html/ignition/router-7.ign
+/bin/cp -f worker.ign /var/www/html/ignition/router-8.ign
+
+chmod 644 /var/www/html/ignition/*
+
+
+export NGINX_DIRECTORY=/data/ocp4
+export RHCOSVERSION=4.3.0
+export VOLID=$(isoinfo -d -i ${NGINX_DIRECTORY}/rhcos-${RHCOSVERSION}-x86_64-installer.iso | awk '/Volume id/ { print $3 }')
+TEMPDIR=$(mktemp -d)
+echo $VOLID
+echo $TEMPDIR
+
+cd ${TEMPDIR}
+# Extract the ISO content using guestfish (to avoid sudo mount)
+guestfish -a ${NGINX_DIRECTORY}/rhcos-${RHCOSVERSION}-x86_64-installer.iso \
+  -m /dev/sda tar-out / - | tar xvf -
+
+# Helper function to modify the config files
+modify_cfg(){
+  for file in "EFI/redhat/grub.cfg" "isolinux/isolinux.cfg"; do
+    # Append the proper image and ignition urls
+    sed -e '/coreos.inst=yes/s|$| coreos.inst.install_dev=vda coreos.inst.image_url='"${URL}"'\/install\/'"${BIOSMODE}"'.raw.gz coreos.inst.ignition_url='"${URL}"'\/ignition\/'"${NODE}"'.ign ip='"${IP}"'::'"${GATEWAY}"':'"${NETMASK}"':'"${FQDN}"':'"${NET_INTERFACE}"':none:'"${DNS}"' nameserver='"${DNS}"'|' ${file} > $(pwd)/${NODE}_${file##*/}
+    # Boot directly in the installation
+    sed -i -e 's/default vesamenu.c32/default linux/g' -e 's/timeout 600/timeout 10/g' $(pwd)/${NODE}_${file##*/}
+  done
+}
+
+URL="http://117.177.241.16:8080/"
+GATEWAY="117.177.241.1"
+NETMASK="255.255.255.0"
+DNS="117.177.241.16"
+
+NODE="router-0"
+IP="117.177.241.243"
+FQDN="vm-router-0"
+BIOSMODE="bios"
+NET_INTERFACE="ens3"
+modify_cfg
+
+NODE="router-1"
+IP="117.177.241.244"
+FQDN="vm-router-1"
+BIOSMODE="bios"
+NET_INTERFACE="ens3"
+modify_cfg
+
+NODE="router-2"
+IP="117.177.241.245"
+FQDN="vm-router-2"
+BIOSMODE="bios"
+NET_INTERFACE="ens3"
+modify_cfg
+
+NODE="router-3"
+IP="117.177.241.246"
+FQDN="vm-router-3"
+BIOSMODE="bios"
+NET_INTERFACE="ens3"
+modify_cfg
+
+NODE="router-4"
+IP="117.177.241.247"
+FQDN="vm-router-4"
+BIOSMODE="bios"
+NET_INTERFACE="ens3"
+modify_cfg
+
+NODE="router-5"
+IP="117.177.241.248"
+FQDN="vm-router-5"
+BIOSMODE="bios"
+NET_INTERFACE="ens3"
+modify_cfg
+
+NODE="router-6"
+IP="117.177.241.249"
+FQDN="vm-router-6"
+BIOSMODE="bios"
+NET_INTERFACE="ens3"
+modify_cfg
+
+NODE="router-7"
+IP="117.177.241.250"
+FQDN="vm-router-7"
+BIOSMODE="bios"
+NET_INTERFACE="ens3"
+modify_cfg
+
+NODE="router-8"
+IP="117.177.241.251"
+FQDN="vm-router-8"
+BIOSMODE="bios"
+NET_INTERFACE="ens3"
+modify_cfg
+
+# Generate the images, one per node as the IP configuration is different...
+# https://github.com/coreos/coreos-assembler/blob/master/src/cmd-buildextend-installer#L97-L103
+for node in router-0 router-1 router-2 router-3 router-4 router-5 router-6 router-7 router-8; do
+  # Overwrite the grub.cfg and isolinux.cfg files for each node type
+  for file in "EFI/redhat/grub.cfg" "isolinux/isolinux.cfg"; do
+    /bin/cp -f $(pwd)/${node}_${file##*/} ${file}
+  done
+  # As regular user!
+  genisoimage -verbose -rock -J -joliet-long -volset ${VOLID} \
+    -eltorito-boot isolinux/isolinux.bin -eltorito-catalog isolinux/boot.cat \
+    -no-emul-boot -boot-load-size 4 -boot-info-table \
+    -eltorito-alt-boot -efi-boot images/efiboot.img -no-emul-boot \
+    -o ${NGINX_DIRECTORY}/${node}.iso .
+done
+
+# Optionally, clean up
+cd /data/ocp4
+rm -Rf ${TEMPDIR}
+
+cd ${NGINX_DIRECTORY}
+
+scp router-*.iso root@117.177.241.21:/data/ocp4/
+
+```
+
 ### bootstrap node day1
 
 ```bash
@@ -2057,6 +2195,16 @@ firewall-cmd --get-active-zones
 firewall-cmd --set-default-zone=block
 firewall-cmd --runtime-to-permanent
 firewall-cmd --reload
+
+################################
+## add more router vm
+virt-install --name=ocp4-router-0 --vcpus=2 --ram=8192 \
+--disk path=/data/kvm/ocp4-router-0.qcow2,bus=virtio,size=200 \
+--os-variant rhel8.0 --network bridge=br0,model=virtio \
+--boot menu=on --cdrom /data/ocp4/router-0.iso 
+
+
+
 
 ```
 
