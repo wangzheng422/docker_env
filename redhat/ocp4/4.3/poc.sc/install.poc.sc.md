@@ -2133,9 +2133,19 @@ oc apply -f 45-router-wzh-service.yaml -n openshift-config
 ### helper node zte tcp-router
 ```bash
 
+oc project openshift-ingress
+
+# install the tcp-router and demo
+oc create configmap customrouter-wzh --from-file=haproxy-config.template
+oc apply -f haproxy.router.yaml
+
+oc project zxcdn
+
+oc apply -f ott-service.tcp.router.yaml
 
 
 ```
+
 ### bootstrap node day1
 
 ```bash
