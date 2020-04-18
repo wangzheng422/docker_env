@@ -2033,6 +2033,86 @@ cd ${NGINX_DIRECTORY}
 
 scp router-*.iso root@117.177.241.21:/data/ocp4/
 
+# after vm on bootstrap created
+oc get csr
+oc get csr -o go-template='{{range .items}}{{if not .status}}{{.metadata.name}}{{"\n"}}{{end}}{{end}}' | xargs oc adm certificate approve
+
+oc label node vm-router-0.ocpsc.redhat.ren node-role.kubernetes.io/router=''
+oc label node vm-router-1.ocpsc.redhat.ren node-role.kubernetes.io/router=''
+oc label node vm-router-2.ocpsc.redhat.ren node-role.kubernetes.io/router=''
+oc label node vm-router-3.ocpsc.redhat.ren node-role.kubernetes.io/router=''
+oc label node vm-router-4.ocpsc.redhat.ren node-role.kubernetes.io/router=''
+oc label node vm-router-5.ocpsc.redhat.ren node-role.kubernetes.io/router=''
+oc label node vm-router-6.ocpsc.redhat.ren node-role.kubernetes.io/router=''
+oc label node vm-router-7.ocpsc.redhat.ren node-role.kubernetes.io/router=''
+oc label node vm-router-8.ocpsc.redhat.ren node-role.kubernetes.io/router=''
+
+##########################
+## secure the router vm
+
+cat << EOF > wzh.script
+#!/bin/bash
+
+iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+iptables -A INPUT -s 127.0.0.1/32 -j ACCEPT
+iptables -A INPUT -s 223.87.20.0/24 -j ACCEPT
+iptables -A INPUT -s 117.177.241.0/24 -j ACCEPT
+iptables -A INPUT -s 39.134.200.0/24 -j ACCEPT
+iptables -A INPUT -s 192.168.7.0/24 -j ACCEPT
+iptables -A INPUT -s 112.44.102.224/27 -j ACCEPT
+iptables -A INPUT -s 47.93.86.113/32 -j ACCEPT
+iptables -A INPUT -p tcp -j REJECT
+iptables -A INPUT -p udp -j REJECT
+
+EOF
+
+var_local=$(cat ./wzh.script | python3 -c "import sys, urllib.parse; print(urllib.parse.quote(''.join(sys.stdin.readlines())))"  )
+
+cat <<EOF > 45-wzh-service.yaml
+apiVersion: machineconfiguration.openshift.io/v1
+kind: MachineConfig
+metadata:
+  labels:
+    machineconfiguration.openshift.io/role: router
+  name: 45-wzh-service
+spec:
+  config:
+    ignition:
+      version: 2.2.0
+    storage:
+      files:
+      - contents:
+          source: data:text/plain,${var_local}
+          verification: {}
+        filesystem: root
+        mode: 0755
+        path: /etc/rc.d/wzh.local
+    systemd:
+      units:
+      - name: wzh.service
+        enabled: true
+        contents: |
+          [Unit]
+          Description=/etc/rc.d/wzh.local Compatibility
+          Documentation=zhengwan@redhat.com
+          ConditionFileIsExecutable=/etc/rc.d/wzh.local
+          After=network.target
+
+          [Service]
+          Type=oneshot
+          User=root
+          Group=root
+          ExecStart=/bin/bash -c /etc/rc.d/wzh.local
+
+          [Install]
+          WantedBy=multi-user.target
+
+EOF
+oc apply -f 45-wzh-service.yaml -n openshift-config
+
+
+
+
 ```
 
 ### bootstrap node day1
@@ -2203,7 +2283,48 @@ virt-install --name=ocp4-router-0 --vcpus=2 --ram=8192 \
 --os-variant rhel8.0 --network bridge=br0,model=virtio \
 --boot menu=on --cdrom /data/ocp4/router-0.iso 
 
+virt-install --name=ocp4-router-1 --vcpus=2 --ram=8192 \
+--disk path=/data/kvm/ocp4-router-1.qcow2,bus=virtio,size=200 \
+--os-variant rhel8.0 --network bridge=br0,model=virtio \
+--boot menu=on --cdrom /data/ocp4/router-1.iso 
 
+virt-install --name=ocp4-router-2 --vcpus=2 --ram=8192 \
+--disk path=/data/kvm/ocp4-router-2.qcow2,bus=virtio,size=200 \
+--os-variant rhel8.0 --network bridge=br0,model=virtio \
+--boot menu=on --cdrom /data/ocp4/router-2.iso 
+
+virt-install --name=ocp4-router-3 --vcpus=2 --ram=8192 \
+--disk path=/data/kvm/ocp4-router-3.qcow2,bus=virtio,size=200 \
+--os-variant rhel8.0 --network bridge=br0,model=virtio \
+--boot menu=on --cdrom /data/ocp4/router-3.iso 
+
+virt-install --name=ocp4-router-4 --vcpus=2 --ram=8192 \
+--disk path=/data/kvm/ocp4-router-4.qcow2,bus=virtio,size=200 \
+--os-variant rhel8.0 --network bridge=br0,model=virtio \
+--boot menu=on --cdrom /data/ocp4/router-4.iso 
+
+virt-install --name=ocp4-router-5 --vcpus=2 --ram=8192 \
+--disk path=/data/kvm/ocp4-router-5.qcow2,bus=virtio,size=200 \
+--os-variant rhel8.0 --network bridge=br0,model=virtio \
+--boot menu=on --cdrom /data/ocp4/router-5.iso 
+
+virt-install --name=ocp4-router-6 --vcpus=2 --ram=8192 \
+--disk path=/data/kvm/ocp4-router-6.qcow2,bus=virtio,size=200 \
+--os-variant rhel8.0 --network bridge=br0,model=virtio \
+--boot menu=on --cdrom /data/ocp4/router-6.iso 
+
+virt-install --name=ocp4-router-7 --vcpus=2 --ram=8192 \
+--disk path=/data/kvm/ocp4-router-7.qcow2,bus=virtio,size=200 \
+--os-variant rhel8.0 --network bridge=br0,model=virtio \
+--boot menu=on --cdrom /data/ocp4/router-7.iso 
+
+virt-install --name=ocp4-router-8 --vcpus=2 --ram=8192 \
+--disk path=/data/kvm/ocp4-router-8.qcow2,bus=virtio,size=200 \
+--os-variant rhel8.0 --network bridge=br0,model=virtio \
+--boot menu=on --cdrom /data/ocp4/router-8.iso 
+
+
+# helper node operation
 
 
 ```
