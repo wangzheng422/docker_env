@@ -2141,7 +2141,7 @@ oc apply -f haproxy.router.yaml
 
 oc project zxcdn
 
-oc apply -f ott-service.tcp.router.yaml
+oc apply -f ott-service.tcp.route.yaml
 
 
 ```
@@ -2884,6 +2884,21 @@ dd if=/dev/zero of=/data/testfile bs=5M count=9999 oflag=direct
 # 9999+0 records in
 # 9999+0 records out
 # 52423557120 bytes (52 GB) copied, 16.1121 s, 3.3 GB/s
+
+dd if=/dev/zero of=/data/testfile bs=5M count=9999 oflag=dsync
+# 9999+0 records in
+# 9999+0 records out
+# 52423557120 bytes (52 GB) copied, 51.2713 s, 1.0 GB/s
+
+dd if=/data/testfile of=/dev/null bs=1M count=9999 oflag=dsync
+# 9999+0 records in
+# 9999+0 records out
+# 10484711424 bytes (10 GB) copied, 1.9141 s, 5.5 GB/s
+
+dd if=/data/testfile of=/dev/null bs=5M count=9999 oflag=dsync
+# 9999+0 records in
+# 9999+0 records out
+# 52423557120 bytes (52 GB) copied, 9.3676 s, 5.6 GB/s
 
 # secure for anti-scan
 cat << EOF > /etc/rc.local
