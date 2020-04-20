@@ -2127,7 +2127,33 @@ spec:
 EOF
 oc apply -f 45-router-wzh-service.yaml -n openshift-config
 
+# DO NOT
+# cp 99-master-zzz-container-registries.yaml 99-router-zzz-container-registries.yaml 
+# # change: machineconfiguration.openshift.io/role: router
+# oc apply -f ./99-router-zzz-container-registries.yaml -n openshift-config
 
+
+cat << EOF > /etc/docker-distribution/registry/config.yml
+version: 0.1
+log:
+  fields:
+    service: registry
+storage:
+    cache:
+        layerinfo: inmemory
+    filesystem:
+        rootdirectory: /data/registry
+    delete:
+        enabled: true
+http:
+    addr: :5443
+    tls:
+       certificate: /data/cert/redhat.ren.crt
+       key: /data/cert/redhat.ren.key
+
+EOF
+
+systemctl restart docker-distribution
 ```
 
 ### helper node zte tcp-router
