@@ -252,6 +252,16 @@ chronyc tracking
 
 useradd -m zte
 
+groupadd docker
+usermod -aG docker zte
+
+# https://github.com/containers/libpod/issues/5049
+loginctl enable-linger zte
+su -l zte
+
+# https://www.redhat.com/en/blog/preview-running-containers-without-root-rhel-76
+echo 10000 > /proc/sys/user/max_user_namespaces
+
 ```
 
 
