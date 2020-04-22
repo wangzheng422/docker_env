@@ -213,6 +213,7 @@ cat > /root/iplist.txt <<EOL
 61.132.54.2/32
 112.44.102.228/32
 223.87.20.7/32
+10.88.0.0/16
 EOL
 
 firewall-cmd --permanent --ipset=my-allow-list --add-entries-from-file=iplist.txt
