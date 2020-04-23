@@ -263,6 +263,10 @@ su -l zte
 # https://www.redhat.com/en/blog/preview-running-containers-without-root-rhel-76
 echo 10000 > /proc/sys/user/max_user_namespaces
 
+####################################
+## trust podman
+firewall-cmd --permanent --zone=trusted --add-interface=cni0
+
 ```
 
 
