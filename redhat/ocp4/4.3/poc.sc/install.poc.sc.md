@@ -266,7 +266,9 @@ echo 10000 > /proc/sys/user/max_user_namespaces
 ####################################
 ## trust podman
 firewall-cmd --permanent --zone=trusted --add-interface=cni0
+firewall-cmd --permanent --zone=trusted --remove-interface=cni0
 
+firewall-cmd --reload
 ```
 
 
@@ -1861,7 +1863,6 @@ podman run --restart=always -d \
     -v /data/quay/clair-config:/clair/config:Z \
     -v /data/quay/clair-config/ca.crt:/etc/pki/ca-trust/source/anchors/ca.crt  \
     --pod quay \
-    --add-host registry.redhat.ren:127.0.0.1 \
     registry.redhat.ren:5443/quay.io/redhat/clair-jwt:v3.2.1
 
 # stop and restart
