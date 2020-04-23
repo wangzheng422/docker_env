@@ -1914,6 +1914,17 @@ oc apply -f ottcache-pod.yaml
 oc delete -f slbl7-pod.yaml
 oc delete -f ottcache-pod.yaml
 
+## web cache
+oc apply -f slb-configmap.yaml  
+oc apply -f slb-deployment.yaml
+
+oc delete -f slb-deployment.yaml
+
+oc apply -f webcache-configmap.yaml  
+oc apply -f webcache-deployment.yaml
+
+oc delete -f webcache-deployment.yaml
+
 ```
 
 ### helper host add vm-router
