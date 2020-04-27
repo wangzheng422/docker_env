@@ -2161,7 +2161,7 @@ oc apply -f 45-router-wzh-service.yaml -n openshift-config
 # # change: machineconfiguration.openshift.io/role: router
 # oc apply -f ./99-router-zzz-container-registries.yaml -n openshift-config
 
-
+# on helper node
 cat << EOF > /etc/docker-distribution/registry/config.yml
 version: 0.1
 log:
@@ -2363,6 +2363,22 @@ firewall-cmd --get-active-zones
 firewall-cmd --set-default-zone=block
 firewall-cmd --runtime-to-permanent
 firewall-cmd --reload
+
+# https://access.redhat.com/solutions/39604
+virsh list
+
+virsh dump ocp4-router-0 /data/tmp/ocp4-router-0.dump --memory-only --verbose
+
+virsh dump ocp4-router-1 /data/tmp/ocp4-router-1.dump --memory-only --verbose
+
+virsh dump ocp4-router-2 /data/tmp/ocp4-router-2.dump --memory-only --verbose
+
+virsh dump ocp4-router-3 /data/tmp/ocp4-router-3.dump --memory-only --verbose
+
+cd /data
+tar -cvf - tmp/ | pigz -c > virsh.dump.tgz
+
+
 
 ################################
 ## add more router vm
