@@ -160,6 +160,8 @@ oc adm catalog mirror \
 
 bash image.registries.conf.sh
 
+/bin/rm -f index.html*
+
 cd /data
 tar cf - registry/ | pigz -c > registry.tgz 
 
@@ -183,3 +185,4 @@ find /data -maxdepth 1 -type f -exec sha256sum {} \; > checksum.txt
 
 # find ./ -maxdepth 1 -name "*.tgz" -exec skicka upload {}  /"zhengwan.share/shared_docs/2020.02/ocp.ccn.4.3.3/" \;
 # find ./ -maxdepth 1 -name "*.txt" -exec skicka upload {}  /"zhengwan.share/shared_docs/2020.02/ocp.ccn.4.3.3/" \;
+
