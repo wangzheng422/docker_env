@@ -269,6 +269,20 @@ firewall-cmd --permanent --zone=trusted --add-interface=cni0
 firewall-cmd --permanent --zone=trusted --remove-interface=cni0
 
 firewall-cmd --reload
+
+# update ntp
+cat << EOF > /etc/chrony.conf
+server 223.87.20.100 iburst
+driftfile /var/lib/chrony/drift
+makestep 1.0 3
+rtcsync
+logdir /var/log/chrony
+allow 39.134.0.0/16
+EOF
+
+systemctl restart chronyd
+systemctl status chronyd
+chronyc tracking
 ```
 
 
@@ -374,6 +388,18 @@ systemctl restart chronyd
 systemctl status chronyd
 chronyc tracking
 
+# update ntp
+cat << EOF > /etc/chrony.conf
+server 223.87.20.100 iburst
+driftfile /var/lib/chrony/drift
+makestep 1.0 3
+rtcsync
+logdir /var/log/chrony
+EOF
+
+systemctl restart chronyd
+systemctl status chronyd
+chronyc tracking
 ```
 
 ### master0 host
@@ -478,6 +504,19 @@ cat << EOF >> /etc/fstab
 EOF
 
 mount -a
+
+# update ntp
+cat << EOF > /etc/chrony.conf
+server 223.87.20.100 iburst
+driftfile /var/lib/chrony/drift
+makestep 1.0 3
+rtcsync
+logdir /var/log/chrony
+EOF
+
+systemctl restart chronyd
+systemctl status chronyd
+chronyc tracking
 ```
 
 ### master1 host
@@ -553,6 +592,19 @@ cat << EOF >> /etc/fstab
 EOF
 
 mount -a
+
+# update ntp
+cat << EOF > /etc/chrony.conf
+server 223.87.20.100 iburst
+driftfile /var/lib/chrony/drift
+makestep 1.0 3
+rtcsync
+logdir /var/log/chrony
+EOF
+
+systemctl restart chronyd
+systemctl status chronyd
+chronyc tracking
 ```
 
 ### master2 host
@@ -661,6 +713,19 @@ systemctl enable chronyd
 systemctl restart chronyd
 systemctl status chronyd
 chronyc tracking
+
+# update ntp
+cat << EOF > /etc/chrony.conf
+server 223.87.20.100 iburst
+driftfile /var/lib/chrony/drift
+makestep 1.0 3
+rtcsync
+logdir /var/log/chrony
+EOF
+
+systemctl restart chronyd
+systemctl status chronyd
+chronyc tracking
 ```
 
 ### infra0 host
@@ -765,6 +830,19 @@ systemctl enable chronyd
 systemctl restart chronyd
 systemctl status chronyd
 chronyc tracking
+
+# update ntp
+cat << EOF > /etc/chrony.conf
+server 223.87.20.100 iburst
+driftfile /var/lib/chrony/drift
+makestep 1.0 3
+rtcsync
+logdir /var/log/chrony
+EOF
+
+systemctl restart chronyd
+systemctl status chronyd
+chronyc tracking
 ```
 
 ### infra1 host
@@ -866,6 +944,19 @@ iostat -m -x dm-12 5
 
 yum install -y chrony
 systemctl enable chronyd
+systemctl restart chronyd
+systemctl status chronyd
+chronyc tracking
+
+# update ntp
+cat << EOF > /etc/chrony.conf
+server 223.87.20.100 iburst
+driftfile /var/lib/chrony/drift
+makestep 1.0 3
+rtcsync
+logdir /var/log/chrony
+EOF
+
 systemctl restart chronyd
 systemctl status chronyd
 chronyc tracking
@@ -981,6 +1072,18 @@ chronyc tracking
 
 systemctl disable --now firewalld.service
 
+# update ntp
+cat << EOF > /etc/chrony.conf
+server 223.87.20.100 iburst
+driftfile /var/lib/chrony/drift
+makestep 1.0 3
+rtcsync
+logdir /var/log/chrony
+EOF
+
+systemctl restart chronyd
+systemctl status chronyd
+chronyc tracking
 ```
 
 ### worker-1 host
@@ -1114,6 +1217,19 @@ systemctl status chronyd
 chronyc tracking
 chronyc sources -v
 
+# update ntp
+cat << EOF > /etc/chrony.conf
+server 223.87.20.100 iburst
+driftfile /var/lib/chrony/drift
+makestep 1.0 3
+rtcsync
+logdir /var/log/chrony
+EOF
+
+systemctl restart chronyd
+systemctl status chronyd
+chronyc tracking
+
 ```
 
 ### worker-2 host
@@ -1246,6 +1362,21 @@ systemctl restart chronyd
 systemctl status chronyd
 chronyc tracking
 chronyc sources -v
+
+# update ntp
+cat << EOF > /etc/chrony.conf
+server 223.87.20.100 iburst
+driftfile /var/lib/chrony/drift
+makestep 1.0 3
+rtcsync
+logdir /var/log/chrony
+EOF
+
+systemctl restart chronyd
+systemctl status chronyd
+chronyc tracking
+
+
 ```
 
 ## install ocp
@@ -2880,6 +3011,12 @@ systemctl enable rc-local
 
 # systemctl restart rc-local
 
+# 配置kvm环境
+yum -y install qemu-kvm libvirt libvirt-python libguestfs-tools virt-install virt-viewer virt-manager
+
+systemctl enable libvirtd
+systemctl start libvirtd
+
 ```
 
 ### infra1 node day1
@@ -2913,6 +3050,12 @@ chmod +x /etc/rc.d/rc.local
 systemctl enable rc-local
 
 # systemctl restart rc-local
+
+# 配置kvm环境
+yum -y install qemu-kvm libvirt libvirt-python libguestfs-tools virt-install virt-viewer virt-manager
+
+systemctl enable libvirtd
+systemctl start libvirtd
 
 ```
 
@@ -3019,6 +3162,12 @@ ipset add my-allow-set 221.226.0.75/32
 ipset add my-allow-set 210.21.236.182/32
 ipset add my-allow-set 61.132.54.2/32
 
+# 配置kvm环境
+yum -y install qemu-kvm libvirt libvirt-python libguestfs-tools virt-install virt-viewer virt-manager
+
+systemctl enable libvirtd
+systemctl start libvirtd
+
 ```
 
 ### worker-1 day2 oper
@@ -3065,6 +3214,12 @@ systemctl enable rc-local
 
 # systemctl restart rc-local
 
+# 配置kvm环境
+yum -y install qemu-kvm libvirt libvirt-python libguestfs-tools virt-install virt-viewer virt-manager
+
+systemctl enable libvirtd
+systemctl start libvirtd
+
 ```
 
 ### worker-2 day2 oper
@@ -3110,6 +3265,112 @@ chmod +x /etc/rc.d/rc.local
 systemctl enable rc-local
 
 # systemctl restart rc-local
+
+# 配置kvm环境
+yum -y install qemu-kvm libvirt libvirt-python libguestfs-tools virt-install virt-viewer virt-manager
+
+systemctl enable libvirtd
+systemctl start libvirtd
+
+# Installed:
+#   libguestfs-tools.noarch 1:1.40.2-5.el7_7.3          libvirt.x86_64 0:4.5.0-23.el7_7.5          libvirt-python.x86_64 0:4.5.0-1.el7
+#   qemu-kvm.x86_64 10:1.5.3-167.el7_7.4                virt-install.noarch 0:1.5.0-7.el7          virt-manager.noarch 0:1.5.0-7.el7
+#   virt-viewer.x86_64 0:5.0-15.el7
+
+# Dependency Installed:
+#   adwaita-cursor-theme.noarch 0:3.28.0-1.el7                            adwaita-icon-theme.noarch 0:3.28.0-1.el7
+#   at-spi2-atk.x86_64 0:2.26.2-1.el7                                     at-spi2-core.x86_64 0:2.28.0-1.el7
+#   atk.x86_64 0:2.28.1-1.el7                                             augeas-libs.x86_64 0:1.4.0-9.el7
+#   autogen-libopts.x86_64 0:5.18-5.el7                                   cairo.x86_64 0:1.15.12-4.el7
+#   cairo-gobject.x86_64 0:1.15.12-4.el7                                  cdparanoia-libs.x86_64 0:10.2-17.el7
+#   celt051.x86_64 0:0.5.1.3-8.el7                                        colord-libs.x86_64 0:1.3.4-1.el7
+#   cyrus-sasl.x86_64 0:2.1.26-23.el7                                     dbus-x11.x86_64 1:1.10.24-13.el7_6
+#   dconf.x86_64 0:0.28.0-4.el7                                           dejavu-fonts-common.noarch 0:2.33-6.el7
+#   dejavu-sans-fonts.noarch 0:2.33-6.el7                                 flac-libs.x86_64 0:1.3.0-5.el7_1
+#   fontconfig.x86_64 0:2.13.0-4.3.el7                                    fontpackages-filesystem.noarch 0:1.44-8.el7
+#   fribidi.x86_64 0:1.0.2-1.el7_7.1                                      fuse.x86_64 0:2.9.2-11.el7
+#   fuse-libs.x86_64 0:2.9.2-11.el7                                       gdk-pixbuf2.x86_64 0:2.36.12-3.el7
+#   genisoimage.x86_64 0:1.1.11-25.el7                                    glib-networking.x86_64 0:2.56.1-1.el7
+#   glusterfs-api.x86_64 0:3.12.2-47.2.el7                                glusterfs-cli.x86_64 0:3.12.2-47.2.el7
+#   gnome-icon-theme.noarch 0:3.12.0-1.el7                                gnutls.x86_64 0:3.3.29-9.el7_6
+#   gnutls-dane.x86_64 0:3.3.29-9.el7_6                                   gnutls-utils.x86_64 0:3.3.29-9.el7_6
+#   gperftools-libs.x86_64 0:2.6.1-1.el7                                  graphite2.x86_64 0:1.3.10-1.el7_3
+#   gsettings-desktop-schemas.x86_64 0:3.28.0-2.el7                       gsm.x86_64 0:1.0.13-11.el7
+#   gstreamer1.x86_64 0:1.10.4-2.el7                                      gstreamer1-plugins-base.x86_64 0:1.10.4-2.el7
+#   gtk-update-icon-cache.x86_64 0:3.22.30-3.el7                          gtk-vnc2.x86_64 0:0.7.0-3.el7
+#   gtk3.x86_64 0:3.22.30-3.el7                                           gvnc.x86_64 0:0.7.0-3.el7
+#   harfbuzz.x86_64 0:1.7.5-2.el7                                         hexedit.x86_64 0:1.2.13-5.el7
+#   hicolor-icon-theme.noarch 0:0.12-7.el7                                hivex.x86_64 0:1.3.10-6.9.el7
+#   ipxe-roms-qemu.noarch 0:20180825-2.git133f4c.el7                      iso-codes.noarch 0:3.46-2.el7
+#   jasper-libs.x86_64 0:1.900.1-33.el7                                   jbigkit-libs.x86_64 0:2.0-11.el7
+#   json-glib.x86_64 0:1.4.2-2.el7                                        lcms2.x86_64 0:2.6-3.el7
+#   libICE.x86_64 0:1.0.9-9.el7                                           libSM.x86_64 0:1.2.2-2.el7
+#   libX11.x86_64 0:1.6.7-2.el7                                           libX11-common.noarch 0:1.6.7-2.el7
+#   libXau.x86_64 0:1.0.8-2.1.el7                                         libXcomposite.x86_64 0:0.4.4-4.1.el7
+#   libXcursor.x86_64 0:1.1.15-1.el7                                      libXdamage.x86_64 0:1.1.4-4.1.el7
+#   libXext.x86_64 0:1.3.3-3.el7                                          libXfixes.x86_64 0:5.0.3-1.el7
+#   libXft.x86_64 0:2.3.2-2.el7                                           libXi.x86_64 0:1.7.9-1.el7
+#   libXinerama.x86_64 0:1.1.3-2.1.el7                                    libXmu.x86_64 0:1.1.2-2.el7
+#   libXrandr.x86_64 0:1.5.1-2.el7                                        libXrender.x86_64 0:0.9.10-1.el7
+#   libXt.x86_64 0:1.1.5-3.el7                                            libXtst.x86_64 0:1.2.3-1.el7
+#   libXv.x86_64 0:1.0.11-1.el7                                           libXxf86misc.x86_64 0:1.0.3-7.1.el7
+#   libXxf86vm.x86_64 0:1.1.4-1.el7                                       libarchive.x86_64 0:3.1.2-14.el7_7
+#   libasyncns.x86_64 0:0.8-7.el7                                         libcacard.x86_64 40:2.5.2-2.el7
+#   libconfig.x86_64 0:1.4.9-5.el7                                        libepoxy.x86_64 0:1.5.2-1.el7
+#   libglvnd.x86_64 1:1.0.1-0.8.git5baa1e5.el7                            libglvnd-egl.x86_64 1:1.0.1-0.8.git5baa1e5.el7
+#   libglvnd-glx.x86_64 1:1.0.1-0.8.git5baa1e5.el7                        libgovirt.x86_64 0:0.3.4-3.el7
+#   libguestfs.x86_64 1:1.40.2-5.el7_7.3                                  libguestfs-tools-c.x86_64 1:1.40.2-5.el7_7.3
+#   libgusb.x86_64 0:0.2.9-1.el7                                          libibverbs.x86_64 0:22.1-3.el7
+#   libiscsi.x86_64 0:1.9.0-7.el7                                         libjpeg-turbo.x86_64 0:1.2.90-8.el7
+#   libmodman.x86_64 0:2.0.1-8.el7                                        libogg.x86_64 2:1.3.0-7.el7
+#   libosinfo.x86_64 0:1.1.0-3.el7                                        libproxy.x86_64 0:0.4.11-11.el7
+#   librdmacm.x86_64 0:22.1-3.el7                                         libsndfile.x86_64 0:1.0.25-10.el7
+#   libsoup.x86_64 0:2.62.2-2.el7                                         libthai.x86_64 0:0.1.14-9.el7
+#   libtheora.x86_64 1:1.1.1-8.el7                                        libtiff.x86_64 0:4.0.3-32.el7
+#   libusal.x86_64 0:1.1.11-25.el7                                        libusbx.x86_64 0:1.0.21-1.el7
+#   libvirt-bash-completion.x86_64 0:4.5.0-23.el7_7.5                     libvirt-client.x86_64 0:4.5.0-23.el7_7.5
+#   libvirt-daemon.x86_64 0:4.5.0-23.el7_7.5                              libvirt-daemon-config-network.x86_64 0:4.5.0-23.el7_7.5
+#   libvirt-daemon-config-nwfilter.x86_64 0:4.5.0-23.el7_7.5              libvirt-daemon-driver-interface.x86_64 0:4.5.0-23.el7_7.5
+#   libvirt-daemon-driver-lxc.x86_64 0:4.5.0-23.el7_7.5                   libvirt-daemon-driver-network.x86_64 0:4.5.0-23.el7_7.5
+#   libvirt-daemon-driver-nodedev.x86_64 0:4.5.0-23.el7_7.5               libvirt-daemon-driver-nwfilter.x86_64 0:4.5.0-23.el7_7.5
+#   libvirt-daemon-driver-qemu.x86_64 0:4.5.0-23.el7_7.5                  libvirt-daemon-driver-secret.x86_64 0:4.5.0-23.el7_7.5
+#   libvirt-daemon-driver-storage.x86_64 0:4.5.0-23.el7_7.5               libvirt-daemon-driver-storage-core.x86_64 0:4.5.0-23.el7_7.5
+#   libvirt-daemon-driver-storage-disk.x86_64 0:4.5.0-23.el7_7.5          libvirt-daemon-driver-storage-gluster.x86_64 0:4.5.0-23.el7_7.5
+#   libvirt-daemon-driver-storage-iscsi.x86_64 0:4.5.0-23.el7_7.5         libvirt-daemon-driver-storage-logical.x86_64 0:4.5.0-23.el7_7.5
+#   libvirt-daemon-driver-storage-mpath.x86_64 0:4.5.0-23.el7_7.5         libvirt-daemon-driver-storage-rbd.x86_64 0:4.5.0-23.el7_7.5
+#   libvirt-daemon-driver-storage-scsi.x86_64 0:4.5.0-23.el7_7.5          libvirt-daemon-kvm.x86_64 0:4.5.0-23.el7_7.5
+#   libvirt-glib.x86_64 0:1.0.0-1.el7                                     libvirt-libs.x86_64 0:4.5.0-23.el7_7.5
+#   libvisual.x86_64 0:0.4.0-16.el7                                       libvorbis.x86_64 1:1.3.3-8.el7.1
+#   libwayland-client.x86_64 0:1.15.0-1.el7                               libwayland-cursor.x86_64 0:1.15.0-1.el7
+#   libwayland-egl.x86_64 0:1.15.0-1.el7                                  libwayland-server.x86_64 0:1.15.0-1.el7
+#   libxcb.x86_64 0:1.13-1.el7                                            libxkbcommon.x86_64 0:0.7.1-3.el7
+#   libxshmfence.x86_64 0:1.2-1.el7                                       lsof.x86_64 0:4.87-6.el7
+#   lzop.x86_64 0:1.03-10.el7                                             mesa-libEGL.x86_64 0:18.3.4-6.el7_7
+#   mesa-libGL.x86_64 0:18.3.4-6.el7_7                                    mesa-libgbm.x86_64 0:18.3.4-6.el7_7
+#   mesa-libglapi.x86_64 0:18.3.4-6.el7_7                                 mtools.x86_64 0:4.0.18-5.el7
+#   netcf-libs.x86_64 0:0.2.8-4.el7                                       nettle.x86_64 0:2.7.1-8.el7
+#   numad.x86_64 0:0.5-18.20150602git.el7                                 opus.x86_64 0:1.0.2-6.el7
+#   orc.x86_64 0:0.4.26-1.el7                                             osinfo-db.noarch 0:20190319-2.el7
+#   osinfo-db-tools.x86_64 0:1.1.0-1.el7                                  pango.x86_64 0:1.42.4-4.el7_7
+#   pcre2.x86_64 0:10.23-2.el7                                            perl-Sys-Guestfs.x86_64 1:1.40.2-5.el7_7.3
+#   perl-Sys-Virt.x86_64 0:4.5.0-2.el7                                    perl-hivex.x86_64 0:1.3.10-6.9.el7
+#   perl-libintl.x86_64 0:1.20-12.el7                                     pixman.x86_64 0:0.34.0-1.el7
+#   pulseaudio-libs.x86_64 0:10.0-5.el7                                   pulseaudio-libs-glib2.x86_64 0:10.0-5.el7
+#   pycairo.x86_64 0:1.8.10-8.el7                                         python-gobject.x86_64 0:3.22.0-1.el7_4.1
+#   qemu-img.x86_64 10:1.5.3-167.el7_7.4                                  qemu-kvm-common.x86_64 10:1.5.3-167.el7_7.4
+#   radvd.x86_64 0:2.17-3.el7                                             rdma-core.x86_64 0:22.1-3.el7
+#   rest.x86_64 0:0.8.1-2.el7                                             scrub.x86_64 0:2.5.2-7.el7
+#   seabios-bin.noarch 0:1.11.0-2.el7                                     seavgabios-bin.noarch 0:1.11.0-2.el7
+#   sgabios-bin.noarch 1:0.20110622svn-4.el7                              spice-glib.x86_64 0:0.35-4.el7
+#   spice-gtk3.x86_64 0:0.35-4.el7                                        spice-server.x86_64 0:0.14.0-7.el7
+#   squashfs-tools.x86_64 0:4.3-0.21.gitaae0aff4.el7                      supermin5.x86_64 0:5.1.19-1.el7
+#   syslinux.x86_64 0:4.05-15.el7                                         syslinux-extlinux.x86_64 0:4.05-15.el7
+#   trousers.x86_64 0:0.3.14-2.el7                                        unbound-libs.x86_64 0:1.6.6-1.el7
+#   usbredir.x86_64 0:0.7.1-3.el7                                         virt-manager-common.noarch 0:1.5.0-7.el7
+#   vte-profile.x86_64 0:0.52.2-2.el7                                     vte291.x86_64 0:0.52.2-2.el7
+#   xkeyboard-config.noarch 0:2.24-1.el7                                  xml-common.noarch 0:0.6.3-39.el7
+#   xorg-x11-server-utils.x86_64 0:7.7-20.el7                             xorg-x11-xauth.x86_64 1:1.0.9-1.el7
+#   xorg-x11-xinit.x86_64 0:1.3.4-2.el7                                   yajl.x86_64 0:2.0.4-4.el7
 
 ```
 
