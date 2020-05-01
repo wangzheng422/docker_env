@@ -3253,6 +3253,7 @@ ipset add my-allow-set 47.93.86.113/32
 ipset add my-allow-set 221.226.0.75/32
 ipset add my-allow-set 210.21.236.182/32
 ipset add my-allow-set 61.132.54.2/32
+# ipset add my-allow-set 10.0.0.0/8
 
 iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
 iptables -A INPUT -m set --match-set my-allow-set src -j ACCEPT
@@ -3271,7 +3272,10 @@ yum -y install qemu-kvm libvirt libvirt-python libguestfs-tools virt-install vir
 
 systemctl enable libvirtd
 systemctl start libvirtd
+systemctl status libvirtd
 
+systemctl stop libvirtd
+systemctl disable libvirtd
 # Installed:
 #   libguestfs-tools.noarch 1:1.40.2-5.el7_7.3          libvirt.x86_64 0:4.5.0-23.el7_7.5          libvirt-python.x86_64 0:4.5.0-1.el7
 #   qemu-kvm.x86_64 10:1.5.3-167.el7_7.4                virt-install.noarch 0:1.5.0-7.el7          virt-manager.noarch 0:1.5.0-7.el7
