@@ -135,17 +135,17 @@ buildah commit --rm --format=docker onbuild-container docker.io/wangzheng422/ope
 buildah push docker.io/wangzheng422/operator-catalog:fs-$var_date
 
 oc adm catalog build \
-    --appregistry-endpoint https://quay.io/cnr \
     --appregistry-org redhat-operators \
+    --from=registry.redhat.io/openshift4/ose-operator-registry:v4.4 \
     --to=docker.io/wangzheng422/operator-catalog:redhat-$var_date 
 
 oc adm catalog build \
-    --appregistry-endpoint https://quay.io/cnr \
     --appregistry-org certified-operators \
+    --from=registry.redhat.io/openshift4/ose-operator-registry:v4.4 \
     --to=docker.io/wangzheng422/operator-catalog:certified-$var_date  
 
 oc adm catalog build \
-    --appregistry-endpoint https://quay.io/cnr \
     --appregistry-org community-operators \
+    --from=registry.redhat.io/openshift4/ose-operator-registry:v4.4 \
     --to=docker.io/wangzheng422/operator-catalog:community-$var_date  
 
