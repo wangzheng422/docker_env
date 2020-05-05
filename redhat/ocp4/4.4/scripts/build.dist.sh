@@ -6,30 +6,30 @@ set -x
 # export BUILDNUMBER="4.2.13"
 # stable 4.3.5
 build_number_list=$(cat << EOF
-4.3.5
-4.3.8
+4.3.18
+4.4.3
 EOF
 )
 
-export var_date='2020-03-23'
+export var_date='2020-05-05'
 echo $var_date
 
 # export MIRROR_DIR='/data/mirror_dir'
 # mkdir -p ${MIRROR_DIR}
 
-wget -O image.mirror.fn.sh https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/4.3/scripts/image.mirror.fn.sh
+wget -O image.mirror.fn.sh https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/4.4/scripts/image.mirror.fn.sh
 
-wget -O image.mirror.install.sh https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/4.3/scripts/image.mirror.install.sh
+wget -O image.mirror.install.sh https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/4.4/scripts/image.mirror.install.sh
 
-wget -O image.registries.conf.sh https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/4.3/scripts/image.registries.conf.sh
+wget -O image.registries.conf.sh https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/4.4/scripts/image.registries.conf.sh
 
-wget -O install.image.list https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/4.3/scripts/install.image.list
+wget -O install.image.list https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/4.4/scripts/install.image.list
 
-wget -O add.image.load.sh https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/4.3/scripts/add.image.load.sh
+wget -O add.image.load.sh https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/4.4/scripts/add.image.load.sh
 
-wget -O add.image.sh https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/4.3/scripts/add.image.sh
+wget -O add.image.sh https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/4.4/scripts/add.image.sh
 
-wget -O demos.sh https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/4.3/scripts/demos.sh
+wget -O demos.sh https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/4.4/scripts/demos.sh
 
 # podman login registry.redhat.ren -u a -p a
 
@@ -89,7 +89,7 @@ done <<< "$build_number_list"
 
 cd /data/ocp4
 
-wget --recursive --no-directories --no-parent https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/4.3/latest/
+wget --recursive --no-directories --no-parent https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/4.4/latest/
 
 # wget --recursive --no-directories --no-parent https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/4.2/latest/
 

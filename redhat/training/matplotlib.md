@@ -107,5 +107,18 @@ for i in range(12):
     plt.sca(axes[i]) # set the current Axes
     plt.text(0.5, 0.5, i+1) # print conventional subplot index number to middle of Axes
 
+plt.figure(figsize = [10, 5])
+
+# histogram on left: full data
+plt.subplot(1, 2, 1)
+bin_edges = np.arange(0, df['skew_var'].max()+2.5, 2.5)
+plt.hist(data = df, x = 'skew_var', bins = bin_edges)
+
+# histogram on right: focus in on bulk of data < 35
+plt.subplot(1, 2, 2)
+bin_edges = np.arange(0, 35+1, 1)
+plt.hist(data = df, x = 'skew_var', bins = bin_edges)
+plt.xlim(0, 35) # could also be called as plt.xlim((0, 35))
+
 
 ```
