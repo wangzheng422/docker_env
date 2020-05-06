@@ -13,6 +13,8 @@ EOF
 
 export var_date='2020-03-23'
 echo $var_date
+export var_major_version='4.3'
+echo ${var_major_version}
 
 # export MIRROR_DIR='/data/mirror_dir'
 # mkdir -p ${MIRROR_DIR}
@@ -103,9 +105,9 @@ podman save quay.io/wangzheng422/filetranspiler | pigz -c > filetranspiler.tgz
 podman pull docker.io/library/registry:2
 podman save docker.io/library/registry:2 | pigz -c > registry.tgz
 
-oc image mirror docker.io/wangzheng422/operator-catalog:redhat-${var_date} ${LOCAL_REG}/docker.io/wangzheng422/operator-catalog:redhat-${var_date}
-oc image mirror docker.io/wangzheng422/operator-catalog:certified-${var_date} ${LOCAL_REG}/docker.io/wangzheng422/operator-catalog:certified-${var_date}
-oc image mirror docker.io/wangzheng422/operator-catalog:community-${var_date} ${LOCAL_REG}/docker.io/wangzheng422/operator-catalog:community-${var_date}
+oc image mirror docker.io/wangzheng422/operator-catalog:redhat-${var_major_version}-${var_date} ${LOCAL_REG}/docker.io/wangzheng422/operator-catalog:redhat-${var_major_version}-${var_date}
+oc image mirror docker.io/wangzheng422/operator-catalog:certified-${var_major_version}-${var_date} ${LOCAL_REG}/docker.io/wangzheng422/operator-catalog:certified-${var_major_version}-${var_date}
+oc image mirror docker.io/wangzheng422/operator-catalog:community-${var_major_version}-${var_date} ${LOCAL_REG}/docker.io/wangzheng422/operator-catalog:community-${var_major_version}-${var_date}
 
 # /bin/rm -f pull-secret.json
 
@@ -144,17 +146,17 @@ bash demos.sh
 
 # build operator catalog
 oc adm catalog mirror \
-    docker.io/wangzheng422/operator-catalog:redhat-$var_date \
+    docker.io/wangzheng422/operator-catalog:redhat-${var_major_version}-$var_date \
     registry.redhat.ren:5443/ocp-operator 
 /bin/cp -f operator-catalog-manifests/mapping.txt mapping-redhat.txt
 
 oc adm catalog mirror \
-    docker.io/wangzheng422/operator-catalog:certified-$var_date \
+    docker.io/wangzheng422/operator-catalog:certified-${var_major_version}-$var_date \
     registry.redhat.ren:5443/ocp-operator 
 /bin/cp -f operator-catalog-manifests/mapping.txt mapping-certified.txt
 
 oc adm catalog mirror \
-    docker.io/wangzheng422/operator-catalog:community-$var_date \
+    docker.io/wangzheng422/operator-catalog:community-${var_major_version}-$var_date \
     registry.redhat.ren:5443/ocp-operator 
 /bin/cp -f operator-catalog-manifests/mapping.txt mapping-community.txt
 

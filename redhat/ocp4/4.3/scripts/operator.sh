@@ -132,20 +132,20 @@ buildah copy onbuild-container operator.image.list.uniq /
 buildah umount onbuild-container 
 buildah commit --rm --format=docker onbuild-container docker.io/wangzheng422/operator-catalog:fs-$var_date
 # buildah rm onbuild-container
-buildah push docker.io/wangzheng422/operator-catalog:fs-$var_date
+buildah push docker.io/wangzheng422/operator-catalog:fs-4.3-$var_date
 
 oc adm catalog build \
-    --appregistry-endpoint https://quay.io/cnr \
     --appregistry-org redhat-operators \
-    --to=docker.io/wangzheng422/operator-catalog:redhat-$var_date 
+    --from=registry.redhat.io/openshift4/ose-operator-registry:v4.3 \
+    --to=docker.io/wangzheng422/operator-catalog:redhat-4.3-$var_date 
 
 oc adm catalog build \
-    --appregistry-endpoint https://quay.io/cnr \
     --appregistry-org certified-operators \
-    --to=docker.io/wangzheng422/operator-catalog:certified-$var_date  
+    --from=registry.redhat.io/openshift4/ose-operator-registry:v4.3 \
+    --to=docker.io/wangzheng422/operator-catalog:certified-4.3-$var_date  
 
 oc adm catalog build \
-    --appregistry-endpoint https://quay.io/cnr \
     --appregistry-org community-operators \
-    --to=docker.io/wangzheng422/operator-catalog:community-$var_date  
+    --from=registry.redhat.io/openshift4/ose-operator-registry:v4.3 \
+    --to=docker.io/wangzheng422/operator-catalog:community-4.3-$var_date  
 
