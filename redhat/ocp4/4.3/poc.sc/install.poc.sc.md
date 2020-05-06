@@ -1084,6 +1084,56 @@ EOF
 systemctl restart chronyd
 systemctl status chronyd
 chronyc tracking
+
+#######################################
+# nic bond
+cat << EOF > /root/nic.bond.sh
+#!/bin/bash
+
+# delete all connection 
+nmcli -g uuid con | while read i ; do nmcli c delete uuid ${i} ; done 
+
+nmcli con add type bond \
+    con-name bond0 \
+    ifname bond0 \
+    mode 802.3ad \
+    ipv4.method 'manual' \
+    ipv4.address '39.137.101.28/25' \
+    ipv4.gateway '39.137.101.126' \
+    ipv4.dns '117.177.241.16'
+    
+nmcli con mod id bond0 bond.options \
+    mode=802.3ad,miimon=100,lacp_rate=fast,xmit_hash_policy=layer2+3
+    
+nmcli con add type bond-slave ifname enp3s0f0 con-name enp3s0f0 master bond0
+nmcli con add type bond-slave ifname enp3s0f1 con-name enp3s0f1 master bond0
+
+nmcli con stop enp3s0f0 && nmcli con start enp3s0f0
+nmcli con stop enp3s0f1 && nmcli con start enp3s0f1
+nmcli con stop bond0 && nmcli con start bond0
+EOF
+
+cat > /root/nic.restore.sh << 'EOF'
+#!/bin/bash
+
+# delete all connection 
+nmcli -g uuid con | while read i ; do nmcli c delete uuid ${i} ; done 
+
+# re-create primary connection 
+nmcli con add type ethernet \
+    con-name enp3s0f0 \
+    ifname enp3s0f0 \
+    ipv4.method 'manual' \
+    ipv4.address '39.137.101.28/25' \
+    ipv4.gateway '39.137.101.126' \
+    ipv4.dns '117.177.241.16'
+
+# restart interface
+nmcli con down enp3s0f0 && nmcli con up enp3s0f0
+
+exit 0
+EOF
+
 ```
 
 ### worker-1 host
