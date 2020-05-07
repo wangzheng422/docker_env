@@ -4,7 +4,7 @@ export GUID=2192
 
 ssh -tt zhengwan-redhat.com@bastion.f93a.sandbox744.opentlc.com "bash -c byobu"
 
-ansible localhost -m lineinfile -a 'path=$HOME/.bashrc regexp="^export OCP_RELEASE" line="export OCP_RELEASE=4.2.12"'
+# ansible localhost -m lineinfile -a 'path=$HOME/.bashrc regexp="^export OCP_RELEASE" line="export OCP_RELEASE=4.2.12"'
 
 yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
 
@@ -67,7 +67,7 @@ platform:
     region: us-west-2
 pullSecret: '{*****************}'
 sshKey: |
-  ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDCi/8RUbaQKrA1O3pn3g0QvMVQEEx88rhgJJoD5MOeMMP3xtGuiLkTC9xWxrz5eA3tkb+RlWozQ4FlU6sFiFXM3Mu4aRRfdi+1Km9c3dTUnG9cnu0EjSPhRs2zIP/nrSTe/HYn5qMGLchof4ol1BJIMTQFKrgDs21GcIS6dp9v+ckKQvrR6lU1Q81v1H1QO5u4ZpggLc9nhfS2suueO7P1lZ5tIhiM0lm1A3ry9EtoIjHxVhNsBQMdQCth9h0B/GUIP2XCqtw/PgWpLWid995dNMD2XNLuQsx8POrVdS9vnZ+JVrzIXMfiFw8Y+OYGudX5ZZFoibfVubX8/Vcfaizf zhengwan-redhat.com@clientvm.f93a.internal
+  ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDSRLKJEJuGfIpGGmuayaT2Vo9rffk15kQMciWVt/N60eDD0WSadJLjipnM1beSafzKD0u0T1mQrADOUFKmsXPHJ9NjA4ZA70OzbR4zSTLNBVZny5DbFWv5gAPdI5L0Owe7+MjMiW3JMBWT9YV8QZmwqJBcG8YMTC9CrQAHfJYL3Ce7Sbzif9jbtKr59QkaFU6DS6w6610HNwlE7AZmoRbcxufSMmad8hu6e0+xpD4myUXeZkUa1vUdpgWFOiObL4Kye9OmBAuIz5tPWrusmCY6JuF4OdNGTGZkbEjo6izC63f9cwpyiBxMiTtU2I5CDp9PFVBQafpM00C5rMuHnGyL zhengwan-redhat.com@clientvm.643b.internal
 
 ```
 ```bash
