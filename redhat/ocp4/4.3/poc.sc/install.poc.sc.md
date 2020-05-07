@@ -2384,6 +2384,42 @@ oc apply -f ott-service.tcp.route.yaml
 
 ```
 
+### helper node cluster tunning
+```bash
+# tunning for pid.max
+
+oc label mcp worker custom-kubelet-pod-pids-limit=true
+
+cat << EOF > PodPidsLimit.yaml
+apiVersion: machineconfiguration.openshift.io/v1
+kind: KubeletConfig
+metadata:
+  name: pod-pids-limit
+spec:
+  machineConfigPoolSelector:
+    matchLabels:
+      custom-kubelet-pod-pids-limit: 'true'
+  kubeletConfig:
+    PodPidsLimit: 4096
+EOF
+oc apply -f PodPidsLimit.yaml
+
+cat << EOF > crio.yaml
+apiVersion: machineconfiguration.openshift.io/v1
+kind: ContainerRuntimeConfig
+metadata:
+ name: set-log-and-pid
+spec:
+ machineConfigPoolSelector:
+   matchLabels:
+     custom-kubelet-pod-pids-limit: 'true'
+ containerRuntimeConfig:
+   pidsLimit: 10240
+EOF
+oc apply -f crio.yaml
+
+
+```
 ### bootstrap node day1
 
 ```bash
