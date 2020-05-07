@@ -1108,9 +1108,12 @@ nmcli con mod id bond0 bond.options \
 nmcli con add type bond-slave ifname enp3s0f0 con-name enp3s0f0 master bond0
 nmcli con add type bond-slave ifname enp3s0f1 con-name enp3s0f1 master bond0
 
-nmcli con stop enp3s0f0 && nmcli con start enp3s0f0
-nmcli con stop enp3s0f1 && nmcli con start enp3s0f1
-nmcli con stop bond0 && nmcli con start bond0
+# nmcli con down enp3s0f0 && nmcli con start enp3s0f0
+# nmcli con down enp3s0f1 && nmcli con start enp3s0f1
+# nmcli con down bond0 && nmcli con start bond0
+
+systemctl restart network
+
 EOF
 
 cat > /root/nic.restore.sh << 'EOF'
@@ -1129,10 +1132,22 @@ nmcli con add type ethernet \
     ipv4.dns '117.177.241.16'
 
 # restart interface
-nmcli con down enp3s0f0 && nmcli con up enp3s0f0
+# nmcli con down enp3s0f0 && nmcli con up enp3s0f0
+
+systemctl restart network
 
 exit 0
 EOF
+
+chmod +x /root/nic.restore.sh
+
+cat > ~/cron-network-con-recreate << EOF
+*/2 * * * * /bin/bash /root/nic.restore.sh
+EOF
+
+crontab ~/cron-network-con-recreate
+
+bash /root/nic.bond.sh
 
 ```
 
@@ -2420,6 +2435,7 @@ oc apply -f crio.yaml
 
 
 ```
+
 ### bootstrap node day1
 
 ```bash
