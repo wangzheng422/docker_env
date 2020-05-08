@@ -120,5 +120,120 @@ bin_edges = np.arange(0, 35+1, 1)
 plt.hist(data = df, x = 'skew_var', bins = bin_edges)
 plt.xlim(0, 35) # could also be called as plt.xlim((0, 35))
 
+plt.figure(figsize = [10, 5])
+
+# left histogram: data plotted in natural units
+plt.subplot(1, 2, 1)
+bin_edges = np.arange(0, data.max()+100, 100)
+plt.hist(data, bins = bin_edges)
+plt.xlabel('values')
+
+# right histogram: data plotted after direct log transformation
+plt.subplot(1, 2, 2)
+log_data = np.log10(data) # direct data transform
+log_bin_edges = np.arange(0.8, log_data.max()+0.1, 0.1)
+plt.hist(log_data, bins = log_bin_edges)
+plt.xlabel('log(values)')
+
+bin_edges = np.arange(0, data.max()+100, 100)
+plt.hist(data, bins = bin_edges)
+plt.xscale('log')
+
+bin_edges = 10 ** np.arange(0.8, np.log10(data.max())+0.1, 0.1)
+plt.hist(data, bins = bin_edges)
+plt.xscale('log')
+tick_locs = [10, 30, 100, 300, 1000, 3000]
+plt.xticks(tick_locs, tick_locs)
+
+def sqrt_trans(x, inverse = False):
+    """ transformation helper function """
+    if not inverse:
+        return np.sqrt(x)
+    else:
+        return x ** 2
+
+bin_edges = np.arange(0, sqrt_trans(data.max())+1, 1)
+plt.hist(data.apply(sqrt_trans), bins = bin_edges)
+tick_locs = np.arange(0, sqrt_trans(data.max())+10, 10)
+plt.xticks(tick_locs, sqrt_trans(tick_locs, inverse = True).astype(int))
+
+def scales_solution_1():
+    """
+    Solution for Question 1 in scales and transformation practice: create a
+    histogram of Pokemon heights.
+    """
+    sol_string = ["There's a very long tail of Pokemon heights. Here, I've",
+                  "focused in on Pokemon of height 6 meters or less, so that I",
+                  "can use a smaller bin size to get a more detailed look at",
+                  "the main data distribution."]
+    print((" ").join(sol_string))
+
+    # data setup
+    pokemon = pd.read_csv('./data/pokemon.csv')
+
+    bins = np.arange(0, pokemon['height'].max()+0.2, 0.2)
+    plt.hist(data = pokemon, x = 'height', bins = bins)
+    plt.xlim((0,6))
+
+def scales_solution_2():
+    """
+    Solution for Question 2 in scales and transformation practice: create a
+    histogram of Pokemon weights.
+    """
+    sol_string = ["Since Pokemon weights are so skewed, I used a log transformation",
+                  "on the x-axis. Bin edges are in increments of 0.1 powers of ten,",
+                  "with custom tick marks to demonstrate the log scaling."]
+    print((" ").join(sol_string))
+
+    # data setup
+    pokemon = pd.read_csv('./data/pokemon.csv')
+
+    bins = 10 ** np.arange(-1, 3.0+0.1, 0.1)
+    ticks = [0.1, 0.3, 1, 3, 10, 30, 100, 300, 1000]
+    labels = ['{}'.format(val) for val in ticks]
+
+    plt.hist(data = pokemon, x = 'weight', bins = bins)
+    plt.xscale('log')
+    plt.xticks(ticks, labels)
+    plt.xlabel('Weight (kg)')
+
+data = [0.0, 3.0, 4.5, 8.0]
+plt.figure(figsize = [12, 5])
+
+# left plot: showing kde lumps with the default settings
+plt.subplot(1, 3, 1)
+sb.distplot(data, hist = False, rug = True, rug_kws = {'color' : 'r'})
+
+# central plot: kde with narrow bandwidth to show individual probability lumps
+plt.subplot(1, 3, 2)
+sb.distplot(data, hist = False, rug = True, rug_kws = {'color' : 'r'},
+            kde_kws = {'bw' : 1})
+
+# right plot: choosing a different, triangular kernel function (lump shape)
+plt.subplot(1, 3, 3)
+sb.distplot(data, hist = False, rug = True, rug_kws = {'color' : 'r'},
+            kde_kws = {'bw' : 1.5, 'kernel' : 'tri'})
+
+plt.scatter(data = df, x = 'num_var1', y = 'num_var2')
+
+sb.regplot(data = df, x = 'num_var1', y = 'num_var2')
+
+def log_trans(x, inverse = False):
+    if not inverse:
+        return np.log10(x)
+    else:
+        return np.power(10, x)
+
+sb.regplot(df['num_var1'], df['num_var2'].apply(log_trans))
+tick_locs = [10, 20, 50, 100, 200, 500]
+plt.yticks(log_trans(tick_locs), tick_locs)
+
+plt.scatter(data = df, x = 'disc_var1', y = 'disc_var2')
+
+plt.scatter(data = df, x = 'disc_var1', y = 'disc_var2', alpha = 1/5)
+
+sb.regplot(data = df, x = 'disc_var1', y = 'disc_var2', fit_reg = False,
+           x_jitter = 0.2, y_jitter = 0.2, scatter_kws = {'alpha' : 1/3})
+
 
 ```
