@@ -11,7 +11,7 @@ git clone https://github.com/openshift-psap/gpu-burn.git
 
 git clone https://github.com/redhat-developer/redhat-helm-charts
 
-
+git clone https://github.com/redhat-gpte-devopsautomation/openshift-tasks.git
 
 
 
