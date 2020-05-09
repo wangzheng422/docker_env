@@ -235,5 +235,94 @@ plt.scatter(data = df, x = 'disc_var1', y = 'disc_var2', alpha = 1/5)
 sb.regplot(data = df, x = 'disc_var1', y = 'disc_var2', fit_reg = False,
            x_jitter = 0.2, y_jitter = 0.2, scatter_kws = {'alpha' : 1/3})
 
+plt.figure(figsize = [12, 5])
 
+# left plot: scatterplot of discrete data with jitter and transparency
+plt.subplot(1, 2, 1)
+sb.regplot(data = df, x = 'disc_var1', y = 'disc_var2', fit_reg = False,
+           x_jitter = 0.2, y_jitter = 0.2, scatter_kws = {'alpha' : 1/3})
+
+# right plot: heat map with bin edges between values
+plt.subplot(1, 2, 2)
+bins_x = np.arange(0.5, 10.5+1, 1)
+bins_y = np.arange(-0.5, 10.5+1, 1)
+plt.hist2d(data = df, x = 'disc_var1', y = 'disc_var2',
+           bins = [bins_x, bins_y])
+plt.colorbar();
+
+bins_x = np.arange(0.5, 10.5+1, 1)
+bins_y = np.arange(-0.5, 10.5+1, 1)
+plt.hist2d(data = df, x = 'disc_var1', y = 'disc_var2',
+           bins = [bins_x, bins_y], cmap = 'viridis_r', cmin = 0.5)
+plt.colorbar()
+
+# hist2d returns a number of different variables, including an array of counts
+bins_x = np.arange(0.5, 10.5+1, 1)
+bins_y = np.arange(-0.5, 10.5+1, 1)
+h2d = plt.hist2d(data = df, x = 'disc_var1', y = 'disc_var2',
+               bins = [bins_x, bins_y], cmap = 'viridis_r', cmin = 0.5)
+counts = h2d[0]
+
+# loop through the cell counts and add text annotations for each
+for i in range(counts.shape[0]):
+    for j in range(counts.shape[1]):
+        c = counts[i,j]
+        if c >= 7: # increase visibility on darkest cells
+            plt.text(bins_x[i]+0.5, bins_y[j]+0.5, int(c),
+                     ha = 'center', va = 'center', color = 'white')
+        elif c > 0:
+            plt.text(bins_x[i]+0.5, bins_y[j]+0.5, int(c),
+                     ha = 'center', va = 'center', color = 'black')
+
+def scales_solution_1():
+    """
+    Solution for Question 1 in scales and transformation practice: create a
+    histogram of Pokemon heights.
+    """
+    sol_string = ["There's a very long tail of Pokemon heights. Here, I've",
+                  "focused in on Pokemon of height 6 meters or less, so that I",
+                  "can use a smaller bin size to get a more detailed look at",
+                  "the main data distribution."]
+    print((" ").join(sol_string))
+
+    # data setup
+    pokemon = pd.read_csv('./data/pokemon.csv')
+
+    bins = np.arange(0, pokemon['height'].max()+0.2, 0.2)
+    plt.hist(data = pokemon, x = 'height', bins = bins)
+    plt.xlim((0,6))
+
+def scales_solution_2():
+    """
+    Solution for Question 2 in scales and transformation practice: create a
+    histogram of Pokemon weights.
+    """
+    sol_string = ["Since Pokemon weights are so skewed, I used a log transformation",
+                  "on the x-axis. Bin edges are in increments of 0.1 powers of ten,",
+                  "with custom tick marks to demonstrate the log scaling."]
+    print((" ").join(sol_string))
+
+    # data setup
+    pokemon = pd.read_csv('./data/pokemon.csv')
+
+    bins = 10 ** np.arange(-1, 3.0+0.1, 0.1)
+    ticks = [0.1, 0.3, 1, 3, 10, 30, 100, 300, 1000]
+    labels = ['{}'.format(val) for val in ticks]
+
+    plt.hist(data = pokemon, x = 'weight', bins = bins)
+    plt.xscale('log')
+    plt.xticks(ticks, labels)
+    plt.xlabel('Weight (kg)')
+
+sb.violinplot(data = df, x = 'cat_var', y = 'num_var')
+
+base_color = sb.color_palette()[0]
+sb.violinplot(data = df, x = 'cat_var', y = 'num_var', color = base_color,
+              inner = None)
+
+base_color = sb.color_palette()[0]
+sb.violinplot(data = df, x = 'num_var', y = 'cat_var', color = base_color,
+              inner = None)
+              
+                            
 ```
