@@ -534,4 +534,181 @@ bin_edges = np.arange(-3, df['num_var'].max()+1/3, 1/3)
 g = sb.FacetGrid(data = df, hue = 'cat_var', size = 5)
 g.map(freq_poly, "num_var", bins = bin_edges)
 g.add_legend()
+
+def additionalplot_solution_1():
+    """
+    Solution for Question 1 in additional plots practice: plot the distribution
+    of combined fuel efficiencies for each manufacturer with at least 80 cars.
+    """
+    sol_string = ["Due to the large number of manufacturers to plot, I've gone",
+                  "with a faceted plot of histograms rather than a single figure",
+                  "like a box plot. As part of setting up the FacetGrid object, I",
+                  "have sorted the manufacturers by average mileage, and wrapped",
+                  "the faceting into a six column by three row grid. One interesting",
+                  "thing to note is that there are a very large number of BMW cars",
+                  "in the data, almost twice as many as the second-most prominent",
+                  "maker, Mercedes-Benz. One possible refinement could be to change",
+                  "the axes to be in terms of relative frequency or density to",
+                  "normalize the axes, making the less-frequent manufacturers",
+                  "easier to read."]
+    print((" ").join(sol_string))
+
+    # data setup
+    fuel_econ = pd.read_csv('./data/fuel_econ.csv')
+
+    most_makes = fuel_econ['make'].value_counts().index[:18]
+    fuel_econ_sub = fuel_econ.loc[fuel_econ['make'].isin(most_makes)]
+
+    make_means = fuel_econ_sub.groupby('make').mean()
+    comb_order = make_means.sort_values('comb', ascending = False).index
+
+    # plotting
+    g = sb.FacetGrid(data = fuel_econ_sub, col = 'make', col_wrap = 6, size = 2,
+                     col_order = comb_order)
+    # try sb.distplot instead of plt.hist to see the plot in terms of density!
+    g.map(plt.hist, 'comb', bins = np.arange(12, fuel_econ_sub['comb'].max()+2, 2))
+    g.set_titles('{col_name}')
+
+plt.scatter(data = df, x = 'num_var1', y = 'num_var2', c = 'num_var3')
+plt.colorbar()
+
+g = sb.FacetGrid(data = df, hue = 'cat_var1', size = 5)
+g.map(plt.scatter, 'num_var1', 'num_var2')
+g.add_legend()
+
+sb.palplot(sb.color_palette(n_colors=9))
+
+sb.palplot(sb.color_palette('viridis', 9))
+
+sb.palplot(sb.color_palette('vlag', 9))
+
+plt.figure(figsize = [5,5])
+
+# left: qualitative points
+plt.scatter(0,0.5,s = 1e4, c = sb.color_palette()[0], alpha = 0.5)
+plt.scatter(0,-0.5,s = 1e4, c = sb.color_palette()[1], alpha = 0.5)
+
+# right: quantitative points
+plt.scatter(1,0.5,s = 1e4, c = sb.color_palette('Blues')[2], alpha = 0.5)
+plt.scatter(1,-0.5,s = 1e4, c = sb.color_palette('Blues')[4], alpha = 0.5)
+
+# set axes for point overlap
+plt.xlim(-0.5,1.5)
+plt.ylim(-3.5,3.5)
+plt.xticks([])
+plt.yticks([])
+
+g = sb.FacetGrid(data = df, col = 'cat_var2', row = 'cat_var1', size = 2.5,
+                margin_titles = True)
+g.map(plt.scatter, 'num_var1', 'num_var2')
+
+plt.figure(figsize = [12, 5])
+base_color = sb.color_palette()[0]
+
+# left plot: violin plot
+plt.subplot(1, 3, 1)
+ax1 = sb.violinplot(data = df, x = 'cat_var', y = 'num_var', color = base_color)
+
+# center plot: box plot
+plt.subplot(1, 3, 2)
+sb.boxplot(data = df, x = 'cat_var', y = 'num_var', color = base_color)
+plt.ylim(ax1.get_ylim()) # set y-axis limits to be same as left plot
+
+# right plot: swarm plot
+plt.subplot(1, 3, 3)
+sb.swarmplot(data = df, x = 'cat_var', y = 'num_var', color = base_color)
+plt.ylim(ax1.get_ylim()) # set y-axis limits to be same as left plot
+
+g = sb.JointGrid(data = df, x = 'num_var1', y = 'num_var2')
+g.plot_joint(plt.scatter)
+g.plot_marginals(sb.rugplot, height = 0.25)
+
+plt.figure(figsize = [10, 5])
+base_color = sb.color_palette()[0]
+
+# left plot: strip plot
+plt.subplot(1, 2, 1)
+ax1 = sb.stripplot(data = df, x = 'num_var', y = 'cat_var',
+                   color = base_color)
+
+# right plot: violin plot with inner strip plot as lines
+plt.subplot(1, 2, 2)
+sb.violinplot(data = df, x = 'num_var', y = 'cat_var', color = base_color,
+             inner = 'stick')
+
+# pre-processing: count and sort by the number of instances of each category
+sorted_counts = df['cat_var'].value_counts()
+
+# establish the Figure
+plt.figure(figsize = [12, 5])
+
+# left plot: pie chart
+plt.subplot(1, 2, 1)
+plt.pie(sorted_counts, labels = sorted_counts.index, startangle = 90,
+        counterclock = False);
+plt.axis('square');
+
+# right plot: horizontally stacked bar
+plt.subplot(1, 2, 2)
+baseline = 0
+for i in range(sorted_counts.shape[0]):
+    plt.barh(y = 1, width = sorted_counts[i], left = baseline)
+    baseline += sorted_counts[i]
+
+plt.legend(sorted_counts.index)  # add a legend for labeling
+plt.ylim([0,2]) # give some vertical spacing around the bar
+
+cat1_order = ['East', 'South', 'West', 'North']
+cat2_order = ['Type X', 'Type Y', 'Type Z', 'Type O']
+
+plt.figure(figsize = [12, 5])
+
+# left plot: clustered bar chart, absolute counts
+plt.subplot(1, 2, 1)
+sb.countplot(data = df, x = 'cat_var1', hue = 'cat_var2',
+             order = cat1_order, hue_order = cat2_order)
+plt.legend()
+
+# right plot: stacked bar chart, absolute counts
+plt.subplot(1, 2, 2)
+
+baselines = np.zeros(len(cat1_order))
+# for each second-variable category:
+for i in range(len(cat2_order)):
+    # isolate the counts of the first category,
+    cat2 = cat2_order[i]
+    inner_counts = df[df['cat_var2'] == cat2]['cat_var1'].value_counts()
+    # then plot those counts on top of the accumulated baseline
+    plt.bar(x = np.arange(len(cat1_order)), height = inner_counts[cat1_order],
+            bottom = baselines)
+    baselines += inner_counts[cat1_order]
+
+plt.xticks(np.arange(len(cat1_order)), cat1_order)
+plt.legend(cat2_order)
+
+cat1_order = ['East', 'South', 'West', 'North']
+cat2_order = ['Type X', 'Type Y', 'Type Z', 'Type O']
+
+artists = [] # for storing references to plot elements
+baselines = np.zeros(len(cat1_order))
+cat1_counts = df['cat_var1'].value_counts()
+
+# for each second-variable category:
+for i in range(len(cat2_order)):
+    # isolate the counts of the first category,
+    cat2 = cat2_order[i]
+    inner_counts = df[df['cat_var2'] == cat2]['cat_var1'].value_counts()
+    inner_props = inner_counts / cat1_counts
+    # then plot those counts on top of the accumulated baseline
+    bars = plt.bar(x = np.arange(len(cat1_order)),
+                   height = inner_props[cat1_order],
+                   bottom = baselines)
+    artists.append(bars)
+    baselines += inner_props[cat1_order]
+
+plt.xticks(np.arange(len(cat1_order)), cat1_order)
+plt.legend(reversed(artists), reversed(cat2_order), framealpha = 1,
+           bbox_to_anchor = (1, 0.5), loc = 6);
+
+           
 ```
