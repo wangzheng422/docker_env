@@ -1,6 +1,6 @@
 # matplotlib
 
-```bash
+```python
 # prerequisite package imports
 import numpy as np
 import pandas as pd
@@ -324,5 +324,214 @@ base_color = sb.color_palette()[0]
 sb.violinplot(data = df, x = 'num_var', y = 'cat_var', color = base_color,
               inner = None)
               
-                            
+plt.figure(figsize = [10, 5])
+base_color = sb.color_palette()[0]
+
+# left plot: violin plot
+plt.subplot(1, 2, 1)
+ax1 = sb.violinplot(data = df, x = 'cat_var', y = 'num_var', color = base_color)
+
+# right plot: box plot
+plt.subplot(1, 2, 2)
+sb.boxplot(data = df, x = 'cat_var', y = 'num_var', color = base_color)
+plt.ylim(ax1.get_ylim()) # set y-axis limits to be same as left plot
+
+base_color = sb.color_palette()[0]
+sb.boxplot(data = df, x = 'num_var', y = 'cat_var', color = base_color)
+
+base_color = sb.color_palette()[0]
+sb.violinplot(data = df, x = 'cat_var', y = 'num_var', color = base_color,
+              inner = 'quartile')
+
+
+def violinbox_solution_1():
+    """
+    Solution for Question 1 in violin and box plot practice: plot the relationship
+    between vehicle class and engine displacement.
+    """
+    sol_string = ["I used a violin plot to depict the data in this case; you might",
+                  "have chosen a box plot instead. One of the interesting things",
+                  "about the relationship between variables is that it isn't consistent.",
+                  "Compact cars tend to have smaller engine sizes than the minicompact",
+                  "and subcompact cars, even though those two vehicle sizes are smaller.",
+                  "The box plot would make it easier to see that the median displacement",
+                  "for the two smallest vehicle classes is greater than the third quartile",
+                  "of the compact car class."]
+    print((" ").join(sol_string))
+
+    # data setup
+    fuel_econ = pd.read_csv('./data/fuel_econ.csv')
+
+    sedan_classes = ['Minicompact Cars', 'Subcompact Cars', 'Compact Cars', 'Midsize Cars', 'Large Cars']
+    pd_ver = pd.__version__.split(".")
+    if (int(pd_ver[0]) > 0) or (int(pd_ver[1]) >= 21): # v0.21 or later
+        vclasses = pd.api.types.CategoricalDtype(ordered = True, categories = sedan_classes)
+        fuel_econ['VClass'] = fuel_econ['VClass'].astype(vclasses)
+    else: # pre-v0.21
+        fuel_econ['VClass'] = fuel_econ['VClass'].astype('category', ordered = True, categories = sedan_classes)
+
+    # plotting
+    base_color = sb.color_palette()[0]
+    sb.violinplot(data = fuel_econ, x = 'VClass', y = 'displ',
+                  color = base_color)
+    plt.xticks(rotation = 15)
+
+sb.countplot(data = df, x = 'cat_var1', hue = 'cat_var2')
+
+ax = sb.countplot(data = df, x = 'cat_var1', hue = 'cat_var2')
+ax.legend(loc = 8, ncol = 3, framealpha = 1, title = 'cat_var2')
+
+ct_counts = df.groupby(['cat_var1', 'cat_var2']).size()
+ct_counts = ct_counts.reset_index('count')
+ct_counts = ct_counts.pivot(index = 'cat_var2', columns = 'cat_var1', values = 'count')
+
+sb.heatmap(ct_counts)
+
+sb.heatmap(ct_counts, annot = True, fmt = 'd')
+
+def categorical_solution_1():
+    """
+    Solution for Question 1 in categorical plot practice: plot the relationship
+    between vehicle class and fuel type.
+    """
+    sol_string = ["I chose a clustered bar chart instead of a heat map in this case",
+                  "since there weren't a lot of numbers to plot. If you chose a heat",
+                  "map, did you remember to add a color bar and include annotations?",
+                  "From this plot, you can see that more cars use premium gas over",
+                  "regular gas, and that the smaller cars are biased towards the",
+                  "premium gas grade. It is only in midsize sedans where regular",
+                  "gasoline was used in more cars than premium gasoline."]
+    print((" ").join(sol_string))
+
+    # data setup
+    fuel_econ = pd.read_csv('./data/fuel_econ.csv')
+    
+    sedan_classes = ['Minicompact Cars', 'Subcompact Cars', 'Compact Cars', 'Midsize Cars', 'Large Cars']
+    pd_ver = pd.__version__.split(".")
+    if (int(pd_ver[0]) > 0) or (int(pd_ver[1]) >= 21): # v0.21 or later
+        vclasses = pd.api.types.CategoricalDtype(ordered = True, categories = sedan_classes)
+        fuel_econ['VClass'] = fuel_econ['VClass'].astype(vclasses)
+    else: # pre-v0.21
+        fuel_econ['VClass'] = fuel_econ['VClass'].astype('category', ordered = True,
+                                                         categories = sedan_classes)
+    fuel_econ_sub = fuel_econ.loc[fuel_econ['fuelType'].isin(['Premium Gasoline', 'Regular Gasoline'])]
+
+    # plotting
+    ax = sb.countplot(data = fuel_econ_sub, x = 'VClass', hue = 'fuelType')
+    ax.legend(loc = 4, framealpha = 1) # lower right, no transparency
+    plt.xticks(rotation = 15)
+
+g = sb.FacetGrid(data = df, col = 'cat_var')
+g.map(plt.hist, "num_var")
+
+bin_edges = np.arange(-3, df['num_var'].max()+1/3, 1/3)
+g = sb.FacetGrid(data = df, col = 'cat_var')
+g.map(plt.hist, "num_var", bins = bin_edges)
+
+group_means = df.groupby(['many_cat_var']).mean()
+group_order = group_means.sort_values(['num_var'], ascending = False).index
+
+g = sb.FacetGrid(data = df, col = 'many_cat_var', col_wrap = 5, size = 2,
+                 col_order = group_order)
+g.map(plt.hist, 'num_var', bins = np.arange(5, 15+1, 1))
+g.set_titles('{col_name}')
+
+base_color = sb.color_palette()[0]
+sb.barplot(data = df, x = 'cat_var', y = 'num_var', color = base_color)
+
+sb.pointplot(data = df, x = 'cat_var', y = 'num_var', linestyles = "")
+plt.ylabel('Avg. value of num_var')
+
+plt.figure(figsize = [12, 5])
+base_color = sb.color_palette()[0]
+
+# left plot: violin plot
+plt.subplot(1, 3, 1)
+sb.violinplot(data = df, x = 'condition', y = 'binary_out', inner = None,
+              color = base_color)
+plt.xticks(rotation = 10) # include label rotation due to small subplot size
+
+# center plot: box plot
+plt.subplot(1, 3, 2)
+sb.boxplot(data = df, x = 'condition', y = 'binary_out', color = base_color)
+plt.xticks(rotation = 10)
+
+# right plot: adapted bar chart
+plt.subplot(1, 3, 3)
+sb.barplot(data = df, x = 'condition', y = 'binary_out', color = base_color)
+plt.xticks(rotation = 10)
+
+bin_edges = np.arange(0, df['num_var'].max()+1/3, 1/3)
+
+# count number of points in each bin
+bin_idxs = pd.cut(df['num_var'], bin_edges, right = False, include_lowest = True,
+                  labels = False).astype(int)
+pts_per_bin = df.groupby(bin_idxs).size()
+
+num_var_wts = df['binary_out'] / pts_per_bin[bin_idxs].values
+
+# plot the data using the calculated weights
+plt.hist(data = df, x = 'num_var', bins = bin_edges, weights = num_var_wts)
+plt.xlabel('num_var')
+plt.ylabel('mean(binary_out)')
+
+plt.errorbar(data = df, x = 'num_var1', y = 'num_var2')
+
+# set bin edges, compute centers
+bin_size = 0.25
+xbin_edges = np.arange(0.5, df['num_var1'].max()+bin_size, bin_size)
+xbin_centers = (xbin_edges + bin_size/2)[:-1]
+
+# compute statistics in each bin
+data_xbins = pd.cut(df['num_var1'], xbin_edges, right = False, include_lowest = True)
+y_means = df['num_var2'].groupby(data_xbins).mean()
+y_sems = df['num_var2'].groupby(data_xbins).sem()
+
+# plot the summarized data
+plt.errorbar(x = xbin_centers, y = y_means, yerr = y_sems)
+plt.xlabel('num_var1')
+plt.ylabel('num_var2')
+
+# compute statistics in a rolling window
+df_window = df.sort_values('num_var1').rolling(15)
+x_winmean = df_window.mean()['num_var1']
+y_median = df_window.median()['num_var2']
+y_q1 = df_window.quantile(.25)['num_var2']
+y_q3 = df_window.quantile(.75)['num_var2']
+
+# plot the summarized data
+base_color = sb.color_palette()[0]
+line_color = sb.color_palette('dark')[0]
+plt.scatter(data = df, x = 'num_var1', y = 'num_var2')
+plt.errorbar(x = x_winmean, y = y_median, c = line_color)
+plt.errorbar(x = x_winmean, y = y_q1, c = line_color, linestyle = '--')
+plt.errorbar(x = x_winmean, y = y_q3, c = line_color, linestyle = '--')
+
+plt.xlabel('num_var1')
+plt.ylabel('num_var2')
+
+bin_edges = np.arange(-3, df['num_var'].max()+1/3, 1/3)
+g = sb.FacetGrid(data = df, hue = 'cat_var', size = 5)
+g.map(plt.hist, "num_var", bins = bin_edges, histtype = 'step')
+g.add_legend()
+
+def freq_poly(x, bins = 10, **kwargs):
+    """ Custom frequency polygon / line plot code. """
+    # set bin edges if none or int specified
+    if type(bins) == int:
+        bins = np.linspace(x.min(), x.max(), bins+1)
+    bin_centers = (bin_edges[1:] + bin_edges[:-1]) / 2
+
+    # compute counts
+    data_bins = pd.cut(x, bins, right = False,
+                       include_lowest = True)
+    counts = x.groupby(data_bins).count()
+
+    # create plot
+    plt.errorbar(x = bin_centers, y = counts, **kwargs)
+
+bin_edges = np.arange(-3, df['num_var'].max()+1/3, 1/3)
+g = sb.FacetGrid(data = df, hue = 'cat_var', size = 5)
+g.map(freq_poly, "num_var", bins = bin_edges)
+g.add_legend()
 ```
