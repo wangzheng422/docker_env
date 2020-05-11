@@ -31,7 +31,7 @@ split_image(){
         yaml_local_image="${STATIC_MID_REG}/${domain_part}${image_part}"
         # echo $image_url
         
-        local_image_url_without_domin="${LOCAL_REG}/${image_part}:${sha_part}"
+        local_image_url_without_domain="${LOCAL_REG}/${image_part}:${sha_part}"
     elif [[ $docker_image =~ ^.*\.(io|com|org)/.*:.* ]]; then
         # echo "io, com, org with tag: $docker_image"
         domain_part=$(echo $docker_image | cut -d'/' -f1)
@@ -42,7 +42,7 @@ split_image(){
         yaml_image=$(echo $docker_image | sed -r 's/:.*$//')
         yaml_local_image="${STATIC_MID_REG}/${yaml_image}"
         # echo $image_url
-        local_image_url_without_domin="${LOCAL_REG}/${image_part}"
+        local_image_url_without_domain="${LOCAL_REG}/${image_part}"
     elif [[ $docker_image =~ ^.*\.(io|com|org)/[^:]*  ]]; then
         # echo "io, com, org without tag: $docker_image"
         domain_part=$(echo $docker_image | cut -d'/' -f1)
@@ -57,7 +57,7 @@ split_image(){
 
         yaml_local_image="${STATIC_MID_REG}/${domain_part}${image_part}"
 
-        local_image_url_without_domin="${LOCAL_REG}/${image_part}:latest"
+        local_image_url_without_domain="${LOCAL_REG}/${image_part}:latest"
     elif [[ $docker_image =~ ^.*/.*@sha256:.* ]]; then
         # echo "docker with tag: $docker_image"
         domain_part="docker.io"
@@ -72,7 +72,7 @@ split_image(){
         yaml_image=$(echo $docker_image | sed -r 's/@sha256:.*$//')
         yaml_local_image="${STATIC_MID_REG}/docker.io/${image_part}"
 
-        local_image_url_without_domin="${LOCAL_REG}/${image_part}:${sha_part}"
+        local_image_url_without_domain="${LOCAL_REG}/${image_part}:${sha_part}"
     elif [[ $docker_image =~ ^.*/.*:.* ]]; then
         # echo "docker with tag: $docker_image"
         domain_part="docker.io"
@@ -84,7 +84,7 @@ split_image(){
         # yaml_local_image=$(echo $local_image_url | sed -r 's/:.*$//')
         yaml_local_image=$(echo "${STATIC_MID_REG}/docker.io/${docker_image}" | sed -r 's/:.*$//')
 
-        local_image_url_without_domin="${LOCAL_REG}/${docker_image}"
+        local_image_url_without_domain="${LOCAL_REG}/${docker_image}"
     elif [[ $docker_image =~ ^.*/[^:]* ]]; then
         # echo "docker without tag: $docker_image"
         domain_part="docker.io"
@@ -97,7 +97,7 @@ split_image(){
         # echo $image_url
         docker_image+="${docker_image}:latest"
 
-        local_image_url_without_domin="${LOCAL_REG}/${docker_image}:latest"
+        local_image_url_without_domain="${LOCAL_REG}/${docker_image}:latest"
     elif [[ $docker_image =~ ^.*:.* ]]; then
         # echo "docker with tag: $docker_image"
         domain_part="docker.io"
@@ -111,7 +111,7 @@ split_image(){
 
         # docker_image="${docker_image}"
 
-        local_image_url_without_domin="${LOCAL_REG}/${docker_image}"
+        local_image_url_without_domain="${LOCAL_REG}/${docker_image}"
 
     fi
 
@@ -217,6 +217,46 @@ add_image_load_docker_file() {
     fi
 }
 
+
+add_image_load_oci_file_without_domain() {
+
+    var_docker_image=$1
+    file_name=$2
+
+    split_image $var_docker_image
+
+    # if oc image mirror $docker_image $local_image_url; then
+    if [[ $var_skip == 0 ]]; then
+        # if skopeo copy "docker://"$docker_image "docker://"$local_image_url; then
+        if oc image mirror --from-dir=${MIRROR_DIR}/oci/ file:/${file_name} $local_image_url_without_domain ; then
+            echo -e "${docker_image}\t${local_image_url}" >> pull.add.image.ok.list
+            # echo -e "${yaml_image}\t${yaml_local_image}" >> yaml.add.image.ok.list
+            # echo -e "${domain_part}" >> yaml.add.image.ok.list
+        else
+            echo "$docker_image" >> pull.add.image.failed.list
+        fi
+    fi
+}
+
+add_image_load_docker_file_without_domain() {
+
+    var_docker_image=$1
+    file_name=$2
+
+    split_image $var_docker_image
+
+    # if oc image mirror $docker_image $local_image_url; then
+    if [[ $var_skip == 0 ]]; then
+        if skopeo copy docker-archive:/${MIRROR_DIR}/docker/${sha_part} "docker://"$local_image_url_without_domain; then
+        # if oc image mirror --from-dir=${MIRROR_DIR}/oci/ file:/${file_name} $local_image_url ; then
+            echo -e "${docker_image}\t${local_image_url}" >> pull.add.image.ok.list
+            # echo -e "${yaml_image}\t${yaml_local_image}" >> yaml.add.image.ok.list
+            # echo -e "${domain_part}" >> yaml.add.image.ok.list
+        else
+            echo "$docker_image" >> pull.add.image.failed.list
+        fi
+    fi
+}
 
 
 
