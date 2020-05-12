@@ -690,6 +690,301 @@ df_18.air_pollution_score = df_18.air_pollution_score.astype(float)
 df_08.to_csv('data_08_v4.csv', index=False)
 df_18.to_csv('data_18_v4.csv', index=False)
 
+# load datasets
+import pandas as pd
+
+df_08 = pd.read_csv('data_08_v4.csv')
+df_18 = pd.read_csv('data_18_v4.csv')
+
+# convert mpg columns to floats
+mpg_columns = ['city_mpg', 'hwy_mpg', 'cmb_mpg']
+for c in mpg_columns:
+    df_18[c] = df_18[c].astype(float)
+    df_08[c] = df_08[c].astype(float)
+
+# convert from float to int
+df_08['greenhouse_gas_score'] = df_08['greenhouse_gas_score'].astype(int)
+
+df_08.dtypes
+
+df_18.dtypes
+
+df_08.dtypes == df_18.dtypes
+
+# Save your final CLEAN datasets as new files!
+df_08.to_csv('clean_08.csv', index=False)
+df_18.to_csv('clean_18.csv', index=False)
+
+# To add a new cell, type '# %%'
+# To add a new markdown cell, type '# %% [markdown]'
+# %%
+from IPython import get_ipython
+
+# %% [markdown]
+# # Drawing Conclusions
+# Use the space below to address questions on datasets `clean_08.csv` and `clean_18.csv`
+
+# %%
+import pandas as pd
+import matplotlib.pyplot as plt
+get_ipython().run_line_magic('matplotlib', 'inline')
+
+
+# %%
+# load datasets
+df_08 = pd.read_csv('clean_08.csv')
+df_18 = pd.read_csv('clean_18.csv')
+
+
+# %%
+df_08.head(1)
+
+# %% [markdown]
+# ### Q1: Are more unique models using alternative sources of fuel? By how much?
+# %% [markdown]
+# Let's first look at what the sources of fuel are and which ones are alternative sources.
+
+# %%
+
+
+
+# %%
+df_08.fuel.value_counts()
+
+
+# %%
+df_18.fuel.value_counts()
+
+# %% [markdown]
+# Looks like the alternative sources of fuel available in 2008 are CNG and ethanol, and those in 2018 ethanol and electricity. (You can use Google if you weren't sure which ones are alternative sources of fuel!)
+
+# %%
+# how many unique models used alternative sources of fuel in 2008
+alt_08 = df_08.query('fuel in ["CNG", "ethanol"]').model.nunique()
+alt_08
+
+
+# %%
+# how many unique models used alternative sources of fuel in 2018
+alt_18 = df_18.query('fuel in ["Ethanol", "Electricity"]').model.nunique()
+alt_18
+
+
+# %%
+plt.bar(["2008", "2018"], [alt_08, alt_18])
+plt.title("Number of Unique Models Using Alternative Fuels")
+plt.xlabel("Year")
+plt.ylabel("Number of Unique Models");
+
+# %% [markdown]
+# Since 2008, the number of unique models using alternative sources of fuel increased by 24. We can also look at proportions.
+
+# %%
+# total unique models each year
+total_08 = df_08.model.nunique()
+total_18 = df_18.model.nunique()
+total_08, total_18
+
+
+# %%
+prop_08 = alt_08/total_08
+prop_18 = alt_18/total_18
+prop_08, prop_18
+
+
+# %%
+plt.bar(["2008", "2018"], [prop_08, prop_18])
+plt.title("Proportion of Unique Models Using Alternative Fuels")
+plt.xlabel("Year")
+plt.ylabel("Proportion of Unique Models");
+
+# %% [markdown]
+# ### Q2: How much have vehicle classes improved in fuel economy?  
+# %% [markdown]
+# Let's look at the average fuel economy for each vehicle class for both years.
+
+# %%
+veh_08 = df_08.groupby('veh_class').cmb_mpg.mean()
+veh_08
+
+
+# %%
+veh_18 = df_18.groupby('veh_class').cmb_mpg.mean()
+veh_18
+
+
+# %%
+# how much they've increased by for each vehicle class
+inc = veh_18 - veh_08
+inc
+
+
+# %%
+# only plot the classes that exist in both years
+inc.dropna(inplace=True)
+plt.subplots(figsize=(8, 5))
+plt.bar(inc.index, inc)
+plt.title('Improvements in Fuel Economy from 2008 to 2018 by Vehicle Class')
+plt.xlabel('Vehicle Class')
+plt.ylabel('Increase in Average Combined MPG');
+
+# %% [markdown]
+# ### Q3: What are the characteristics of SmartWay vehicles? Have they changed over time?
+# %% [markdown]
+# We can analyze this by filtering each dataframe by SmartWay classification and exploring these datasets.
+
+# %%
+# smartway labels for 2008
+df_08.smartway.unique()
+
+
+# %%
+# get all smartway vehicles in 2008
+smart_08 = df_08.query('smartway == "yes"')
+
+
+# %%
+# explore smartway vehicles in 2008
+smart_08.describe()
+
+# %% [markdown]
+# Use what you've learned so for to further explore this dataset on 2008 smartway vehicles.
+
+# %%
+# smartway labels for 2018
+df_18.smartway.unique()
+
+
+# %%
+# get all smartway vehicles in 2018
+smart_18 = df_18.query('smartway in ["Yes", "Elite"]')
+
+
+# %%
+smart_18.describe()
+
+# %% [markdown]
+# Use what you've learned so for to further explore this dataset on 2018 smartway vehicles.
+# %% [markdown]
+# ### Q4: What features are associated with better fuel economy?
+# %% [markdown]
+# You can explore trends between cmb_mpg and the other features in this dataset, or filter this dataset like in the previous question and explore the properties of that dataset. For example, you can select all vehicles that have the top 50% fuel economy ratings like this.
+
+# %%
+top_08 = df_08.query('cmb_mpg > cmb_mpg.mean()')
+top_08.describe()
+
+
+# %%
+top_18 = df_18.query('cmb_mpg > cmb_mpg.mean()')
+top_18.describe()
+
+
+# %%
+
+# To add a new cell, type '# %%'
+# To add a new markdown cell, type '# %% [markdown]'
+# %% [markdown]
+# # Merging Datasets
+# Use Pandas Merges to create a combined dataset from `clean_08.csv` and `clean_18.csv`.
+
+# %%
+# load datasets
+import pandas as pd
+
+df_08 = pd.read_csv('clean_08.csv')
+df_18 = pd.read_csv('clean_18.csv')
+
+# %% [markdown]
+# ### Create combined dataset
+
+# %%
+# rename 2008 columns
+df_08.rename(columns=lambda x: x[:10] + "_2008", inplace=True)
+
+
+# %%
+# view to check names
+df_08.head()
+
+
+# %%
+# merge datasets
+df_combined = df_08.merge(df_18, left_on='model_2008', right_on='model', how='inner')
+
+
+# %%
+# view to check merge
+df_combined.head()
+
+# %% [markdown]
+# Save the combined dataset
+
+# %%
+df_combined.to_csv('combined_dataset.csv', index=False)
+
+# To add a new cell, type '# %%'
+# To add a new markdown cell, type '# %% [markdown]'
+# %% [markdown]
+# # Results with Merged Dataset
+# #### Q5: For all of the models that were produced in 2008 that are still being produced now, how much has the mpg improved and which vehicle improved the most?
+# Remember to use your new dataset, `combined_dataset.csv`
+
+# %%
+# load dataset
+import pandas as pd
+df = pd.read_csv('combined_dataset.csv')
+
+# %% [markdown]
+# ### 1. Create a new dataframe, `model_mpg`, that contain the mean combined mpg values in 2008 and 2018 for each unique model
+# 
+# To do this, group by `model` and find the mean `cmb_mpg_2008` and mean `cmb_mpg` for each.
+
+# %%
+model_mpg = df.groupby('model').mean()[['cmb_mpg_2008', 'cmb_mpg']]
+
+
+# %%
+model_mpg.head()
+
+# %% [markdown]
+# ### 2. Create a new column, `mpg_change`, with the change in mpg
+# Subtract the mean mpg in 2008 from that in 2018 to get the change in mpg
+
+# %%
+model_mpg['mpg_change'] = model_mpg['cmb_mpg'] - model_mpg['cmb_mpg_2008']
+
+
+# %%
+model_mpg.head()
+
+# %% [markdown]
+# ### 3. Find the vehicle that improved the most
+# Find the max mpg change, and then use query or indexing to see what model it is!
+
+# %%
+max_change = model_mpg['mpg_change'].max()
+max_change
+
+
+# %%
+model_mpg[model_mpg['mpg_change'] == max_change]
+
+# %% [markdown]
+# Pandas also has a useful [`idxmax`](https://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.idxmax.html) function you can use to find the index of the row containing a column's maximum value!
+
+# %%
+idx = model_mpg.mpg_change.idxmax()
+idx
+
+
+# %%
+model_mpg.loc[idx]
+
+
+# %%
+
+
 
 
 ```

@@ -214,6 +214,7 @@ cat > /root/iplist.txt <<EOL
 112.44.102.228/32
 223.87.20.7/32
 10.88.0.0/16
+223.86.0.14/32
 EOL
 
 firewall-cmd --permanent --ipset=my-allow-list --add-entries-from-file=iplist.txt
@@ -3248,6 +3249,8 @@ ipset add my-allow-set 221.226.0.75/32
 ipset add my-allow-set 210.21.236.182/32
 ipset add my-allow-set 61.132.54.2/32
 
+ipset add my-allow-set 39.134.198.0/24
+
 iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
 iptables -A INPUT -m set --match-set my-allow-set src -j ACCEPT
 iptables -A INPUT -p tcp -j REJECT
@@ -3304,6 +3307,8 @@ ipset add my-allow-set 221.226.0.75/32
 ipset add my-allow-set 210.21.236.182/32
 ipset add my-allow-set 61.132.54.2/32
 
+ipset add my-allow-set 39.134.198.0/24
+
 iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
 iptables -A INPUT -m set --match-set my-allow-set src -j ACCEPT
 iptables -A INPUT -p tcp -j REJECT
@@ -3355,7 +3360,8 @@ ipset add my-allow-set 47.93.86.113/32
 ipset add my-allow-set 221.226.0.75/32
 ipset add my-allow-set 210.21.236.182/32
 ipset add my-allow-set 61.132.54.2/32
-# ipset add my-allow-set 10.0.0.0/8
+
+ipset add my-allow-set 39.134.198.0/24
 
 iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
 iptables -A INPUT -m set --match-set my-allow-set src -j ACCEPT
