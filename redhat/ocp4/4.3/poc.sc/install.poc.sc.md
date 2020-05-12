@@ -1483,7 +1483,7 @@ nmcli -g uuid con | while read i ; do nmcli c delete uuid ${i} ; done
 # re-create primary connection 
 nmcli con add type ethernet \
     con-name enp176s0f0 \
-    ifname enp3s0f0 \
+    ifname enp176s0f0 \
     ipv4.method 'manual' \
     ipv4.address '39.134.204.73 /27' \
     ipv4.gateway '39.134.204.65' \
