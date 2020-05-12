@@ -4,7 +4,7 @@ https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/7/html-si
 
 https://people.redhat.com/duffy/selinux/selinux-coloring-book_A4-Stapled.pdf
 
-
+https://www.redhat.com/en/services/training/ex200-red-hat-certified-system-administrator-rhcsa-exam
 
 ```bash
 export LANG=$i

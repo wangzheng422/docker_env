@@ -1445,6 +1445,59 @@ chronyc tracking
 
 ```
 
+### worker-3 host
+```bash
+#######################################
+# nic bond
+cat << EOF > /root/nic.bond.sh
+#!/bin/bash
+
+# delete all connection 
+nmcli -g uuid con | while read i ; do nmcli c delete uuid ${i} ; done 
+
+nmcli con add type bond \
+    con-name bond0 \
+    ifname bond0 \
+    mode 802.3ad \
+    ipv4.method 'manual' \
+    ipv4.address '39.134.204.73/27' \
+    ipv4.gateway '39.134.204.65' \
+    ipv4.dns '117.177.241.16'
+    
+nmcli con mod id bond0 bond.options \
+    mode=802.3ad,miimon=100,lacp_rate=fast,xmit_hash_policy=layer2+3
+    
+nmcli con add type bond-slave ifname enp176s0f0 con-name enp176s0f0 master bond0
+nmcli con add type bond-slave ifname enp176s0f1 con-name enp176s0f1 master bond0
+
+systemctl restart network
+
+EOF
+
+cat > /root/nic.restore.sh << 'EOF'
+#!/bin/bash
+
+# delete all connection 
+nmcli -g uuid con | while read i ; do nmcli c delete uuid ${i} ; done 
+
+# re-create primary connection 
+nmcli con add type ethernet \
+    con-name enp176s0f0 \
+    ifname enp3s0f0 \
+    ipv4.method 'manual' \
+    ipv4.address '39.134.204.73 /27' \
+    ipv4.gateway '39.134.204.65' \
+    ipv4.dns '117.177.241.16'
+
+systemctl restart network
+
+exit 0
+EOF
+
+chmod +x /root/nic.restore.sh
+
+```
+
 ## install ocp
 
 ### helper node day1
