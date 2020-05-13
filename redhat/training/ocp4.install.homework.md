@@ -10,7 +10,7 @@ yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarc
 
 yum install -y byobu
 
-ansible localhost -m lineinfile -a 'path=$HOME/.bashrc regexp="^export OCP_RELEASE" line="export OCP_RELEASE=4.3.8"'
+ansible localhost -m lineinfile -a 'path=$HOME/.bashrc regexp="^export OCP_RELEASE" line="export OCP_RELEASE=4.3.19"'
 
 source $HOME/.bashrc
 
@@ -67,7 +67,7 @@ platform:
     region: us-west-2
 pullSecret: '{*****************}'
 sshKey: |
-  ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDSRLKJEJuGfIpGGmuayaT2Vo9rffk15kQMciWVt/N60eDD0WSadJLjipnM1beSafzKD0u0T1mQrADOUFKmsXPHJ9NjA4ZA70OzbR4zSTLNBVZny5DbFWv5gAPdI5L0Owe7+MjMiW3JMBWT9YV8QZmwqJBcG8YMTC9CrQAHfJYL3Ce7Sbzif9jbtKr59QkaFU6DS6w6610HNwlE7AZmoRbcxufSMmad8hu6e0+xpD4myUXeZkUa1vUdpgWFOiObL4Kye9OmBAuIz5tPWrusmCY6JuF4OdNGTGZkbEjo6izC63f9cwpyiBxMiTtU2I5CDp9PFVBQafpM00C5rMuHnGyL zhengwan-redhat.com@clientvm.643b.internal
+  ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCYYN6lCPdqUiWYEq7EXbtFBaNTCJH2+Vbznok+fDy00Xqmh2/kGBRaTBPN5HAsD4Wy3m7fp7Oij+rxN/dm6v1Yd+GH/Ac90vFgZGe22HZQiEM488JppVokAHmllVMI+xdH/OMed7X5pALoWzWBfiCObz8aZIpnga6M3f+oFearqfgEGlWRIEdfl01KjX/HDKqnPosVz7cwEnW16UvCWChESm73SbvzLUxlPJiKjxKbcm8/XDkb4kGwqPeqq4wGoFCub2FvZ+4ZRqmhwofnAP4fAzGUPPVX1Htuw7kXxFLD/4L2LCL2gkUyze8+4ELtclTwsMmoZ1WDtO47lflCf66n zhengwan-redhat.com@clientvm.b5e0.internal
 
 ```
 ```bash

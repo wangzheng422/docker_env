@@ -29,4 +29,10 @@ sudo systemctl status cockpit.socket
 
 redhat-support-tool
 
+parted /dev/vdb mklabel msdos
+
+udevadm settle
+
+lsblk --fs
+
 ```
