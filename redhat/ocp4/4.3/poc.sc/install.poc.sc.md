@@ -3349,8 +3349,9 @@ ipset add my-allow-set 47.93.86.113/32
 ipset add my-allow-set 221.226.0.75/32
 ipset add my-allow-set 210.21.236.182/32
 ipset add my-allow-set 61.132.54.2/32
-
 ipset add my-allow-set 39.134.198.0/24
+
+ipset add my-allow-set 218.205.236.16/28
 
 iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
 iptables -A INPUT -m set --match-set my-allow-set src -j ACCEPT
@@ -3407,8 +3408,9 @@ ipset add my-allow-set 47.93.86.113/32
 ipset add my-allow-set 221.226.0.75/32
 ipset add my-allow-set 210.21.236.182/32
 ipset add my-allow-set 61.132.54.2/32
-
 ipset add my-allow-set 39.134.198.0/24
+
+ipset add my-allow-set 218.205.236.16/28
 
 iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
 iptables -A INPUT -m set --match-set my-allow-set src -j ACCEPT
@@ -3461,8 +3463,9 @@ ipset add my-allow-set 47.93.86.113/32
 ipset add my-allow-set 221.226.0.75/32
 ipset add my-allow-set 210.21.236.182/32
 ipset add my-allow-set 61.132.54.2/32
-
 ipset add my-allow-set 39.134.198.0/24
+
+ipset add my-allow-set 218.205.236.16/28
 
 iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
 iptables -A INPUT -m set --match-set my-allow-set src -j ACCEPT
