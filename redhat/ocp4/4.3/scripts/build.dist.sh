@@ -6,8 +6,8 @@ set -x
 # export BUILDNUMBER="4.2.13"
 # stable 4.3.5
 build_number_list=$(cat << EOF
-4.3.5
-4.3.8
+4.3.19
+4.3.21
 EOF
 )
 
