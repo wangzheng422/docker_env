@@ -11,7 +11,7 @@ build_number_list=$(cat << EOF
 EOF
 )
 
-export var_date='2020-03-23'
+export var_date='2020-05-15'
 echo $var_date
 export var_major_version='4.3'
 echo ${var_major_version}
