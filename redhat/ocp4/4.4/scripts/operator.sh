@@ -13,6 +13,22 @@ mkdir -p /data/ocp4/operator/manifests
 mkdir -p /data/ocp4/operator/tgz
 cd /data/ocp4/operator/
 
+oc adm catalog build \
+    --appregistry-org redhat-operators \
+    --from=registry.redhat.io/openshift4/ose-operator-registry:v4.4 \
+    --to=docker.io/wangzheng422/operator-catalog:redhat-4.4-$var_date 
+
+oc adm catalog build \
+    --appregistry-org certified-operators \
+    --from=registry.redhat.io/openshift4/ose-operator-registry:v4.4 \
+    --to=docker.io/wangzheng422/operator-catalog:certified-4.4-$var_date  
+
+oc adm catalog build \
+    --appregistry-org community-operators \
+    --from=registry.redhat.io/openshift4/ose-operator-registry:v4.4 \
+    --to=docker.io/wangzheng422/operator-catalog:community-4.4-$var_date  
+
+
 curl https://quay.io/cnr/api/v1/packages?namespace=redhat-operators > packages.txt
 curl https://quay.io/cnr/api/v1/packages?namespace=certified-operators >> packages.txt
 curl https://quay.io/cnr/api/v1/packages?namespace=community-operators >> packages.txt
@@ -134,18 +150,4 @@ buildah commit --rm --format=docker onbuild-container docker.io/wangzheng422/ope
 # buildah rm onbuild-container
 buildah push docker.io/wangzheng422/operator-catalog:fs-4.4-$var_date
 
-oc adm catalog build \
-    --appregistry-org redhat-operators \
-    --from=registry.redhat.io/openshift4/ose-operator-registry:v4.4 \
-    --to=docker.io/wangzheng422/operator-catalog:redhat-4.4-$var_date 
-
-oc adm catalog build \
-    --appregistry-org certified-operators \
-    --from=registry.redhat.io/openshift4/ose-operator-registry:v4.4 \
-    --to=docker.io/wangzheng422/operator-catalog:certified-4.4-$var_date  
-
-oc adm catalog build \
-    --appregistry-org community-operators \
-    --from=registry.redhat.io/openshift4/ose-operator-registry:v4.4 \
-    --to=docker.io/wangzheng422/operator-catalog:community-4.4-$var_date  
 
