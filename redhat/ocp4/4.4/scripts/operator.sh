@@ -146,7 +146,7 @@ buildah from --name onbuild-container docker.io/library/centos:centos7
 buildah copy onbuild-container operator.tgz /
 buildah copy onbuild-container operator.image.list.uniq /
 buildah umount onbuild-container 
-buildah commit --rm --format=docker onbuild-container docker.io/wangzheng422/operator-catalog:fs-$var_date
+buildah commit --rm --format=docker onbuild-container docker.io/wangzheng422/operator-catalog:fs-4.4-$var_date
 # buildah rm onbuild-container
 buildah push docker.io/wangzheng422/operator-catalog:fs-4.4-$var_date
 
