@@ -165,7 +165,7 @@ bash image.registries.conf.sh
 /bin/rm -f index.html*
 
 cd /data
-tar cf - registry/ | pigz -c > registry.tgz 
+# tar cf - registry/ | pigz -c > registry.tgz 
 
 # cd /data/ocp4
 # bash image.mirror.sh
@@ -177,13 +177,13 @@ tar cf - registry/ | pigz -c > registry.tgz
 # cd /data
 # tar cf - registry/ | pigz -c > registry.full.with.sample.tgz 
 
-cd /data
-tar cf - ocp4/ | pigz -c > ocp4.tgz 
+# cd /data
+# tar cf - ocp4/ | pigz -c > ocp4.tgz 
 
 # split -b 10G registry.with.operator.image.tgz registry.
 # find /data -maxdepth 1 -type f -exec sha256sum {} \;
-echo "$build_number_list" > versions.txt
-find /data -maxdepth 1 -type f -exec sha256sum {} \; > checksum.txt
+# echo "$build_number_list" > versions.txt
+# find /data -maxdepth 1 -type f -exec sha256sum {} \; > checksum.txt
 
 # find ./ -maxdepth 1 -name "*.tgz" -exec skicka upload {}  /"zhengwan.share/shared_docs/2020.02/ocp.ccn.4.3.3/" \;
 # find ./ -maxdepth 1 -name "*.txt" -exec skicka upload {}  /"zhengwan.share/shared_docs/2020.02/ocp.ccn.4.3.3/" \;
