@@ -1085,7 +1085,13 @@ lvcreate --type raid5 -L 1T --stripes 9 -n mixlv datavg /dev/sdb /dev/sdc /dev/s
 
 lvcreate -L 300G -n ssdlv datavg /dev/nvme0n1
 
-lvcreate --type cache-pool -L 300G -n cache1 datavg /dev/nvme0n1
+# lvcreate --type cache-pool -L 300G -n cache1 datavg /dev/nvme0n1
+
+lvcreate -L 300G -n cache1 datavg /dev/nvme0n1
+
+lvcreate -L 10G -n cache1meta datavg /dev/nvme0n1
+
+lvconvert --type cache-pool --poolmetadata datavg/cache1meta datavg/cache1
 
 lvconvert --type cache --cachepool datavg/cache1 datavg/mixlv
 
@@ -1600,6 +1606,119 @@ lsblk | grep disk | awk '{print $1}' | xargs -I DEMO echo -n "DEMO "
 iostat -m -x sda sdb sdc sdd sde sdf sdg sdh sdi sdj sdk 5
 iostat -m -x dm-10 5
 
+#########################################
+# ssd cache + hdd
+# https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/7/html-single/logical_volume_manager_administration/index#lvm_cache_volume_creation
+umount /data
+lsblk -d -o name,rota
+
+lvremove  /dev/datavg/datalv
+
+# lsblk | grep 894 | awk '{print $1}'
+
+pvcreate /dev/sdz /dev/sdaa /dev/sdab /dev/sdac /dev/sdad /dev/sdae /dev/sdaf /dev/sdag /dev/sdah /dev/sdai
+
+# https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/6/html/logical_volume_manager_administration/vg_grow
+vgextend datavg /dev/sdz /dev/sdaa /dev/sdab /dev/sdac /dev/sdad /dev/sdae /dev/sdaf /dev/sdag /dev/sdah /dev/sdai
+
+## raid5
+
+lvcreate --type raid5 -L 1T --stripes 23 -n hddlv datavg /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx
+
+lvcreate --type raid5 -L 1T --stripes 23 -n mixlv datavg /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx
+
+lvcreate --type raid5 -L 300G --stripes 9 -n ssdlv datavg /dev/sdz /dev/sdaa /dev/sdab /dev/sdac /dev/sdad /dev/sdae /dev/sdaf /dev/sdag /dev/sdah /dev/sdai
+
+lvcreate --type raid5 -L 300G --stripes 9 -n cache1 datavg /dev/sdz /dev/sdaa /dev/sdab /dev/sdac /dev/sdad /dev/sdae /dev/sdaf /dev/sdag /dev/sdah /dev/sdai
+
+lvcreate --type raid5 -L 10G --stripes 9 -n cache1meta datavg /dev/sdz /dev/sdaa /dev/sdab /dev/sdac /dev/sdad /dev/sdae /dev/sdaf /dev/sdag /dev/sdah /dev/sdai
+
+lvconvert --type cache-pool --poolmetadata datavg/cache1meta datavg/cache1
+
+lvconvert --type cache --cachepool datavg/cache1 datavg/mixlv
+
+# lvcreate --type raid5 --stripes 9 -L 1T -I 16M -R 4096K -n hddlv datavg /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk
+
+
+## raid0 + stripe
+
+lvcreate --type raid0 -L 1T --stripes 24 -n hddlv datavg /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx
+
+lvcreate --type raid0 -L 1T --stripes 24 -n mixlv datavg /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx
+
+lvcreate --type raid0 -L 300G --stripes 10 -n ssdlv datavg /dev/sdz /dev/sdaa /dev/sdab /dev/sdac /dev/sdad /dev/sdae /dev/sdaf /dev/sdag /dev/sdah /dev/sdai
+
+lvcreate --type raid0 -L 300G --stripes 10 -n cache1 datavg /dev/sdz /dev/sdaa /dev/sdab /dev/sdac /dev/sdad /dev/sdae /dev/sdaf /dev/sdag /dev/sdah /dev/sdai
+
+lvcreate --type raid0 -L 3G --stripes 10 -n cache1meta datavg /dev/sdz /dev/sdaa /dev/sdab /dev/sdac /dev/sdad /dev/sdae /dev/sdaf /dev/sdag /dev/sdah /dev/sdai
+
+lvconvert --type cache-pool --poolmetadata datavg/cache1meta datavg/cache1
+
+# lvs -a -o name,size,attr,devices datavg
+
+lvconvert --type cache --cachepool datavg/cache1 datavg/mixlv
+
+# lvs -a -o name,size,attr,devices datavg
+# lvs -o+cache_mode datavg
+
+mkfs.xfs /dev/datavg/hddlv
+mkfs.xfs /dev/datavg/ssdlv
+mkfs.xfs /dev/datavg/mixlv
+
+mkdir -p /data/
+mkdir -p /data_ssd/
+mkdir -p /data_mix/
+
+cat /etc/fstab
+
+cat << EOF >> /etc/fstab
+/dev/datavg/hddlv /data                  xfs     defaults        0 0
+/dev/datavg/ssdlv /data_ssd                  xfs     defaults        0 0
+/dev/datavg/mixlv /data_mix                  xfs     defaults        0 0
+EOF
+
+mount -a
+df -h | grep \/data
+
+dd if=/dev/zero of=/data/testfile bs=4k count=9999 oflag=dsync
+dd if=/dev/zero of=/data_ssd/testfile bs=4k count=9999 oflag=dsync
+dd if=/dev/zero of=/data_mix/testfile bs=4k count=9999 oflag=dsync
+
+dd if=/dev/zero of=/data/testfile bs=4M count=9999 oflag=dsync
+dd if=/dev/zero of=/data_ssd/testfile bs=4M count=9999 oflag=dsync
+dd if=/dev/zero of=/data_mix/testfile bs=4M count=9999 oflag=dsync
+
+dd if=/dev/zero of=/data/testfile.large bs=4M count=9999 oflag=direct
+dd if=/dev/zero of=/data_ssd/testfile.large bs=4M count=9999 oflag=direct
+dd if=/dev/zero of=/data_mix/testfile.large bs=4M count=9999 oflag=direct
+
+dd if=/dev/zero of=/data/testfile.large bs=4M count=9999
+dd if=/dev/zero of=/data_ssd/testfile.large bs=4M count=9999 
+dd if=/dev/zero of=/data_mix/testfile.large bs=4M count=9999 
+
+dd if=/data/testfile.large of=/dev/null bs=4k count=9999 oflag=dsync
+dd if=/data_ssd/testfile.large of=/dev/null bs=4k count=9999 oflag=dsync
+dd if=/data_mix/testfile.large of=/dev/null bs=4k count=9999 oflag=dsync
+
+dd if=/data/testfile.large of=/dev/null bs=4M count=9999 oflag=dsync
+dd if=/data_ssd/testfile.large of=/dev/null bs=4M count=9999 oflag=dsync
+dd if=/data_mix/testfile.large of=/dev/null bs=4M count=9999 oflag=dsync
+
+dd if=/data/testfile.large of=/dev/null bs=4M count=9999
+dd if=/data_ssd/testfile.large of=/dev/null bs=4M count=9999
+dd if=/data_mix/testfile.large of=/dev/null bs=4M count=9999
+
+# cleanup
+umount /data/
+umount /data_ssd/
+umount /data_mix/
+lvremove -f /dev/datavg/hddlv
+lvremove -f /dev/datavg/ssdlv
+lvremove -f /dev/datavg/mixlv
+
+
+########################################
+# ntp
 yum install -y chrony
 systemctl enable chronyd
 systemctl restart chronyd
