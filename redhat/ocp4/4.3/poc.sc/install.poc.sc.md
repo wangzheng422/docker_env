@@ -1551,6 +1551,73 @@ nmcli con up ens2f1
 nmcli con down bond0
 nmcli con start bond0       
 
+
+#######################################
+# nic bond
+cat > /root/nic.bond.sh << 'EOF'
+#!/bin/bash
+
+set -x 
+
+# delete all connection 
+nmcli -g uuid con | while read i ; do nmcli c delete  ${i} ; done 
+
+nmcli con add type bond \
+    con-name bond0 \
+    ifname bond0 \
+    mode 802.3ad \
+    ipv4.method 'manual' \
+    ipv4.address '39.134.201.65/27' \
+    ipv4.gateway '39.134.201.94' \
+    ipv4.dns '117.177.241.16'
+    
+nmcli con mod id bond0 bond.options \
+    mode=802.3ad,miimon=100,lacp_rate=fast,xmit_hash_policy=layer2+3
+
+nmcli con add type bond-slave ifname eno1 con-name eno1 master bond0    
+nmcli con add type bond-slave ifname eno2 con-name eno2 master bond0
+nmcli con add type bond-slave ifname ens2f0 con-name ens2f0 master bond0
+nmcli con add type bond-slave ifname ens2f1 con-name ens2f1 master bond0
+
+systemctl restart network
+
+EOF
+
+cat > /root/nic.restore.sh << 'EOF'
+#!/bin/bash
+
+set -x 
+
+# delete all connection 
+nmcli -g uuid con | while read i ; do nmcli c delete  ${i} ; done 
+
+# re-create primary connection 
+nmcli con add type ethernet \
+    con-name eno1 \
+    ifname eno1 \
+    ipv4.method 'manual' \
+    ipv4.address '39.134.201.65/27' \
+    ipv4.gateway '39.134.201.94' \
+    ipv4.dns '117.177.241.16'
+
+# restart interface
+# nmcli con down enp3s0f0 && nmcli con up enp3s0f0
+
+systemctl restart network
+
+exit 0
+EOF
+
+chmod +x /root/nic.restore.sh
+
+cat > ~/cron-network-con-recreate << EOF
+*/20 * * * * /bin/bash /root/nic.restore.sh
+EOF
+
+crontab ~/cron-network-con-recreate
+
+bash /root/nic.bond.sh
+
 ```
 
 ### worker-2 host
@@ -1931,6 +1998,7 @@ EOF
 crontab ~/cron-network-con-recreate
 
 bash /root/nic.bond.sh
+
 
 ```
 
