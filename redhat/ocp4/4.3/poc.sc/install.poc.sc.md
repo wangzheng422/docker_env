@@ -1083,7 +1083,7 @@ lvcreate --type raid5 -L 1T --stripes 9 -n hddlv datavg /dev/sdb /dev/sdc /dev/s
 
 lvcreate --type raid5 -L 1T --stripes 9 -n mixlv datavg /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk
 
-lvcreate -L 300G -n ssdlv datavg /dev/nvme0n1
+lvcreate -L 1T -n ssdlv datavg /dev/nvme0n1
 
 # lvcreate --type cache-pool -L 300G -n cache1 datavg /dev/nvme0n1
 
@@ -1107,7 +1107,7 @@ lvcreate --type raid0 -L 1T --stripes 10 -n hddlv datavg /dev/sdb /dev/sdc /dev/
 
 lvcreate --type raid0 -L 1T --stripes 10 -n mixlv datavg /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk
 
-lvcreate -L 1T -n ssdlv datavg /dev/nvme0n1
+lvcreate -L 300G -n ssdlv datavg /dev/nvme0n1
 
 lvcreate --type cache-pool -L 300G -n cpool datavg /dev/nvme0n1
 
