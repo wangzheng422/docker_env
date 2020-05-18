@@ -1107,7 +1107,7 @@ lvcreate --type raid0 -L 1T --stripes 10 -n hddlv datavg /dev/sdb /dev/sdc /dev/
 
 lvcreate --type raid0 -L 1T --stripes 10 -n mixlv datavg /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk
 
-lvcreate -L 300G -n ssdlv datavg /dev/nvme0n1
+lvcreate -L 1T -n ssdlv datavg /dev/nvme0n1
 
 lvcreate --type cache-pool -L 300G -n cpool datavg /dev/nvme0n1
 
@@ -1141,22 +1141,6 @@ EOF
 
 mount -a
 df -h | grep \/data
-
-dd if=/dev/zero of=/data/testfile bs=4k count=9999 oflag=dsync
-dd if=/dev/zero of=/data_ssd/testfile bs=4k count=9999 oflag=dsync
-dd if=/dev/zero of=/data_mix/testfile bs=4k count=9999 oflag=dsync
-
-dd if=/dev/zero of=/data/testfile bs=4M count=9999 oflag=dsync
-dd if=/dev/zero of=/data_ssd/testfile bs=4M count=9999 oflag=dsync
-dd if=/dev/zero of=/data_mix/testfile bs=4M count=9999 oflag=dsync
-
-dd if=/data/testfile of=/dev/null bs=4k count=9999 oflag=dsync
-dd if=/data_ssd/testfile of=/dev/null bs=4k count=9999 oflag=dsync
-dd if=/data_mix/testfile of=/dev/null bs=4k count=9999 oflag=dsync
-
-dd if=/data/testfile of=/dev/null bs=4M count=9999 oflag=dsync
-dd if=/data_ssd/testfile of=/dev/null bs=4M count=9999 oflag=dsync
-dd if=/data_mix/testfile of=/dev/null bs=4M count=9999 oflag=dsync
 
 # cleanup
 umount /data/
@@ -1380,7 +1364,7 @@ lvcreate --type raid5 -L 1T --stripes 23 -n hddlv datavg /dev/sda /dev/sdb /dev/
 
 lvcreate --type raid5 -L 1T --stripes 23 -n mixlv datavg /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx
 
-lvcreate --type raid5 -L 300G --stripes 9 -n ssdlv datavg /dev/sdz /dev/sdaa /dev/sdab /dev/sdac /dev/sdad /dev/sdae /dev/sdaf /dev/sdag /dev/sdah /dev/sdai
+lvcreate --type raid5 -L 1T --stripes 9 -n ssdlv datavg /dev/sdz /dev/sdaa /dev/sdab /dev/sdac /dev/sdad /dev/sdae /dev/sdaf /dev/sdag /dev/sdah /dev/sdai
 
 lvcreate --type raid5 -L 300G --stripes 9 -n cache1 datavg /dev/sdz /dev/sdaa /dev/sdab /dev/sdac /dev/sdad /dev/sdae /dev/sdaf /dev/sdag /dev/sdah /dev/sdai
 
@@ -1432,22 +1416,6 @@ EOF
 
 mount -a
 df -h | grep \/data
-
-dd if=/dev/zero of=/data/testfile bs=4k count=9999 oflag=dsync
-dd if=/dev/zero of=/data_ssd/testfile bs=4k count=9999 oflag=dsync
-dd if=/dev/zero of=/data_mix/testfile bs=4k count=9999 oflag=dsync
-
-dd if=/dev/zero of=/data/testfile bs=4M count=9999 oflag=dsync
-dd if=/dev/zero of=/data_ssd/testfile bs=4M count=9999 oflag=dsync
-dd if=/dev/zero of=/data_mix/testfile bs=4M count=9999 oflag=dsync
-
-dd if=/data/testfile of=/dev/null bs=4k count=9999 oflag=dsync
-dd if=/data_ssd/testfile of=/dev/null bs=4k count=9999 oflag=dsync
-dd if=/data_mix/testfile of=/dev/null bs=4k count=9999 oflag=dsync
-
-dd if=/data/testfile of=/dev/null bs=4M count=9999 oflag=dsync
-dd if=/data_ssd/testfile of=/dev/null bs=4M count=9999 oflag=dsync
-dd if=/data_mix/testfile of=/dev/null bs=4M count=9999 oflag=dsync
 
 # cleanup
 umount /data/
@@ -1627,7 +1595,7 @@ lvcreate --type raid5 -L 1T --stripes 23 -n hddlv datavg /dev/sda /dev/sdb /dev/
 
 lvcreate --type raid5 -L 1T --stripes 23 -n mixlv datavg /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx
 
-lvcreate --type raid5 -L 300G --stripes 9 -n ssdlv datavg /dev/sdz /dev/sdaa /dev/sdab /dev/sdac /dev/sdad /dev/sdae /dev/sdaf /dev/sdag /dev/sdah /dev/sdai
+lvcreate --type raid5 -L 1T --stripes 9 -n ssdlv datavg /dev/sdz /dev/sdaa /dev/sdab /dev/sdac /dev/sdad /dev/sdae /dev/sdaf /dev/sdag /dev/sdah /dev/sdai
 
 lvcreate --type raid5 -L 300G --stripes 9 -n cache1 datavg /dev/sdz /dev/sdaa /dev/sdab /dev/sdac /dev/sdad /dev/sdae /dev/sdaf /dev/sdag /dev/sdah /dev/sdai
 
