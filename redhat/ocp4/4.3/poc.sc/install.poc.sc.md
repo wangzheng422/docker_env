@@ -1499,6 +1499,60 @@ chronyc tracking
 
 ```
 
+### worker-1 nic bond
+```bash
+ip link show
+# 2: eno1: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP mode DEFAULT group default qlen 1000
+#     link/ether cc:64:a6:59:bd:24 brd ff:ff:ff:ff:ff:ff
+# 3: eno2: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP mode DEFAULT group default qlen 1000
+#     link/ether cc:64:a6:59:bd:25 brd ff:ff:ff:ff:ff:ff
+# 4: ens2f0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP mode DEFAULT group default qlen 1000
+#     link/ether 08:4f:0a:b5:a2:be brd ff:ff:ff:ff:ff:ff
+# 5: eno3: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP mode DEFAULT group default qlen 1000
+#     link/ether cc:64:a6:59:bd:26 brd ff:ff:ff:ff:ff:ff
+# 6: eno4: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP mode DEFAULT group default qlen 1000
+#     link/ether cc:64:a6:59:bd:27 brd ff:ff:ff:ff:ff:ff
+# 7: ens2f1: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP mode DEFAULT group default qlen 1000
+#     link/ether 08:4f:0a:b5:a2:bf brd ff:ff:ff:ff:ff:ff
+
+ip a s eno1
+# 2: eno1: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP group default qlen 1000
+#     link/ether cc:64:a6:59:bd:24 brd ff:ff:ff:ff:ff:ff
+#     inet 39.134.201.65/27 brd 39.134.201.95 scope global noprefixroute eno1
+#        valid_lft forever preferred_lft forever
+#     inet6 fe80::149f:d0ce:2700:4bf2/64 scope link noprefixroute
+#        valid_lft forever preferred_lft forever
+
+ethtool eno1  # 10000baseT/Full
+ethtool eno2  # 10000baseT/Full
+ethtool eno3  # 1000baseT/Full
+ethtool eno4  # 1000baseT/Full
+ethtool ens2f0  #  10000baseT/Full
+ethtool ens2f1  #  10000baseT/Full
+
+nmcli con add type bond \
+    con-name bond0 \
+    ifname bond0 \
+    mode 802.3ad 
+
+nmcli con mod id bond0 bond.options \
+    mode=802.3ad,miimon=100,lacp_rate=fast,xmit_hash_policy=layer2+3
+    
+nmcli con add type bond-slave ifname eno2 con-name eno2 master bond0
+nmcli con add type bond-slave ifname ens2f0 con-name ens2f0 master bond0
+nmcli con add type bond-slave ifname ens2f1 con-name ens2f1 master bond0
+
+nmcli con down eno2
+nmcli con up eno2
+nmcli con down ens2f0
+nmcli con up ens2f0
+nmcli con down ens2f1
+nmcli con up ens2f1
+nmcli con down bond0
+nmcli con start bond0       
+
+```
+
 ### worker-2 host
 
 ```bash
@@ -1756,6 +1810,127 @@ systemctl restart chronyd
 systemctl status chronyd
 chronyc tracking
 
+
+```
+
+### worker-2 nic bond
+```bash
+ip link show
+# 2: eno1: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP mode DEFAULT group default qlen 1000
+#     link/ether cc:64:a6:59:bb:80 brd ff:ff:ff:ff:ff:ff
+# 3: ens2f0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP mode DEFAULT group default qlen 1000
+#     link/ether 08:4f:0a:b5:a4:6e brd ff:ff:ff:ff:ff:ff
+# 4: eno2: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP mode DEFAULT group default qlen 1000
+#     link/ether cc:64:a6:59:bb:81 brd ff:ff:ff:ff:ff:ff
+# 5: eno3: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP mode DEFAULT group default qlen 1000
+#     link/ether cc:64:a6:59:bb:82 brd ff:ff:ff:ff:ff:ff
+# 6: ens2f1: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP mode DEFAULT group default qlen 1000
+#     link/ether 08:4f:0a:b5:a4:6f brd ff:ff:ff:ff:ff:ff
+# 7: eno4: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP mode DEFAULT group default qlen 1000
+#     link/ether cc:64:a6:59:bb:83 brd ff:ff:ff:ff:ff:ff
+
+ip a s eno1
+# 2: eno1: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP group default qlen 1000
+#     link/ether cc:64:a6:59:bb:80 brd ff:ff:ff:ff:ff:ff
+#     inet 39.134.201.66/27 brd 39.134.201.95 scope global noprefixroute eno1
+#        valid_lft forever preferred_lft forever
+#     inet6 fe80::f690:1c45:b8c3:96d/64 scope link noprefixroute
+#        valid_lft forever preferred_lft forever
+
+ethtool eno1  # 10000baseT/Full
+ethtool eno2  # 10000baseT/Full
+ethtool eno3  # 1000baseT/Full
+ethtool eno4  # 1000baseT/Full
+ethtool ens2f0  #  10000baseT/Full
+ethtool ens2f1  #  10000baseT/Full
+
+nmcli con add type bond \
+    con-name bond0 \
+    ifname bond0 \
+    mode 802.3ad 
+
+nmcli con mod id bond0 bond.options \
+    mode=802.3ad,miimon=100,lacp_rate=fast,xmit_hash_policy=layer2+3
+
+nmcli con add type bond-slave ifname eno2 con-name eno2 master bond0
+nmcli con add type bond-slave ifname ens2f0 con-name ens2f0 master bond0
+nmcli con add type bond-slave ifname ens2f1 con-name ens2f1 master bond0
+
+nmcli con down eno2
+nmcli con up eno2
+nmcli con down ens2f0
+nmcli con up ens2f0
+nmcli con down ens2f1
+nmcli con up ens2f1
+nmcli con down bond0
+nmcli con start bond0     
+
+
+#######################################
+# nic bond
+cat > /root/nic.bond.sh << 'EOF'
+#!/bin/bash
+
+set -x 
+
+# delete all connection 
+nmcli -g uuid con | while read i ; do nmcli c delete  ${i} ; done 
+
+nmcli con add type bond \
+    con-name bond0 \
+    ifname bond0 \
+    mode 802.3ad \
+    ipv4.method 'manual' \
+    ipv4.address '39.134.201.66/27' \
+    ipv4.gateway '39.134.201.94' \
+    ipv4.dns '117.177.241.16'
+    
+nmcli con mod id bond0 bond.options \
+    mode=802.3ad,miimon=100,lacp_rate=fast,xmit_hash_policy=layer2+3
+
+nmcli con add type bond-slave ifname eno1 con-name eno1 master bond0    
+nmcli con add type bond-slave ifname eno2 con-name eno2 master bond0
+nmcli con add type bond-slave ifname ens2f0 con-name ens2f0 master bond0
+nmcli con add type bond-slave ifname ens2f1 con-name ens2f1 master bond0
+
+systemctl restart network
+
+EOF
+
+cat > /root/nic.restore.sh << 'EOF'
+#!/bin/bash
+
+set -x 
+
+# delete all connection 
+nmcli -g uuid con | while read i ; do nmcli c delete  ${i} ; done 
+
+# re-create primary connection 
+nmcli con add type ethernet \
+    con-name eno1 \
+    ifname eno1 \
+    ipv4.method 'manual' \
+    ipv4.address '39.134.201.66/27' \
+    ipv4.gateway '39.134.201.94' \
+    ipv4.dns '117.177.241.16'
+
+# restart interface
+# nmcli con down enp3s0f0 && nmcli con up enp3s0f0
+
+systemctl restart network
+
+exit 0
+EOF
+
+chmod +x /root/nic.restore.sh
+
+cat > ~/cron-network-con-recreate << EOF
+*/20 * * * * /bin/bash /root/nic.restore.sh
+EOF
+
+crontab ~/cron-network-con-recreate
+
+bash /root/nic.bond.sh
 
 ```
 
