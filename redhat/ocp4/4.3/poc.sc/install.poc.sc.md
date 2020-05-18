@@ -1600,9 +1600,6 @@ nmcli con add type ethernet \
     ipv4.gateway '39.134.201.94' \
     ipv4.dns '117.177.241.16'
 
-# restart interface
-# nmcli con down enp3s0f0 && nmcli con up enp3s0f0
-
 systemctl restart network
 
 exit 0
@@ -1980,9 +1977,6 @@ nmcli con add type ethernet \
     ipv4.address '39.134.201.66/27' \
     ipv4.gateway '39.134.201.94' \
     ipv4.dns '117.177.241.16'
-
-# restart interface
-# nmcli con down enp3s0f0 && nmcli con up enp3s0f0
 
 systemctl restart network
 
