@@ -75,7 +75,7 @@ rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/mirror_dir ./
 
 # copy to local disk
 cd /root
-tar -cvf - data/ | pigz -c > /mnt/hgfs/ocp/rhel-data-7.7.tgz
+tar -cvf - data/ | pigz -c > /mnt/hgfs/ocp/rhel-data-7.8.tgz
 
 cd /data
 tar -cvf - ocp4/ | pigz -c > /mnt/hgfs/ocp/ocp.4.3.21.tgz
@@ -100,6 +100,7 @@ rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/remote/4.3.21
 
 split -b 5000m ocp.4.3.21.tgz ocp.4.3.21.
 split -b 5000m registry.4.3.21.tgz registry.4.3.21.
+split -b 5000m rhel-data-7.8.tgz rhel-data-7.8.
 
 # sync to vcdn.redhat.ren
 rsync -e ssh --info=progress2 -P --delete -arz  /root/data ${VULTR_HOST}:/data/rhel-data

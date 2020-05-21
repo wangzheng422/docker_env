@@ -1461,7 +1461,7 @@ lvremove -f /dev/datavg/hddlv
 lvremove -f /dev/datavg/ssdlv
 lvremove -f /dev/datavg/mixlv
 
-# tunning
+# ssd tunning
 # https://serverfault.com/questions/80134/linux-md-vs-lvm-performance
 hdparm -tT /dev/md0
 
@@ -1471,6 +1471,122 @@ cat /sys/block/*/queue/scheduler
 lsblk | grep 894 | awk '{print $1}' | xargs -I DEMO cat /sys/block/DEMO/queue/scheduler
 
 lsblk | grep 894 | awk '{print "echo noop > /sys/block/"$1"/queue/scheduler"}' 
+
+yum -y install fio
+
+# https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/7/html/storage_administration_guide/vdo-ev-performance-testing
+
+
+lvcreate --type raid5 -L 120G --stripes 23 -n mixtestlv datavg /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx
+
+fio --rw=rw --rwmixread=80 --bsrange=4k-256k --name=vdo \
+    --filename=/dev/datavg/mixtestlv --ioengine=libaio --numjobs=1 --thread \
+    --norandommap --runtime=300 --direct=0 --iodepth=8 \
+    --scramble_buffers=1 --offset=0 --size=100g
+
+lvremove -f datavg/mixtestlv
+# Run status group 0 (all jobs):
+#    READ: bw=587MiB/s (615MB/s), 587MiB/s-587MiB/s (615MB/s-615MB/s), io=79.9GiB (85.8GB), run=139473-139473msec
+#   WRITE: bw=147MiB/s (155MB/s), 147MiB/s-147MiB/s (155MB/s-155MB/s), io=20.1GiB (21.6GB), run=139473-139473msec
+
+lvcreate --type raid6 -L 120G --stripes 22 -n mixtestlv datavg /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx
+
+fio --rw=rw --rwmixread=80 --bsrange=4k-256k --name=vdo \
+    --filename=/dev/datavg/mixtestlv --ioengine=libaio --numjobs=1 --thread \
+    --norandommap --runtime=300 --direct=0 --iodepth=8 \
+    --scramble_buffers=1 --offset=0 --size=100g
+
+lvremove -f datavg/mixtestlv
+# Run status group 0 (all jobs):
+#    READ: bw=586MiB/s (614MB/s), 586MiB/s-586MiB/s (614MB/s-614MB/s), io=79.9GiB (85.8GB), run=139739-139739msec
+#   WRITE: bw=147MiB/s (154MB/s), 147MiB/s-147MiB/s (154MB/s-154MB/s), io=20.1GiB (21.6GB), run=139739-139739msec
+
+lvcreate --type raid0 -L 120G --stripes 24 -n mixtestlv datavg /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx
+
+fio --rw=rw --rwmixread=80 --bsrange=4k-256k --name=vdo \
+    --filename=/dev/datavg/mixtestlv --ioengine=libaio --numjobs=1 --thread \
+    --norandommap --runtime=300 --direct=0 --iodepth=8 \
+    --scramble_buffers=1 --offset=0 --size=100g
+
+lvremove -f datavg/mixtestlv
+# Run status group 0 (all jobs):
+#    READ: bw=1139MiB/s (1194MB/s), 1139MiB/s-1139MiB/s (1194MB/s-1194MB/s), io=79.9GiB (85.8GB), run=71841-71841msec
+#   WRITE: bw=286MiB/s (300MB/s), 286MiB/s-286MiB/s (300MB/s-300MB/s), io=20.1GiB (21.6GB), run=71841-71841msec
+
+lvcreate --type raid0 -L 100G --stripes 10 -n mixtestlv datavg /dev/sdz /dev/sdaa /dev/sdab /dev/sdac /dev/sdad /dev/sdae /dev/sdaf /dev/sdag /dev/sdah /dev/sdai
+
+fio --rw=rw --rwmixread=80 --bsrange=4k-256k --name=vdo \
+    --filename=/dev/datavg/mixtestlv --ioengine=libaio --numjobs=1 --thread \
+    --norandommap --runtime=300 --direct=0 --iodepth=8 \
+    --scramble_buffers=1 --offset=0 --size=100g
+
+lvremove -f datavg/mixtestlv
+# Run status group 0 (all jobs):
+#    READ: bw=1358MiB/s (1424MB/s), 1358MiB/s-1358MiB/s (1424MB/s-1424MB/s), io=79.9GiB (85.8GB), run=60282-60282msec
+#   WRITE: bw=341MiB/s (358MB/s), 341MiB/s-341MiB/s (358MB/s-358MB/s), io=20.1GiB (21.6GB), run=60282-60282msec
+
+
+lvcreate --type raid5 -L 100G --stripes 9 -n mixtestlv datavg /dev/sdz /dev/sdaa /dev/sdab /dev/sdac /dev/sdad /dev/sdae /dev/sdaf /dev/sdag /dev/sdah /dev/sdai
+
+fio --rw=rw --rwmixread=80 --bsrange=4k-256k --name=vdo \
+    --filename=/dev/datavg/mixtestlv --ioengine=libaio --numjobs=1 --thread \
+    --norandommap --runtime=300 --direct=0 --iodepth=8 \
+    --scramble_buffers=1 --offset=0 --size=100g
+
+lvremove -f datavg/mixtestlv
+
+
+
+lvcreate --type raid6 -L 100G --stripes 9 -n mixtestlv datavg /dev/sdz /dev/sdaa /dev/sdab /dev/sdac /dev/sdad /dev/sdae /dev/sdaf /dev/sdag /dev/sdah /dev/sdai
+
+fio --rw=rw --rwmixread=80 --bsrange=4k-256k --name=vdo \
+    --filename=/dev/datavg/mixtestlv --ioengine=libaio --numjobs=1 --thread \
+    --norandommap --runtime=300 --direct=0 --iodepth=8 \
+    --scramble_buffers=1 --offset=0 --size=100g
+
+lvremove -f datavg/mixtestlv
+
+
+
+lvcreate --type raid5 -L 120G --stripes 23 -n mixtestlv datavg /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx
+
+lvcreate --type raid0 -L 40G --stripes 10 -n cachetest datavg /dev/sdz /dev/sdaa /dev/sdab /dev/sdac /dev/sdad /dev/sdae /dev/sdaf /dev/sdag /dev/sdah /dev/sdai
+
+lvcreate --type raid0 -L 400M --stripes 10 -n cachetestmeta datavg /dev/sdz /dev/sdaa /dev/sdab /dev/sdac /dev/sdad /dev/sdae /dev/sdaf /dev/sdag /dev/sdah /dev/sdai
+
+lvconvert --type cache-pool --poolmetadata datavg/cachetestmeta datavg/cachetest
+
+lvconvert --type cache --cachepool datavg/cachetest datavg/mixtestlv
+
+fio --rw=rw --rwmixread=80 --bsrange=4k-256k --name=vdo \
+    --filename=/dev/datavg/mixtestlv --ioengine=libaio --numjobs=1 --thread \
+    --norandommap --runtime=300 --direct=0 --iodepth=8 \
+    --scramble_buffers=1 --offset=0 --size=100g -random_distribution=zoned:60/10:30/20:8/30:2/40
+
+lvremove -f datavg/mixtestlv
+# Run status group 0 (all jobs):
+#    READ: bw=716MiB/s (750MB/s), 716MiB/s-716MiB/s (750MB/s-750MB/s), io=31.0GiB (34.3GB), run=45744-45744msec
+#   WRITE: bw=180MiB/s (189MB/s), 180MiB/s-180MiB/s (189MB/s-189MB/s), io=8228MiB (8628MB), run=45744-45744msec
+
+lvcreate --type raid5 -L 120G --stripes 23 -n mixtestlv datavg /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx
+
+lvcreate --type raid5 -L 40G --stripes 9 -n cachetest datavg /dev/sdz /dev/sdaa /dev/sdab /dev/sdac /dev/sdad /dev/sdae /dev/sdaf /dev/sdag /dev/sdah /dev/sdai
+
+lvcreate --type raid5 -L 400M --stripes 9 -n cachetestmeta datavg /dev/sdz /dev/sdaa /dev/sdab /dev/sdac /dev/sdad /dev/sdae /dev/sdaf /dev/sdag /dev/sdah /dev/sdai
+
+lvconvert --type cache-pool --poolmetadata datavg/cachetestmeta datavg/cachetest
+
+lvconvert --type cache --cachepool datavg/cachetest datavg/mixtestlv
+
+fio --rw=rw --rwmixread=80 --bsrange=4k-256k --name=vdo \
+    --filename=/dev/datavg/mixtestlv --ioengine=libaio --numjobs=1 --thread \
+    --norandommap --runtime=300 --direct=0 --iodepth=8 \
+    --scramble_buffers=1 --offset=0 --size=100g -random_distribution=zoned:60/10:30/20:8/30:2/40
+
+lvremove -f datavg/mixtestlv
+# Run status group 0 (all jobs):
+#    READ: bw=487MiB/s (511MB/s), 487MiB/s-487MiB/s (511MB/s-511MB/s), io=79.9GiB (85.8GB), run=167880-167880msec
+#   WRITE: bw=122MiB/s (128MB/s), 122MiB/s-122MiB/s (128MB/s-128MB/s), io=20.1GiB (21.6GB), run=167880-167880msec
 
 ########################################
 # ntp
@@ -1774,6 +1890,19 @@ lvconvert --type cache-pool --poolmetadata datavg/cache1meta datavg/cache1
 
 lvconvert --type cache --cachepool datavg/cache1 datavg/mixlv
 
+
+
+lvcreate --type raid5 -L 12T --stripes 23 -n mix0lv datavg /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx
+
+
+lvcreate --type raid0 -L 4T --stripes 10 -n cachemix0 datavg /dev/sdz /dev/sdaa /dev/sdab /dev/sdac /dev/sdad /dev/sdae /dev/sdaf /dev/sdag /dev/sdah /dev/sdai
+
+lvcreate --type raid0 -L 40G --stripes 10 -n cachemix0meta datavg /dev/sdz /dev/sdaa /dev/sdab /dev/sdac /dev/sdad /dev/sdae /dev/sdaf /dev/sdag /dev/sdah /dev/sdai
+
+lvconvert --type cache-pool --poolmetadata datavg/cachemix0meta datavg/cachemix0
+
+lvconvert --type cache --cachepool datavg/cachemix0 datavg/mix0lv
+
 # lvcreate --type raid5 --stripes 9 -L 1T -I 16M -R 4096K -n hddlv datavg /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk
 
 
@@ -1801,10 +1930,12 @@ lvconvert --type cache --cachepool datavg/cache1 datavg/mixlv
 mkfs.xfs /dev/datavg/hddlv
 mkfs.xfs /dev/datavg/ssdlv
 mkfs.xfs /dev/datavg/mixlv
+mkfs.xfs /dev/datavg/mix0lv
 
 mkdir -p /data/
 mkdir -p /data_ssd/
 mkdir -p /data_mix/
+mkdir -p /data_mix0
 
 cat /etc/fstab
 
@@ -1812,6 +1943,7 @@ cat << EOF >> /etc/fstab
 /dev/datavg/hddlv /data                  xfs     defaults        0 0
 /dev/datavg/ssdlv /data_ssd                  xfs     defaults        0 0
 /dev/datavg/mixlv /data_mix                  xfs     defaults        0 0
+/dev/datavg/mix0lv  /data_mix0                  xfs     defaults        0 0
 EOF
 
 mount -a
