@@ -1425,6 +1425,10 @@ dd if=/dev/zero of=/data/testfile bs=4M count=9999 oflag=dsync
 dd if=/dev/zero of=/data_ssd/testfile bs=4M count=9999 oflag=dsync
 dd if=/dev/zero of=/data_mix/testfile bs=4M count=9999 oflag=dsync
 
+dd if=/data/testfile of=/dev/null bs=4k count=9999 oflag=dsync
+dd if=/data_ssd/testfile of=/dev/null bs=4k count=9999 oflag=dsync
+dd if=/data_mix/testfile of=/dev/null bs=4k count=9999 oflag=dsync
+
 dd if=/dev/zero of=/data/testfile.large bs=4M count=9999 oflag=direct
 dd if=/dev/zero of=/data_ssd/testfile.large bs=4M count=9999 oflag=direct
 dd if=/dev/zero of=/data_mix/testfile.large bs=4M count=9999 oflag=direct
@@ -1445,6 +1449,10 @@ dd if=/data/testfile.large of=/dev/null bs=4M count=9999
 dd if=/data_ssd/testfile.large of=/dev/null bs=4M count=9999
 dd if=/data_mix/testfile.large of=/dev/null bs=4M count=9999
 
+dd if=/data/testfile.large of=/dev/null bs=40M count=9999
+dd if=/data_ssd/testfile.large of=/dev/null bs=40M count=9999
+dd if=/data_mix/testfile.large of=/dev/null bs=40M count=9999
+
 # cleanup
 umount /data/
 umount /data_ssd/
@@ -1453,6 +1461,16 @@ lvremove -f /dev/datavg/hddlv
 lvremove -f /dev/datavg/ssdlv
 lvremove -f /dev/datavg/mixlv
 
+# tunning
+# https://serverfault.com/questions/80134/linux-md-vs-lvm-performance
+hdparm -tT /dev/md0
+
+# https://www.ibm.com/developerworks/cn/linux/l-lo-io-scheduler-optimize-performance/index.html
+cat /sys/block/*/queue/scheduler
+
+lsblk | grep 894 | awk '{print $1}' | xargs -I DEMO cat /sys/block/DEMO/queue/scheduler
+
+lsblk | grep 894 | awk '{print "echo noop > /sys/block/"$1"/queue/scheduler"}' 
 
 ########################################
 # ntp
@@ -1615,6 +1633,11 @@ crontab ~/cron-network-con-recreate
 
 bash /root/nic.bond.sh
 
+# debug
+cat /proc/net/bonding/bond0
+cat /sys/class/net/bond*/bonding/xmit_hash_policy
+# https://access.redhat.com/solutions/666853
+ip -s -h link show master bond0
 ```
 
 ### worker-2 host

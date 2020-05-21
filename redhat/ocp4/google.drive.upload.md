@@ -47,7 +47,7 @@ yum -y install connect-proxy
 
 export VULTR_HOST=nexus.redhat.ren
 
-export VULTR_HOST=base-pvg.redhat.ren
+export VULTR_HOST=zero.pvg.redhat.ren
 
 export VULTR_HOST=vcdn.redhat.ren
 
@@ -78,8 +78,8 @@ cd /root
 tar -cvf - data/ | pigz -c > /mnt/hgfs/ocp/rhel-data-7.7.tgz
 
 cd /data
-tar -cvf - ocp4/ | pigz -c > /mnt/hgfs/ocp/ocp.4.3.8.tgz
-tar -cvf - registry/ | pigz -c > /mnt/hgfs/ocp/registry.4.3.8.tgz
+tar -cvf - ocp4/ | pigz -c > /mnt/hgfs/ocp/ocp.4.3.21.tgz
+tar -cvf - registry/ | pigz -c > /mnt/hgfs/ocp/registry.4.3.21.tgz
 tar -cvf - is.samples/ | pigz -c > /mnt/hgfs/ocp/is.samples.4.3.5.tgz
 
 # sync to base-pvg
@@ -88,9 +88,18 @@ rsync -e ssh --info=progress2 -P --delete -arz  /root/data ${VULTR_HOST}:/var/ft
 rsync -e ssh --info=progress2 -P --delete -arz ./mirror_dir ${VULTR_HOST}:/data/remote/4.3.3/is.samples/
 
 # sync from base-pvg
+export VULTR_HOST=zero.pvg.redhat.ren
+
 rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/var/ftp/data /root/
 
 rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/remote/4.3.3/is.samples/mirror_dir ./
+
+rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/remote/4.3.21/ocp4 ./
+
+rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/remote/4.3.21/registry ./
+
+split -b 5000m ocp.4.3.21.tgz ocp.4.3.21.
+split -b 5000m registry.4.3.21.tgz registry.4.3.21.
 
 # sync to vcdn.redhat.ren
 rsync -e ssh --info=progress2 -P --delete -arz  /root/data ${VULTR_HOST}:/data/rhel-data
