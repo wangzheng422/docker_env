@@ -1377,6 +1377,20 @@ lvconvert --type cache --cachepool datavg/cache1 datavg/mixlv
 # lvcreate --type raid5 --stripes 9 -L 1T -I 16M -R 4096K -n hddlv datavg /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk
 
 
+
+lvcreate --type raid5 -L 12T --stripes 23 -n mix0lv datavg /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx
+
+
+lvcreate --type raid0 -L 4T --stripes 10 -n cachemix0 datavg /dev/sdz /dev/sdaa /dev/sdab /dev/sdac /dev/sdad /dev/sdae /dev/sdaf /dev/sdag /dev/sdah /dev/sdai
+
+lvcreate --type raid0 -L 40G --stripes 10 -n cachemix0meta datavg /dev/sdz /dev/sdaa /dev/sdab /dev/sdac /dev/sdad /dev/sdae /dev/sdaf /dev/sdag /dev/sdah /dev/sdai
+
+lvconvert --type cache-pool --poolmetadata datavg/cachemix0meta datavg/cachemix0
+
+lvconvert --type cache --cachepool datavg/cachemix0 datavg/mix0lv
+
+
+
 ## raid0 + stripe
 
 lvcreate --type raid0 -L 1T --stripes 24 -n hddlv datavg /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx
@@ -1401,10 +1415,12 @@ lvconvert --type cache --cachepool datavg/cache1 datavg/mixlv
 mkfs.xfs /dev/datavg/hddlv
 mkfs.xfs /dev/datavg/ssdlv
 mkfs.xfs /dev/datavg/mixlv
+mkfs.xfs /dev/datavg/mix0lv
 
 mkdir -p /data/
 mkdir -p /data_ssd/
 mkdir -p /data_mix/
+mkdir -p /data_mix0
 
 cat /etc/fstab
 
@@ -1412,6 +1428,7 @@ cat << EOF >> /etc/fstab
 /dev/datavg/hddlv /data                  xfs     defaults        0 0
 /dev/datavg/ssdlv /data_ssd                  xfs     defaults        0 0
 /dev/datavg/mixlv /data_mix                  xfs     defaults        0 0
+/dev/datavg/mix0lv  /data_mix0                  xfs     defaults        0 0
 EOF
 
 mount -a
@@ -1457,9 +1474,11 @@ dd if=/data_mix/testfile.large of=/dev/null bs=40M count=9999
 umount /data/
 umount /data_ssd/
 umount /data_mix/
+umount /data_mix0/
 lvremove -f /dev/datavg/hddlv
 lvremove -f /dev/datavg/ssdlv
 lvremove -f /dev/datavg/mixlv
+lvremove -f /dev/datavg/mix0lv
 
 # ssd tunning
 # https://serverfault.com/questions/80134/linux-md-vs-lvm-performance
@@ -1470,7 +1489,7 @@ cat /sys/block/*/queue/scheduler
 
 lsblk | grep 894 | awk '{print $1}' | xargs -I DEMO cat /sys/block/DEMO/queue/scheduler
 
-lsblk | grep 894 | awk '{print "echo noop > /sys/block/"$1"/queue/scheduler"}' 
+lsblk | grep 894 | awk '{print "echo deadline > /sys/block/"$1"/queue/scheduler"}' 
 
 yum -y install fio
 
@@ -1587,6 +1606,35 @@ lvremove -f datavg/mixtestlv
 # Run status group 0 (all jobs):
 #    READ: bw=487MiB/s (511MB/s), 487MiB/s-487MiB/s (511MB/s-511MB/s), io=79.9GiB (85.8GB), run=167880-167880msec
 #   WRITE: bw=122MiB/s (128MB/s), 122MiB/s-122MiB/s (128MB/s-128MB/s), io=20.1GiB (21.6GB), run=167880-167880msec
+
+lvcreate -L 100G -n singledisklv datavg /dev/sda
+
+fio --rw=rw --rwmixread=80 --bsrange=4k-256k --name=vdo \
+    --filename=/dev/datavg/singledisklv --ioengine=libaio --numjobs=1 --thread \
+    --norandommap --runtime=300 --direct=0 --iodepth=8 \
+    --scramble_buffers=1 --offset=0 --size=100g -random_distribution=zoned:60/10:30/20:8/30:2/40
+
+lvremove -f datavg/singledisklv
+# Run status group 0 (all jobs):
+#    READ: bw=151MiB/s (158MB/s), 151MiB/s-151MiB/s (158MB/s-158MB/s), io=44.2GiB (47.5GB), run=300031-300031msec
+#   WRITE: bw=37.0MiB/s (39.8MB/s), 37.0MiB/s-37.0MiB/s (39.8MB/s-39.8MB/s), io=11.1GiB (11.9GB), run=300031-300031msec
+
+lvcreate -L 20G -n singledisklv datavg /dev/sdai
+
+fio --rw=rw --rwmixread=80 --bsrange=4k-256k --name=vdo \
+    --filename=/dev/datavg/singledisklv --ioengine=libaio --numjobs=1 --thread \
+    --norandommap --runtime=300 --direct=0 --iodepth=8 \
+    --scramble_buffers=1 --offset=0 --size=20g -random_distribution=zoned:60/10:30/20:8/30:2/40
+
+lvremove -f datavg/singledisklv
+# Run status group 0 (all jobs):
+#    READ: bw=431MiB/s (452MB/s), 431MiB/s-431MiB/s (452MB/s-452MB/s), io=16.0GiB (17.2GB), run=38005-38005msec
+#   WRITE: bw=108MiB/s (113MB/s), 108MiB/s-108MiB/s (113MB/s-113MB/s), io=4088MiB (4287MB), run=38005-38005msec
+
+fio --rw=rw --rwmixread=80 --bsrange=4k-256k --name=vdo \
+    --directory=./ --ioengine=libaio --numjobs=1 --thread \
+    --norandommap --runtime=300 --direct=0 --iodepth=8 \
+    --scramble_buffers=1 --offset=0 --size=10g 
 
 ########################################
 # ntp
@@ -1984,6 +2032,18 @@ umount /data_mix/
 lvremove -f /dev/datavg/hddlv
 lvremove -f /dev/datavg/ssdlv
 lvremove -f /dev/datavg/mixlv
+
+
+# ssd tunning
+# https://serverfault.com/questions/80134/linux-md-vs-lvm-performance
+hdparm -tT /dev/md0
+
+# https://www.ibm.com/developerworks/cn/linux/l-lo-io-scheduler-optimize-performance/index.html
+cat /sys/block/*/queue/scheduler
+
+lsblk | grep 894 | awk '{print $1}' | xargs -I DEMO cat /sys/block/DEMO/queue/scheduler
+
+lsblk | grep 894 | awk '{print "echo deadline > /sys/block/"$1"/queue/scheduler"}' 
 
 
 ########################################
