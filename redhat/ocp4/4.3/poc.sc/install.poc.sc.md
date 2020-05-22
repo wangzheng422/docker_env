@@ -1065,90 +1065,6 @@ lsblk | grep disk | awk '{print $1}' | xargs -I DEMO echo -n "DEMO "
 iostat -m -x sda sdb sdc sdd sde sdf sdg sdh sdi sdj sdk 5
 iostat -m -x dm-10 5
 
-#########################################
-# ssd cache + hdd
-# https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/7/html-single/logical_volume_manager_administration/index#lvm_cache_volume_creation
-umount /data
-lsblk -d -o name,rota
-
-lvremove  /dev/datavg/datalv
-
-pvcreate /dev/nvme0n1
-
-# https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/6/html/logical_volume_manager_administration/vg_grow
-vgextend datavg /dev/nvme0n1
-
-## raid5 + cache
-lvcreate --type raid5 -L 1T --stripes 9 -n hddlv datavg /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk
-
-lvcreate --type raid5 -L 1T --stripes 9 -n mixlv datavg /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk
-
-lvcreate -L 1T -n ssdlv datavg /dev/nvme0n1
-
-# lvcreate --type cache-pool -L 300G -n cache1 datavg /dev/nvme0n1
-
-lvcreate -L 300G -n cache1 datavg /dev/nvme0n1
-
-lvcreate -L 10G -n cache1meta datavg /dev/nvme0n1
-
-lvconvert --type cache-pool --poolmetadata datavg/cache1meta datavg/cache1
-
-lvconvert --type cache --cachepool datavg/cache1 datavg/mixlv
-
-# lvcreate --type raid5 --stripes 9 -L 1T -I 16M -R 4096K -n hddlv datavg /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk
-
-# lvcreate --type raid5 --stripes 9 -L 1T -I 16M -R 4096K -n datalv datavg /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk
-
-# lvcreate --type raid5 --stripes 9 -L 1T -n datalv datavg /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk
-
-## raid0 + cache
-
-lvcreate --type raid0 -L 1T --stripes 10 -n hddlv datavg /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk
-
-lvcreate --type raid0 -L 1T --stripes 10 -n mixlv datavg /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk
-
-lvcreate -L 300G -n ssdlv datavg /dev/nvme0n1
-
-lvcreate --type cache-pool -L 300G -n cpool datavg /dev/nvme0n1
-
-lvs -a -o name,size,attr,devices datavg
-
-# lvconvert --type cache --cachepool cpool datavg/datalv
-
-lvconvert --type cache --cachepool cpool datavg/mixlv
-
-# lvconvert --type cache --cachepool cpool --cachemode writeback datavg/datalv
-
-# lvs -a -o name,size,attr,devices datavg
-# lvs -o+cache_mode datavg
-
-# mkfs.xfs /dev/datavg/datalv
-mkfs.xfs /dev/datavg/hddlv
-mkfs.xfs /dev/datavg/ssdlv
-mkfs.xfs /dev/datavg/mixlv
-
-mkdir -p /data/
-mkdir -p /data_ssd/
-mkdir -p /data_mix/
-
-cat /etc/fstab
-
-cat << EOF >> /etc/fstab
-/dev/datavg/hddlv /data                  xfs     defaults        0 0
-/dev/datavg/ssdlv /data_ssd                  xfs     defaults        0 0
-/dev/datavg/mixlv /data_mix                  xfs     defaults        0 0
-EOF
-
-mount -a
-df -h | grep \/data
-
-# cleanup
-umount /data/
-umount /data_ssd/
-umount /data_mix/
-lvremove -f /dev/datavg/hddlv
-lvremove -f /dev/datavg/ssdlv
-lvremove -f /dev/datavg/mixlv
 
 
 ####################################
@@ -1240,6 +1156,96 @@ bash /root/nic.bond.sh
 
 ```
 
+### worker-0 disk
+```bash
+
+#########################################
+# ssd cache + hdd
+# https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/7/html-single/logical_volume_manager_administration/index#lvm_cache_volume_creation
+umount /data
+lsblk -d -o name,rota
+
+lvremove  /dev/datavg/datalv
+
+pvcreate /dev/nvme0n1
+
+# https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/6/html/logical_volume_manager_administration/vg_grow
+vgextend datavg /dev/nvme0n1
+
+## raid5 + cache
+lvcreate --type raid5 -L 1T --stripes 9 -n hddlv datavg /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk
+
+lvcreate --type raid5 -L 1T --stripes 9 -n mixlv datavg /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk
+
+lvcreate -L 1T -n ssdlv datavg /dev/nvme0n1
+
+# lvcreate --type cache-pool -L 300G -n cache1 datavg /dev/nvme0n1
+
+lvcreate -L 300G -n cache1 datavg /dev/nvme0n1
+
+lvcreate -L 10G -n cache1meta datavg /dev/nvme0n1
+
+lvconvert --type cache-pool --poolmetadata datavg/cache1meta datavg/cache1
+
+lvconvert --type cache --cachepool datavg/cache1 datavg/mixlv
+
+# lvcreate --type raid5 --stripes 9 -L 1T -I 16M -R 4096K -n hddlv datavg /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk
+
+# lvcreate --type raid5 --stripes 9 -L 1T -I 16M -R 4096K -n datalv datavg /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk
+
+# lvcreate --type raid5 --stripes 9 -L 1T -n datalv datavg /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk
+
+## raid0 + cache
+
+lvcreate --type raid0 -L 1T --stripes 10 -n hddlv datavg /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk
+
+lvcreate --type raid0 -L 1T --stripes 10 -n mixlv datavg /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk
+
+lvcreate -L 300G -n ssdlv datavg /dev/nvme0n1
+
+lvcreate --type cache-pool -L 300G -n cpool datavg /dev/nvme0n1
+
+lvs -a -o name,size,attr,devices datavg
+
+# lvconvert --type cache --cachepool cpool datavg/datalv
+
+lvconvert --type cache --cachepool cpool datavg/mixlv
+
+# lvconvert --type cache --cachepool cpool --cachemode writeback datavg/datalv
+
+# lvs -a -o name,size,attr,devices datavg
+# lvs -o+cache_mode datavg
+
+# mkfs.xfs /dev/datavg/datalv
+mkfs.xfs /dev/datavg/hddlv
+mkfs.xfs /dev/datavg/ssdlv
+mkfs.xfs /dev/datavg/mixlv
+
+mkdir -p /data/
+mkdir -p /data_ssd/
+mkdir -p /data_mix/
+
+cat /etc/fstab
+
+cat << EOF >> /etc/fstab
+/dev/datavg/hddlv /data                  xfs     defaults        0 0
+/dev/datavg/ssdlv /data_ssd                  xfs     defaults        0 0
+/dev/datavg/mixlv /data_mix                  xfs     defaults        0 0
+EOF
+
+mount -a
+df -h | grep \/data
+
+# cleanup
+umount /data/
+umount /data_ssd/
+umount /data_mix/
+lvremove -f /dev/datavg/hddlv
+lvremove -f /dev/datavg/ssdlv
+lvremove -f /dev/datavg/mixlv
+
+
+```
 ### worker-1 host
 
 ```bash
@@ -1343,6 +1349,54 @@ lsblk | grep disk | awk '{print $1}' | xargs -I DEMO echo -n "DEMO "
 iostat -m -x sda sdb sdc sdd sde sdf sdg sdh sdi sdj sdk 5
 iostat -m -x dm-10 5
 
+
+########################################
+# ntp
+yum install -y chrony
+systemctl enable chronyd
+systemctl restart chronyd
+systemctl status chronyd
+chronyc tracking
+
+systemctl disable --now firewalld.service
+
+# setup time server
+/bin/cp -f /etc/chrony.conf /etc/chrony.conf.bak
+
+cat << EOF > /etc/chrony.conf
+server 117.177.241.16 iburst
+server 0.rhel.pool.ntp.org iburst
+server 1.rhel.pool.ntp.org iburst
+server 2.rhel.pool.ntp.org iburst
+server 3.rhel.pool.ntp.org iburst
+driftfile /var/lib/chrony/drift
+makestep 1.0 3
+rtcsync
+logdir /var/log/chrony
+EOF
+
+systemctl restart chronyd
+systemctl status chronyd
+chronyc tracking
+chronyc sources -v
+
+# update ntp
+cat << EOF > /etc/chrony.conf
+server 223.87.20.100 iburst
+driftfile /var/lib/chrony/drift
+makestep 1.0 3
+rtcsync
+logdir /var/log/chrony
+EOF
+
+systemctl restart chronyd
+systemctl status chronyd
+chronyc tracking
+
+```
+
+### worker-1 disk
+```bash
 #########################################
 # ssd cache + hdd
 # https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/7/html-single/logical_volume_manager_administration/index#lvm_cache_volume_creation
@@ -1636,52 +1690,21 @@ fio --rw=rw --rwmixread=80 --bsrange=4k-256k --name=vdo \
     --norandommap --runtime=300 --direct=0 --iodepth=8 \
     --scramble_buffers=1 --offset=0 --size=10g 
 
-########################################
-# ntp
-yum install -y chrony
-systemctl enable chronyd
-systemctl restart chronyd
-systemctl status chronyd
-chronyc tracking
+fio --rw=rw --rwmixread=95 --bsrange=4k-256k --name=vdo \
+    --directory=./ --ioengine=sync --size=10g 
 
-systemctl disable --now firewalld.service
+# http benchmark tools
+yum install httpd-tools
+# https://github.com/philipgloyne/apachebench-for-multi-url
+# https://hub.docker.com/r/chrisipa/ab-multi-url
+# https://www.simonholywell.com/post/2015/06/parallel-benchmark-many-urls-with-apachebench/
 
-# setup time server
-/bin/cp -f /etc/chrony.conf /etc/chrony.conf.bak
 
-cat << EOF > /etc/chrony.conf
-server 117.177.241.16 iburst
-server 0.rhel.pool.ntp.org iburst
-server 1.rhel.pool.ntp.org iburst
-server 2.rhel.pool.ntp.org iburst
-server 3.rhel.pool.ntp.org iburst
-driftfile /var/lib/chrony/drift
-makestep 1.0 3
-rtcsync
-logdir /var/log/chrony
-EOF
-
-systemctl restart chronyd
-systemctl status chronyd
-chronyc tracking
-chronyc sources -v
-
-# update ntp
-cat << EOF > /etc/chrony.conf
-server 223.87.20.100 iburst
-driftfile /var/lib/chrony/drift
-makestep 1.0 3
-rtcsync
-logdir /var/log/chrony
-EOF
-
-systemctl restart chronyd
-systemctl status chronyd
-chronyc tracking
 
 ```
 
 ### worker-1 nic bond
+
 ```bash
 ip link show
 # 2: eno1: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP mode DEFAULT group default qlen 1000
@@ -1907,6 +1930,57 @@ lsblk | grep disk | awk '{print $1}' | xargs -I DEMO echo -n "DEMO "
 iostat -m -x sda sdb sdc sdd sde sdf sdg sdh sdi sdj sdk 5
 iostat -m -x dm-10 5
 
+
+########################################
+# ntp
+yum install -y chrony
+systemctl enable chronyd
+systemctl restart chronyd
+systemctl status chronyd
+chronyc tracking
+
+systemctl disable --now firewalld.service
+
+# setup time server
+/bin/cp -f /etc/chrony.conf /etc/chrony.conf.bak
+
+cat << EOF > /etc/chrony.conf
+server 117.177.241.16 iburst
+server 0.rhel.pool.ntp.org iburst
+server 1.rhel.pool.ntp.org iburst
+server 2.rhel.pool.ntp.org iburst
+server 3.rhel.pool.ntp.org iburst
+driftfile /var/lib/chrony/drift
+makestep 1.0 3
+rtcsync
+logdir /var/log/chrony
+EOF
+
+systemctl restart chronyd
+systemctl status chronyd
+chronyc tracking
+chronyc sources -v
+
+# update ntp
+cat << EOF > /etc/chrony.conf
+server 223.87.20.100 iburst
+driftfile /var/lib/chrony/drift
+makestep 1.0 3
+rtcsync
+logdir /var/log/chrony
+EOF
+
+systemctl restart chronyd
+systemctl status chronyd
+chronyc tracking
+
+
+```
+
+### worker-2 disk
+```bash
+
+
 #########################################
 # ssd cache + hdd
 # https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/7/html-single/logical_volume_manager_administration/index#lvm_cache_volume_creation
@@ -2044,50 +2118,6 @@ cat /sys/block/*/queue/scheduler
 lsblk | grep 894 | awk '{print $1}' | xargs -I DEMO cat /sys/block/DEMO/queue/scheduler
 
 lsblk | grep 894 | awk '{print "echo deadline > /sys/block/"$1"/queue/scheduler"}' 
-
-
-########################################
-# ntp
-yum install -y chrony
-systemctl enable chronyd
-systemctl restart chronyd
-systemctl status chronyd
-chronyc tracking
-
-systemctl disable --now firewalld.service
-
-# setup time server
-/bin/cp -f /etc/chrony.conf /etc/chrony.conf.bak
-
-cat << EOF > /etc/chrony.conf
-server 117.177.241.16 iburst
-server 0.rhel.pool.ntp.org iburst
-server 1.rhel.pool.ntp.org iburst
-server 2.rhel.pool.ntp.org iburst
-server 3.rhel.pool.ntp.org iburst
-driftfile /var/lib/chrony/drift
-makestep 1.0 3
-rtcsync
-logdir /var/log/chrony
-EOF
-
-systemctl restart chronyd
-systemctl status chronyd
-chronyc tracking
-chronyc sources -v
-
-# update ntp
-cat << EOF > /etc/chrony.conf
-server 223.87.20.100 iburst
-driftfile /var/lib/chrony/drift
-makestep 1.0 3
-rtcsync
-logdir /var/log/chrony
-EOF
-
-systemctl restart chronyd
-systemctl status chronyd
-chronyc tracking
 
 
 ```
