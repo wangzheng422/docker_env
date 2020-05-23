@@ -1173,17 +1173,17 @@ pvcreate /dev/nvme0n1
 vgextend datavg /dev/nvme0n1
 
 ## raid5 + cache
-lvcreate --type raid5 -L 1T --stripes 9 -n hddlv datavg /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk
+lvcreate --type raid5 -L 1G --stripes 9 -n hddlv datavg /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk
 
-lvcreate --type raid5 -L 1T --stripes 9 -n mixlv datavg /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk
+lvcreate --type raid5 -L 3.8T --stripes 9 -n mixlv datavg /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk
 
-lvcreate -L 1T -n ssdlv datavg /dev/nvme0n1
+lvcreate -L 1G -n ssdlv datavg /dev/nvme0n1
 
 # lvcreate --type cache-pool -L 300G -n cache1 datavg /dev/nvme0n1
 
-lvcreate -L 300G -n cache1 datavg /dev/nvme0n1
+lvcreate -L 1.4T -n cache1 datavg /dev/nvme0n1
 
-lvcreate -L 10G -n cache1meta datavg /dev/nvme0n1
+lvcreate -L 14G -n cache1meta datavg /dev/nvme0n1
 
 lvconvert --type cache-pool --poolmetadata datavg/cache1meta datavg/cache1
 
@@ -1243,6 +1243,25 @@ umount /data_mix/
 lvremove -f /dev/datavg/hddlv
 lvremove -f /dev/datavg/ssdlv
 lvremove -f /dev/datavg/mixlv
+
+fio --rw=rw --rwmixread=99 --bsrange=4k-256k --name=vdo \
+    --directory=./ --ioengine=libaio --numjobs=1 --thread \
+    --norandommap --runtime=300 --direct=0 --iodepth=8 \
+    --scramble_buffers=1 --offset=0 --size=100g 
+
+fio --rw=rw --rwmixread=99 --bsrange=4k-256k --name=vdo \
+    --directory=./ --ioengine=sync --size=100g 
+
+blktrace /dev/datavg/mixlv /dev/nvme0n1 /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk
+
+blkparse -o /dev/null -i dm-42 -d dm-42.bin
+btt -i dm-42.blktrace.bin
+
+blkparse -o /dev/null -i nvme0n1 -d nvme0n1.bin
+btt -i nvme0n1.bin | less
+
+blkparse -o /dev/null -i sdb -d sdb.bin
+btt -i sdb.bin | less
 
 
 ```
@@ -1685,14 +1704,15 @@ lvremove -f datavg/singledisklv
 #    READ: bw=431MiB/s (452MB/s), 431MiB/s-431MiB/s (452MB/s-452MB/s), io=16.0GiB (17.2GB), run=38005-38005msec
 #   WRITE: bw=108MiB/s (113MB/s), 108MiB/s-108MiB/s (113MB/s-113MB/s), io=4088MiB (4287MB), run=38005-38005msec
 
-fio --rw=rw --rwmixread=80 --bsrange=4k-256k --name=vdo \
+fio --rw=rw --rwmixread=99 --bsrange=4k-256k --name=vdo \
     --directory=./ --ioengine=libaio --numjobs=1 --thread \
     --norandommap --runtime=300 --direct=0 --iodepth=8 \
-    --scramble_buffers=1 --offset=0 --size=10g 
+    --scramble_buffers=1 --offset=0 --size=100g 
 
-fio --rw=rw --rwmixread=95 --bsrange=4k-256k --name=vdo \
-    --directory=./ --ioengine=sync --size=10g 
+fio --rw=rw --rwmixread=99 --bsrange=4k-256k --name=vdo \
+    --directory=./ --ioengine=sync --size=100g 
 
+blktrace /dev/datavg/mixlv 
 # http benchmark tools
 yum install httpd-tools
 # https://github.com/philipgloyne/apachebench-for-multi-url
@@ -2118,6 +2138,28 @@ cat /sys/block/*/queue/scheduler
 lsblk | grep 894 | awk '{print $1}' | xargs -I DEMO cat /sys/block/DEMO/queue/scheduler
 
 lsblk | grep 894 | awk '{print "echo deadline > /sys/block/"$1"/queue/scheduler"}' 
+
+fio --rw=rw --rwmixread=99 --bsrange=4k-256k --name=vdo \
+    --directory=./ --ioengine=libaio --numjobs=1 --thread \
+    --norandommap --runtime=300 --direct=0 --iodepth=8 \
+    --scramble_buffers=1 --offset=0 --size=100g 
+
+fio --rw=rw --rwmixread=99 --bsrange=4k-256k --name=vdo \
+    --directory=./ --ioengine=sync --size=100g 
+
+blktrace /dev/datavg/mix0lv /dev/sdz /dev/sdaa /dev/sdab /dev/sdac /dev/sdad /dev/sdae /dev/sdaf /dev/sdag /dev/sdah /dev/sdai     /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx
+
+blkparse -o /dev/null -i dm-244 -d dm-244.bin
+btt -i dm-244.bin | less
+
+blkparse -o /dev/null -i sdaa -d sdaa.bin
+btt -i sdaa.bin | less
+
+blkparse -o /dev/null -i sda -d sda.bin
+btt -i sda.bin | less
+
+
+blktrace /dev/datavg/ssd0lv /dev/sdz /dev/sdaa /dev/sdab /dev/sdac /dev/sdad /dev/sdae /dev/sdaf /dev/sdag /dev/sdah /dev/sdai    
 
 
 ```

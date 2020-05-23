@@ -62,4 +62,21 @@ diskutil list
 diskutil unmountDisk /dev/disk2
 sudo dd if=./rhel-server-7.6-x86_64-dvd.iso of=/dev/rdisk2 bs=10m
 
+
+# https://unix.stackexchange.com/questions/181067/how-to-read-dmesg-from-previous-session-dmesg-0
+# Options:
+# -k (dmesg)
+# -b < boot_number > (How many reboots ago 0, -1, -2, etc.)
+# -o short-precise (dmesg -T)
+# -p priority Filter by priority output (4 to filter out notice and info).
+# Current boot : journalctl -o short-precise -k
+# Last boot : journalctl -o short-precise -k -b -1
+# Two boots prior : journalctl -o short-precise -k -b -2
+journalctl -o short-precise -k
+journalctl -o short-precise -k -b -1
+journalctl --list-boot
+
+# https://access.redhat.com/solutions/696893
+sed -i 's/#Storage=auto/Storage=persistent/' /etc/systemd/journald.conf
+systemctl restart systemd-journald.service
 ```
