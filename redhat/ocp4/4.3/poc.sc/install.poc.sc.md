@@ -1265,6 +1265,7 @@ btt -i sdb.bin | less
 
 
 ```
+
 ### worker-1 host
 
 ```bash
@@ -1435,9 +1436,9 @@ vgextend datavg /dev/sdz /dev/sdaa /dev/sdab /dev/sdac /dev/sdad /dev/sdae /dev/
 
 lvcreate --type raid5 -L 3T --stripes 23 -n hddlv datavg /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx
 
-lvcreate --type raid5 -L 3T --stripes 23 -n mixlv datavg /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx
+lvcreate --type raid0 -L 1G --stripes 10 -n ssdlv datavg /dev/sdz /dev/sdaa /dev/sdab /dev/sdac /dev/sdad /dev/sdae /dev/sdaf /dev/sdag /dev/sdah /dev/sdai
 
-lvcreate --type raid5 -L 3T --stripes 9 -n ssdlv datavg /dev/sdz /dev/sdaa /dev/sdab /dev/sdac /dev/sdad /dev/sdae /dev/sdaf /dev/sdag /dev/sdah /dev/sdai
+lvcreate --type raid5 -L 3T --stripes 23 -n mixlv datavg /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx
 
 lvcreate --type raid5 -L 1T --stripes 9 -n cache1 datavg /dev/sdz /dev/sdaa /dev/sdab /dev/sdac /dev/sdad /dev/sdae /dev/sdaf /dev/sdag /dev/sdah /dev/sdai
 
@@ -1453,7 +1454,6 @@ lvconvert --type cache --cachepool datavg/cache1 datavg/mixlv
 
 lvcreate --type raid5 -L 12T --stripes 23 -n mix0lv datavg /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx
 
-
 lvcreate --type raid0 -L 4T --stripes 10 -n cachemix0 datavg /dev/sdz /dev/sdaa /dev/sdab /dev/sdac /dev/sdad /dev/sdae /dev/sdaf /dev/sdag /dev/sdah /dev/sdai
 
 lvcreate --type raid0 -L 40G --stripes 10 -n cachemix0meta datavg /dev/sdz /dev/sdaa /dev/sdab /dev/sdac /dev/sdad /dev/sdae /dev/sdaf /dev/sdag /dev/sdah /dev/sdai
@@ -1463,6 +1463,27 @@ lvconvert --type cache-pool --poolmetadata datavg/cachemix0meta datavg/cachemix0
 lvconvert --type cache --cachepool datavg/cachemix0 datavg/mix0lv
 
 
+lvcreate --type raid5 -L 1T --stripes 23 -n mix0weblv datavg /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx
+
+lvcreate --type raid0 -L 162G --stripes 10 -n cachemix0web datavg /dev/sdz /dev/sdaa /dev/sdab /dev/sdac /dev/sdad /dev/sdae /dev/sdaf /dev/sdag /dev/sdah /dev/sdai
+
+lvcreate --type raid0 -L 2G --stripes 10 -n cachemix0webmeta datavg /dev/sdz /dev/sdaa /dev/sdab /dev/sdac /dev/sdad /dev/sdae /dev/sdaf /dev/sdag /dev/sdah /dev/sdai
+
+lvconvert --type cache-pool --poolmetadata datavg/cachemix0webmeta datavg/cachemix0web
+
+lvconvert --type cache --cachepool datavg/cachemix0web datavg/mix0weblv
+
+
+# lvcreate --type raid0 -L 200G --stripes 10 -n ssd0lv datavg /dev/sdz /dev/sdaa /dev/sdab /dev/sdac /dev/sdad /dev/sdae /dev/sdaf /dev/sdag /dev/sdah /dev/sdai
+
+lvcreate --type raid0 -L 200G --stripes 4 -n ssd0lv datavg /dev/sdz /dev/sdaa /dev/sdab /dev/sdac
+
+fio --rw=rw --rwmixread=99 --bsrange=4k-256k --name=vdo \
+    --filename=/dev/datavg/ssd0lv --ioengine=libaio --numjobs=1 --thread \
+    --norandommap --runtime=300 --direct=1 --iodepth=8 \
+    --scramble_buffers=1 --offset=0 --size=100g
+
+lvremove -f datavg/ssd0lv
 
 ## raid0 + stripe
 
@@ -1489,11 +1510,13 @@ mkfs.xfs /dev/datavg/hddlv
 mkfs.xfs /dev/datavg/ssdlv
 mkfs.xfs /dev/datavg/mixlv
 mkfs.xfs /dev/datavg/mix0lv
+mkfs.xfs /dev/datavg/mix0weblv
 
 mkdir -p /data/
 mkdir -p /data_ssd/
 mkdir -p /data_mix/
 mkdir -p /data_mix0
+mkdir -p /data_mix0_web/
 
 cat /etc/fstab
 
@@ -1502,6 +1525,7 @@ cat << EOF >> /etc/fstab
 /dev/datavg/ssdlv /data_ssd                  xfs     defaults        0 0
 /dev/datavg/mixlv /data_mix                  xfs     defaults        0 0
 /dev/datavg/mix0lv  /data_mix0                  xfs     defaults        0 0
+/dev/datavg/mix0weblv  /data_mix0_web                  xfs     defaults        0 0
 EOF
 
 mount -a
@@ -1567,6 +1591,8 @@ lsblk | grep 894 | awk '{print "echo deadline > /sys/block/"$1"/queue/scheduler"
 yum -y install fio
 
 # https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/7/html/storage_administration_guide/vdo-ev-performance-testing
+
+lvs -o+cache_policy,cache_settings,chunksize datavg/mix0weblv
 
 
 lvcreate --type raid5 -L 120G --stripes 23 -n mixtestlv datavg /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx
@@ -1718,6 +1744,17 @@ yum install httpd-tools
 # https://github.com/philipgloyne/apachebench-for-multi-url
 # https://hub.docker.com/r/chrisipa/ab-multi-url
 # https://www.simonholywell.com/post/2015/06/parallel-benchmark-many-urls-with-apachebench/
+
+
+fio --rw=rw --rwmixread=99 --bsrange=4k-256k --name=vdo \
+    --filename=/dev/datavg/ssd0lv --ioengine=libaio --numjobs=1 --thread \
+    --norandommap --runtime=300 --direct=0 --iodepth=8 \
+    --scramble_buffers=1 --offset=0 --size=100g
+
+fio --rw=rw --rwmixread=99 --bsrange=128k-256k --name=vdo \
+    --filename=/dev/datavg/ssd0lv --ioengine=libaio --numjobs=1 --thread \
+    --norandommap --runtime=300 --direct=0 --iodepth=8 \
+    --scramble_buffers=1 --offset=0 --size=100g
 
 
 
@@ -2020,26 +2057,17 @@ vgextend datavg /dev/sdz /dev/sdaa /dev/sdab /dev/sdac /dev/sdad /dev/sdae /dev/
 
 lvcreate --type raid5 -L 1G --stripes 23 -n hddlv datavg /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx
 
-lvcreate --type raid5 -L 12T --stripes 23 -n mixlv datavg /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx
+lvcreate --type raid5 -L 1G --stripes 23 -n mixlv datavg /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx
 
 lvcreate --type raid5 -L 1G --stripes 9 -n ssdlv datavg /dev/sdz /dev/sdaa /dev/sdab /dev/sdac /dev/sdad /dev/sdae /dev/sdaf /dev/sdag /dev/sdah /dev/sdai
 
-lvcreate --type raid5 -L 4T --stripes 9 -n cache1 datavg /dev/sdz /dev/sdaa /dev/sdab /dev/sdac /dev/sdad /dev/sdae /dev/sdaf /dev/sdag /dev/sdah /dev/sdai
 
-lvcreate --type raid5 -L 40G --stripes 9 -n cache1meta datavg /dev/sdz /dev/sdaa /dev/sdab /dev/sdac /dev/sdad /dev/sdae /dev/sdaf /dev/sdag /dev/sdah /dev/sdai
-
-lvconvert --type cache-pool --poolmetadata datavg/cache1meta datavg/cache1
-
-lvconvert --type cache --cachepool datavg/cache1 datavg/mixlv
+lvcreate --type raid5 -L 3T --stripes 23 -n mix0lv datavg /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx
 
 
+lvcreate --type raid0 -L 1.3536T --stripes 10 -n cachemix0 datavg /dev/sdz /dev/sdaa /dev/sdab /dev/sdac /dev/sdad /dev/sdae /dev/sdaf /dev/sdag /dev/sdah /dev/sdai
 
-lvcreate --type raid5 -L 12T --stripes 23 -n mix0lv datavg /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx
-
-
-lvcreate --type raid0 -L 4T --stripes 10 -n cachemix0 datavg /dev/sdz /dev/sdaa /dev/sdab /dev/sdac /dev/sdad /dev/sdae /dev/sdaf /dev/sdag /dev/sdah /dev/sdai
-
-lvcreate --type raid0 -L 40G --stripes 10 -n cachemix0meta datavg /dev/sdz /dev/sdaa /dev/sdab /dev/sdac /dev/sdad /dev/sdae /dev/sdaf /dev/sdag /dev/sdah /dev/sdai
+lvcreate --type raid0 -L 13G --stripes 10 -n cachemix0meta datavg /dev/sdz /dev/sdaa /dev/sdab /dev/sdac /dev/sdad /dev/sdae /dev/sdaf /dev/sdag /dev/sdah /dev/sdai
 
 lvconvert --type cache-pool --poolmetadata datavg/cachemix0meta datavg/cachemix0
 
@@ -2123,9 +2151,11 @@ dd if=/data_mix/testfile.large of=/dev/null bs=4M count=9999
 umount /data/
 umount /data_ssd/
 umount /data_mix/
+umount /data_mix0/
 lvremove -f /dev/datavg/hddlv
 lvremove -f /dev/datavg/ssdlv
 lvremove -f /dev/datavg/mixlv
+lvremove -f /dev/datavg/mix0lv
 
 
 # ssd tunning
