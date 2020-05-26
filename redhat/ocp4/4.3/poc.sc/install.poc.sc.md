@@ -1594,6 +1594,10 @@ yum -y install fio
 
 lvs -o+cache_policy,cache_settings,chunksize datavg/mix0weblv
 
+# https://access.redhat.com/solutions/2961861
+for i in  /proc/[0-9]* ; do echo $i >> /tmp/mountinfo ;  grep -q "/dev/mapper/datavg-mix0weblv" $i/mountinfo ; echo $? >> /tmp/mountinfo ; done
+
+grep -B 1 '^0$' /tmp/mountinfo 
 
 lvcreate --type raid5 -L 120G --stripes 23 -n mixtestlv datavg /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx
 
