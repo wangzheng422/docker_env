@@ -2202,6 +2202,10 @@ lvmconfig --type default --withcomments allocation/cache_policy
 lvmconfig --type default --withcomments allocation/cache_settings
 lvmconfig --type list --withcomments allocation/cache_settings
 
+iostat -x -m 3 /dev/mapper/datavg-mix0lv /dev/mapper/datavg-mix0lv_corig /dev/mapper/datavg-cachemix0_cdata /dev/mapper/datavg-cachemix0_cmeta
+
+bmon -p eno1,eno2,ens2f0,ens2f1
+
 
 ```
 
