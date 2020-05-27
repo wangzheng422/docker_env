@@ -2196,6 +2196,13 @@ btt -i sda.bin | less
 blktrace /dev/datavg/ssd0lv /dev/sdz /dev/sdaa /dev/sdab /dev/sdac /dev/sdad /dev/sdae /dev/sdaf /dev/sdag /dev/sdah /dev/sdai    
 
 
+lvmconfig --typeconfig default --withcomments --withspaces
+
+lvmconfig --type default --withcomments allocation/cache_policy
+lvmconfig --type default --withcomments allocation/cache_settings
+lvmconfig --type list --withcomments allocation/cache_settings
+
+
 ```
 
 ### worker-2 nic bond
