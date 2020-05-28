@@ -18,4 +18,15 @@ lvextend -l 100%VG /dev/rhel/root
 # lvextend -l 100%VG /dev/rhel/root -r
 xfs_growfs /dev/rhel/root
 
+# https://access.redhat.com/articles/3776151
+systemctl isolate graphical.target
+# systemctl isolate multi-user.target
+# startx
+
+systemctl get-default
+# multi-user.target
+systemctl set-default graphical.target
+
+vi /etc/PackageKit/PackageKit.conf 
+ProxyHTTP=http://192.168.253.1:5084
 ```
