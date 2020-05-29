@@ -21,6 +21,7 @@ subscription-manager repos \
     --enable="rhel-7-server-ose-4.2-rpms" \
     --enable="rhel-7-server-ose-4.3-rpms" \
     --enable="rhel-7-server-optional-rpms" \
+    --enable="rhel-7-server-rhv-4-mgmt-agent-rpms" \
     --enable="rhel-7-server-cnv-2.2-rpms"
     # --enable="rhel-7-server-ose-4.2-rpms" \
     # --enable="rhel-7-server-ose-3.11-rpms" \

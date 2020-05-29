@@ -1197,7 +1197,16 @@ lvconvert --type cache --cachepool datavg/cache1 datavg/mixlv
 
 ## raid0 + cache
 
-lvcreate --type raid0 -L 1T --stripes 10 -n hddlv datavg /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk
+lvcreate --type raid0 -L 4T --stripes 10 -n hddlv datavg /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk
+
+
+
+
+
+
+
+
+
 
 lvcreate --type raid0 -L 1T --stripes 10 -n mixlv datavg /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk
 
@@ -1417,6 +1426,11 @@ chronyc tracking
 
 ### worker-1 disk
 ```bash
+##################################
+## config
+mkdir -p /app_conf/zxcdn
+
+
 #########################################
 # ssd cache + hdd
 # https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/7/html-single/logical_volume_manager_administration/index#lvm_cache_volume_creation
@@ -1487,7 +1501,13 @@ lvremove -f datavg/ssd0lv
 
 ## raid0 + stripe
 
-lvcreate --type raid0 -L 1T --stripes 24 -n hddlv datavg /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx
+lvcreate --type raid0 -L 130T --stripes 24 -n hddlv datavg /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx
+
+
+
+
+
+
 
 lvcreate --type raid0 -L 1T --stripes 24 -n mixlv datavg /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx
 
@@ -1522,10 +1542,10 @@ cat /etc/fstab
 
 cat << EOF >> /etc/fstab
 /dev/datavg/hddlv /data                  xfs     defaults        0 0
-/dev/datavg/ssdlv /data_ssd                  xfs     defaults        0 0
-/dev/datavg/mixlv /data_mix                  xfs     defaults        0 0
-/dev/datavg/mix0lv  /data_mix0                  xfs     defaults        0 0
-/dev/datavg/mix0weblv  /data_mix0_web                  xfs     defaults        0 0
+# /dev/datavg/ssdlv /data_ssd                  xfs     defaults        0 0
+# /dev/datavg/mixlv /data_mix                  xfs     defaults        0 0
+# /dev/datavg/mix0lv  /data_mix0                  xfs     defaults        0 0
+# /dev/datavg/mix0weblv  /data_mix0_web                  xfs     defaults        0 0
 EOF
 
 mount -a
@@ -2086,6 +2106,8 @@ lvconvert --type cache --cachepool datavg/cachemix0 datavg/mix0lv
 
 ## raid0 + stripe
 
+
+
 lvcreate --type raid0 -L 1T --stripes 24 -n hdd0lv datavg /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx
 
 fio --rw=rw --rwmixread=99 --bsrange=4k-256k --name=vdo \
@@ -2259,13 +2281,21 @@ lvremove -f datavg/ssd0lv
 
 
 
-lvcreate --type raid0 -L 1T --stripes 24 -n mixlv datavg /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx
 
-lvcreate --type raid0 -L 300G --stripes 10 -n ssdlv datavg /dev/sdz /dev/sdaa /dev/sdab /dev/sdac /dev/sdad /dev/sdae /dev/sdaf /dev/sdag /dev/sdah /dev/sdai
 
-lvcreate --type raid0 -L 300G --stripes 10 -n cache1 datavg /dev/sdz /dev/sdaa /dev/sdab /dev/sdac /dev/sdad /dev/sdae /dev/sdaf /dev/sdag /dev/sdah /dev/sdai
 
-lvcreate --type raid0 -L 3G --stripes 10 -n cache1meta datavg /dev/sdz /dev/sdaa /dev/sdab /dev/sdac /dev/sdad /dev/sdae /dev/sdaf /dev/sdag /dev/sdah /dev/sdai
+
+lvcreate --type raid0 -L 1G --stripes 24 -n hddlv datavg /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx
+
+
+
+lvcreate --type raid0 -L 130T --stripes 24 -n mixlv datavg /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx
+
+# lvcreate --type raid0 -L 300G --stripes 10 -n ssdlv datavg /dev/sdz /dev/sdaa /dev/sdab /dev/sdac /dev/sdad /dev/sdae /dev/sdaf /dev/sdag /dev/sdah /dev/sdai
+
+lvcreate --type raid0 -L 8.6T --stripes 10 -n cache1 datavg /dev/sdz /dev/sdaa /dev/sdab /dev/sdac /dev/sdad /dev/sdae /dev/sdaf /dev/sdag /dev/sdah /dev/sdai
+
+lvcreate --type raid0 -L 40G --stripes 10 -n cache1meta datavg /dev/sdz /dev/sdaa /dev/sdab /dev/sdac /dev/sdad /dev/sdae /dev/sdaf /dev/sdag /dev/sdah /dev/sdai
 
 lvconvert --type cache-pool --poolmetadata datavg/cache1meta datavg/cache1
 
