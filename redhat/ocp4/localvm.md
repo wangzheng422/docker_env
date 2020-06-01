@@ -28,6 +28,30 @@ cd /data
 tar -cf - ocp4/ | pigz -c > /mnt/hgfs/ocp.4.2.8/ocp4.tgz
 tar -cf - registry/ | pigz -c > /mnt/hgfs/ocp.4.2.8/registry.tgz
 
+
+
+# back up to disk
+
+cd /root
+tar -cf - data/ | pigz -c > /mnt/hgfs/ocp.tgz.4.3.21/rhel-data.tgz
+
+cd /data
+tar -cf - ocp4/ | pigz -c > /mnt/hgfs/ocp.tgz.4.3.21/ocp4.tgz
+tar -cf - registry/ | pigz -c > /mnt/hgfs/ocp.tgz.4.3.21/registry.tgz
+tar -cf - is.samples/ | pigz -c > /mnt/hgfs/ocp.tgz.4.3.21/is.samples.tgz
+
+cd 
+mkdir -p /mnt/hgfs/ocp.4.3.21/rhel-data/
+rsync --info=progress2 -P --delete -arz --no-o --no-g --no-perms /root/data/  /mnt/hgfs/ocp.4.3.21/rhel-data/
+mkdir -p /mnt/hgfs/ocp.4.3.21/ocp4
+rsync --info=progress2 -P --delete -arz --no-o --no-g --no-perms  /data/ocp4/  /mnt/hgfs/ocp.4.3.21/ocp4/
+mkdir -p /mnt/hgfs/ocp.4.3.21/registry
+rsync --info=progress2 -P --delete -arz --no-o --no-g --no-perms  /data/registry/  /mnt/hgfs/ocp.4.3.21/registry/
+mkdir -p /mnt/hgfs/ocp.4.3.21/is.samples
+rsync --info=progress2 -P --delete -arz --no-o --no-g --no-perms  /data/is.samples/  /mnt/hgfs/ocp.4.3.21/is.samples/
+
+
+
 ######################
 ## on kvm host
 systemctl stop docker-distribution
