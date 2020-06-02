@@ -1273,6 +1273,25 @@ blkparse -o /dev/null -i sdb -d sdb.bin
 btt -i sdb.bin | less
 
 
+dstat -D /dev/mapper/datavg-hddlv,sdd,nvme0n1 -N enp3s0f0
+
+dstat -D /dev/mapper/datavg-hddlv,sdd,nvme0n1 --disk-util 
+
+bmon -p ens8f0,ens8f1,enp3s0f0,enp3s0f1
+
+lvs -o+lv_all datavg/mixlv_corig
+
+lvs -o+Layout datavg/mixlv_corig
+
+lvs -o+CacheReadHits,CacheReadMisses
+
+lvs -o+Layout
+
+blockdev --report 
+# https://access.redhat.com/solutions/3588841
+/sbin/blockdev --setra 262144 /dev/mapper/datavg-hddlv
+
+
 ```
 
 ### worker-1 host
@@ -1610,7 +1629,25 @@ lsblk | grep 894 | awk '{print "echo deadline > /sys/block/"$1"/queue/scheduler"
 
 iostat -x -m 3 /dev/mapper/datavg-mix0weblv /dev/mapper/datavg-mix0weblv_corig /dev/mapper/datavg-cachemix0web_cdata /dev/mapper/datavg-cachemix0web_cmeta
 
-bmon -p eno1,eno2,ens2f0,ens2f1
+
+dstat -D /dev/mapper/datavg-hddlv,sdh,sdab -N bond0
+
+dstat -D /dev/mapper/datavg-hddlv,sdh,sdab --disk-util 
+
+bmon -p eno1,eno2,ens2f0,ens2f1,bond0
+
+lvs -o+lv_all datavg/mixlv_corig
+
+lvs -o+Layout datavg/mixlv_corig
+
+lvs -o+CacheReadHits,CacheReadMisses
+
+lvs -o+Layout
+
+blockdev --report 
+# https://access.redhat.com/solutions/3588841
+/sbin/blockdev --setra 262144 /dev/mapper/datavg-hddlv
+
 
 yum -y install fio
 
@@ -2407,10 +2444,141 @@ lvmconfig --type default --withcomments allocation/cache_policy
 lvmconfig --type default --withcomments allocation/cache_settings
 lvmconfig --type list --withcomments allocation/cache_settings
 
-iostat -x -m 3 /dev/mapper/datavg-mix0lv /dev/mapper/datavg-mix0lv_corig /dev/mapper/datavg-cachemix0_cdata /dev/mapper/datavg-cachemix0_cmeta
+iostat -x -m 3 /dev/mapper/datavg-mixlv sdh sdab
 
-bmon -p eno1,eno2,ens2f0,ens2f1
+dstat -D /dev/mapper/datavg-mixlv,sdh,sdab -N bond0
 
+dstat -D /dev/mapper/datavg-mixlv,sdh,sdab --disk-util 
+
+bmon -p eno1,eno2,ens2f0,ens2f1,bond0
+
+lvs -o+lv_all datavg/mixlv_corig
+
+lvs -o+Layout datavg/mixlv_corig
+
+lvs -o+CacheReadHits,CacheReadMisses
+
+lvs -o+Layout
+
+
+blockdev --report    
+# RO    RA   SSZ   BSZ   StartSec            Size   Device
+# rw  8192   512  4096          0    478998953984   /dev/sdy
+# rw  8192   512   512       2048      1073741824   /dev/sdy1
+# rw  8192   512  4096    2099200      1073741824   /dev/sdy2
+# rw  8192   512  4096    4196352    476849373184   /dev/sdy3
+# rw  8192   512  4096          0    958999298048   /dev/sdaj
+# rw  8192   512  4096       2048    958998249472   /dev/sdaj1
+# rw  8192   512  4096          0   6001175126016   /dev/sda
+# rw  8192   512  4096          0   6001175126016   /dev/sdd
+# rw  8192   512  4096          0   6001175126016   /dev/sde
+# rw  8192   512  4096          0   6001175126016   /dev/sdc
+# rw  8192   512  4096          0   6001175126016   /dev/sdf
+# rw  8192   512  4096          0   6001175126016   /dev/sdb
+# rw  8192   512  4096          0   6001175126016   /dev/sdg
+# rw  8192   512  4096          0   6001175126016   /dev/sdh
+# rw  8192   512  4096          0   6001175126016   /dev/sdk
+# rw  8192   512  4096          0   6001175126016   /dev/sdi
+# rw  8192   512  4096          0   6001175126016   /dev/sdm
+# rw  8192   512  4096          0   6001175126016   /dev/sdj
+# rw  8192   512  4096          0   6001175126016   /dev/sdl
+# rw  8192   512  4096          0   6001175126016   /dev/sdn
+# rw  8192   512  4096          0   6001175126016   /dev/sdo
+# rw  8192   512  4096          0   6001175126016   /dev/sdp
+# rw  8192   512  4096          0   6001175126016   /dev/sdx
+# rw  8192   512  4096          0   6001175126016   /dev/sdq
+# rw  8192   512  4096          0   6001175126016   /dev/sdr
+# rw  8192   512  4096          0   6001175126016   /dev/sdu
+# rw  8192   512  4096          0   6001175126016   /dev/sdw
+# rw  8192   512  4096          0   6001175126016   /dev/sds
+# rw  8192   512  4096          0   6001175126016   /dev/sdt
+# rw  8192   512  4096          0   6001175126016   /dev/sdv
+# rw  8192   512  4096          0    960197124096   /dev/sdz
+# rw  8192   512  4096          0    960197124096   /dev/sdaa
+# rw  8192   512  4096          0    960197124096   /dev/sdac
+# rw  8192   512  4096          0    960197124096   /dev/sdab
+# rw  8192   512  4096          0    960197124096   /dev/sdad
+# rw  8192   512  4096          0    960197124096   /dev/sdae
+# rw  8192   512  4096          0    960197124096   /dev/sdag
+# rw  8192   512  4096          0    960197124096   /dev/sdaf
+# rw  8192   512  4096          0    960197124096   /dev/sdai
+# rw  8192   512  4096          0    960197124096   /dev/sdah
+# rw  8192   512  4096          0   5955689381888   /dev/dm-0
+# rw  8192   512  4096          0   5955689381888   /dev/dm-1
+# rw  8192   512  4096          0   5955689381888   /dev/dm-2
+# rw  8192   512  4096          0   5955689381888   /dev/dm-3
+# rw  8192   512  4096          0   5955689381888   /dev/dm-4
+# rw  8192   512  4096          0   5955689381888   /dev/dm-5
+# rw  8192   512  4096          0   5955689381888   /dev/dm-6
+# rw  8192   512  4096          0   5955689381888   /dev/dm-7
+# rw  8192   512  4096          0   5955689381888   /dev/dm-8
+# rw  8192   512  4096          0   5955689381888   /dev/dm-9
+# rw  8192   512  4096          0   5955689381888   /dev/dm-10
+# rw  8192   512  4096          0   5955689381888   /dev/dm-11
+# rw  8192   512  4096          0   5955689381888   /dev/dm-12
+# rw  8192   512  4096          0   5955689381888   /dev/dm-13
+# rw  8192   512  4096          0   5955689381888   /dev/dm-14
+# rw  8192   512  4096          0   5955689381888   /dev/dm-15
+# rw  8192   512  4096          0   5955689381888   /dev/dm-16
+# rw  8192   512  4096          0   5955689381888   /dev/dm-17
+# rw  8192   512  4096          0   5955689381888   /dev/dm-18
+# rw  8192   512  4096          0   5955689381888   /dev/dm-19
+# rw  8192   512  4096          0   5955689381888   /dev/dm-20
+# rw  8192   512  4096          0   5955689381888   /dev/dm-21
+# rw  8192   512  4096          0   5955689381888   /dev/dm-22
+# rw  8192   512  4096          0   5955689381888   /dev/dm-23
+# rw  8192   512  4096          0 142936545165312   /dev/dm-24
+# rw  8192   512  4096          0    945580670976   /dev/dm-25
+# rw  8192   512  4096          0    945580670976   /dev/dm-26
+# rw  8192   512  4096          0    945580670976   /dev/dm-27
+# rw  8192   512  4096          0    945580670976   /dev/dm-28
+# rw  8192   512  4096          0    945580670976   /dev/dm-29
+# rw  8192   512  4096          0    945580670976   /dev/dm-30
+# rw  8192   512  4096          0    945580670976   /dev/dm-31
+# rw  8192   512  4096          0    945580670976   /dev/dm-32
+# rw  8192   512  4096          0    945580670976   /dev/dm-33
+# rw  8192   512  4096          0    945580670976   /dev/dm-34
+# rw  8192   512  4096          0   9455806709760   /dev/dm-35
+# rw  8192   512  4096          0      4294967296   /dev/dm-36
+# rw  8192   512  4096          0      4294967296   /dev/dm-37
+# rw  8192   512  4096          0      4294967296   /dev/dm-38
+# rw  8192   512  4096          0      4294967296   /dev/dm-39
+# rw  8192   512  4096          0      4294967296   /dev/dm-40
+# rw  8192   512  4096          0      4294967296   /dev/dm-41
+# rw  8192   512  4096          0      4294967296   /dev/dm-42
+# rw  8192   512  4096          0      4294967296   /dev/dm-43
+# rw  8192   512  4096          0      4294967296   /dev/dm-44
+# rw  8192   512  4096          0      4294967296   /dev/dm-45
+# rw  8192   512  4096          0     42949672960   /dev/dm-46
+# rw  8192   512  4096          0 142936545165312   /dev/dm-47
+# rw  8192   512  4096          0        46137344   /dev/dm-48
+# rw  8192   512  4096          0        46137344   /dev/dm-49
+# rw  8192   512  4096          0        46137344   /dev/dm-50
+# rw  8192   512  4096          0        46137344   /dev/dm-51
+# rw  8192   512  4096          0        46137344   /dev/dm-52
+# rw  8192   512  4096          0        46137344   /dev/dm-53
+# rw  8192   512  4096          0        46137344   /dev/dm-54
+# rw  8192   512  4096          0        46137344   /dev/dm-55
+# rw  8192   512  4096          0        46137344   /dev/dm-56
+# rw  8192   512  4096          0        46137344   /dev/dm-57
+# rw  8192   512  4096          0        46137344   /dev/dm-58
+# rw  8192   512  4096          0        46137344   /dev/dm-59
+# rw  8192   512  4096          0        46137344   /dev/dm-60
+# rw  8192   512  4096          0        46137344   /dev/dm-61
+# rw  8192   512  4096          0        46137344   /dev/dm-62
+# rw  8192   512  4096          0        46137344   /dev/dm-63
+# rw  8192   512  4096          0        46137344   /dev/dm-64
+# rw  8192   512  4096          0        46137344   /dev/dm-65
+# rw  8192   512  4096          0        46137344   /dev/dm-66
+# rw  8192   512  4096          0        46137344   /dev/dm-67
+# rw  8192   512  4096          0        46137344   /dev/dm-68
+# rw  8192   512  4096          0        46137344   /dev/dm-69
+# rw  8192   512  4096          0        46137344   /dev/dm-70
+# rw  8192   512  4096          0        46137344   /dev/dm-71
+# rw  8192   512  4096          0      1107296256   /dev/dm-72    
+
+# https://access.redhat.com/solutions/3588841
+/sbin/blockdev --setra 4096 /dev/mapper/datavg-mixlv
 
 ```
 
