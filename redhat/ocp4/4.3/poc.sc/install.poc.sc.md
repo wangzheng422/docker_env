@@ -210,7 +210,7 @@ cat > /root/iplist.txt <<EOL
 47.93.86.113/32
 221.226.0.75/32
 210.21.236.182/32
-61.132.54.2/32
+61.132.54.0/24
 112.44.102.228/32
 223.87.20.7/32
 10.88.0.0/16
@@ -1290,6 +1290,24 @@ lvs -o+Layout
 blockdev --report 
 # https://access.redhat.com/solutions/3588841
 /sbin/blockdev --setra 262144 /dev/mapper/datavg-hddlv
+/sbin/blockdev --setra 8192 /dev/mapper/datavg-hddlv
+/sbin/blockdev --setra 0 /dev/mapper/datavg-hddlv
+
+
+hdparm -t /dev/mapper/datavg-hddlv
+
+/sbin/blockdev --setra 4096 /dev/mapper/datavg-hddlv
+/sbin/blockdev --setra 8192 /dev/mapper/datavg-hddlv
+/sbin/blockdev --setra 16384 /dev/mapper/datavg-hddlv
+/sbin/blockdev --setra 32768 /dev/mapper/datavg-hddlv
+/sbin/blockdev --setra 65536 /dev/mapper/datavg-hddlv
+/sbin/blockdev --setra 131072 /dev/mapper/datavg-hddlv
+
+for f in /dev/mapper/datavg-hddlv_rimage_*; do /sbin/blockdev --setra 65536 $f ; done
+
+for f in /dev/mapper/datavg-hddlv_rimage_*; do /sbin/blockdev --setra 131072 $f ; done
+
+blktrace /dev/datavg/hddlv /dev/nvme0n1 /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk
 
 
 ```
@@ -1646,7 +1664,36 @@ lvs -o+Layout
 
 blockdev --report 
 # https://access.redhat.com/solutions/3588841
+/sbin/blockdev --setra 1048576 /dev/mapper/datavg-hddlv
+
+/sbin/blockdev --setra 524288 /dev/mapper/datavg-hddlv
+
 /sbin/blockdev --setra 262144 /dev/mapper/datavg-hddlv
+
+/sbin/blockdev --setra 131072 /dev/mapper/datavg-hddlv
+
+/sbin/blockdev --setra 65536 /dev/mapper/datavg-hddlv
+
+/sbin/blockdev --setra 32768 /dev/mapper/datavg-hddlv
+
+/sbin/blockdev --setra 16384 /dev/mapper/datavg-hddlv
+
+/sbin/blockdev --setra 8192 /dev/mapper/datavg-hddlv
+
+/sbin/blockdev --setra 8192 /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx
+
+
+for f in /dev/mapper/datavg-hddlv_rimage_*; do /sbin/blockdev --setra 8192 $f ; done
+
+for f in /dev/mapper/datavg-hddlv_rimage_*; do /sbin/blockdev --setra 131072 $f ; done
+
+blktrace /dev/datavg/hddlv  /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx
+
+blkparse -o /dev/null -i dm-24 -d dm-24.bin
+btt -i dm-24.bin | less
+
+blkparse -o /dev/null -i sda -d sda.bin
+btt -i sda.bin | less
 
 
 yum -y install fio
@@ -2446,9 +2493,9 @@ lvmconfig --type list --withcomments allocation/cache_settings
 
 iostat -x -m 3 /dev/mapper/datavg-mixlv sdh sdab
 
-dstat -D /dev/mapper/datavg-mixlv,sdh,sdab -N bond0
+dstat -D /dev/mapper/datavg-mixlv,/dev/mapper/datavg-mixlv_corig,sdh,sdab -N bond0
 
-dstat -D /dev/mapper/datavg-mixlv,sdh,sdab --disk-util 
+dstat -D /dev/mapper/datavg-mixlv,/dev/mapper/datavg-mixlv_corig,sdh,sdab --disk-util 
 
 bmon -p eno1,eno2,ens2f0,ens2f1,bond0
 
@@ -2579,6 +2626,13 @@ blockdev --report
 
 # https://access.redhat.com/solutions/3588841
 /sbin/blockdev --setra 4096 /dev/mapper/datavg-mixlv
+/sbin/blockdev --setra 8192 /dev/mapper/datavg-mixlv
+/sbin/blockdev --setra 16384 /dev/mapper/datavg-mixlv
+/sbin/blockdev --setra 32768 /dev/mapper/datavg-mixlv
+/sbin/blockdev --setra 65536 /dev/mapper/datavg-mixlv
+/sbin/blockdev --setra 131072 /dev/mapper/datavg-mixlv
+
+for f in /dev/mapper/datavg-mixlv_corig_rimage_*; do /sbin/blockdev --setra 65536  $f ; done
 
 ```
 
