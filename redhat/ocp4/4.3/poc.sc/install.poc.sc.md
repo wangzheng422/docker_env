@@ -1680,12 +1680,12 @@ blockdev --report
 
 /sbin/blockdev --setra 8192 /dev/mapper/datavg-hddlv
 
-/sbin/blockdev --setra 8192 /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx
+/sbin/blockdev --setra 32768 /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx
 
 
 for f in /dev/mapper/datavg-hddlv_rimage_*; do /sbin/blockdev --setra 8192 $f ; done
 
-for f in /dev/mapper/datavg-hddlv_rimage_*; do /sbin/blockdev --setra 131072 $f ; done
+for f in /dev/mapper/datavg-hddlv_rimage_*; do /sbin/blockdev --setra 32768 $f ; done
 
 blktrace /dev/datavg/hddlv  /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx
 
