@@ -2495,7 +2495,7 @@ iostat -x -m 3 /dev/mapper/datavg-mixlv sdh sdab
 
 dstat -D /dev/mapper/datavg-mixlv,/dev/mapper/datavg-mixlv_corig,sdh,sdab -N bond0
 
-dstat -D /dev/mapper/datavg-mixlv,/dev/mapper/datavg-mixlv_corig,sdh,sdab --disk-util 
+dstat -D /dev/mapper/datavg-mixlv,/dev/mapper/datavg-mixlv_corig,sdh,sdab --disk-util -D /dev/mapper/datavg-mixlv,/dev/mapper/datavg-mixlv_corig,sdh,sdab -N bond0
 
 bmon -p eno1,eno2,ens2f0,ens2f1,bond0
 
@@ -2631,8 +2631,11 @@ blockdev --report
 /sbin/blockdev --setra 32768 /dev/mapper/datavg-mixlv
 /sbin/blockdev --setra 65536 /dev/mapper/datavg-mixlv
 /sbin/blockdev --setra 131072 /dev/mapper/datavg-mixlv
+/sbin/blockdev --setra 262144 /dev/mapper/datavg-mixlv
 
-for f in /dev/mapper/datavg-mixlv_corig_rimage_*; do /sbin/blockdev --setra 65536  $f ; done
+# final config
+/sbin/blockdev --setra 16384 /dev/mapper/datavg-mixlv
+for f in /dev/mapper/datavg-mixlv_corig_rimage_*; do /sbin/blockdev --setra 16384  $f ; done
 
 ```
 
