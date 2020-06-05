@@ -2637,6 +2637,55 @@ blockdev --report
 /sbin/blockdev --setra 16384 /dev/mapper/datavg-mixlv
 for f in /dev/mapper/datavg-mixlv_corig_rimage_*; do /sbin/blockdev --setra 16384  $f ; done
 
+# worker2
+# 5.5
+find /data/mnt/ -type f > list
+split -n l/1800 list split.list.all.
+for f in split.list.all.*; do ( cat $f | xargs -I DEMO cat DEMO > /dev/null & ); done
+# 800MB-1GB/s
+ps -ef | grep /data/mnt | grep cat | awk '{print $2}' | xargs -I DEMO kill DEMO
+
+# 2.8
+var_num=`echo "scale=0;$(cat list | wc -l  )/5" | bc -l`
+head -n $var_num list > list.20
+tail -n +$var_num list > list.80
+
+split -n l/$(echo "scale=0;1800/5*4"|bc -l) list.20 split.list.20.
+for f in split.list.20.*; do ( cat $f | xargs -I DEMO cat DEMO > /dev/null & ); done
+
+split -n l/$(echo "scale=0;1800/5*1"|bc -l) list.80 split.list.80.
+for f in split.list.80.*; do ( cat $f | xargs -I DEMO cat DEMO > /dev/null & ); done
+
+ps -ef | grep /data/mnt | grep cat | awk '{print $2}' | xargs -I DEMO kill DEMO
+
+# woker1
+# 5.5
+find /data/mnt/ -type f > list
+split -n l/1800 list split.list.all.
+for f in split.list.all.*; do ( cat $f | xargs -I DEMO cat DEMO > /dev/null & ); done
+# 800MB-1GB/s
+ps -ef | grep /data/mnt | grep cat | awk '{print $2}' | xargs -I DEMO kill DEMO
+
+# 2.8
+var_num=`echo "scale=0;$(cat list | wc -l  )/5" | bc -l`
+head -n $var_num list > list.20
+tail -n +$var_num list > list.80
+
+split -n l/$(echo "scale=0;1800/5*4"|bc -l) list.20 split.list.20.
+for f in split.list.20.*; do ( cat $f | xargs -I DEMO cat DEMO > /dev/null & ); done
+
+split -n l/$(echo "scale=0;1800/5*1"|bc -l) list.80 split.list.80.
+for f in split.list.80.*; do ( cat $f | xargs -I DEMO cat DEMO > /dev/null & ); done
+
+ps -ef | grep /data/mnt | grep cat | awk '{print $2}' | xargs -I DEMO kill DEMO
+
+# worker0
+find /data/mnt/ -type f > list
+split -l 19026 list list.all.
+for f in list.all.*; do ( cat $f | xargs -I DEMO cat DEMO > /dev/null & ); done
+
+ps -ef | grep /data/mnt | grep cat | awk '{print $2}' | xargs -I DEMO kill DEMO
+
 ```
 
 ### worker-2 nic bond
