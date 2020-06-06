@@ -2654,7 +2654,7 @@ var_total=1500
 # done
 
 while true; do
-  for ((i=0; i<$var_total; i++)); do
+  for ((i=1; i<=$var_total; i++)); do
     echo "Welcome $i times"
     cat list | shuf | xargs -I DEMO cat DEMO > /dev/null &
   done
@@ -2681,7 +2681,7 @@ var_total=1500
 # done
 var_runtimes=$(echo "scale=0;$var_total/5*4"|bc -l)
 while true; do
-  for ((i=0; i<$var_runtimes; i++)); do
+  for ((i=1; i<=$var_runtimes; i++)); do
     echo "Welcome $i times"
     cat list.20 | shuf | xargs -I DEMO cat DEMO > /dev/null &
   done
@@ -2700,7 +2700,7 @@ var_total=1500
 # done
 var_runtimes=$(echo "scale=0;$var_total/5*1"|bc -l)
 while true; do
-  for ((i=0; i<$var_runtimes; i++)); do
+  for ((i=1; i<=$var_runtimes; i++)); do
     echo "Welcome $i times"
     cat list.80 | shuf | xargs -I DEMO cat DEMO > /dev/null &
   done
@@ -2719,7 +2719,7 @@ dstat --output /root/dstat.csv -D /dev/mapper/datavg-hddlv,/dev/mapper/datavg-hd
 # for f in split.list.all.*; do ( cat $f | xargs -I DEMO cat DEMO > /dev/null & ); done
 
 # zte use 1800
-var_total=1500
+var_total=10
 while true; do
   for ((i=0; i<$var_total; i++)); do
     echo "Welcome $i times"
@@ -2742,7 +2742,7 @@ tail -n +$var_num list > list.80
 # split -n l/$(echo "scale=0;1800/5*1"|bc -l) list.80 split.list.80.
 # for f in split.list.80.*; do ( cat $f | xargs -I DEMO cat DEMO > /dev/null & ); done
 
-var_total=1500
+var_total=10
 var_runtimes=$(echo "scale=0;$var_total/5*4"|bc -l)
 while true; do
   for ((i=0; i<$var_runtimes; i++)); do
@@ -2753,7 +2753,7 @@ while true; do
   wait
 done
 
-var_total=1500
+var_total=10
 var_runtimes=$(echo "scale=0;$var_total/5*1"|bc -l)
 while true; do
   for ((i=0; i<$var_runtimes; i++)); do
@@ -2768,8 +2768,21 @@ ps -ef | grep /data/mnt | grep cat | awk '{print $2}' | xargs -I DEMO kill DEMO
 
 # worker0
 find /data/mnt/ -type f > list
-split -l 19026 list list.all.
-for f in list.all.*; do ( cat $f | xargs -I DEMO cat DEMO > /dev/null & ); done
+# split -l 19026 list list.all.
+# for f in list.all.*; do ( cat $f | xargs -I DEMO cat DEMO > /dev/null & ); done
+
+var_total=10
+while true; do
+  for ((i=0; i<$var_total; i++)); do
+    echo "Welcome $i times"
+    cat list | shuf | xargs -I DEMO cat DEMO > /dev/null &
+  done
+  echo "wait to finish"
+  wait
+done
+# 800MB-1GB/s
+ps -ef | grep /data/mnt | grep cat | awk '{print $2}' | xargs -I DEMO kill DEMO
+
 
 ps -ef | grep /data/mnt | grep cat | awk '{print $2}' | xargs -I DEMO kill DEMO
 
