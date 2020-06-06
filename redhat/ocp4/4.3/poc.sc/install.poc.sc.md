@@ -2495,7 +2495,7 @@ iostat -x -m 3 /dev/mapper/datavg-mixlv sdh sdab
 
 dstat -D /dev/mapper/datavg-mixlv,/dev/mapper/datavg-mixlv_corig,sdh,sdab -N bond0
 
-dstat -D /dev/mapper/datavg-mixlv,/dev/mapper/datavg-mixlv_corig,sdh,sdab --disk-util -D /dev/mapper/datavg-mixlv,/dev/mapper/datavg-mixlv_corig,sdh,sdab -N bond0
+dstat -D /dev/mapper/datavg-mixlv,/dev/mapper/datavg-mixlv_corig,sdh,sdab --disk-util 
 
 bmon -p eno1,eno2,ens2f0,ens2f1,bond0
 
@@ -2639,30 +2639,95 @@ for f in /dev/mapper/datavg-mixlv_corig_rimage_*; do /sbin/blockdev --setra 1638
 
 # worker2
 # 5.5
-find /data/mnt/ -type f > list
-split -n l/1800 list split.list.all.
-for f in split.list.all.*; do ( cat $f | xargs -I DEMO cat DEMO > /dev/null & ); done
+find /data_mix/mnt/ -type f > list
+dstat --output /root/dstat.csv -D /dev/mapper/datavg-mixlv,/dev/mapper/datavg-mixlv_corig,sdh,sdab -N bond0
+
+# zte use 1800
+var_total=1500
+# split -n l/$var_total list split.list.all.
+# while true; do
+#   for f in split.list.all.*; do 
+#       cat $f | xargs -I DEMO cat DEMO > /dev/null &
+#   done
+#   echo "wait to finish"
+#   wait
+# done
+
+while true; do
+  for ((i=0; i<$var_total; i++)); do
+    echo "Welcome $i times"
+    cat list | shuf | xargs -I DEMO cat DEMO > /dev/null &
+  done
+  echo "wait to finish"
+  wait
+done
 # 800MB-1GB/s
-ps -ef | grep /data/mnt | grep cat | awk '{print $2}' | xargs -I DEMO kill DEMO
+ps -ef | grep /data_mix/mnt | grep cat | awk '{print $2}' | xargs -I DEMO kill DEMO
+# rm -f split.*
 
 # 2.8
 var_num=`echo "scale=0;$(cat list | wc -l  )/5" | bc -l`
 head -n $var_num list > list.20
 tail -n +$var_num list > list.80
 
-split -n l/$(echo "scale=0;1800/5*4"|bc -l) list.20 split.list.20.
-for f in split.list.20.*; do ( cat $f | xargs -I DEMO cat DEMO > /dev/null & ); done
+var_total=1500
+# split -n l/$(echo "scale=0;$var_total/5*4"|bc -l) list.20 split.list.20.
+# while true; do
+#   for f in split.list.20.*; do 
+#       cat $f | xargs -I DEMO cat DEMO > /dev/null &
+#   done
+#   echo "wait to finish"
+#   wait
+# done
+var_runtimes=$(echo "scale=0;$var_total/5*4"|bc -l)
+while true; do
+  for ((i=0; i<$var_runtimes; i++)); do
+    echo "Welcome $i times"
+    cat list.20 | shuf | xargs -I DEMO cat DEMO > /dev/null &
+  done
+  echo "wait to finish"
+  wait
+done
 
-split -n l/$(echo "scale=0;1800/5*1"|bc -l) list.80 split.list.80.
-for f in split.list.80.*; do ( cat $f | xargs -I DEMO cat DEMO > /dev/null & ); done
-
-ps -ef | grep /data/mnt | grep cat | awk '{print $2}' | xargs -I DEMO kill DEMO
+var_total=1500
+# split -n l/$(echo "scale=0;$var_total/5*1"|bc -l) list.80 split.list.80.
+# while true; do
+#   for f in split.list.80.*; do 
+#       cat $f | xargs -I DEMO cat DEMO > /dev/null &
+#   done
+#   echo "wait to finish"
+#   wait
+# done
+var_runtimes=$(echo "scale=0;$var_total/5*1"|bc -l)
+while true; do
+  for ((i=0; i<$var_runtimes; i++)); do
+    echo "Welcome $i times"
+    cat list.80 | shuf | xargs -I DEMO cat DEMO > /dev/null &
+  done
+  echo "wait to finish"
+  wait
+done
+# 500M-1.2GB/s
+ps -ef | grep /data_mix/mnt | grep cat | awk '{print $2}' | xargs -I DEMO kill DEMO
 
 # woker1
 # 5.5
 find /data/mnt/ -type f > list
-split -n l/1800 list split.list.all.
-for f in split.list.all.*; do ( cat $f | xargs -I DEMO cat DEMO > /dev/null & ); done
+dstat --output /root/dstat.csv -D /dev/mapper/datavg-hddlv,/dev/mapper/datavg-hddlv_corig,sdh,sdab -N bond0
+
+# split -n l/1800 list split.list.all.
+# for f in split.list.all.*; do ( cat $f | xargs -I DEMO cat DEMO > /dev/null & ); done
+
+# zte use 1800
+var_total=1500
+while true; do
+  for ((i=0; i<$var_total; i++)); do
+    echo "Welcome $i times"
+    cat list | shuf | xargs -I DEMO cat DEMO > /dev/null &
+  done
+  echo "wait to finish"
+  wait
+done
 # 800MB-1GB/s
 ps -ef | grep /data/mnt | grep cat | awk '{print $2}' | xargs -I DEMO kill DEMO
 
@@ -2671,11 +2736,33 @@ var_num=`echo "scale=0;$(cat list | wc -l  )/5" | bc -l`
 head -n $var_num list > list.20
 tail -n +$var_num list > list.80
 
-split -n l/$(echo "scale=0;1800/5*4"|bc -l) list.20 split.list.20.
-for f in split.list.20.*; do ( cat $f | xargs -I DEMO cat DEMO > /dev/null & ); done
+# split -n l/$(echo "scale=0;1800/5*4"|bc -l) list.20 split.list.20.
+# for f in split.list.20.*; do ( cat $f | xargs -I DEMO cat DEMO > /dev/null & ); done
 
-split -n l/$(echo "scale=0;1800/5*1"|bc -l) list.80 split.list.80.
-for f in split.list.80.*; do ( cat $f | xargs -I DEMO cat DEMO > /dev/null & ); done
+# split -n l/$(echo "scale=0;1800/5*1"|bc -l) list.80 split.list.80.
+# for f in split.list.80.*; do ( cat $f | xargs -I DEMO cat DEMO > /dev/null & ); done
+
+var_total=1500
+var_runtimes=$(echo "scale=0;$var_total/5*4"|bc -l)
+while true; do
+  for ((i=0; i<$var_runtimes; i++)); do
+    echo "Welcome $i times"
+    cat list.20 | shuf | xargs -I DEMO cat DEMO > /dev/null &
+  done
+  echo "wait to finish"
+  wait
+done
+
+var_total=1500
+var_runtimes=$(echo "scale=0;$var_total/5*1"|bc -l)
+while true; do
+  for ((i=0; i<$var_runtimes; i++)); do
+    echo "Welcome $i times"
+    cat list.80 | shuf | xargs -I DEMO cat DEMO > /dev/null &
+  done
+  echo "wait to finish"
+  wait
+done
 
 ps -ef | grep /data/mnt | grep cat | awk '{print $2}' | xargs -I DEMO kill DEMO
 
