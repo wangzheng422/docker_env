@@ -2643,7 +2643,7 @@ find /data_mix/mnt/ -type f > list
 dstat --output /root/dstat.csv -D /dev/mapper/datavg-mixlv,/dev/mapper/datavg-mixlv_corig,sdh,sdab -N bond0
 
 # zte use 1800
-var_total=1500
+var_total=15
 # split -n l/$var_total list split.list.all.
 # while true; do
 #   for f in split.list.all.*; do 
@@ -2663,6 +2663,10 @@ while true; do
 done
 # 800MB-1GB/s
 ps -ef | grep /data_mix/mnt | grep cat | awk '{print $2}' | xargs -I DEMO kill DEMO
+
+tmux kill-window -t 3
+
+
 # rm -f split.*
 
 # 2.8
@@ -2764,7 +2768,9 @@ while true; do
   wait
 done
 
-ps -ef | grep /data/mnt | grep cat | awk '{print $2}' | xargs -I DEMO kill DEMO
+while true; do
+  ps -ef | grep /data/mnt | grep cat | awk '{print $2}' | xargs -I DEMO kill DEMO
+done
 
 # worker0
 find /data/mnt/ -type f > list
