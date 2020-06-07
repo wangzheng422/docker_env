@@ -1,5 +1,42 @@
 # poc for sc
-
+- [poc for sc](#poc-for-sc)
+  - [rhel host maintain](#rhel-host-maintain)
+    - [aliyun host](#aliyun-host)
+    - [helper host](#helper-host)
+    - [helper host day 2](#helper-host-day-2)
+    - [bootstrap host](#bootstrap-host)
+    - [master0 host](#master0-host)
+    - [master1 host](#master1-host)
+    - [master2 host](#master2-host)
+    - [infra0 host](#infra0-host)
+    - [infra1 host](#infra1-host)
+    - [worker-0 host](#worker-0-host)
+    - [worker-0 disk](#worker-0-disk)
+    - [worker-1 host](#worker-1-host)
+    - [worker-1 disk](#worker-1-disk)
+    - [worker-1 nic bond](#worker-1-nic-bond)
+    - [worker-2 host](#worker-2-host)
+    - [worker-2 disk](#worker-2-disk)
+    - [worker-2 nic bond](#worker-2-nic-bond)
+    - [worker-3 host](#worker-3-host)
+  - [install ocp](#install-ocp)
+    - [helper node day1](#helper-node-day1)
+    - [helper node day1 oper](#helper-node-day1-oper)
+    - [helper node day 2 sec](#helper-node-day-2-sec)
+    - [helper node quay](#helper-node-quay)
+    - [helper node zte oper](#helper-node-zte-oper)
+    - [helper host add vm-router](#helper-host-add-vm-router)
+    - [helper node zte tcp-router](#helper-node-zte-tcp-router)
+    - [helper node cluster tunning](#helper-node-cluster-tunning)
+    - [bootstrap node day1](#bootstrap-node-day1)
+    - [master1 node day1](#master1-node-day1)
+    - [master0 node day1](#master0-node-day1)
+    - [master2 node day1](#master2-node-day1)
+    - [infra0 node day1](#infra0-node-day1)
+    - [infra1 node day1](#infra1-node-day1)
+    - [worker-0 day2 oper](#worker-0-day2-oper)
+    - [worker-1 day2 oper](#worker-1-day2-oper)
+    - [worker-2 day2 oper](#worker-2-day2-oper)
 ## rhel host maintain
 
 ### aliyun host
@@ -5059,4 +5096,6 @@ systemctl disable libvirtd
 ```
 
 
-### 
+
+
+

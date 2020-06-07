@@ -985,6 +985,18 @@ model_mpg.loc[idx]
 # %%
 
 
+import numpy as np
+import pandas as pd
+import statsmodels.api as sm
 
+df = pd.read_csv('./house_prices.csv')
+df2 = df.copy()
+df.head()
+
+new_df['intercept'] = 1
+
+lm = sm.OLS(new_df['price'], new_df[['intercept', 'ranch', 'victorian']])
+results = lm.fit()
+results.summary()
 
 ```
