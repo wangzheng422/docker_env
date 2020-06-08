@@ -6,11 +6,11 @@ set -x
 # export BUILDNUMBER="4.2.13"
 # stable 4.3.5
 build_number_list=$(cat << EOF
-4.4.4
+4.4.7
 EOF
 )
 
-export var_date='2020-05-16'
+export var_date='2020-06-08'
 echo $var_date
 export var_major_version='4.4'
 echo ${var_major_version}
