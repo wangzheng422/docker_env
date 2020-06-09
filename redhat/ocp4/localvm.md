@@ -31,24 +31,30 @@ tar -cf - registry/ | pigz -c > /mnt/hgfs/ocp.4.2.8/registry.tgz
 
 
 # back up to disk
+OCP_VERION="4.4.7"
+
+mkdir -p /mnt/hgfs/ocp.archive/ocp.tgz.${OCP_VERION}
 
 cd /root
-tar -cf - data/ | pigz -c > /mnt/hgfs/ocp.tgz.4.3.21/rhel-data.tgz
+tar -cf - data/ | pigz -c > /mnt/hgfs/ocp.archive/ocp.tgz.${OCP_VERION}/rhel-data.tgz
 
 cd /data
-tar -cf - ocp4/ | pigz -c > /mnt/hgfs/ocp.tgz.4.3.21/ocp4.tgz
-tar -cf - registry/ | pigz -c > /mnt/hgfs/ocp.tgz.4.3.21/registry.tgz
-tar -cf - is.samples/ | pigz -c > /mnt/hgfs/ocp.tgz.4.3.21/is.samples.tgz
+tar -cf - ocp4/ | pigz -c > /mnt/hgfs/ocp.archive/ocp.tgz.${OCP_VERION}/ocp4.tgz
+tar -cf - registry/ | pigz -c > /mnt/hgfs/ocp.archive/ocp.tgz.${OCP_VERION}/registry.tgz
+tar -cf - is.samples/ | pigz -c > /mnt/hgfs/ocp.archive/ocp.tgz.${OCP_VERION}/is.samples.tgz
 
 cd 
-mkdir -p /mnt/hgfs/ocp.4.3.21/rhel-data/
-rsync --info=progress2 -P --delete -arz --no-o --no-g --no-perms /root/data/  /mnt/hgfs/ocp.4.3.21/rhel-data/
-mkdir -p /mnt/hgfs/ocp.4.3.21/ocp4
-rsync --info=progress2 -P --delete -arz --no-o --no-g --no-perms  /data/ocp4/  /mnt/hgfs/ocp.4.3.21/ocp4/
-mkdir -p /mnt/hgfs/ocp.4.3.21/registry
-rsync --info=progress2 -P --delete -arz --no-o --no-g --no-perms  /data/registry/  /mnt/hgfs/ocp.4.3.21/registry/
-mkdir -p /mnt/hgfs/ocp.4.3.21/is.samples
-rsync --info=progress2 -P --delete -arz --no-o --no-g --no-perms  /data/is.samples/  /mnt/hgfs/ocp.4.3.21/is.samples/
+mkdir -p /mnt/hgfs/ocp/rhel-data/
+rsync --info=progress2 -P --delete -arz --no-o --no-g --no-perms /root/data/  /mnt/hgfs/ocp/rhel-data/
+
+mkdir -p /mnt/hgfs/ocp/ocp4
+rsync --info=progress2 -P --delete -arz --no-o --no-g --no-perms  /data/ocp4/  /mnt/hgfs/ocp/ocp4/
+
+mkdir -p /mnt/hgfs/ocp/registry
+rsync --info=progress2 -P --delete -arz --no-o --no-g --no-perms  /data/registry/  /mnt/hgfs/ocp/registry/
+
+mkdir -p /mnt/hgfs/ocp/is.samples
+rsync --info=progress2 -P --delete -arz --no-o --no-g --no-perms  /data/is.samples/  /mnt/hgfs/ocp/is.samples/
 
 
 

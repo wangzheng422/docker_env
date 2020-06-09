@@ -19,6 +19,7 @@
     - [worker-2 disk](#worker-2-disk)
     - [worker-2 nic bond](#worker-2-nic-bond)
     - [worker-3 host](#worker-3-host)
+    - [worker-3 disk](#worker-3-disk)
   - [install ocp](#install-ocp)
     - [helper node day1](#helper-node-day1)
     - [helper node day1 oper](#helper-node-day1-oper)
@@ -252,6 +253,7 @@ cat > /root/iplist.txt <<EOL
 223.87.20.7/32
 10.88.0.0/16
 223.86.0.14/32
+39.134.204.0/24
 EOL
 
 firewall-cmd --permanent --ipset=my-allow-list --add-entries-from-file=iplist.txt
@@ -2987,6 +2989,8 @@ ipset add my-allow-set 61.132.54.2/32
 
 ipset add my-allow-set 39.134.198.0/24
 
+ipset add my-allow-set 39.134.204.0/24
+
 iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
 iptables -A INPUT -m set --match-set my-allow-set src -j ACCEPT
 iptables -A INPUT -p tcp -j REJECT
@@ -3048,6 +3052,94 @@ exit 0
 EOF
 
 chmod +x /root/nic.restore.sh
+
+
+mkdir /etc/yum.repos.d.bak
+mv /etc/yum.repos.d/* /etc/yum.repos.d.bak
+
+cat << EOF > /etc/yum.repos.d/remote.repo
+[remote]
+name=RHEL FTP
+baseurl=ftp://117.177.241.16/data
+enabled=1
+gpgcheck=0
+
+EOF
+
+yum clean all
+yum --disableplugin=subscription-manager  repolist
+
+yum -y update
+
+hostnamectl set-hostname worker-3.ocpsc.redhat.ren
+
+nmcli connection modify enp176s0f0 ipv4.dns 117.177.241.16
+nmcli connection reload
+nmcli connection up enp176s0f0
+
+
+
+# ntp
+yum install -y chrony
+systemctl enable chronyd
+systemctl restart chronyd
+systemctl status chronyd
+chronyc tracking
+
+systemctl disable --now firewalld.service
+
+# update ntp
+cat << EOF > /etc/chrony.conf
+server 223.87.20.100 iburst
+driftfile /var/lib/chrony/drift
+makestep 1.0 3
+rtcsync
+logdir /var/log/chrony
+EOF
+
+systemctl restart chronyd
+systemctl status chronyd
+chronyc tracking
+
+
+
+
+
+```
+
+### worker-3 disk
+
+```bash
+lshw -class disk
+
+lsblk | grep 5.5 | awk '{print $1}' | xargs -I DEMO echo -n "/dev/DEMO "
+# /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk
+lsblk | grep 5.5 | awk '{print $1}' | wc -l
+
+pvcreate -y /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp
+
+vgcreate datavg /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp
+
+lsblk -d -o name,rota
+
+
+lvcreate --type raid0 -L 75T --stripes 14 -n hddlv datavg /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp
+
+mkfs.xfs /dev/datavg/hddlv
+
+mkdir -p /data/
+
+cat /etc/fstab
+
+cat << EOF >> /etc/fstab
+/dev/datavg/hddlv /data                  xfs     defaults        0 0
+EOF
+
+mount -a
+df -h | grep \/data
+
+
+
 
 ```
 
@@ -3521,6 +3613,45 @@ EOF
 
 ansible-playbook -i /data/ocp4/rhel-ansible-host /usr/share/ansible/openshift-ansible/playbooks/scaleup.yml
 
+
+#########################################
+# add worker-3 rhel-ansible-host
+# upload vars-static.yaml 
+cd /data/ocp4/ocp4-upi-helpernode
+ansible-playbook -e @vars-static.yaml -e staticips=true tasks/main.yml
+
+cat << EOF  > /etc/yum/pluginconf.d/subscription-manager.conf
+[main]
+enabled=0
+EOF
+# scp vars_static.yaml to helper
+cd /data/ocp4/ocp4-upi-helpernode
+ansible-playbook -e @vars-static.yaml -e staticips=true tasks/main.yml
+
+ssh-copy-id root@worker-3.ocpsc.redhat.ren
+
+cat <<EOF > /data/ocp4/rhel-ansible-host
+[all:vars]
+ansible_user=root 
+#ansible_become=True 
+
+openshift_kubeconfig_path="/data/ocp4/auth/kubeconfig" 
+
+[workers] 
+infra-0.ocpsc.redhat.ren
+infra-1.ocpsc.redhat.ren
+worker-0.ocpsc.redhat.ren
+worker-1.ocpsc.redhat.ren
+worker-2.ocpsc.redhat.ren
+
+[new_workers]
+worker-3.ocpsc.redhat.ren
+
+EOF
+
+ansible-playbook -i /data/ocp4/rhel-ansible-host /usr/share/ansible/openshift-ansible/playbooks/scaleup.yml
+
+
 ```
 
 ### helper node day 2 sec
@@ -3540,6 +3671,7 @@ iptables -A INPUT -s 39.137.101.0/24 -j ACCEPT
 iptables -A INPUT -s 192.168.7.0/24 -j ACCEPT
 iptables -A INPUT -s 112.44.102.224/27 -j ACCEPT
 iptables -A INPUT -s 47.93.86.113/32 -j ACCEPT
+iptables -A INPUT -s 39.134.204.0/24 -j ACCEPT
 iptables -A INPUT -p tcp -j REJECT
 iptables -A INPUT -p udp -j REJECT
 
@@ -4707,6 +4839,8 @@ ipset add my-allow-set 39.137.101.0/24
 ipset add my-allow-set 192.168.7.0/24
 ipset add my-allow-set 112.44.102.224/27
 ipset add my-allow-set 47.93.86.113/32
+
+ipset add my-allow-set 39.134.204.0/24
 
 iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
 iptables -A INPUT -m set --match-set my-allow-set src -j ACCEPT

@@ -51,7 +51,7 @@ export VULTR_HOST=zero.pvg.redhat.ren
 
 export VULTR_HOST=vcdn.redhat.ren
 
-export VULTR_HOST=bastion.833e.example.opentlc.com
+export VULTR_HOST=bastion.e1be.example.opentlc.com
 
 cat << EOF > /root/.ssh/config
 StrictHostKeyChecking no
@@ -65,6 +65,7 @@ EOF
 # ProxyJump user@bastion-host-nickname
 # -J user@bastion-host-nickname
 
+# sync from aws to localvm
 cd /data
 
 rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/registry /data/
@@ -73,7 +74,16 @@ rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/ocp4 /data/
 
 rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/mirror_dir ./
 
+## sync from aws to pvg
+cd /data/remote/4.4.7
+
+rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/ocp4 ./
+
+rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/registry /data/
+
 # copy to local disk
+# localvm.md
+
 cd /root
 tar -cvf - data/ | pigz -c > /mnt/hgfs/ocp/rhel-data-7.8.tgz
 

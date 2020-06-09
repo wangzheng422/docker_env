@@ -29,4 +29,12 @@ systemctl set-default graphical.target
 
 vi /etc/PackageKit/PackageKit.conf 
 ProxyHTTP=http://192.168.253.1:5084
+
+
+nmcli connection modify ens33 ipv4.dns 192.168.253.2
+nmcli connection reload
+nmcli connection up ens33
+
+
+
 ```
