@@ -1630,10 +1630,19 @@ lvcreate --type raid0 -L 130T --stripes 24 -n hddlv datavg /dev/sda /dev/sdb /de
 
 
 
-lvcreate --type raid0 -L 400G --stripes 12 -n testfslv datavg /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl 
 
-mkfs.xfs /dev/datavg/testfslv
+
+
+lvcreate --type raid6 -L 900G --stripesize 128k --stripes 22 -n testfslv datavg /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx
+
+mkfs.ext4 /dev/datavg/testfslv
 mount /dev/datavg/testfslv /data_mix
+
+
+
+
+# slow
+lvcreate --type raid0 -L 400G --stripesize 128k --stripes 12 -n testfslv datavg /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl 
 
 
 
@@ -1802,13 +1811,14 @@ find /data/mnt/ -type f  -size +100M > list.100m.up
 find /data/mnt/ -type f > list
 dstat --output /root/dstat.csv -D /dev/mapper/datavg-mixlv,/dev/mapper/datavg-mixlv_corig,sdh,sdab -N bond0
 
-dstat -D /dev/mapper/datavg-hddlv,/dev/datavg/ext4lv,sdh,sdab -N bond0
+dstat -D /dev/mapper/datavg-hddlv,/dev/datavg/testfslv,sdh,sdab -N bond0
 
+mkdir /data_mix/mnt
 i=0
 while read f; do
   /bin/cp -f $f /data_mix/mnt/$i
   ((i++))
-done < list
+done < list.2m
 
 while true; do
   df -h | grep /data
@@ -1839,6 +1849,458 @@ ps -ef | grep /mnt/zxdfs | grep cat | awk '{print $2}' | xargs -I DEMO kill DEMO
 
 ps -ef | grep /data_mix/mnt | grep cat | awk '{print $2}' | xargs -I DEMO kill DEMO
 
+
+# check sn
+dmidecode -t 1
+# # dmidecode 3.2
+# Getting SMBIOS data from sysfs.
+# SMBIOS 3.0.0 present.
+
+# Handle 0x0001, DMI type 1, 27 bytes
+# System Information
+#         Manufacturer: Huawei
+#         Product Name: 5288 V5
+#         Version: Purley
+#         Serial Number: 2102312CJSN0K9000028
+#         UUID: a659bd21-cc64-83c1-e911-6cd6de4f8050
+#         Wake-up Type: Power Switch
+#         SKU Number: Purley
+#         Family: Purley
+
+# check disk
+lshw -c disk
+  # *-disk:0
+  #      description: ATA Disk
+  #      product: HUS726T6TALE600
+  #      physical id: 0.2.0
+  #      bus info: scsi@0:0.2.0
+  #      logical name: /dev/sda
+  #      version: T010
+  #      serial: xLkuQ2-XVVp-sfs3-8Rgm-vRgS-uysW-ncIudq
+  #      size: 5589GiB (6001GB)
+  #      capacity: 5589GiB (6001GB)
+  #      capabilities: 7200rpm lvm2
+  #      configuration: ansiversion=6 logicalsectorsize=512 sectorsize=4096
+  # *-disk:1
+  #      description: ATA Disk
+  #      product: HUS726T6TALE600
+  #      physical id: 0.3.0
+  #      bus info: scsi@0:0.3.0
+  #      logical name: /dev/sdb
+  #      version: T010
+  #      serial: 5d2geD-fGih-Q6yK-2xVs-lWUG-tH38-qQWRC6
+  #      size: 5589GiB (6001GB)
+  #      capacity: 5589GiB (6001GB)
+  #      capabilities: 7200rpm lvm2
+  #      configuration: ansiversion=6 logicalsectorsize=512 sectorsize=4096
+  # *-disk:2
+  #      description: ATA Disk
+  #      product: HUS726T6TALE600
+  #      physical id: 0.c.0
+  #      bus info: scsi@0:0.12.0
+  #      logical name: /dev/sdk
+  #      version: T010
+  #      serial: fePKOb-MTZv-j4Xz-qNjo-cPTr-078I-vZYiPH
+  #      size: 5589GiB (6001GB)
+  #      capacity: 5589GiB (6001GB)
+  #      capabilities: 7200rpm lvm2
+  #      configuration: ansiversion=6 logicalsectorsize=512 sectorsize=4096
+  # *-disk:3
+  #      description: ATA Disk
+  #      product: HUS726T6TALE600
+  #      physical id: 0.d.0
+  #      bus info: scsi@0:0.13.0
+  #      logical name: /dev/sdl
+  #      version: T010
+  #      serial: fUTBJp-fXg0-0uJX-V4Qp-vSfZ-yxmb-G8LNam
+  #      size: 5589GiB (6001GB)
+  #      capacity: 5589GiB (6001GB)
+  #      capabilities: 7200rpm lvm2
+  #      configuration: ansiversion=6 logicalsectorsize=512 sectorsize=4096
+  # *-disk:4
+  #      description: ATA Disk
+  #      product: HUS726T6TALE600
+  #      physical id: 0.e.0
+  #      bus info: scsi@0:0.14.0
+  #      logical name: /dev/sdm
+  #      version: T010
+  #      serial: SNfxce-ytX2-7j4p-opnQ-lOxC-AFIp-VbCfec
+  #      size: 5589GiB (6001GB)
+  #      capacity: 5589GiB (6001GB)
+  #      capabilities: 7200rpm lvm2
+  #      configuration: ansiversion=6 logicalsectorsize=512 sectorsize=4096
+  # *-disk:5
+  #      description: ATA Disk
+  #      product: HUS726T6TALE600
+  #      physical id: 0.f.0
+  #      bus info: scsi@0:0.15.0
+  #      logical name: /dev/sdn
+  #      version: T010
+  #      serial: HJqH2G-XT7i-2R27-dSb0-q36n-T4Ut-Ml4GiE
+  #      size: 5589GiB (6001GB)
+  #      capacity: 5589GiB (6001GB)
+  #      capabilities: 7200rpm lvm2
+  #      configuration: ansiversion=6 logicalsectorsize=512 sectorsize=4096
+  # *-disk:6
+  #      description: ATA Disk
+  #      product: HUS726T6TALE600
+  #      physical id: 0.10.0
+  #      bus info: scsi@0:0.16.0
+  #      logical name: /dev/sdo
+  #      version: T010
+  #      serial: IBh87y-SOWJ-rI3R-Mshu-agWM-TyHs-6ko0iu
+  #      size: 5589GiB (6001GB)
+  #      capacity: 5589GiB (6001GB)
+  #      capabilities: 7200rpm lvm2
+  #      configuration: ansiversion=6 logicalsectorsize=512 sectorsize=4096
+  # *-disk:7
+  #      description: ATA Disk
+  #      product: HUS726T6TALE600
+  #      physical id: 0.11.0
+  #      bus info: scsi@0:0.17.0
+  #      logical name: /dev/sdp
+  #      version: T010
+  #      serial: erBKxc-gBsD-msEq-aXMJ-8akE-FGRb-SjBk1w
+  #      size: 5589GiB (6001GB)
+  #      capacity: 5589GiB (6001GB)
+  #      capabilities: 7200rpm lvm2
+  #      configuration: ansiversion=6 logicalsectorsize=512 sectorsize=4096
+  # *-disk:8
+  #      description: ATA Disk
+  #      product: HUS726T6TALE600
+  #      physical id: 0.12.0
+  #      bus info: scsi@0:0.18.0
+  #      logical name: /dev/sdq
+  #      version: T010
+  #      serial: HsiL2h-6736-4x4H-0OTz-HuXj-My1c-RRShQP
+  #      size: 5589GiB (6001GB)
+  #      capacity: 5589GiB (6001GB)
+  #      capabilities: 7200rpm lvm2
+  #      configuration: ansiversion=6 logicalsectorsize=512 sectorsize=4096
+  # *-disk:9
+  #      description: ATA Disk
+  #      product: HUS726T6TALE600
+  #      physical id: 0.13.0
+  #      bus info: scsi@0:0.19.0
+  #      logical name: /dev/sdr
+  #      version: T010
+  #      serial: yZQ8MH-7SCw-KIFL-fphN-S0W0-GS4V-Wc2gwx
+  #      size: 5589GiB (6001GB)
+  #      capacity: 5589GiB (6001GB)
+  #      capabilities: 7200rpm lvm2
+  #      configuration: ansiversion=6 logicalsectorsize=512 sectorsize=4096
+  # *-disk:10
+  #      description: ATA Disk
+  #      product: HUS726T6TALE600
+  #      physical id: 0.14.0
+  #      bus info: scsi@0:0.20.0
+  #      logical name: /dev/sds
+  #      version: T010
+  #      serial: pp6xvN-MBT9-aLkB-65hF-7fwE-29vt-hA51K9
+  #      size: 5589GiB (6001GB)
+  #      capacity: 5589GiB (6001GB)
+  #      capabilities: 7200rpm lvm2
+  #      configuration: ansiversion=6 logicalsectorsize=512 sectorsize=4096
+  # *-disk:11
+  #      description: ATA Disk
+  #      product: HUS726T6TALE600
+  #      physical id: 0.15.0
+  #      bus info: scsi@0:0.21.0
+  #      logical name: /dev/sdt
+  #      version: T010
+  #      serial: jXj3cL-qvoJ-JWP0-jvp9-WEbn-yD63-e6vFmP
+  #      size: 5589GiB (6001GB)
+  #      capacity: 5589GiB (6001GB)
+  #      capabilities: 7200rpm lvm2
+  #      configuration: ansiversion=6 logicalsectorsize=512 sectorsize=4096
+  # *-disk:12
+  #      description: ATA Disk
+  #      product: HUS726T6TALE600
+  #      physical id: 0.4.0
+  #      bus info: scsi@0:0.4.0
+  #      logical name: /dev/sdc
+  #      version: T010
+  #      serial: Ca6Nyo-Oq5p-UdAY-oqIs-DlK5-1PPy-ugvF3P
+  #      size: 5589GiB (6001GB)
+  #      capacity: 5589GiB (6001GB)
+  #      capabilities: 7200rpm lvm2
+  #      configuration: ansiversion=6 logicalsectorsize=512 sectorsize=4096
+  # *-disk:13
+  #      description: ATA Disk
+  #      product: HUS726T6TALE600
+  #      physical id: 0.16.0
+  #      bus info: scsi@0:0.22.0
+  #      logical name: /dev/sdu
+  #      version: T010
+  #      serial: GOTXh2-34fo-rZfh-IB5d-RkwW-o5EC-rDD4R1
+  #      size: 5589GiB (6001GB)
+  #      capacity: 5589GiB (6001GB)
+  #      capabilities: 7200rpm lvm2
+  #      configuration: ansiversion=6 logicalsectorsize=512 sectorsize=4096
+  # *-disk:14
+  #      description: ATA Disk
+  #      product: HUS726T6TALE600
+  #      physical id: 0.17.0
+  #      bus info: scsi@0:0.23.0
+  #      logical name: /dev/sdv
+  #      version: T010
+  #      serial: 7Yn8xd-68Xu-A0RC-nx5Q-YEvJ-QPEG-CwjkP0
+  #      size: 5589GiB (6001GB)
+  #      capacity: 5589GiB (6001GB)
+  #      capabilities: 7200rpm lvm2
+  #      configuration: ansiversion=6 logicalsectorsize=512 sectorsize=4096
+  # *-disk:15
+  #      description: ATA Disk
+  #      product: HUS726T6TALE600
+  #      physical id: 0.18.0
+  #      bus info: scsi@0:0.24.0
+  #      logical name: /dev/sdw
+  #      version: T010
+  #      serial: hdz5tv-f2Zm-wuf8-qtKO-XIlN-4Z1E-uHapKc
+  #      size: 5589GiB (6001GB)
+  #      capacity: 5589GiB (6001GB)
+  #      capabilities: 7200rpm lvm2
+  #      configuration: ansiversion=6 logicalsectorsize=512 sectorsize=4096
+  # *-disk:16
+  #      description: ATA Disk
+  #      product: HUS726T6TALE600
+  #      physical id: 0.19.0
+  #      bus info: scsi@0:0.25.0
+  #      logical name: /dev/sdx
+  #      version: T010
+  #      serial: C3VFhO-mh9a-vKIR-Gi1o-pc05-LOqY-oErH8r
+  #      size: 5589GiB (6001GB)
+  #      capacity: 5589GiB (6001GB)
+  #      capabilities: 7200rpm lvm2
+  #      configuration: ansiversion=6 logicalsectorsize=512 sectorsize=4096
+  # *-disk:17
+  #      description: SCSI Disk
+  #      product: HW-SAS3408
+  #      vendor: AVAGO
+  #      physical id: 2.0.0
+  #      bus info: scsi@0:2.0.0
+  #      logical name: /dev/sdy
+  #      version: 5.06
+  #      serial: 00457f537b174eb025007018406c778a
+  #      size: 446GiB (478GB)
+  #      capabilities: gpt-1.00 partitioned partitioned:gpt
+  #      configuration: ansiversion=5 guid=f72b8f56-6e5d-4a0c-a2a0-bf641ac2c2ff logicalsectorsize=512 sectorsize=4096
+  # *-disk:18
+  #      description: ATA Disk
+  #      product: HUS726T6TALE600
+  #      physical id: 0.5.0
+  #      bus info: scsi@0:0.5.0
+  #      logical name: /dev/sdd
+  #      version: T010
+  #      serial: 1sulWQ-pttz-zf0P-WTEe-cydl-lY6Q-CdX4Hv
+  #      size: 5589GiB (6001GB)
+  #      capacity: 5589GiB (6001GB)
+  #      capabilities: 7200rpm lvm2
+  #      configuration: ansiversion=6 logicalsectorsize=512 sectorsize=4096
+  # *-disk:19
+  #      description: ATA Disk
+  #      product: HUS726T6TALE600
+  #      physical id: 0.6.0
+  #      bus info: scsi@0:0.6.0
+  #      logical name: /dev/sde
+  #      version: T010
+  #      serial: JF6q37-XaYh-qoXg-mPeZ-4Ofr-Qrkt-nh21RR
+  #      size: 5589GiB (6001GB)
+  #      capacity: 5589GiB (6001GB)
+  #      capabilities: 7200rpm lvm2
+  #      configuration: ansiversion=6 logicalsectorsize=512 sectorsize=4096
+  # *-disk:20
+  #      description: ATA Disk
+  #      product: HUS726T6TALE600
+  #      physical id: 0.7.0
+  #      bus info: scsi@0:0.7.0
+  #      logical name: /dev/sdf
+  #      version: T010
+  #      serial: vvF48a-k1sq-7v1m-dpSh-yb50-KLLk-otk7lA
+  #      size: 5589GiB (6001GB)
+  #      capacity: 5589GiB (6001GB)
+  #      capabilities: 7200rpm lvm2
+  #      configuration: ansiversion=6 logicalsectorsize=512 sectorsize=4096
+  # *-disk:21
+  #      description: ATA Disk
+  #      product: HUS726T6TALE600
+  #      physical id: 0.8.0
+  #      bus info: scsi@0:0.8.0
+  #      logical name: /dev/sdg
+  #      version: T010
+  #      serial: NHU0VX-vm31-DyRP-V4dc-gx7T-dXGI-Bb8qlw
+  #      size: 5589GiB (6001GB)
+  #      capacity: 5589GiB (6001GB)
+  #      capabilities: 7200rpm lvm2
+  #      configuration: ansiversion=6 logicalsectorsize=512 sectorsize=4096
+  # *-disk:22
+  #      description: ATA Disk
+  #      product: HUS726T6TALE600
+  #      physical id: 0.9.0
+  #      bus info: scsi@0:0.9.0
+  #      logical name: /dev/sdh
+  #      version: T010
+  #      serial: jCIRNL-K08S-oYZc-Q5Eb-Y2ht-0NYt-0luz1T
+  #      size: 5589GiB (6001GB)
+  #      capacity: 5589GiB (6001GB)
+  #      capabilities: 7200rpm lvm2
+  #      configuration: ansiversion=6 logicalsectorsize=512 sectorsize=4096
+  # *-disk:23
+  #      description: ATA Disk
+  #      product: HUS726T6TALE600
+  #      physical id: 0.a.0
+  #      bus info: scsi@0:0.10.0
+  #      logical name: /dev/sdi
+  #      version: T010
+  #      serial: wiQiLJ-Arua-8vcg-m6ta-KgSL-f1kD-rgzKxD
+  #      size: 5589GiB (6001GB)
+  #      capacity: 5589GiB (6001GB)
+  #      capabilities: 7200rpm lvm2
+  #      configuration: ansiversion=6 logicalsectorsize=512 sectorsize=4096
+  # *-disk:24
+  #      description: ATA Disk
+  #      product: HUS726T6TALE600
+  #      physical id: 0.b.0
+  #      bus info: scsi@0:0.11.0
+  #      logical name: /dev/sdj
+  #      version: T010
+  #      serial: T7vZ96-uTGr-tvFz-jKoZ-479j-vRvh-WeCVRJ
+  #      size: 5589GiB (6001GB)
+  #      capacity: 5589GiB (6001GB)
+  #      capabilities: 7200rpm lvm2
+  #      configuration: ansiversion=6 logicalsectorsize=512 sectorsize=4096
+  # *-disk:0
+  #      description: ATA Disk
+  #      product: MTFDDAK960TDC-1A
+  #      physical id: 0.e.0
+  #      bus info: scsi@15:0.14.0
+  #      logical name: /dev/sdz
+  #      version: M030
+  #      serial: HE21uM-4KRw-heFX-IFVf-zO8Y-Rzah-ncwlwL
+  #      size: 894GiB (960GB)
+  #      capacity: 894GiB (960GB)
+  #      capabilities: lvm2
+  #      configuration: ansiversion=6 logicalsectorsize=512 sectorsize=4096
+  # *-disk:1
+  #      description: ATA Disk
+  #      product: MTFDDAK960TDC-1A
+  #      physical id: 0.f.0
+  #      bus info: scsi@15:0.15.0
+  #      logical name: /dev/sdaa
+  #      version: M030
+  #      serial: RGeqtd-dTEc-hV8g-Xd9o-I1Ke-sDH1-UK6mZg
+  #      size: 894GiB (960GB)
+  #      capacity: 894GiB (960GB)
+  #      capabilities: lvm2
+  #      configuration: ansiversion=6 logicalsectorsize=512 sectorsize=4096
+  # *-disk:2
+  #      description: ATA Disk
+  #      product: MTFDDAK960TDC-1A
+  #      physical id: 0.10.0
+  #      bus info: scsi@15:0.16.0
+  #      logical name: /dev/sdab
+  #      version: M030
+  #      serial: 1ROsNp-0J4j-DuWM-1nNl-Fo3K-gWfg-d7VDLq
+  #      size: 894GiB (960GB)
+  #      capacity: 894GiB (960GB)
+  #      capabilities: lvm2
+  #      configuration: ansiversion=6 logicalsectorsize=512 sectorsize=4096
+  # *-disk:3
+  #      description: ATA Disk
+  #      product: MTFDDAK960TDC-1A
+  #      physical id: 0.11.0
+  #      bus info: scsi@15:0.17.0
+  #      logical name: /dev/sdac
+  #      version: M030
+  #      serial: s0XeSI-Zl3B-0xcU-8wi3-BvVo-vU3k-cLZx22
+  #      size: 894GiB (960GB)
+  #      capacity: 894GiB (960GB)
+  #      capabilities: lvm2
+  #      configuration: ansiversion=6 logicalsectorsize=512 sectorsize=4096
+  # *-disk:4
+  #      description: ATA Disk
+  #      product: MTFDDAK960TDC-1A
+  #      physical id: 0.12.0
+  #      bus info: scsi@15:0.18.0
+  #      logical name: /dev/sdad
+  #      version: M030
+  #      serial: rZZ7yM-KImV-6Ld8-xmOJ-KyiC-Wstp-4t35S3
+  #      size: 894GiB (960GB)
+  #      capacity: 894GiB (960GB)
+  #      capabilities: lvm2
+  #      configuration: ansiversion=6 logicalsectorsize=512 sectorsize=4096
+  # *-disk:5
+  #      description: ATA Disk
+  #      product: MTFDDAK960TDC-1A
+  #      physical id: 0.13.0
+  #      bus info: scsi@15:0.19.0
+  #      logical name: /dev/sdae
+  #      version: M030
+  #      serial: LI50dd-vn2G-RiYE-5iuL-nxYI-TXCT-zs1lSY
+  #      size: 894GiB (960GB)
+  #      capacity: 894GiB (960GB)
+  #      capabilities: lvm2
+  #      configuration: ansiversion=6 logicalsectorsize=512 sectorsize=4096
+  # *-disk:6
+  #      description: ATA Disk
+  #      product: MTFDDAK960TDC-1A
+  #      physical id: 0.14.0
+  #      bus info: scsi@15:0.20.0
+  #      logical name: /dev/sdaf
+  #      version: M030
+  #      serial: 2hkDxG-90a2-mkEJ-GxmQ-doAv-SPT1-8qyo10
+  #      size: 894GiB (960GB)
+  #      capacity: 894GiB (960GB)
+  #      capabilities: lvm2
+  #      configuration: ansiversion=6 logicalsectorsize=512 sectorsize=4096
+  # *-disk:7
+  #      description: ATA Disk
+  #      product: MTFDDAK960TDC-1A
+  #      physical id: 0.15.0
+  #      bus info: scsi@15:0.21.0
+  #      logical name: /dev/sdag
+  #      version: M030
+  #      serial: bMQrTa-IKF7-vDFU-5RSR-cj4a-cOUL-QAY2yI
+  #      size: 894GiB (960GB)
+  #      capacity: 894GiB (960GB)
+  #      capabilities: lvm2
+  #      configuration: ansiversion=6 logicalsectorsize=512 sectorsize=4096
+  # *-disk:8
+  #      description: ATA Disk
+  #      product: MTFDDAK960TDC-1A
+  #      physical id: 0.16.0
+  #      bus info: scsi@15:0.22.0
+  #      logical name: /dev/sdah
+  #      version: M030
+  #      serial: q0VZpE-4sub-HKbe-RkRx-G0wM-HOeU-NDRXRe
+  #      size: 894GiB (960GB)
+  #      capacity: 894GiB (960GB)
+  #      capabilities: lvm2
+  #      configuration: ansiversion=6 logicalsectorsize=512 sectorsize=4096
+  # *-disk:9
+  #      description: ATA Disk
+  #      product: MTFDDAK960TDC-1A
+  #      physical id: 0.17.0
+  #      bus info: scsi@15:0.23.0
+  #      logical name: /dev/sdai
+  #      version: M030
+  #      serial: fEj7Rr-FSS8-ruwb-IjSj-xW6l-oj6v-q1pSNV
+  #      size: 894GiB (960GB)
+  #      capacity: 894GiB (960GB)
+  #      capabilities: lvm2
+  #      configuration: ansiversion=6 logicalsectorsize=512 sectorsize=4096
+  # *-disk:10
+  #      description: SCSI Disk
+  #      product: HW-SAS3408
+  #      vendor: AVAGO
+  #      physical id: 2.0.0
+  #      bus info: scsi@15:2.0.0
+  #      logical name: /dev/sdaj
+  #      version: 5.06
+  #      serial: 00a6b489499e4cb02500904af3624ac6
+  #      size: 893GiB (958GB)
+  #      capabilities: partitioned partitioned:dos
+  #      configuration: ansiversion=5 logicalsectorsize=512 sectorsize=4096 signature=550d3974
 
 yum -y install fio
 
@@ -3228,22 +3690,22 @@ vgcreate datavg /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /
 lsblk -d -o name,rota
 
 
-lvcreate --type raid0 -L 75T --stripes 14 -n hddlv datavg /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp
+lvcreate --type raid0 -L 75T  --stripesize 128k --stripes 14 -n hddlv datavg /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp
 
-mkfs.xfs /dev/datavg/hddlv
+mkfs.ext4 /dev/datavg/hddlv
 
 mkdir -p /data/
 
 cat /etc/fstab
 
 cat << EOF >> /etc/fstab
-/dev/datavg/hddlv /data                  xfs     defaults        0 0
+/dev/datavg/hddlv /data                  ext4     defaults        0 0
 EOF
 
 mount -a
 df -h | grep \/data
 
-
+dstat -D /dev/datavg/hddlv 
 
 
 ```
@@ -5097,6 +5559,8 @@ ipset add my-allow-set 39.134.198.0/24
 
 ipset add my-allow-set 218.205.236.16/28
 
+ipset add my-allow-set 39.134.204.0/24
+
 iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
 iptables -A INPUT -m set --match-set my-allow-set src -j ACCEPT
 iptables -A INPUT -p tcp -j REJECT
@@ -5156,6 +5620,8 @@ ipset add my-allow-set 39.134.198.0/24
 
 ipset add my-allow-set 218.205.236.16/28
 
+ipset add my-allow-set 39.134.204.0/24
+
 iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
 iptables -A INPUT -m set --match-set my-allow-set src -j ACCEPT
 iptables -A INPUT -p tcp -j REJECT
@@ -5210,6 +5676,8 @@ ipset add my-allow-set 61.132.54.2/32
 ipset add my-allow-set 39.134.198.0/24
 
 ipset add my-allow-set 218.205.236.16/28
+
+ipset add my-allow-set 39.134.204.0/24
 
 iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
 iptables -A INPUT -m set --match-set my-allow-set src -j ACCEPT
