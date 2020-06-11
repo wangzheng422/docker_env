@@ -85,6 +85,17 @@ systemctl enable nfs
 
 showmount -e localhost
 
+# install rhv
+yum install cockpit-ovirt-dashboard
+
+systemctl enable cockpit.socket
+systemctl start cockpit.socket
+
+yum install rhvm-appliance
+
+
+
+
 ```
 
 ## redhat-02

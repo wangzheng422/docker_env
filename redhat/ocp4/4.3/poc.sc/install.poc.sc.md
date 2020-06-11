@@ -1349,6 +1349,54 @@ for f in /dev/mapper/datavg-hddlv_rimage_*; do /sbin/blockdev --setra 131072 $f 
 blktrace /dev/datavg/hddlv /dev/nvme0n1 /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk
 
 
+
+# 5.5
+find /data/mnt/ -type f -size -2M  > list.2m
+find /data/mnt/ -type f -size -10M  -size +2M > list.10m
+find /data/mnt/ -type f -size -100M  -size +10M > list.100m
+find /data/mnt/ -type f  -size +100M > list.100m.up
+
+
+find /data/mnt/ -type f > list
+dstat --output /root/dstat.csv -D /dev/mapper/datavg-mixlv,/dev/mapper/datavg-mixlv_corig,sdh,sdab -N bond0
+
+dstat -D /dev/mapper/datavg-hddlv,/dev/datavg/ext4lv,sdh,sdab -N bond0
+
+i=0
+while read f; do
+  /bin/cp -f $f /data_mix/mnt/$i
+  ((i++))
+done < list
+
+find /data_mix/mnt/ -type f > list
+cat list | shuf > list.shuf
+
+# zte use 1800
+var_total=32
+split -n l/$var_total list.shuf split.list.all.
+for f in split.list.all.*; do 
+    cat $f | xargs -I DEMO cat DEMO > /dev/null &
+done
+echo "wait to finish"
+wait
+# while true; do
+#   for f in split.list.all.*; do 
+#       cat $f | xargs -I DEMO cat DEMO > /dev/null &
+#   done
+#   echo "wait to finish"
+#   wait
+# done
+kill -9 $(jobs -p)
+
+jobs -p  | xargs kill
+
+ps -ef | grep /mnt/zxdfs | grep cat | awk '{print $2}' | xargs -I DEMO kill DEMO
+
+ps -ef | grep /data_mix/mnt | grep cat | awk '{print $2}' | xargs -I DEMO kill DEMO
+
+
+
+
 ```
 
 ### worker-1 host
@@ -1582,6 +1630,15 @@ lvcreate --type raid0 -L 130T --stripes 24 -n hddlv datavg /dev/sda /dev/sdb /de
 
 
 
+lvcreate --type raid0 -L 400G --stripes 12 -n testfslv datavg /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl 
+
+mkfs.xfs /dev/datavg/testfslv
+mount /dev/datavg/testfslv /data_mix
+
+
+
+
+
 
 
 
@@ -1719,12 +1776,12 @@ blockdev --report
 
 /sbin/blockdev --setra 8192 /dev/mapper/datavg-hddlv
 
-/sbin/blockdev --setra 32768 /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx
+/sbin/blockdev --setra 8192 /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx
 
 
 for f in /dev/mapper/datavg-hddlv_rimage_*; do /sbin/blockdev --setra 8192 $f ; done
 
-for f in /dev/mapper/datavg-hddlv_rimage_*; do /sbin/blockdev --setra 32768 $f ; done
+for f in /dev/mapper/datavg-hddlv_rimage_*; do /sbin/blockdev --setra 16384 $f ; done
 
 blktrace /dev/datavg/hddlv  /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx
 
@@ -1733,6 +1790,54 @@ btt -i dm-24.bin | less
 
 blkparse -o /dev/null -i sda -d sda.bin
 btt -i sda.bin | less
+
+
+# 5.5
+# find /data/mnt/ -type f -size -2M -size +512k  > list
+find /data/mnt/ -type f -size -2M  > list.2m
+find /data/mnt/ -type f -size -10M  -size +2M > list.10m
+find /data/mnt/ -type f -size -100M  -size +10M > list.100m
+find /data/mnt/ -type f  -size +100M > list.100m.up
+
+find /data/mnt/ -type f > list
+dstat --output /root/dstat.csv -D /dev/mapper/datavg-mixlv,/dev/mapper/datavg-mixlv_corig,sdh,sdab -N bond0
+
+dstat -D /dev/mapper/datavg-hddlv,/dev/datavg/ext4lv,sdh,sdab -N bond0
+
+i=0
+while read f; do
+  /bin/cp -f $f /data_mix/mnt/$i
+  ((i++))
+done < list
+
+while true; do
+  df -h | grep /data
+  sleep 60
+done
+
+find /data_mix/mnt/ -type f > list
+cat list | shuf > list.shuf
+
+# zte use 1800
+var_total=32
+split -n l/$var_total list.shuf split.list.all.
+for f in split.list.all.*; do 
+    cat $f | xargs -I DEMO cat DEMO > /dev/null &
+done
+echo "wait to finish"
+wait
+# while true; do
+#   for f in split.list.all.*; do 
+#       cat $f | xargs -I DEMO cat DEMO > /dev/null &
+#   done
+#   echo "wait to finish"
+#   wait
+# done
+kill -9 $(jobs -p)
+
+ps -ef | grep /mnt/zxdfs | grep cat | awk '{print $2}' | xargs -I DEMO kill DEMO
+
+ps -ef | grep /data_mix/mnt | grep cat | awk '{print $2}' | xargs -I DEMO kill DEMO
 
 
 yum -y install fio
@@ -2682,24 +2787,24 @@ find /data_mix/mnt/ -type f > list
 dstat --output /root/dstat.csv -D /dev/mapper/datavg-mixlv,/dev/mapper/datavg-mixlv_corig,sdh,sdab -N bond0
 
 # zte use 1800
-var_total=15
-# split -n l/$var_total list split.list.all.
-# while true; do
-#   for f in split.list.all.*; do 
-#       cat $f | xargs -I DEMO cat DEMO > /dev/null &
-#   done
-#   echo "wait to finish"
-#   wait
-# done
-
+var_total=5
+split -n l/$var_total list split.list.all.
 while true; do
-  for ((i=1; i<=$var_total; i++)); do
-    echo "Welcome $i times"
-    cat list | shuf | xargs -I DEMO cat DEMO > /dev/null &
+  for f in split.list.all.*; do 
+      cat $f | xargs -I DEMO cat DEMO > /dev/null &
   done
   echo "wait to finish"
   wait
 done
+
+# while true; do
+#   for ((i=1; i<=$var_total; i++)); do
+#     echo "Welcome $i times"
+#     cat list | shuf | xargs -I DEMO cat DEMO > /dev/null &
+#   done
+#   echo "wait to finish"
+#   wait
+# done
 # 800MB-1GB/s
 ps -ef | grep /data_mix/mnt | grep cat | awk '{print $2}' | xargs -I DEMO kill DEMO
 
