@@ -38,6 +38,7 @@
     - [worker-0 day2 oper](#worker-0-day2-oper)
     - [worker-1 day2 oper](#worker-1-day2-oper)
     - [worker-2 day2 oper](#worker-2-day2-oper)
+  - [tips](#tips)
 ## rhel host maintain
 
 ### aliyun host
@@ -1348,10 +1349,33 @@ for f in /dev/mapper/datavg-hddlv_rimage_*; do /sbin/blockdev --setra 131072 $f 
 
 blktrace /dev/datavg/hddlv /dev/nvme0n1 /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk
 
+# Generate distribution of file sizes from the command prompt
+# https://superuser.com/questions/565443/generate-distribution-of-file-sizes-from-the-command-prompt
+find /data/mnt/ -type f > list
+cat list | xargs ls -l > list.size
+cat list.size | awk '{ n=int(log($5)/log(2))+1;                         \
+          if (n<10) n=10;                                               \
+          size[n]++ }                                                   \
+      END { for (i in size) printf("%d %d\n", 2^i, size[i]) }'          \
+ | sort -n                                                              \
+ | awk 'function human(x) { x[1]/=1024;                                 \
+                            if (x[1]>=1024) { x[2]++;                   \
+                                              human(x) } }              \
+        { a[1]=$1;                                                      \
+          a[2]=0;                                                       \
+          human(a);                                                     \
+          printf("%3d%s: %6d\n", a[1],substr("kMGTEPYZ",a[2]+1,1),$2) }' 
+#   1k:      2
+#  16k: 18875840
+#  64k: 7393088
+# 128k: 5093147
+# 512k: 1968632
+#   1M: 914486
 
+cat list.size | awk '{size[int(log($5)/log(2))]++}END{for (i in size) printf("%10d %3d\n", 2^i, size[i])}' | sort -n
 
 # 5.5
-find /data/mnt/ -type f -size -2M  > list.2m
+find /data/mnt/ -type f -size -20k  > list.20k
 find /data/mnt/ -type f -size -10M  -size +2M > list.10m
 find /data/mnt/ -type f -size -100M  -size +10M > list.100m
 find /data/mnt/ -type f  -size +100M > list.100m.up
@@ -1369,7 +1393,8 @@ while read f; do
 done < list
 
 find /data_mix/mnt/ -type f > list
-cat list | shuf > list.shuf
+
+cat list.20k | shuf > list.shuf
 
 # zte use 1800
 var_total=32
@@ -1633,7 +1658,7 @@ lvcreate --type raid0 -L 130T --stripes 24 -n hddlv datavg /dev/sda /dev/sdb /de
 
 
 
-lvcreate --type raid6 -L 900G --stripesize 128k --stripes 22 -n testfslv datavg /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx
+lvcreate --type raid0 -L 900G --stripesize 128k --stripes 24 -n testfslv datavg /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx
 
 mkfs.ext4 /dev/datavg/testfslv
 mount /dev/datavg/testfslv /data_mix
@@ -1641,12 +1666,42 @@ mount /dev/datavg/testfslv /data_mix
 
 
 
+
+
+lvcreate --type raid0 -L 5T --stripes 10 -n ssdlv datavg /dev/sdz /dev/sdaa /dev/sdab /dev/sdac /dev/sdad /dev/sdae /dev/sdaf /dev/sdag /dev/sdah /dev/sdai
+
+mkfs.ext4 /dev/datavg/ssdlv
+mount /dev/datavg/ssdlv /data_ssd
+
+rsync -e ssh --info=progress2 -P --delete -ar --files-from=list.20k / 39.134.201.65:/data_ssd/mnt/
+
+rsync -e ssh --info=progress2 -P --delete -ar /data/mnt/ 39.134.201.65:/data_ssd/mnt/
+
+
+
+
+
+
+
+
 # slow
 lvcreate --type raid0 -L 400G --stripesize 128k --stripes 12 -n testfslv datavg /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl 
 
-
-
-
+# Generate distribution of file sizes from the command prompt
+# https://superuser.com/questions/565443/generate-distribution-of-file-sizes-from-the-command-prompt
+cat list | xargs ls -l > list.size
+cat list.size | awk '{ n=int(log($5)/log(2))+1;                                      \
+          if (n<10) n=10;                                               \
+          size[n]++ }                                                   \
+      END { for (i in size) printf("%d %d\n", 2^i, size[i]) }'          \
+ | sort -n                                                              \
+ | awk 'function human(x) { x[1]/=1024;                                 \
+                            if (x[1]>=1024) { x[2]++;                   \
+                                              human(x) } }              \
+        { a[1]=$1;                                                      \
+          a[2]=0;                                                       \
+          human(a);                                                     \
+          printf("%3d%s: %6d\n", a[1],substr("kMGTEPYZ",a[2]+1,1),$2) }' 
 
 
 
@@ -1808,17 +1863,22 @@ find /data/mnt/ -type f -size -10M  -size +2M > list.10m
 find /data/mnt/ -type f -size -100M  -size +10M > list.100m
 find /data/mnt/ -type f  -size +100M > list.100m.up
 
+find /data_ssd/mnt/ -type f -size -16k  > list.16k
+
 find /data/mnt/ -type f > list
 dstat --output /root/dstat.csv -D /dev/mapper/datavg-mixlv,/dev/mapper/datavg-mixlv_corig,sdh,sdab -N bond0
 
 dstat -D /dev/mapper/datavg-hddlv,/dev/datavg/testfslv,sdh,sdab -N bond0
 
-mkdir /data_mix/mnt
+mkdir -p /data_mix/mnt
 i=0
 while read f; do
-  /bin/cp -f $f /data_mix/mnt/$i
+  /bin/cp -f $f /data_mix/mnt/$i &
   ((i++))
-done < list.2m
+  if (( $i % 200 == 0 )) ; then
+    wait
+  fi
+done < list.100m
 
 while true; do
   df -h | grep /data
@@ -1826,6 +1886,7 @@ while true; do
 done
 
 find /data_mix/mnt/ -type f > list
+
 cat list | shuf > list.shuf
 
 # zte use 1800
@@ -3573,7 +3634,7 @@ systemctl enable rc-local
 
 #######################################
 # nic bond
-cat << EOF > /root/nic.bond.sh
+cat << 'EOF' > /root/nic.bond.sh
 #!/bin/bash
 
 # delete all connection 
@@ -3619,6 +3680,13 @@ exit 0
 EOF
 
 chmod +x /root/nic.restore.sh
+
+cat > ~/cron-network-con-recreate << EOF
+*/2 * * * * /bin/bash /root/nic.restore.sh
+EOF
+
+crontab ~/cron-network-con-recreate
+
 
 
 mkdir /etc/yum.repos.d.bak
@@ -4078,7 +4146,7 @@ data:
         node-role.kubernetes.io/infra: ""
 EOF
 
-oc create -f /data/ocp4/monitoring-cm.yaml -n openshift-monitoring
+oc apply -f /data/ocp4/monitoring-cm.yaml -n openshift-monitoring
 
 oc get pods -n openshift-monitoring -o wide --sort-by=".spec.nodeName"
 
@@ -5805,4 +5873,10 @@ systemctl disable libvirtd
 
 
 
+
+
+## tips
+
+1. config local storage operator
+2. config monitor storage
 
