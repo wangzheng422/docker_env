@@ -1375,13 +1375,14 @@ cat list.size | awk '{ n=int(log($5)/log(2))+1;                         \
 cat list.size | awk '{size[int(log($5)/log(2))]++}END{for (i in size) printf("%10d %3d\n", 2^i, size[i])}' | sort -n
 
 # 5.5
-find /data/mnt/ -type f -size -20k  > list.20k
-find /data/mnt/ -type f -size -10M  -size +2M > list.10m
-find /data/mnt/ -type f -size -100M  -size +10M > list.100m
-find /data/mnt/ -type f  -size +100M > list.100m.up
+var_basedir="/data/mnt"
+find $var_basedir -type f -size -16k  > list.16k
+find $var_basedir -type f -size -128k  -size +16k > list.128k
+find $var_basedir -type f -size +128k > list.+128k
 
 
-find /data/mnt/ -type f > list
+
+find $var_basedir -type f > list
 dstat --output /root/dstat.csv -D /dev/mapper/datavg-mixlv,/dev/mapper/datavg-mixlv_corig,sdh,sdab -N bond0
 
 dstat -D /dev/mapper/datavg-hddlv,/dev/datavg/ext4lv,sdh,sdab -N bond0
@@ -1394,14 +1395,26 @@ done < list
 
 find /data_mix/mnt/ -type f > list
 
-cat list.20k | shuf > list.shuf
+cat list.16k | shuf > list.shuf.16k
+cat list.128k | shuf > list.shuf.128k
+cat list.+128k | shuf > list.shuf.+128k
 
 # zte use 1800
-var_total=32
-split -n l/$var_total list.shuf split.list.all.
-for f in split.list.all.*; do 
+var_total=16
+split -n l/$var_total list.shuf.16k split.list.16k.
+split -n l/$var_total list.shuf.128k split.list.128k.
+split -n l/$var_total list.shuf.+128k split.list.+128k.
+
+for f in split.list.16k.*; do 
     cat $f | xargs -I DEMO cat DEMO > /dev/null &
 done
+for f in split.list.128k.*; do 
+    cat $f | xargs -I DEMO cat DEMO > /dev/null &
+done
+for f in split.list.+128k.*; do 
+    cat $f | xargs -I DEMO cat DEMO > /dev/null &
+done
+
 echo "wait to finish"
 wait
 # while true; do
@@ -1690,7 +1703,7 @@ lvcreate --type raid0 -L 400G --stripesize 128k --stripes 12 -n testfslv datavg 
 # Generate distribution of file sizes from the command prompt
 # https://superuser.com/questions/565443/generate-distribution-of-file-sizes-from-the-command-prompt
 cat list | xargs ls -l > list.size
-cat list.size | awk '{ n=int(log($5)/log(2))+1;                                      \
+cat list.size | awk '{ n=int(log($5)/log(2))+1;                         \
           if (n<10) n=10;                                               \
           size[n]++ }                                                   \
       END { for (i in size) printf("%d %d\n", 2^i, size[i]) }'          \
@@ -1858,12 +1871,10 @@ btt -i sda.bin | less
 
 # 5.5
 # find /data/mnt/ -type f -size -2M -size +512k  > list
-find /data/mnt/ -type f -size -2M  > list.2m
-find /data/mnt/ -type f -size -10M  -size +2M > list.10m
-find /data/mnt/ -type f -size -100M  -size +10M > list.100m
-find /data/mnt/ -type f  -size +100M > list.100m.up
-
-find /data_ssd/mnt/ -type f -size -16k  > list.16k
+var_basedir="/data_mix/mnt"
+find $var_basedir -type f -size -2M  > list.2m
+find $var_basedir -type f -size -10M  -size +2M > list.10m
+find $var_basedir -type f -size +10M > list.100m
 
 find /data/mnt/ -type f > list
 dstat --output /root/dstat.csv -D /dev/mapper/datavg-mixlv,/dev/mapper/datavg-mixlv_corig,sdh,sdab -N bond0
@@ -1871,7 +1882,7 @@ dstat --output /root/dstat.csv -D /dev/mapper/datavg-mixlv,/dev/mapper/datavg-mi
 dstat -D /dev/mapper/datavg-hddlv,/dev/datavg/testfslv,sdh,sdab -N bond0
 
 mkdir -p /data_mix/mnt
-i=0
+i=11265199
 while read f; do
   /bin/cp -f $f /data_mix/mnt/$i &
   ((i++))
@@ -1887,14 +1898,34 @@ done
 
 find /data_mix/mnt/ -type f > list
 
-cat list | shuf > list.shuf
+cat list | shuf > list.shuf.all
+
+cat list.2m | shuf > list.shuf.2m
+cat list.10m | shuf > list.shuf.10m
+cat list.100m | shuf > list.shuf.100m
+cat list.10m list.100m | shuf > list.shuf.+2m
 
 # zte use 1800
-var_total=32
-split -n l/$var_total list.shuf split.list.all.
-for f in split.list.all.*; do 
+var_total=16
+# split -n l/$var_total list.shuf.all split.list.all.
+split -n l/$var_total list.shuf.2m split.list.2m.
+split -n l/$var_total list.shuf.10m split.list.10m.
+split -n l/$var_total list.shuf.100m split.list.100m.
+split -n l/$var_total list.shuf.+2m split.list.+2m.
+
+for f in split.list.2m.*; do 
     cat $f | xargs -I DEMO cat DEMO > /dev/null &
 done
+# for f in split.list.+2m.*; do 
+#     cat $f | xargs -I DEMO cat DEMO > /dev/null &
+# done
+for f in split.list.10m.*; do 
+    cat $f | xargs -I DEMO cat DEMO > /dev/null &
+done
+for f in split.list.100m.*; do 
+    cat $f | xargs -I DEMO cat DEMO > /dev/null &
+done
+
 echo "wait to finish"
 wait
 # while true; do
