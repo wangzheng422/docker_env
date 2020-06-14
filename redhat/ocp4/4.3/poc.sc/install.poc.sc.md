@@ -1375,14 +1375,13 @@ cat list.size | awk '{ n=int(log($5)/log(2))+1;                         \
 cat list.size | awk '{size[int(log($5)/log(2))]++}END{for (i in size) printf("%10d %3d\n", 2^i, size[i])}' | sort -n
 
 # 5.5
-var_basedir="/data/mnt"
+var_basedir="/data_ssd/mnt"
 find $var_basedir -type f -size -16k  > list.16k
 find $var_basedir -type f -size -128k  -size +16k > list.128k
 find $var_basedir -type f -size +128k > list.+128k
-
-
-
 find $var_basedir -type f > list
+
+
 dstat --output /root/dstat.csv -D /dev/mapper/datavg-mixlv,/dev/mapper/datavg-mixlv_corig,sdh,sdab -N bond0
 
 dstat -D /dev/mapper/datavg-hddlv,/dev/datavg/ext4lv,sdh,sdab -N bond0
@@ -1395,23 +1394,36 @@ done < list
 
 find /data_mix/mnt/ -type f > list
 
+cat list | shuf > list.shuf.all
 cat list.16k | shuf > list.shuf.16k
 cat list.128k | shuf > list.shuf.128k
 cat list.+128k | shuf > list.shuf.+128k
+cat list.128k list.+128k | shuf > list.shuf.+16k
 
 # zte use 1800
-var_total=16
+var_total=10
+split -n l/$var_total list.shuf.all split.list.all.
 split -n l/$var_total list.shuf.16k split.list.16k.
 split -n l/$var_total list.shuf.128k split.list.128k.
 split -n l/$var_total list.shuf.+128k split.list.+128k.
+split -n l/$var_total list.shuf.+16k split.list.+16k.
+
+rm -f split.list.*
 
 for f in split.list.16k.*; do 
     cat $f | xargs -I DEMO cat DEMO > /dev/null &
 done
+# for f in split.list.+16k.*; do 
+#     cat $f | xargs -I DEMO cat DEMO > /dev/null &
+# done
 for f in split.list.128k.*; do 
     cat $f | xargs -I DEMO cat DEMO > /dev/null &
 done
 for f in split.list.+128k.*; do 
+    cat $f | xargs -I DEMO cat DEMO > /dev/null &
+done
+
+for f in split.list.all.*; do 
     cat $f | xargs -I DEMO cat DEMO > /dev/null &
 done
 
@@ -1906,12 +1918,14 @@ cat list.100m | shuf > list.shuf.100m
 cat list.10m list.100m | shuf > list.shuf.+2m
 
 # zte use 1800
-var_total=16
+var_total=10
 # split -n l/$var_total list.shuf.all split.list.all.
 split -n l/$var_total list.shuf.2m split.list.2m.
 split -n l/$var_total list.shuf.10m split.list.10m.
 split -n l/$var_total list.shuf.100m split.list.100m.
 split -n l/$var_total list.shuf.+2m split.list.+2m.
+
+rm -f split.list.*
 
 for f in split.list.2m.*; do 
     cat $f | xargs -I DEMO cat DEMO > /dev/null &
@@ -3085,6 +3099,8 @@ lvconvert --type cache-pool --poolmetadata datavg/cache1meta datavg/cache1
 
 lvconvert --type cache --cachepool datavg/cache1 datavg/mixlv
 
+lvconvert --splitcache datavg/mixlv
+
 # lvs -a -o name,size,attr,devices datavg
 # lvs -o+cache_mode datavg
 
@@ -3340,26 +3356,40 @@ for f in /dev/mapper/datavg-mixlv_corig_rimage_*; do /sbin/blockdev --setra 1638
 find /data_mix/mnt/ -type f > list
 dstat --output /root/dstat.csv -D /dev/mapper/datavg-mixlv,/dev/mapper/datavg-mixlv_corig,sdh,sdab -N bond0
 
+var_basedir="/data_mix/mnt"
+find $var_basedir -type f -size -511M  > list.512m
+find $var_basedir -type f -size -2049M  -size +511M > list.2g
+find $var_basedir -type f -size +2049M > list.+2g
+
+cat list | shuf > list.shuf.all
+
+cat list.512m | shuf > list.shuf.512m
+cat list.2g | shuf > list.shuf.2g
+cat list.+2g | shuf > list.shuf.+2g
+cat list.2g list.+2g | shuf > list.shuf.+512m
+
+rm -f split.list.*
 # zte use 1800
-var_total=5
-split -n l/$var_total list split.list.all.
-while true; do
-  for f in split.list.all.*; do 
-      cat $f | xargs -I DEMO cat DEMO > /dev/null &
-  done
-  echo "wait to finish"
-  wait
+var_total=10
+# split -n l/$var_total list.shuf.all split.list.all.
+split -n l/$var_total list.shuf.512m split.list.512m.
+split -n l/$var_total list.shuf.2g split.list.2g.
+split -n l/$var_total list.shuf.+2g split.list.+2g.
+split -n l/$var_total list.shuf.+512m split.list.+512m.
+
+for f in split.list.512m.*; do 
+    cat $f | xargs -I DEMO cat DEMO > /dev/null &
+done
+# for f in split.list.+512m.*; do 
+#     cat $f | xargs -I DEMO cat DEMO > /dev/null &
+# done
+for f in split.list.2g.*; do 
+    cat $f | xargs -I DEMO cat DEMO > /dev/null &
+done
+for f in split.list.+2g.*; do 
+    cat $f | xargs -I DEMO cat DEMO > /dev/null &
 done
 
-# while true; do
-#   for ((i=1; i<=$var_total; i++)); do
-#     echo "Welcome $i times"
-#     cat list | shuf | xargs -I DEMO cat DEMO > /dev/null &
-#   done
-#   echo "wait to finish"
-#   wait
-# done
-# 800MB-1GB/s
 ps -ef | grep /data_mix/mnt | grep cat | awk '{print $2}' | xargs -I DEMO kill DEMO
 
 tmux kill-window -t 3
@@ -3412,83 +3442,7 @@ done
 # 500M-1.2GB/s
 ps -ef | grep /data_mix/mnt | grep cat | awk '{print $2}' | xargs -I DEMO kill DEMO
 
-# woker1
-# 5.5
-find /data/mnt/ -type f > list
-dstat --output /root/dstat.csv -D /dev/mapper/datavg-hddlv,/dev/mapper/datavg-hddlv_corig,sdh,sdab -N bond0
 
-# split -n l/1800 list split.list.all.
-# for f in split.list.all.*; do ( cat $f | xargs -I DEMO cat DEMO > /dev/null & ); done
-
-# zte use 1800
-var_total=10
-while true; do
-  for ((i=0; i<$var_total; i++)); do
-    echo "Welcome $i times"
-    cat list | shuf | xargs -I DEMO cat DEMO > /dev/null &
-  done
-  echo "wait to finish"
-  wait
-done
-# 800MB-1GB/s
-ps -ef | grep /data/mnt | grep cat | awk '{print $2}' | xargs -I DEMO kill DEMO
-
-# 2.8
-var_num=`echo "scale=0;$(cat list | wc -l  )/5" | bc -l`
-head -n $var_num list > list.20
-tail -n +$var_num list > list.80
-
-# split -n l/$(echo "scale=0;1800/5*4"|bc -l) list.20 split.list.20.
-# for f in split.list.20.*; do ( cat $f | xargs -I DEMO cat DEMO > /dev/null & ); done
-
-# split -n l/$(echo "scale=0;1800/5*1"|bc -l) list.80 split.list.80.
-# for f in split.list.80.*; do ( cat $f | xargs -I DEMO cat DEMO > /dev/null & ); done
-
-var_total=10
-var_runtimes=$(echo "scale=0;$var_total/5*4"|bc -l)
-while true; do
-  for ((i=0; i<$var_runtimes; i++)); do
-    echo "Welcome $i times"
-    cat list.20 | shuf | xargs -I DEMO cat DEMO > /dev/null &
-  done
-  echo "wait to finish"
-  wait
-done
-
-var_total=10
-var_runtimes=$(echo "scale=0;$var_total/5*1"|bc -l)
-while true; do
-  for ((i=0; i<$var_runtimes; i++)); do
-    echo "Welcome $i times"
-    cat list.80 | shuf | xargs -I DEMO cat DEMO > /dev/null &
-  done
-  echo "wait to finish"
-  wait
-done
-
-while true; do
-  ps -ef | grep /data/mnt | grep cat | awk '{print $2}' | xargs -I DEMO kill DEMO
-done
-
-# worker0
-find /data/mnt/ -type f > list
-# split -l 19026 list list.all.
-# for f in list.all.*; do ( cat $f | xargs -I DEMO cat DEMO > /dev/null & ); done
-
-var_total=10
-while true; do
-  for ((i=0; i<$var_total; i++)); do
-    echo "Welcome $i times"
-    cat list | shuf | xargs -I DEMO cat DEMO > /dev/null &
-  done
-  echo "wait to finish"
-  wait
-done
-# 800MB-1GB/s
-ps -ef | grep /data/mnt | grep cat | awk '{print $2}' | xargs -I DEMO kill DEMO
-
-
-ps -ef | grep /data/mnt | grep cat | awk '{print $2}' | xargs -I DEMO kill DEMO
 
 ```
 
