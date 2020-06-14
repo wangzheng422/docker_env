@@ -1695,6 +1695,8 @@ mount /dev/datavg/testfslv /data_mix
 
 lvcreate --type raid0 -L 5T --stripes 10 -n ssdlv datavg /dev/sdz /dev/sdaa /dev/sdab /dev/sdac /dev/sdad /dev/sdae /dev/sdaf /dev/sdag /dev/sdah /dev/sdai
 
+lvcreate --type raid5 -L 5T --stripes 9 -n ssdlv datavg /dev/sdz /dev/sdaa /dev/sdab /dev/sdac /dev/sdad /dev/sdae /dev/sdaf /dev/sdag /dev/sdah /dev/sdai
+
 mkfs.ext4 /dev/datavg/ssdlv
 mount /dev/datavg/ssdlv /data_ssd
 
@@ -1702,6 +1704,9 @@ rsync -e ssh --info=progress2 -P --delete -ar --files-from=list.20k / 39.134.201
 
 rsync -e ssh --info=progress2 -P --delete -ar /data/mnt/ 39.134.201.65:/data_ssd/mnt/
 
+rsync -e ssh --info=progress2 -P --delete -ar /data/mnt/zxdfs/webcache-011/   39.134.201.65:/data_ssd/mnt/zxdfs/webcache-011/
+
+rsync -e ssh --info=progress2 -P --delete -ar /data/mnt/zxdfs/webcache-012/   39.134.201.65:/data_ssd/mnt/zxdfs/webcache-012/
 
 
 
