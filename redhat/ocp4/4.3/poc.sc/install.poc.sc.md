@@ -29,6 +29,7 @@
     - [helper host add vm-router](#helper-host-add-vm-router)
     - [helper node zte tcp-router](#helper-node-zte-tcp-router)
     - [helper node cluster tunning](#helper-node-cluster-tunning)
+    - [helper node local storage](#helper-node-local-storage)
     - [bootstrap node day1](#bootstrap-node-day1)
     - [master1 node day1](#master1-node-day1)
     - [master0 node day1](#master0-node-day1)
@@ -860,6 +861,16 @@ EOF
 
 mount -a
 
+# https://access.redhat.com/solutions/769403
+fuser -km /data
+lvremove -f datavg/datalv
+vgremove datavg
+pvremove /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm
+
+pvcreate -y /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm
+vgcreate datavg /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm
+lvcreate --type raid0 -L 400G --stripes 12 -n monitorlv datavg
+
 yum install -y sysstat
 lsblk | grep disk | awk '{print $1}' | xargs -I DEMO echo -n "DEMO "
 # sda sdb sdc sdd sde sdf sdg sdh sdi sdj sdk sdl sdm
@@ -976,6 +987,16 @@ cat << EOF >> /etc/fstab
 EOF
 
 mount -a
+
+# https://access.redhat.com/solutions/769403
+fuser -km /data
+lvremove -f datavg/datalv
+vgremove datavg
+pvremove /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm
+
+pvcreate -y /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm
+vgcreate datavg /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm
+lvcreate --type raid0 -L 400G --stripes 12 -n monitorlv datavg
 
 yum install -y sysstat
 lsblk | grep disk | awk '{print $1}' | xargs -I DEMO echo -n "DEMO "
@@ -4119,6 +4140,14 @@ data:
     prometheusK8s:
       nodeSelector:
         node-role.kubernetes.io/infra: ""
+      volumeClaimTemplate:
+        metadata:
+          name: localpvc
+        spec:
+          storageClassName: local-sc
+          resources:
+            requests:
+              storage: 400Gi
     prometheusOperator:
       nodeSelector:
         node-role.kubernetes.io/infra: ""
@@ -4796,6 +4825,38 @@ spec:
    pidsLimit: 10240
 EOF
 oc apply -f crio.yaml
+
+
+```
+
+### helper node local storage 
+https://docs.openshift.com/container-platform/4.3/storage/persistent_storage/persistent-storage-local.html
+```bash
+
+oc new-project local-storage
+
+
+apiVersion: "local.storage.openshift.io/v1"
+kind: "LocalVolume"
+metadata:
+  name: "local-disks"
+  namespace: "local-storage" 
+spec:
+  nodeSelector: 
+    nodeSelectorTerms:
+    - matchExpressions:
+        - key: kubernetes.io/hostname
+          operator: In
+          values:
+          - infra0.hsc.redhat.ren
+          - infra1.hsc.redhat.ren
+  storageClassDevices:
+    - storageClassName: "local-sc"
+      volumeMode: Filesystem 
+      fsType: xfs 
+      devicePaths: 
+        - /dev/datavg/monitorlv
+
 
 
 ```
@@ -5869,4 +5930,5 @@ systemctl disable libvirtd
 
 1. config local storage operator
 2. config monitor storage
+3. benchmark the storage using real senario
 
