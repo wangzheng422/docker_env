@@ -40,6 +40,7 @@
     - [worker-1 day2 oper](#worker-1-day2-oper)
     - [worker-2 day2 oper](#worker-2-day2-oper)
   - [tips](#tips)
+
 ## rhel host maintain
 
 ### aliyun host
@@ -1416,6 +1417,7 @@ done < list
 find /data_mix/mnt/ -type f > list
 
 cat list | shuf > list.shuf.all
+
 cat list.16k | shuf > list.shuf.16k
 cat list.128k | shuf > list.shuf.128k
 cat list.+128k | shuf > list.shuf.+128k
@@ -1423,13 +1425,16 @@ cat list.128k list.+128k | shuf > list.shuf.+16k
 
 # zte use 1800
 var_total=10
+rm -f split.list.*
+
+
 split -n l/$var_total list.shuf.all split.list.all.
+
 split -n l/$var_total list.shuf.16k split.list.16k.
 split -n l/$var_total list.shuf.128k split.list.128k.
 split -n l/$var_total list.shuf.+128k split.list.+128k.
 split -n l/$var_total list.shuf.+16k split.list.+16k.
 
-rm -f split.list.*
 
 for f in split.list.16k.*; do 
     cat $f | xargs -I DEMO cat DEMO > /dev/null &
@@ -1447,6 +1452,8 @@ done
 for f in split.list.all.*; do 
     cat $f | xargs -I DEMO cat DEMO > /dev/null &
 done
+
+ps -ef | grep /data_ssd/mnt | grep cat | awk '{print $2}' | xargs -I DEMO kill DEMO
 
 echo "wait to finish"
 wait
