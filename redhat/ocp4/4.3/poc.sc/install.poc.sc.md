@@ -3792,6 +3792,122 @@ mount -a
 df -h | grep \/data
 
 dstat -D /dev/datavg/hddlv 
+dstat -D /dev/sdc,/dev/sdd
+
+# fill data
+# for 1.5M
+var_basedir_xfs="/data_xfs/mnt"
+var_basedir_ext="/data_ext/mnt"
+
+mkdir -p $var_basedir_xfs
+mkdir -p $var_basedir_ext
+
+var_total=10
+# write 1T
+var_number=$(echo "scale=0;1024*1024/1/$var_total"|bc -l)
+# 1M
+var_len=$(echo "scale=0;1*1024/1"|bc -l)
+
+for ((i=1; i<=$var_number; i++)); do
+  for ((j=1; j<=$var_total; j++)); do
+    # echo "Welcome $i times"
+    head -c ${var_len}K < /dev/urandom > $var_basedir_xfs/1-$j-$i &
+    head -c ${var_len}K < /dev/urandom > $var_basedir_ext/1-$j-$i &
+  done
+  echo "wait to finish: $i"
+  wait
+done
+
+var_basedir_xfs="/data_xfs/mnt"
+var_basedir_ext="/data_ext/mnt"
+var_total=10
+# write 1T
+var_number=$(echo "scale=0;1024*1024/8/$var_total"|bc -l)
+# 8M
+var_len=$(echo "scale=0;8*1024/1"|bc -l)
+
+for ((i=1; i<=$var_number; i++)); do
+  for ((j=1; j<=$var_total; j++)); do
+    # echo "Welcome $i times"
+    head -c ${var_len}K < /dev/urandom > $var_basedir_xfs/8-$j-$i &
+    head -c ${var_len}K < /dev/urandom > $var_basedir_ext/8-$j-$i &
+  done
+  echo "wait to finish: $i"
+  wait
+done
+
+
+var_basedir_xfs="/data_xfs/mnt"
+var_basedir_ext="/data_ext/mnt"
+var_total=10
+# write 1T
+var_number=$(echo "scale=0;1024*1024/16/$var_total"|bc -l)
+# 16M
+var_len=$(echo "scale=0;16*1024/1"|bc -l)
+
+for ((i=1; i<=$var_number; i++)); do
+  for ((j=1; j<=$var_total; j++)); do
+    # echo "Welcome $i times"
+    head -c ${var_len}K < /dev/urandom > $var_basedir_xfs/16-$j-$i &
+    head -c ${var_len}K < /dev/urandom > $var_basedir_ext/16-$j-$i &
+  done
+  echo "wait to finish: $i"
+  wait
+done
+
+var_basedir_xfs="/data_xfs/mnt"
+var_basedir_ext="/data_ext/mnt"
+var_total=10
+# write 1T
+var_number=$(echo "scale=0;1024*1024/32/$var_total"|bc -l)
+# 32M
+var_len=$(echo "scale=0;32*1024/1"|bc -l)
+
+for ((i=1; i<=$var_number; i++)); do
+  for ((j=1; j<=$var_total; j++)); do
+    # echo "Welcome $i times"
+    head -c ${var_len}K < /dev/urandom > $var_basedir_xfs/32-$j-$i &
+    head -c ${var_len}K < /dev/urandom > $var_basedir_ext/32-$j-$i &
+  done
+  echo "wait to finish: $i"
+  wait
+done
+
+var_basedir_xfs="/data_xfs/mnt"
+var_basedir_ext="/data_ext/mnt"
+var_total=10
+# write 1T
+var_number=$(echo "scale=0;1024*1024/64/$var_total"|bc -l)
+# 64M
+var_len=$(echo "scale=0;64*1024/1"|bc -l)
+
+for ((i=1; i<=$var_number; i++)); do
+  for ((j=1; j<=$var_total; j++)); do
+    # echo "Welcome $i times"
+    head -c ${var_len}K < /dev/urandom > $var_basedir_xfs/64-$j-$i &
+    head -c ${var_len}K < /dev/urandom > $var_basedir_ext/64-$j-$i &
+  done
+  echo "wait to finish: $i"
+  wait
+done
+
+var_basedir_xfs="/data_xfs/mnt"
+var_basedir_ext="/data_ext/mnt"
+var_total=10
+# write 1T
+var_number=$(echo "scale=0;1024*1024/128/$var_total"|bc -l)
+# 128M
+var_len=$(echo "scale=0;128*1024/1"|bc -l)
+
+for ((i=1; i<=$var_number; i++)); do
+  for ((j=1; j<=$var_total; j++)); do
+    # echo "Welcome $i times"
+    head -c ${var_len}K < /dev/urandom > $var_basedir_xfs/128-$j-$i &
+    head -c ${var_len}K < /dev/urandom > $var_basedir_ext/128-$j-$i &
+  done
+  echo "wait to finish: $i"
+  wait
+done
 
 
 ```
