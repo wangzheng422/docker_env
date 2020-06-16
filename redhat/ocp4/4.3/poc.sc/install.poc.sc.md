@@ -1375,7 +1375,7 @@ blktrace /dev/datavg/hddlv /dev/nvme0n1 /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev
 # https://superuser.com/questions/565443/generate-distribution-of-file-sizes-from-the-command-prompt
 find /data/mnt/ -type f > list
 cat list | xargs ls -l > list.size
-cat list.size | awk '{ n=int(log($5)/log(2))+1;                         \
+cat list.size | awk '{ n=int(log($5)/log(2));                         \
           if (n<10) n=10;                                               \
           size[n]++ }                                                   \
       END { for (i in size) printf("%d %d\n", 2^i, size[i]) }'          \
@@ -1748,7 +1748,7 @@ lvcreate --type raid0 -L 400G --stripesize 128k --stripes 12 -n testfslv datavg 
 # Generate distribution of file sizes from the command prompt
 # https://superuser.com/questions/565443/generate-distribution-of-file-sizes-from-the-command-prompt
 cat list | xargs ls -l > list.size
-cat list.size | awk '{ n=int(log($5)/log(2))+1;                         \
+cat list.size | awk '{ n=int(log($5)/log(2));                         \
           if (n<10) n=10;                                               \
           size[n]++ }                                                   \
       END { for (i in size) printf("%d %d\n", 2^i, size[i]) }'          \
@@ -3792,7 +3792,17 @@ mount -a
 df -h | grep \/data
 
 dstat -D /dev/datavg/hddlv 
-dstat -D /dev/sdc,/dev/sdd
+dstat -D /dev/sdb,/dev/sdc
+
+mkfs.xfs -f /dev/sdb
+mkfs.ext4 -F /dev/sdc
+
+mkdir -p /data_xfs
+mkdir -p /data_ext
+
+mount /dev/sdb /data_xfs
+mount /dev/sdc /data_ext
+
 
 # fill data
 # for 1.5M
@@ -3802,17 +3812,21 @@ var_basedir_ext="/data_ext/mnt"
 mkdir -p $var_basedir_xfs
 mkdir -p $var_basedir_ext
 
+
+var_basedir_xfs="/data_xfs/mnt"
+var_basedir_ext="/data_ext/mnt"
 var_total=10
+# 512k
+var_size=0.5
 # write 1T
-var_number=$(echo "scale=0;1024*1024/1/$var_total"|bc -l)
-# 1M
-var_len=$(echo "scale=0;1*1024/1"|bc -l)
+var_number=$(echo "scale=0;1024*1024/$var_size/$var_total"|bc -l)
+var_len=$(echo "scale=0;$var_size*1024/1"|bc -l)
 
 for ((i=1; i<=$var_number; i++)); do
   for ((j=1; j<=$var_total; j++)); do
     # echo "Welcome $i times"
-    head -c ${var_len}K < /dev/urandom > $var_basedir_xfs/1-$j-$i &
-    head -c ${var_len}K < /dev/urandom > $var_basedir_ext/1-$j-$i &
+    head -c ${var_len}K < /dev/urandom > $var_basedir_xfs/$var_size-$j-$i &
+    head -c ${var_len}K < /dev/urandom > $var_basedir_ext/$var_size-$j-$i &
   done
   echo "wait to finish: $i"
   wait
@@ -3821,35 +3835,37 @@ done
 var_basedir_xfs="/data_xfs/mnt"
 var_basedir_ext="/data_ext/mnt"
 var_total=10
+# 4M
+var_size=4
 # write 1T
-var_number=$(echo "scale=0;1024*1024/8/$var_total"|bc -l)
+var_number=$(echo "scale=0;1024*1024/$var_size/$var_total"|bc -l)
+var_len=$(echo "scale=0;$var_size*1024/1"|bc -l)
+
+for ((i=1; i<=$var_number; i++)); do
+  for ((j=1; j<=$var_total; j++)); do
+    # echo "Welcome $i times"
+    head -c ${var_len}K < /dev/urandom > $var_basedir_xfs/$var_size-$j-$i &
+    head -c ${var_len}K < /dev/urandom > $var_basedir_ext/$var_size-$j-$i &
+  done
+  echo "wait to finish: $i"
+  wait
+done
+
+
+var_basedir_xfs="/data_xfs/mnt"
+var_basedir_ext="/data_ext/mnt"
+var_total=10
 # 8M
-var_len=$(echo "scale=0;8*1024/1"|bc -l)
-
-for ((i=1; i<=$var_number; i++)); do
-  for ((j=1; j<=$var_total; j++)); do
-    # echo "Welcome $i times"
-    head -c ${var_len}K < /dev/urandom > $var_basedir_xfs/8-$j-$i &
-    head -c ${var_len}K < /dev/urandom > $var_basedir_ext/8-$j-$i &
-  done
-  echo "wait to finish: $i"
-  wait
-done
-
-
-var_basedir_xfs="/data_xfs/mnt"
-var_basedir_ext="/data_ext/mnt"
-var_total=10
+var_size=8
 # write 1T
-var_number=$(echo "scale=0;1024*1024/16/$var_total"|bc -l)
-# 16M
-var_len=$(echo "scale=0;16*1024/1"|bc -l)
+var_number=$(echo "scale=0;1024*1024/$var_size/$var_total"|bc -l)
+var_len=$(echo "scale=0;$var_size*1024/1"|bc -l)
 
 for ((i=1; i<=$var_number; i++)); do
   for ((j=1; j<=$var_total; j++)); do
     # echo "Welcome $i times"
-    head -c ${var_len}K < /dev/urandom > $var_basedir_xfs/16-$j-$i &
-    head -c ${var_len}K < /dev/urandom > $var_basedir_ext/16-$j-$i &
+    head -c ${var_len}K < /dev/urandom > $var_basedir_xfs/$var_size-$j-$i &
+    head -c ${var_len}K < /dev/urandom > $var_basedir_ext/$var_size-$j-$i &
   done
   echo "wait to finish: $i"
   wait
@@ -3858,16 +3874,17 @@ done
 var_basedir_xfs="/data_xfs/mnt"
 var_basedir_ext="/data_ext/mnt"
 var_total=10
-# write 1T
-var_number=$(echo "scale=0;1024*1024/32/$var_total"|bc -l)
 # 32M
-var_len=$(echo "scale=0;32*1024/1"|bc -l)
+var_size=32
+# write 1T
+var_number=$(echo "scale=0;1024*1024/$var_size/$var_total"|bc -l)
+var_len=$(echo "scale=0;$var_size*1024/1"|bc -l)
 
 for ((i=1; i<=$var_number; i++)); do
   for ((j=1; j<=$var_total; j++)); do
     # echo "Welcome $i times"
-    head -c ${var_len}K < /dev/urandom > $var_basedir_xfs/32-$j-$i &
-    head -c ${var_len}K < /dev/urandom > $var_basedir_ext/32-$j-$i &
+    head -c ${var_len}K < /dev/urandom > $var_basedir_xfs/$var_size-$j-$i &
+    head -c ${var_len}K < /dev/urandom > $var_basedir_ext/$var_size-$j-$i &
   done
   echo "wait to finish: $i"
   wait
@@ -3876,38 +3893,54 @@ done
 var_basedir_xfs="/data_xfs/mnt"
 var_basedir_ext="/data_ext/mnt"
 var_total=10
-# write 1T
-var_number=$(echo "scale=0;1024*1024/64/$var_total"|bc -l)
 # 64M
-var_len=$(echo "scale=0;64*1024/1"|bc -l)
-
-for ((i=1; i<=$var_number; i++)); do
-  for ((j=1; j<=$var_total; j++)); do
-    # echo "Welcome $i times"
-    head -c ${var_len}K < /dev/urandom > $var_basedir_xfs/64-$j-$i &
-    head -c ${var_len}K < /dev/urandom > $var_basedir_ext/64-$j-$i &
-  done
-  echo "wait to finish: $i"
-  wait
-done
-
-var_basedir_xfs="/data_xfs/mnt"
-var_basedir_ext="/data_ext/mnt"
-var_total=10
+var_size=64
 # write 1T
-var_number=$(echo "scale=0;1024*1024/128/$var_total"|bc -l)
-# 128M
-var_len=$(echo "scale=0;128*1024/1"|bc -l)
+var_number=$(echo "scale=0;1024*1024/$var_size/$var_total"|bc -l)
+var_len=$(echo "scale=0;$var_size*1024/1"|bc -l)
 
 for ((i=1; i<=$var_number; i++)); do
   for ((j=1; j<=$var_total; j++)); do
     # echo "Welcome $i times"
-    head -c ${var_len}K < /dev/urandom > $var_basedir_xfs/128-$j-$i &
-    head -c ${var_len}K < /dev/urandom > $var_basedir_ext/128-$j-$i &
+    head -c ${var_len}K < /dev/urandom > $var_basedir_xfs/$var_size-$j-$i &
+    head -c ${var_len}K < /dev/urandom > $var_basedir_ext/$var_size-$j-$i &
   done
   echo "wait to finish: $i"
   wait
 done
+
+mkdir -p /data_xfs/list.tmp
+cd /data_xfs/list.tmp
+var_basedir="/data_xfs/mnt"
+find $var_basedir -type f -size -2M  > list.2m
+find $var_basedir -type f -size -10M  -size +2M > list.10m
+find $var_basedir -type f -size +10M > list.100m
+find $var_basedir -type f > list
+
+cat list | xargs ls -l > list.size
+cat list.size | awk '{ n=int(log($5)/log(2));                         \
+          if (n<10) n=10;                                               \
+          size[n]++ }                                                   \
+      END { for (i in size) printf("%d %d\n", 2^i, size[i]) }'          \
+ | sort -n                                                              \
+ | awk 'function human(x) { x[1]/=1024;                                 \
+                            if (x[1]>=1024) { x[2]++;                   \
+                                              human(x) } }              \
+        { a[1]=$1;                                                      \
+          a[2]=0;                                                       \
+          human(a);                                                     \
+          printf("%3d%s: %6d\n", a[1],substr("kMGTEPYZ",a[2]+1,1),$2) }' 
+
+
+mkdir -p /data_ext/list.tmp
+cd /data_ext/list.tmp
+var_basedir="/data_ext/mnt"
+find $var_basedir -type f -size -2M  > list.2m
+find $var_basedir -type f -size -10M  -size +2M > list.10m
+find $var_basedir -type f -size +10M > list.100m
+find $var_basedir -type f > list
+
+
 
 
 ```
