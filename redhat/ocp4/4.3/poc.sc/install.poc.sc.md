@@ -1952,7 +1952,7 @@ cat list.10m list.100m | shuf > list.shuf.+2m
 
 # zte use 1800
 var_total=10
-# split -n l/$var_total list.shuf.all split.list.all.
+split -n l/$var_total list.shuf.all split.list.all.
 split -n l/$var_total list.shuf.2m split.list.2m.
 split -n l/$var_total list.shuf.10m split.list.10m.
 split -n l/$var_total list.shuf.100m split.list.100m.
@@ -1973,18 +1973,14 @@ for f in split.list.100m.*; do
     cat $f | xargs -I DEMO cat DEMO > /dev/null &
 done
 
-echo "wait to finish"
-wait
-# while true; do
-#   for f in split.list.all.*; do 
-#       cat $f | xargs -I DEMO cat DEMO > /dev/null &
-#   done
-#   echo "wait to finish"
-#   wait
-# done
-kill -9 $(jobs -p)
+for f in split.list.all.*; do 
+    cat $f | xargs -I DEMO cat DEMO > /dev/null &
+done
 
-ps -ef | grep /mnt/zxdfs | grep cat | awk '{print $2}' | xargs -I DEMO kill DEMO
+jobs -p | xargs kill
+
+
+ps -ef | grep xargs | grep DEMO | grep cat | awk '{print $2}' | xargs -I DEMO kill DEMO
 
 ps -ef | grep /data_mix/mnt | grep cat | awk '{print $2}' | xargs -I DEMO kill DEMO
 
@@ -3766,19 +3762,56 @@ chronyc tracking
 lshw -class disk
 
 lsblk | grep 5.5 | awk '{print $1}' | xargs -I DEMO echo -n "/dev/DEMO "
-# /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk
+# /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx /dev/sdy
 lsblk | grep 5.5 | awk '{print $1}' | wc -l
+# 24
 
-pvcreate -y /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp
+pvcreate -y /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx /dev/sdy
 
-vgcreate datavg /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp
+vgcreate datavg /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx /dev/sdy
 
 lsblk -d -o name,rota
 
+lvcreate --type raid0 -L 120T  --stripesize 128k --stripes 24 -n hddlv datavg /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx /dev/sdy
 
-lvcreate --type raid0 -L 75T  --stripesize 128k --stripes 14 -n hddlv datavg /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp
 
 mkfs.ext4 /dev/datavg/hddlv
+
+
+
+lvcreate --type raid0 -L 5T  --stripesize 512k --stripes 24 -n xfslv datavg /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx /dev/sdy
+
+lvcreate --type raid0 -L 5T  --stripesize 1024k --stripes 24 -n extlv datavg /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx /dev/sdy
+
+mkfs.xfs /dev/datavg/xfslv
+mkfs.ext4 /dev/datavg/extlv
+
+mount /dev/datavg/xfslv /data_xfs
+mount /dev/datavg/extlv /data_ext
+
+umount /data_xfs
+lvremove -f datavg/xfslv
+# rsync --info=progress2 -P -ar  /data_ext/mnt/ /data_xfs/mnt/
+rclone sync /data_ext/mnt/ /data_xfs/mnt/ -P -L --transfers 64
+
+umount /data_ext
+lvremove -f datavg/extlv
+rclone sync /data_xfs/mnt/ /data_ext/mnt/ -P -L --transfers 64
+
+lvs -o+stripesize
+
+dstat -D /dev/datavg/xfslv,/dev/datavg/extlv,/dev/sdb,/dev/sdc 5
+dstat -D /dev/datavg/xfslv,/dev/datavg/extlv,/dev/sdb,/dev/sdc --disk-util
+
+blockdev --report 
+# https://access.redhat.com/solutions/3588841
+# orig: 12288
+/sbin/blockdev --setra 131072 /dev/datavg/xfslv
+/sbin/blockdev --setra 131072 /dev/datavg/extlv
+
+/sbin/blockdev --setra 12288 /dev/datavg/xfslv
+/sbin/blockdev --setra 12288 /dev/datavg/extlv
+
 
 mkdir -p /data/
 
@@ -3791,8 +3824,11 @@ EOF
 mount -a
 df -h | grep \/data
 
+while true; do df -h | grep /data; sleep 10; done
+
 dstat -D /dev/datavg/hddlv 
 dstat -D /dev/sdb,/dev/sdc
+dstat -D /dev/sdb,/dev/sdc --disk-util
 
 mkfs.xfs -f /dev/sdb
 mkfs.ext4 -F /dev/sdc
@@ -3940,6 +3976,44 @@ find $var_basedir -type f -size -10M  -size +2M > list.10m
 find $var_basedir -type f -size +10M > list.100m
 find $var_basedir -type f > list
 
+
+
+cat list | shuf > list.shuf.all
+
+cat list.2m | shuf > list.shuf.2m
+cat list.10m | shuf > list.shuf.10m
+cat list.100m | shuf > list.shuf.100m
+cat list.10m list.100m | shuf > list.shuf.+2m
+
+rm -f split.list.*
+# zte use 1800
+var_total=30
+split -n l/$var_total list.shuf.all split.list.all.
+split -n l/$var_total list.shuf.2m split.list.2m.
+split -n l/$var_total list.shuf.10m split.list.10m.
+split -n l/$var_total list.shuf.100m split.list.100m.
+split -n l/$var_total list.shuf.+2m split.list.+2m.
+
+for f in split.list.2m.*; do 
+    cat $f | xargs -I DEMO cat DEMO > /dev/null &
+done
+# for f in split.list.+2m.*; do 
+#     cat $f | xargs -I DEMO cat DEMO > /dev/null &
+# done
+for f in split.list.10m.*; do 
+    cat $f | xargs -I DEMO cat DEMO > /dev/null &
+done
+for f in split.list.100m.*; do 
+    cat $f | xargs -I DEMO cat DEMO > /dev/null &
+done
+
+for f in split.list.all.*; do 
+    cat $f | xargs -I DEMO cat DEMO > /dev/null &
+done
+
+jobs -p | xargs kill
+
+ps -ef | grep xargs | grep DEMO | grep cat | awk '{print $2}' | xargs -I DEMO kill DEMO
 
 
 
