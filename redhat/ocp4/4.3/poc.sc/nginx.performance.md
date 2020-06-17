@@ -104,6 +104,6 @@ sed -i "s/\/data\/mnt\/zxdfs/http:\/\/39.134.201.77/" list.shuf.all
 
 # https://github.com/btfak/sniper
 cat list.shuf.all | shuf > url.test
-./sniper -c 30 -t 600 -f url.test
+./sniper -c 300 -t 600 -f url.test
 
 ```
