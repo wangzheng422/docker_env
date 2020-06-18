@@ -18,21 +18,82 @@ data:
     events {
         use epoll;
         multi_accept on;
+        worker_connections  10240;
+    }
+
+    http {
+
+      server {
+          listen       80;
+          server_name  _;
+            root /www/data/;
+            allow   39.134.204.0/24;
+            allow   117.177.241.0/24;
+            allow   39.137.101.0/24;
+            allow   39.134.201.0/24;
+            deny    all;
+
+          location / {
+
+          }
+      }
+
+    }
+EOF
+oc apply -n zxcdn -f nginx-conf.yaml
+
+
+cat << 'EOF' > nginx-conf.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: redhat-nginx-conf
+data:
+  nginx.conf: |
+    user root;
+    worker_processes  auto;
+    error_log  /var/log/nginx/error.log;
+    worker_rlimit_nofile 100000;
+ 
+    events {
+        use epoll;
+        multi_accept on;
       worker_connections  10240;
     }
 
     http {
         sendfile on;
-        sendfile_max_chunk 512k;
+
       server {
           listen       80;
           server_name  _;
             root /www/data/;
+            allow   39.134.204.0/24;
             allow   117.177.241.0/24;
             allow   39.137.101.0/24;
             allow   39.134.201.0/24;
             deny    all;
+
           location / {
+            #include       /etc/nginx/mime.types;
+            default_type  application/octet-stream;
+            access_log off;
+            keepalive_timeout  65;
+            keepalive_requests 200;
+            reset_timedout_connection on;
+            sendfile on;
+            tcp_nopush on;
+            gzip on;
+            gzip_min_length 256;
+            gzip_comp_level 3;
+            gzip_types text/plain text/css application/json application/x-javascript text/xml application/xml application/xml+rss text/javascript;
+            open_file_cache max=10000 inactive=30s;
+            open_file_cache_valid    60s;
+            open_file_cache_min_uses 2;
+            open_file_cache_errors   on;
+ 
+            
+
           }
       }
 
@@ -152,6 +213,7 @@ spec:
             path: nginx.conf
     - name: log
       emptyDir: {}
+
 EOF
 oc apply -f nginx.yaml
 
@@ -199,32 +261,32 @@ scp split.list.*.ac 117.177.241.23:~/
 scp split.list.*.ad 117.177.241.24:~/
 
 # worker-2
-./cassowary run -u http://39.134.201.77/ -c 10 -t 30 -d 6000 -f split.list.2m.aa
+./cassowary run -u http://39.134.201.77/ -c 10 -t 30 -n 9999999 -f split.list.2m.aa
 
-./cassowary run -u http://39.134.201.77/ -c 10 -t 30 -d 6000 -f split.list.10m.aa
+./cassowary run -u http://39.134.201.77/ -c 10 -t 30 -n 9999999 -f split.list.10m.aa
 
-./cassowary run -u http://39.134.201.77/ -c 10 -t 30 -d 6000 -f split.list.100m.aa
+./cassowary run -u http://39.134.201.77/ -c 10 -t 30 -n 9999999 -f split.list.100m.aa
 
 # worker-0
-./cassowary run -u http://39.134.201.77/ -c 10 -t 30 -d 6000 -f split.list.2m.ab
+./cassowary run -u http://39.134.201.77/ -c 10 -t 30 -n 9999999 -f split.list.2m.ab
 
-./cassowary run -u http://39.134.201.77/ -c 10 -t 30 -d 6000 -f split.list.10m.ab
+./cassowary run -u http://39.134.201.77/ -c 10 -t 30 -n 9999999 -f split.list.10m.ab
 
-./cassowary run -u http://39.134.201.77/ -c 10 -t 30 -d 6000 -f split.list.100m.ab
+./cassowary run -u http://39.134.201.77/ -c 10 -t 30 -n 9999999 -f split.list.100m.ab
 
 # infra0
-./cassowary run -u http://39.134.201.78/ -c 10 -t 30 -d 6000 -f split.list.2m.ac
+./cassowary run -u http://39.134.201.78/ -c 10 -t 30 -n 9999999 -f split.list.2m.ac
 
-./cassowary run -u http://39.134.201.78/ -c 10 -t 30 -d 6000 -f split.list.10m.ac
+./cassowary run -u http://39.134.201.78/ -c 10 -t 30 -n 9999999 -f split.list.10m.ac
 
-./cassowary run -u http://39.134.201.78/ -c 10 -t 30 -d 6000 -f split.list.100m.ac
+./cassowary run -u http://39.134.201.78/ -c 10 -t 30 -n 9999999 -f split.list.100m.ac
 
 # infra1
-./cassowary run -u http://39.134.201.78/ -c 10 -t 30 -d 6000 -f split.list.2m.ad
+./cassowary run -u http://39.134.201.78/ -c 10 -t 30 -n 9999999 -f split.list.2m.ad
 
-./cassowary run -u http://39.134.201.78/ -c 10 -t 30 -d 6000 -f split.list.10m.ad
+./cassowary run -u http://39.134.201.78/ -c 10 -t 30 -n 9999999 -f split.list.10m.ad
 
-./cassowary run -u http://39.134.201.78/ -c 10 -t 30 -d 6000 -f split.list.100m.ad
+./cassowary run -u http://39.134.201.78/ -c 10 -t 30 -n 9999999 -f split.list.100m.ad
 
 
 ps -ef | grep cassowary | grep run | awk '{print $2}' | xargs -I DEMO kill DEMO
@@ -356,6 +418,35 @@ spec:
             path: nginx.conf
     - name: log
       emptyDir: {}
+
+---
+kind: Pod
+apiVersion: v1
+metadata:
+  name: demo
+  namespace: zxcdn
+  annotations:
+    k8s.v1.cni.cncf.io/networks: '
+    [{
+      "name": "redhat-003-macvlan",
+      "default-route": ["39.134.204.65"] 
+    }]'
+spec:
+  nodeSelector:
+    kubernetes.io/hostname: 'worker-3.ocpsc.redhat.ren'
+  restartPolicy: Always
+  containers:
+    - name: demo1
+      image: >- 
+        registry.redhat.ren:5443/docker.io/wangzheng422/centos:centos7-test
+      env:
+        - name: key
+          value: value
+      command: ["iperf3", "-s", "-p" ]
+      args: [ "6666" ]
+      imagePullPolicy: Always
+
+
 EOF
 oc apply -f nginx.yaml
 
@@ -386,33 +477,243 @@ scp split.list.*.ac 117.177.241.23:~/
 scp split.list.*.ad 117.177.241.24:~/
 
 # worker-2
-./cassowary run -u http://39.134.204.76/ -c 10 -t 30 -d 6000 -f split.list.2m.aa
+./cassowary run -u http://39.134.204.76/ -c 10 -t 30 -n 9999999 -f split.list.2m.aa
 
-./cassowary run -u http://39.134.204.76/ -c 10 -t 30 -d 6000 -f split.list.10m.aa
+./cassowary run -u http://39.134.204.76/ -c 10 -t 30 -n 9999999 -f split.list.10m.aa
 
-./cassowary run -u http://39.134.204.76/ -c 10 -t 30 -d 6000 -f split.list.100m.aa
+./cassowary run -u http://39.134.204.76/ -c 10 -t 30 -n 9999999 -f split.list.100m.aa
 
 # worker-0
-./cassowary run -u http://39.134.204.76/ -c 10 -t 30 -d 6000 -f split.list.2m.ab
+./cassowary run -u http://39.134.204.76/ -c 10 -t 30 -n 9999999  -f split.list.2m.ab
 
-./cassowary run -u http://39.134.204.76/ -c 10 -t 30 -d 6000 -f split.list.10m.ab
+./cassowary run -u http://39.134.204.76/ -c 10 -t 30 -n 9999999  -f split.list.10m.ab
 
-./cassowary run -u http://39.134.204.76/ -c 10 -t 30 -d 6000 -f split.list.100m.ab
+./cassowary run -u http://39.134.204.76/ -c 10 -t 30 -n 9999999  -f split.list.100m.ab
 
 # infra0
-./cassowary run -u http://39.134.204.76/ -c 10 -t 30 -d 6000 -f split.list.2m.ac
+./cassowary run -u http://39.134.204.77/ -c 10 -t 30 -n 9999999 -f split.list.2m.ac
 
-./cassowary run -u http://39.134.204.77/ -c 10 -t 30 -d 6000 -f split.list.10m.ac
+./cassowary run -u http://39.134.204.77/ -c 10 -t 30 -n 9999999 -f split.list.10m.ac
 
-./cassowary run -u http://39.134.204.77/ -c 10 -t 30 -d 6000 -f split.list.100m.ac
+./cassowary run -u http://39.134.204.77/ -c 10 -t 30 -n 9999999 -f split.list.100m.ac
 
 # infra1
-./cassowary run -u http://39.134.204.77/ -c 10 -t 30 -d 6000 -f split.list.2m.ad
+./cassowary run -u http://39.134.204.77/ -c 10 -t 30 -n 9999999 -f split.list.2m.ad
 
-./cassowary run -u http://39.134.204.77/ -c 10 -t 30 -d 6000 -f split.list.10m.ad
+./cassowary run -u http://39.134.204.77/ -c 10 -t 30 -n 9999999 -f split.list.10m.ad
 
-./cassowary run -u http://39.134.204.77/ -c 10 -t 30 -d 6000 -f split.list.100m.ad
+./cassowary run -u http://39.134.204.77/ -c 10 -t 30 -n 9999999 -f split.list.100m.ad
 
 ps -ef | grep cassowary | grep run | awk '{print $2}' | xargs -I DEMO kill DEMO
+
+
+# debug 
+scp root@39.134.204.73:/data_ext/list.tmp/split.list.*.aa ./
+
+oc rsync ./ demo:/root/
+
+oc exec demo -it -- cassowary run -u http://39.134.204.76/ -c 10 -t 30 -d 6000 -f /root/split.list.100m.aa
+
+
+
+```
+
+## debug
+
+```bash
+
+cat << 'EOF'> apache.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: redhat-001
+  namespace: zxcdn
+  labels: 
+    pod: redhat-001
+  annotations:
+    k8s.v1.cni.cncf.io/networks: '
+    [{
+      "name": "redhat-001-macvlan",
+      "default-route": ["39.134.204.65"] 
+    }]'
+spec:
+  nodeSelector:
+    kubernetes.io/hostname: 'worker-3.ocpsc.redhat.ren'
+  restartPolicy: Always
+  containers:
+    - name: webcache-001-main
+      image: registry.redhat.ren:5443/docker.io/httpd:latest
+      imagePullPolicy: Always
+  
+      volumeMounts:
+        - name: webcache-volumes
+          mountPath: /usr/local/apache2/htdocs/
+        - mountPath: /etc/nginx # mount nginx-conf volumn to /etc/nginx
+          readOnly: true
+          name: nginx-conf
+        - mountPath: /var/log/nginx
+          name: log
+
+      resources:
+        requests:
+          cpu: 8.0
+          memory: 48Gi
+        limits:
+          cpu: 8.0
+          memory: 48Gi
+      securityContext:
+        privileged: true
+        runAsUser: 0
+
+  serviceAccount: zxcdn-app
+  volumes:
+    - name: webcache-volumes
+      hostPath:
+        path: /data_ext/mnt/
+    - name: nginx-conf
+      configMap:
+        name: redhat-nginx-conf # place ConfigMap `nginx-conf` on /etc/nginx
+        items:
+          - key: nginx.conf
+            path: nginx.conf
+    - name: log
+      emptyDir: {}
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: redhat-002
+  namespace: zxcdn
+  labels: 
+    pod: redhat-002
+  annotations:
+    k8s.v1.cni.cncf.io/networks: '
+    [{
+      "name": "redhat-002-macvlan",
+      "default-route": ["39.134.204.65"] 
+    }]'
+spec:
+  nodeSelector:
+    kubernetes.io/hostname: 'worker-3.ocpsc.redhat.ren'
+  restartPolicy: Always
+  containers:
+    - name: webcache-001-main
+      image: registry.redhat.ren:5443/docker.io/httpd:latest
+      imagePullPolicy: Always
+  
+      volumeMounts:
+        - name: webcache-volumes
+          mountPath: /usr/local/apache2/htdocs/
+        - mountPath: /etc/nginx # mount nginx-conf volumn to /etc/nginx
+          readOnly: true
+          name: nginx-conf
+        - mountPath: /var/log/nginx
+          name: log
+
+      resources:
+        requests:
+          cpu: 8.0
+          memory: 48Gi
+        limits:
+          cpu: 8.0
+          memory: 48Gi
+      securityContext:
+        privileged: true
+        runAsUser: 0
+
+  serviceAccount: zxcdn-app
+  volumes:
+    - name: webcache-volumes
+      hostPath:
+        path: /data_ext/mnt/
+    - name: nginx-conf
+      configMap:
+        name: redhat-nginx-conf # place ConfigMap `nginx-conf` on /etc/nginx
+        items:
+          - key: nginx.conf
+            path: nginx.conf
+    - name: log
+      emptyDir: {}
+
+---
+kind: Pod
+apiVersion: v1
+metadata:
+  name: demo
+  namespace: zxcdn
+  annotations:
+    k8s.v1.cni.cncf.io/networks: '
+    [{
+      "name": "redhat-003-macvlan",
+      "default-route": ["39.134.204.65"] 
+    }]'
+spec:
+  nodeSelector:
+    kubernetes.io/hostname: 'worker-3.ocpsc.redhat.ren'
+  restartPolicy: Always
+  containers:
+    - name: demo1
+      image: >- 
+        registry.redhat.ren:5443/docker.io/wangzheng422/centos:centos7-test
+      env:
+        - name: key
+          value: value
+      command: ["iperf3", "-s", "-p" ]
+      args: [ "6666" ]
+      imagePullPolicy: Always
+
+
+EOF
+oc apply -f apache.yaml
+
+oc delete -f apache.yaml
+
+cat << EOF > demo.yaml
+---
+kind: Pod
+apiVersion: v1
+metadata:
+  name: demo-pod
+  annotations:
+    k8s.v1.cni.cncf.io/networks: '
+    [{
+      "name": "redhat-001-macvlan",
+      "default-route": ["39.134.204.65"] 
+    }]'
+spec:
+  nodeSelector:
+    kubernetes.io/hostname: 'worker-3.ocpsc.redhat.ren'
+  restartPolicy: Always
+  containers:
+    - name: demo1
+      image: >- 
+        registry.redhat.ren:5443/docker.io/wangzheng422/centos:centos7-test
+      env:
+        - name: key
+          value: value
+      command: ["iperf3", "-s", "-p" ]
+      args: [ "6666" ]
+      imagePullPolicy: Always
+      securityContext:
+        privileged: true
+        runAsUser: 0
+      volumeMounts:
+        - name: webcache-volumes
+          mountPath: /data_ext/
+  serviceAccount: zxcdn-app
+  volumes:
+    - name: webcache-volumes
+      hostPath:
+        path: /data_ext/
+EOF
+oc apply -n zxcdn -f demo.yaml
+
+oc delete -n zxcdn -f demo.yaml
+
+
+semanage permissive -a httpd_t
+
+semanage permissive -d httpd_t
+
 
 ```
