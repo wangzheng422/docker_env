@@ -3987,7 +3987,7 @@ cat list.10m list.100m | shuf > list.shuf.+2m
 
 rm -f split.list.*
 # zte use 1800
-var_total=30
+var_total=10
 split -n l/$var_total list.shuf.all split.list.all.
 split -n l/$var_total list.shuf.2m split.list.2m.
 split -n l/$var_total list.shuf.10m split.list.10m.
