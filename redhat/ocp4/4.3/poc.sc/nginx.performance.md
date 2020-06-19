@@ -353,7 +353,7 @@ spec:
   volumes:
     - name: webcache-volumes
       hostPath:
-        path: /data_ext/mnt/
+        path: /data_ext04/mnt/
     - name: nginx-conf
       configMap:
         name: redhat-nginx-conf # place ConfigMap `nginx-conf` on /etc/nginx
@@ -409,7 +409,7 @@ spec:
   volumes:
     - name: webcache-volumes
       hostPath:
-        path: /data_ext/mnt/
+        path: /data_ext04/mnt/
     - name: nginx-conf
       configMap:
         name: redhat-nginx-conf # place ConfigMap `nginx-conf` on /etc/nginx
@@ -454,9 +454,20 @@ oc delete -f nginx.yaml
 
 
 # on worker3
-cat list.2m | sed "s/\/data_ext\/mnt//" > list.2m.web
-cat list.10m | sed "s/\/data_ext\/mnt//" > list.10m.web
-cat list.100m | sed "s/\/data_ext\/mnt//" > list.100m.web
+# var_basedir="/data_ext04"
+var_truebase="data_ext04"
+var_basedir="/$var_truebase/mnt"
+
+mkdir -p /$var_truebase/list.tmp
+cd /$var_truebase/list.tmp
+find $var_basedir -type f -size -2M  > list.2m
+find $var_basedir -type f -size -10M  -size +2M > list.10m
+find $var_basedir -type f -size +10M > list.100m
+find $var_basedir -type f > list
+
+cat list.2m | sed "s/\/$var_truebase\/mnt//" > list.2m.web
+cat list.10m | sed "s/\/$var_truebase\/mnt//" > list.10m.web
+cat list.100m | sed "s/\/$var_truebase\/mnt//" > list.100m.web
 
 cat list.2m.web | shuf > list.shuf.2m
 cat list.10m.web | shuf > list.shuf.10m
@@ -465,7 +476,7 @@ cat list.10m.web list.100m.web | shuf > list.shuf.+2m
 
 rm -f split.list.*
 
-var_total=4
+var_total=3
 split -n l/$var_total list.shuf.2m split.list.2m.
 split -n l/$var_total list.shuf.10m split.list.10m.
 split -n l/$var_total list.shuf.100m split.list.100m.
@@ -477,32 +488,34 @@ scp split.list.*.ac 117.177.241.23:~/
 scp split.list.*.ad 117.177.241.24:~/
 
 # worker-2
-./cassowary run -u http://39.134.204.76/ -c 10 -t 30 -n 9999999 -f split.list.2m.aa
+./cassowary run -u http://39.134.204.76/ -c 20 -t 30 -n 1 -f split.list.2m.aa
 
-./cassowary run -u http://39.134.204.76/ -c 10 -t 30 -n 9999999 -f split.list.10m.aa
+./cassowary run -u http://39.134.204.76/ -c 30 -t 30 -n 1 -f split.list.10m.aa
 
-./cassowary run -u http://39.134.204.76/ -c 10 -t 30 -n 9999999 -f split.list.100m.aa
+./cassowary run -u http://39.134.204.76/ -c 30 -t 30 -n 1 -f split.list.100m.aa
 
 # worker-0
-./cassowary run -u http://39.134.204.76/ -c 10 -t 30 -n 9999999  -f split.list.2m.ab
+./cassowary run -u http://39.134.204.77/ -c 30 -t 30 -n 1  -f split.list.2m.ab
 
-./cassowary run -u http://39.134.204.76/ -c 10 -t 30 -n 9999999  -f split.list.10m.ab
+./cassowary run -u http://39.134.204.77/ -c 20 -t 30 -n 1  -f split.list.10m.ab
 
-./cassowary run -u http://39.134.204.76/ -c 10 -t 30 -n 9999999  -f split.list.100m.ab
+./cassowary run -u http://39.134.204.77/ -c 30 -t 30 -n 1  -f split.list.100m.ab
+
+./cassowary run -u http://39.134.204.77/ -c 30 -t 30 -n 1  -f split.list.+2m.ab
 
 # infra0
-./cassowary run -u http://39.134.204.77/ -c 10 -t 30 -n 9999999 -f split.list.2m.ac
+./cassowary run -u http://39.134.204.77/ -c 10 -t 30 -n 1 -f split.list.2m.ac
 
-./cassowary run -u http://39.134.204.77/ -c 10 -t 30 -n 9999999 -f split.list.10m.ac
+./cassowary run -u http://39.134.204.77/ -c 10 -t 30 -n 1 -f split.list.10m.ac
 
-./cassowary run -u http://39.134.204.77/ -c 10 -t 30 -n 9999999 -f split.list.100m.ac
+./cassowary run -u http://39.134.204.77/ -c 20 -t 30 -n 1 -f split.list.100m.ac
 
 # infra1
-./cassowary run -u http://39.134.204.77/ -c 10 -t 30 -n 9999999 -f split.list.2m.ad
+./cassowary run -u http://39.134.204.77/ -c 10 -t 30 -n 1 -f split.list.2m.ad
 
-./cassowary run -u http://39.134.204.77/ -c 10 -t 30 -n 9999999 -f split.list.10m.ad
+./cassowary run -u http://39.134.204.77/ -c 10 -t 30 -n 1 -f split.list.10m.ad
 
-./cassowary run -u http://39.134.204.77/ -c 10 -t 30 -n 9999999 -f split.list.100m.ad
+./cassowary run -u http://39.134.204.77/ -c 10 -t 30 -n 1 -f split.list.100m.ad
 
 ps -ef | grep cassowary | grep run | awk '{print $2}' | xargs -I DEMO kill DEMO
 
@@ -517,6 +530,36 @@ oc exec demo -it -- cassowary run -u http://39.134.204.76/ -c 10 -t 30 -d 6000 -
 
 
 ```
+
+
+## worker-0
+
+```bash
+
+cat list.16k | sed "s/\/data\/mnt//" > list.16k.web
+cat list.128k | sed "s/\/data\/mnt//" > list.128k.web
+cat list.2m | sed "s/\/data\/mnt//" > list.2m.web
+
+cat list.16k.web | shuf > list.shuf.16k
+cat list.128k.web | shuf > list.shuf.128k
+cat list.2m.web | shuf > list.shuf.2m
+cat list.128k.web list.2m.web | shuf > list.shuf.+16k
+
+rm -f split.list.*
+
+var_total=3
+split -n l/$var_total list.shuf.16k split.list.16k.
+split -n l/$var_total list.shuf.128k split.list.128k.
+split -n l/$var_total list.shuf.2m split.list.2m.
+split -n l/$var_total list.shuf.+16k split.list.+16k.
+
+scp split.list.*.aa 39.134.201.66:~/
+scp split.list.*.ab 39.137.101.28:~/
+scp split.list.*.ac 117.177.241.23:~/
+scp split.list.*.ad 117.177.241.24:~/
+
+```
+
 
 ## debug
 

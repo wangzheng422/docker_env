@@ -1985,6 +1985,11 @@ ps -ef | grep xargs | grep DEMO | grep cat | awk '{print $2}' | xargs -I DEMO ki
 ps -ef | grep /data_mix/mnt | grep cat | awk '{print $2}' | xargs -I DEMO kill DEMO
 
 
+rclone sync /data/mnt/ /data/backup/mnt/ -P -L --transfers 64
+rclone sync /data/home/ /data/backup/home/ -P -L --transfers 64
+rclone sync /data/ztecdn/ /data/backup/ztecdn/ -P -L --transfers 64
+
+
 # check sn
 dmidecode -t 1
 # # dmidecode 3.2
@@ -3781,13 +3786,41 @@ mkfs.ext4 /dev/datavg/hddlv
 
 lvcreate --type raid0 -L 5T  --stripesize 512k --stripes 24 -n xfslv datavg /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx /dev/sdy
 
-lvcreate --type raid0 -L 5T  --stripesize 2048k --stripes 24 -n extlv datavg /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx /dev/sdy
+lvcreate --type raid0 -L 110T  --stripesize 4096k --stripes 24 -n extzxlv datavg /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx /dev/sdy
+
+lvcreate --type raid0 -L 3.5T  --stripesize 4096k --stripes 24 -n ext04lv datavg /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx /dev/sdy
+
+lvcreate --type raid6 -L 3.5T  --stripesize 2048k --stripes 22 -n ext62lv datavg /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx /dev/sdy
+
+lvcreate --type raid5 -L 3.2T  --stripesize 2048k --stripes 23 -n ext52lv datavg /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx /dev/sdy
+
+
+
+mkfs.ext4 -E lazy_itable_init=0,lazy_journal_init=0 /dev/mapper/fc-root
 
 mkfs.xfs /dev/datavg/xfslv
 mkfs.ext4 /dev/datavg/extlv
 
+mkfs.ext4 /dev/datavg/ext04lv
+mkfs.ext4 /dev/datavg/ext62lv
+
+mkfs.ext4 /dev/datavg/ext52lv
+
+mkfs.ext4 /dev/datavg/extzxlv
+mount /dev/datavg/extzxlv /data
+
 mount /dev/datavg/xfslv /data_xfs
 mount /dev/datavg/extlv /data_ext
+
+mkdir -p /data_ext02
+mkdir -p /data_ext04
+mkdir -p /data_ext62
+mkdir -p /data_ext52
+
+mount /dev/datavg/ext02lv /data_ext02
+mount /dev/datavg/ext04lv /data_ext04
+mount /dev/datavg/ext62lv /data_ext62
+mount /dev/datavg/ext52lv /data_ext52
 
 umount /data_xfs
 lvremove -f datavg/xfslv
@@ -3798,10 +3831,16 @@ umount /data_ext
 lvremove -f datavg/extlv
 rclone sync /data_xfs/mnt/ /data_ext/mnt/ -P -L --transfers 64
 
+umount /data_ext62
+rclone sync /data_xfs/mnt/ /data_ext04/mnt/ -P -L --transfers 64
+rclone sync /data_xfs/mnt/ /data_ext62/mnt/ -P -L --transfers 64
+rclone sync /data_xfs/mnt/ /data_ext52/mnt/ -P -L --transfers 64
+
 lvs -o+stripesize
 
 dstat -D /dev/datavg/xfslv,/dev/datavg/extlv,/dev/sdb,/dev/sdc 5
 dstat -D /dev/datavg/xfslv,/dev/datavg/extlv,/dev/sdb,/dev/sdc --disk-util
+bmon -p bond0,enp*
 
 blockdev --report 
 # https://access.redhat.com/solutions/3588841
@@ -3953,6 +3992,15 @@ find $var_basedir -type f -size -10M  -size +2M > list.10m
 find $var_basedir -type f -size +10M > list.100m
 find $var_basedir -type f > list
 
+var_truebase="/data_ext62"
+mkdir -p $var_truebase/list.tmp
+cd $var_truebase/list.tmp
+var_basedir="$var_truebase/mnt"
+find $var_basedir -type f -size -2M  > list.2m
+find $var_basedir -type f -size -10M  -size +2M > list.10m
+find $var_basedir -type f -size +10M > list.100m
+find $var_basedir -type f > list
+
 cat list | xargs ls -l > list.size
 cat list.size | awk '{ n=int(log($5)/log(2));                         \
           if (n<10) n=10;                                               \
@@ -3968,13 +4016,6 @@ cat list.size | awk '{ n=int(log($5)/log(2));                         \
           printf("%3d%s: %6d\n", a[1],substr("kMGTEPYZ",a[2]+1,1),$2) }' 
 
 
-mkdir -p /data_ext/list.tmp
-cd /data_ext/list.tmp
-var_basedir="/data_ext/mnt"
-find $var_basedir -type f -size -2M  > list.2m
-find $var_basedir -type f -size -10M  -size +2M > list.10m
-find $var_basedir -type f -size +10M > list.100m
-find $var_basedir -type f > list
 
 
 
@@ -3987,7 +4028,7 @@ cat list.10m list.100m | shuf > list.shuf.+2m
 
 rm -f split.list.*
 # zte use 1800
-var_total=30
+var_total=10
 split -n l/$var_total list.shuf.all split.list.all.
 split -n l/$var_total list.shuf.2m split.list.2m.
 split -n l/$var_total list.shuf.10m split.list.10m.
