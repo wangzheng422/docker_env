@@ -536,6 +536,163 @@ oc exec demo -it -- cassowary run -u http://39.134.204.76/ -c 10 -t 30 -d 6000 -
 
 ```bash
 
+
+
+cat << 'EOF'> nginx.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: redhat-001
+  namespace: zxcdn
+  labels: 
+    pod: redhat-001
+  annotations:
+    k8s.v1.cni.cncf.io/networks: '
+    [{
+      "name": "webcache-011-macvlan",
+      "default-route": ["39.137.101.126"] 
+    }]'
+spec:
+  nodeSelector:
+    kubernetes.io/hostname: 'worker-3.ocpsc.redhat.ren'
+  restartPolicy: Always
+  containers:
+    - name: webcache-001-main
+      image: registry.redhat.ren:5443/docker.io/nginx:latest
+      imagePullPolicy: Always
+  
+      volumeMounts:
+        - name: webcache-volumes
+          mountPath: /www/data
+        - mountPath: /etc/nginx # mount nginx-conf volumn to /etc/nginx
+          readOnly: true
+          name: nginx-conf
+        - mountPath: /var/log/nginx
+          name: log
+
+      resources:
+        requests:
+          cpu: 8.0
+          memory: 48Gi
+        limits:
+          cpu: 8.0
+          memory: 48Gi
+      securityContext:
+        privileged: true
+        runAsUser: 0
+
+  serviceAccount: zxcdn-app
+  volumes:
+    - name: webcache-volumes
+      hostPath:
+        path: /data/mnt/
+    - name: nginx-conf
+      configMap:
+        name: redhat-nginx-conf # place ConfigMap `nginx-conf` on /etc/nginx
+        items:
+          - key: nginx.conf
+            path: nginx.conf
+    - name: log
+      emptyDir: {}
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: redhat-002
+  namespace: zxcdn
+  labels: 
+    pod: redhat-002
+  annotations:
+    k8s.v1.cni.cncf.io/networks: '
+    [{
+      "name": "webcache-012-macvlan",
+      "default-route": ["39.137.101.126"] 
+    }]'
+spec:
+  nodeSelector:
+    kubernetes.io/hostname: 'worker-3.ocpsc.redhat.ren'
+  restartPolicy: Always
+  containers:
+    - name: webcache-001-main
+      image: registry.redhat.ren:5443/docker.io/nginx:latest
+      imagePullPolicy: Always
+  
+      volumeMounts:
+        - name: webcache-volumes
+          mountPath: /www/data
+        - mountPath: /etc/nginx # mount nginx-conf volumn to /etc/nginx
+          readOnly: true
+          name: nginx-conf
+        - mountPath: /var/log/nginx
+          name: log
+
+      resources:
+        requests:
+          cpu: 8.0
+          memory: 48Gi
+        limits:
+          cpu: 8.0
+          memory: 48Gi
+      securityContext:
+        privileged: true
+        runAsUser: 0
+
+  serviceAccount: zxcdn-app
+  volumes:
+    - name: webcache-volumes
+      hostPath:
+        path: /data/mnt/
+    - name: nginx-conf
+      configMap:
+        name: redhat-nginx-conf # place ConfigMap `nginx-conf` on /etc/nginx
+        items:
+          - key: nginx.conf
+            path: nginx.conf
+    - name: log
+      emptyDir: {}
+
+---
+kind: Pod
+apiVersion: v1
+metadata:
+  name: demo
+  namespace: zxcdn
+  annotations:
+    k8s.v1.cni.cncf.io/networks: '
+    [{
+      "name": "redhat-003-macvlan",
+      "default-route": ["39.134.204.65"] 
+    }]'
+spec:
+  nodeSelector:
+    kubernetes.io/hostname: 'worker-3.ocpsc.redhat.ren'
+  restartPolicy: Always
+  containers:
+    - name: demo1
+      image: >- 
+        registry.redhat.ren:5443/docker.io/wangzheng422/centos:centos7-test
+      env:
+        - name: key
+          value: value
+      command: ["iperf3", "-s", "-p" ]
+      args: [ "6666" ]
+      imagePullPolicy: Always
+
+
+EOF
+oc apply -f nginx.yaml
+
+oc delete -f nginx.yaml
+
+
+
+
+var_truebase="data"
+var_basedir="/$var_truebase/mnt"
+
+mkdir -p /$var_truebase/list.tmp
+cd /$var_truebase/list.tmp
+
 cat list.16k | sed "s/\/data\/mnt//" > list.16k.web
 cat list.128k | sed "s/\/data\/mnt//" > list.128k.web
 cat list.2m | sed "s/\/data\/mnt//" > list.2m.web
