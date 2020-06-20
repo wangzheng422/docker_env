@@ -92,8 +92,6 @@ data:
             open_file_cache_min_uses 2;
             open_file_cache_errors   on;
  
-            
-
           }
       }
 
@@ -261,32 +259,32 @@ scp split.list.*.ac 117.177.241.23:~/
 scp split.list.*.ad 117.177.241.24:~/
 
 # worker-2
-./cassowary run -u http://39.134.201.77/ -c 10 -t 30 -n 9999999 -f split.list.2m.aa
+./cassowary run -u http://39.134.201.77/ -c 10 -t 30 -n 1 -f split.list.2m.aa
 
-./cassowary run -u http://39.134.201.77/ -c 10 -t 30 -n 9999999 -f split.list.10m.aa
+./cassowary run -u http://39.134.201.77/ -c 10 -t 30 -n 1 -f split.list.10m.aa
 
-./cassowary run -u http://39.134.201.77/ -c 10 -t 30 -n 9999999 -f split.list.100m.aa
+./cassowary run -u http://39.134.201.77/ -c 10 -t 30 -n 1 -f split.list.100m.aa
 
 # worker-0
-./cassowary run -u http://39.134.201.77/ -c 10 -t 30 -n 9999999 -f split.list.2m.ab
+./cassowary run -u http://39.134.201.77/ -c 10 -t 30 -n 1 -f split.list.2m.ab
 
-./cassowary run -u http://39.134.201.77/ -c 10 -t 30 -n 9999999 -f split.list.10m.ab
+./cassowary run -u http://39.134.201.77/ -c 10 -t 30 -n 1 -f split.list.10m.ab
 
-./cassowary run -u http://39.134.201.77/ -c 10 -t 30 -n 9999999 -f split.list.100m.ab
+./cassowary run -u http://39.134.201.77/ -c 10 -t 30 -n 1 -f split.list.100m.ab
 
 # infra0
-./cassowary run -u http://39.134.201.78/ -c 10 -t 30 -n 9999999 -f split.list.2m.ac
+./cassowary run -u http://39.134.201.78/ -c 10 -t 30 -n 1 -f split.list.2m.ac
 
-./cassowary run -u http://39.134.201.78/ -c 10 -t 30 -n 9999999 -f split.list.10m.ac
+./cassowary run -u http://39.134.201.78/ -c 10 -t 30 -n 1 -f split.list.10m.ac
 
-./cassowary run -u http://39.134.201.78/ -c 10 -t 30 -n 9999999 -f split.list.100m.ac
+./cassowary run -u http://39.134.201.78/ -c 10 -t 30 -n 1 -f split.list.100m.ac
 
 # infra1
-./cassowary run -u http://39.134.201.78/ -c 10 -t 30 -n 9999999 -f split.list.2m.ad
+./cassowary run -u http://39.134.201.78/ -c 10 -t 30 -n 1 -f split.list.2m.ad
 
-./cassowary run -u http://39.134.201.78/ -c 10 -t 30 -n 9999999 -f split.list.10m.ad
+./cassowary run -u http://39.134.201.78/ -c 10 -t 30 -n 1 -f split.list.10m.ad
 
-./cassowary run -u http://39.134.201.78/ -c 10 -t 30 -n 9999999 -f split.list.100m.ad
+./cassowary run -u http://39.134.201.78/ -c 10 -t 30 -n 1 -f split.list.100m.ad
 
 
 ps -ef | grep cassowary | grep run | awk '{print $2}' | xargs -I DEMO kill DEMO
@@ -476,7 +474,7 @@ cat list.10m.web list.100m.web | shuf > list.shuf.+2m
 
 rm -f split.list.*
 
-var_total=3
+var_total=4
 split -n l/$var_total list.shuf.2m split.list.2m.
 split -n l/$var_total list.shuf.10m split.list.10m.
 split -n l/$var_total list.shuf.100m split.list.100m.
@@ -554,7 +552,7 @@ metadata:
     }]'
 spec:
   nodeSelector:
-    kubernetes.io/hostname: 'worker-3.ocpsc.redhat.ren'
+    kubernetes.io/hostname: 'worker-0.ocpsc.redhat.ren'
   restartPolicy: Always
   containers:
     - name: webcache-001-main
@@ -610,7 +608,7 @@ metadata:
     }]'
 spec:
   nodeSelector:
-    kubernetes.io/hostname: 'worker-3.ocpsc.redhat.ren'
+    kubernetes.io/hostname: 'worker-0.ocpsc.redhat.ren'
   restartPolicy: Always
   containers:
     - name: webcache-001-main
@@ -651,34 +649,6 @@ spec:
     - name: log
       emptyDir: {}
 
----
-kind: Pod
-apiVersion: v1
-metadata:
-  name: demo
-  namespace: zxcdn
-  annotations:
-    k8s.v1.cni.cncf.io/networks: '
-    [{
-      "name": "redhat-003-macvlan",
-      "default-route": ["39.134.204.65"] 
-    }]'
-spec:
-  nodeSelector:
-    kubernetes.io/hostname: 'worker-3.ocpsc.redhat.ren'
-  restartPolicy: Always
-  containers:
-    - name: demo1
-      image: >- 
-        registry.redhat.ren:5443/docker.io/wangzheng422/centos:centos7-test
-      env:
-        - name: key
-          value: value
-      command: ["iperf3", "-s", "-p" ]
-      args: [ "6666" ]
-      imagePullPolicy: Always
-
-
 EOF
 oc apply -f nginx.yaml
 
@@ -714,6 +684,17 @@ scp split.list.*.aa 39.134.201.66:~/
 scp split.list.*.ab 39.137.101.28:~/
 scp split.list.*.ac 117.177.241.23:~/
 scp split.list.*.ad 117.177.241.24:~/
+
+
+
+# worker-2
+./cassowary run -u http://39.137.101.52/ -c 20 -t 30 -n 1 -f split.list.16k.aa
+
+./cassowary run -u http://39.137.101.52/ -c 30 -t 30 -n 1 -f split.list.128k.aa
+
+./cassowary run -u http://39.137.101.54/ -c 30 -t 30 -n 1 -f split.list.2m.aa
+
+
 
 ```
 
@@ -915,5 +896,8 @@ semanage permissive -a httpd_t
 
 semanage permissive -d httpd_t
 
-
+sysctl net.core.somaxconn
+# net.core.somaxconn = 128
+sysctl net.core.netdev_max_backlog
+# net.core.netdev_max_backlog = 1000
 ```

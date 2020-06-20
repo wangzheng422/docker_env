@@ -1989,6 +1989,8 @@ rclone sync /data/mnt/ /data/backup/mnt/ -P -L --transfers 64
 rclone sync /data/home/ /data/backup/home/ -P -L --transfers 64
 rclone sync /data/ztecdn/ /data/backup/ztecdn/ -P -L --transfers 64
 
+rclone sync /data/backup/mnt/ /data/mnt/ -P -L --transfers 64
+
 
 # check sn
 dmidecode -t 1
@@ -3792,7 +3794,7 @@ lvcreate --type raid0 -L 3.5T  --stripesize 4096k --stripes 24 -n ext04lv datavg
 
 lvcreate --type raid6 -L 3.5T  --stripesize 2048k --stripes 22 -n ext62lv datavg /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx /dev/sdy
 
-lvcreate --type raid5 -L 3.2T  --stripesize 2048k --stripes 23 -n ext52lv datavg /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx /dev/sdy
+lvcreate --type raid5 -L 3.5T  --stripesize 2048k --stripes 23 -n ext52lv datavg /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx /dev/sdy
 
 
 
@@ -3801,13 +3803,17 @@ mkfs.ext4 -E lazy_itable_init=0,lazy_journal_init=0 /dev/mapper/fc-root
 mkfs.xfs /dev/datavg/xfslv
 mkfs.ext4 /dev/datavg/extlv
 
+
+
 mkfs.ext4 /dev/datavg/ext04lv
 mkfs.ext4 /dev/datavg/ext62lv
 
 mkfs.ext4 /dev/datavg/ext52lv
 
 mkfs.ext4 /dev/datavg/extzxlv
+# mkfs.xfs /dev/datavg/extzxlv
 mount /dev/datavg/extzxlv /data
+rclone sync /data_ext04/mnt/ /data/redhat_mnt/  -P -L --transfers 64
 
 mount /dev/datavg/xfslv /data_xfs
 mount /dev/datavg/extlv /data_ext
@@ -3819,7 +3825,7 @@ mkdir -p /data_ext52
 
 mount /dev/datavg/ext02lv /data_ext02
 mount /dev/datavg/ext04lv /data_ext04
-mount /dev/datavg/ext62lv /data_ext62
+# mount /dev/datavg/ext62lv /data_ext62
 mount /dev/datavg/ext52lv /data_ext52
 
 umount /data_xfs
@@ -3831,7 +3837,7 @@ umount /data_ext
 lvremove -f datavg/extlv
 rclone sync /data_xfs/mnt/ /data_ext/mnt/ -P -L --transfers 64
 
-umount /data_ext62
+umount /data_ext52
 rclone sync /data_xfs/mnt/ /data_ext04/mnt/ -P -L --transfers 64
 rclone sync /data_xfs/mnt/ /data_ext62/mnt/ -P -L --transfers 64
 rclone sync /data_xfs/mnt/ /data_ext52/mnt/ -P -L --transfers 64
@@ -3992,10 +3998,12 @@ find $var_basedir -type f -size -10M  -size +2M > list.10m
 find $var_basedir -type f -size +10M > list.100m
 find $var_basedir -type f > list
 
-var_truebase="/data_ext62"
+
+var_truebase="/data"
 mkdir -p $var_truebase/list.tmp
 cd $var_truebase/list.tmp
-var_basedir="$var_truebase/mnt"
+
+var_basedir="$var_truebase/redhat_mnt"
 find $var_basedir -type f -size -2M  > list.2m
 find $var_basedir -type f -size -10M  -size +2M > list.10m
 find $var_basedir -type f -size +10M > list.100m
@@ -4041,6 +4049,7 @@ done
 # for f in split.list.+2m.*; do 
 #     cat $f | xargs -I DEMO cat DEMO > /dev/null &
 # done
+
 for f in split.list.10m.*; do 
     cat $f | xargs -I DEMO cat DEMO > /dev/null &
 done
