@@ -17,6 +17,7 @@
     - [worker-1 nic bond](#worker-1-nic-bond)
     - [worker-2 host](#worker-2-host)
     - [worker-2 disk](#worker-2-disk)
+    - [worker-2 disk tunning](#worker-2-disk-tunning)
     - [worker-2 nic bond](#worker-2-nic-bond)
     - [worker-3 host](#worker-3-host)
     - [worker-3 disk](#worker-3-disk)
@@ -3482,6 +3483,190 @@ ps -ef | grep /data_mix/mnt | grep cat | awk '{print $2}' | xargs -I DEMO kill D
 
 ```
 
+### worker-2 disk tunning
+
+```bash 
+
+# 8.6T cache / 130T hdd = 6.6%
+# 660G cache / 10T hdd 
+
+lvcreate --type raid0 -L 10T --stripesize 2048k --stripes 24 -n ext02lv datavg /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx
+
+lvcreate --type raid0 -L 10T --stripesize 4096k --stripes 24 -n ext04lv datavg /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx
+
+lvcreate --type raid5 -L 10T --stripesize 2048k --stripes 23 -n ext52lv datavg /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx
+
+lvcreate --type raid5 -L 10T --stripesize 2048k --stripes 11 -n ext52lv12 datavg /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl 
+
+
+
+lvcreate --type raid0 -L 10T --stripesize 2048k --stripes 24 -n xfs02lv datavg /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx
+
+lvcreate --type raid0 -L 10T --stripesize 4096k --stripes 24 -n xfs04lv datavg /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx
+
+lvcreate --type raid5 -L 10T --stripesize 2048k --stripes 23 -n xfs52lv datavg /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx
+
+lvcreate --type raid5 -L 10T --stripesize 2048k --stripes 11 -n xfs52lv12 datavg /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx
+
+
+lvcreate --type raid0 -L 3.5T --stripesize 1024k --stripes 10 -n ext01lvssd datavg /dev/sdz /dev/sdaa /dev/sdab /dev/sdac /dev/sdad /dev/sdae /dev/sdaf /dev/sdag /dev/sdah /dev/sdai
+
+lvcreate --type raid0 -L 3.5T --stripesize 1024k --stripes 10 -n xfs01lvssd datavg /dev/sdz /dev/sdaa /dev/sdab /dev/sdac /dev/sdad /dev/sdae /dev/sdaf /dev/sdag /dev/sdah /dev/sdai
+
+lvcreate --type raid0 -L 700G --stripesize 2048k --stripes 10 -n cachelv datavg /dev/sdz /dev/sdaa /dev/sdab /dev/sdac /dev/sdad /dev/sdae /dev/sdaf /dev/sdag /dev/sdah /dev/sdai
+
+lvconvert --type cache-pool datavg/cachelv
+
+lvconvert --type cache --cachepool datavg/cachelv datavg/ext02lv
+
+# lvconvert --splitcache datavg/ext02lv
+# lvconvert --uncache datavg/ext02lv
+
+lvs -o+layout,stripesize
+  # LV         VG     Attr       LSize  Pool      Origin          Data%  Meta%  Move Log Cpy%Sync Convert Layout              Stripe
+  # ext01lvssd datavg rwi-a-r---  3.50t                                                                   raid,raid0           1.00m
+  # ext02lv    datavg Cwi-a-C--- 10.00t [cachelv] [ext02lv_corig] 0.01   16.41           0.00             cache                   0
+  # ext04lv    datavg rwi-a-r--- 10.00t                                                                   raid,raid0           4.00m
+  # ext52lv    datavg rwi-a-r--- 10.00t                                                  9.72             raid,raid5,raid5_ls  2.00m
+  # xfs01lvssd datavg rwi-a-r---  3.50t                                                                   raid,raid0           1.00m
+
+mkdir -p /data_ext02
+mkdir -p /data_ext04
+mkdir -p /data_ext52
+mkdir -p /data_ext01
+mkdir -p /data_xfs01
+mkdir -p /data_xfs02
+mkdir -p /data_xfs04
+mkdir -p /data_xfs52
+
+mkdir -p /data_ext52_12
+mkdir -p /data_xfs52_12
+
+mkfs.ext4 /dev/datavg/ext02lv
+mkfs.ext4 /dev/datavg/ext04lv
+mkfs.ext4 /dev/datavg/ext52lv
+mkfs.ext4 /dev/datavg/ext01lvssd
+mkfs.xfs  /dev/datavg/xfs01lvssd
+mkfs.xfs  /dev/datavg/xfs02lv
+mkfs.xfs  /dev/datavg/xfs04lv
+mkfs.xfs  /dev/datavg/xfs52lv
+
+mkfs.ext4 /dev/datavg/ext52lv12
+mkfs.xfs  /dev/datavg/xfs52lv12
+
+mount /dev/datavg/ext02lv /data_ext02
+mount /dev/datavg/ext04lv /data_ext04
+mount /dev/datavg/ext52lv /data_ext52
+mount /dev/datavg/ext01lvssd /data_ext01
+mount /dev/datavg/xfs01lvssd /data_xfs01
+mount /dev/datavg/xfs02lv /data_xfs02
+mount /dev/datavg/xfs04lv /data_xfs04
+mount /dev/datavg/xfs52lv /data_xfs52
+
+mount /dev/datavg/ext52lv12 /data_ext52_12
+mount /dev/datavg/xfs52lv12 /data_xfs52_12
+
+dstat -d -D /dev/datavg/ext02lv,/dev/datavg/ext04lv,/dev/datavg/ext52lv,/dev/datavg/ext01lvssd,/dev/datavg/xfs01lvssd,/dev/datavg/xfs02lv,/dev/datavg/xfs04lv,/dev/datavg/xfs52lv,/dev/datavg/ext52lv12,/dev/datavg/xfs52lv12,/dev/sdaa
+dstat -d -D /dev/datavg/ext02lv,/dev/datavg/ext04lv,/dev/datavg/ext52lv,/dev/datavg/ext01lvssd,/dev/datavg/xfs01lvssd,/dev/datavg/xfs02lv,/dev/datavg/xfs04lv,/dev/datavg/xfs52lv,/dev/datavg/ext52lv12,/dev/datavg/xfs52lv12,/dev/sdaa,/dev/sdb --disk-util
+bmon -p bond0,enp*
+
+# on worker1
+rclone config
+rclone lsd worker-2:
+rclone sync /data_ssd/mnt/ worker-2:/data_ext01/mnt/ -P -L --transfers 64
+
+
+# on worker-2
+
+# fill data
+# for 256M
+var_basedir_ext="/data_ext04/mnt"
+
+mkdir -p $var_basedir_ext
+
+# how may write concurrency
+var_total_write=10
+# how much size each file, this value is in MB
+# 512M
+var_size=512
+# how much size to write totally, in TB
+# write 3T
+var_total_size=3
+
+var_number=$(echo "scale=0;$var_total_size*1024*1024/$var_size/$var_total_write"|bc -l)
+var_len=$(echo "scale=0;$var_size*1024/1"|bc -l)
+
+for ((i=1; i<=$var_number; i++)); do
+  for ((j=1; j<=$var_total_write; j++)); do
+    head -c ${var_len}K < /dev/urandom > $var_basedir_ext/$var_size-$j-$i &
+  done
+  echo "wait to finish: $i"
+  wait
+done
+
+
+
+# fill data
+# for 1G
+var_basedir_ext="/data_ext04/mnt"
+
+mkdir -p $var_basedir_ext
+
+# how may write concurrency
+var_total_write=10
+# how much size each file, this value is in MB
+# 512M
+var_size=1024
+# how much size to write totally, in TB
+# write 3T
+var_total_size=3
+
+var_number=$(echo "scale=0;$var_total_size*1024*1024/$var_size/$var_total_write"|bc -l)
+var_len=$(echo "scale=0;$var_size*1024/1"|bc -l)
+
+for ((i=1; i<=$var_number; i++)); do
+  for ((j=1; j<=$var_total_write; j++)); do
+    head -c ${var_len}K < /dev/urandom > $var_basedir_ext/$var_size-$j-$i &
+  done
+  echo "wait to finish: $i"
+  wait
+done
+
+
+
+# fill data
+# for 2G
+var_basedir_ext="/data_ext04/mnt"
+
+mkdir -p $var_basedir_ext
+
+# how may write concurrency
+var_total_write=10
+# how much size each file, this value is in MB
+# 512M
+var_size=2048
+# how much size to write totally, in TB
+# write 3T
+var_total_size=3
+
+var_number=$(echo "scale=0;$var_total_size*1024*1024/$var_size/$var_total_write"|bc -l)
+var_len=$(echo "scale=0;$var_size*1024/1"|bc -l)
+
+for ((i=1; i<=$var_number; i++)); do
+  for ((j=1; j<=$var_total_write; j++)); do
+    head -c ${var_len}K < /dev/urandom > $var_basedir_ext/$var_size-$j-$i &
+  done
+  echo "wait to finish: $i"
+  wait
+done
+
+
+# copy data
+rclone sync /data_ext01/mnt/ /data_xfs01/mnt/ -P -L --transfers 64
+
+
+```
+
 ### worker-2 nic bond
 ```bash
 ip link show
@@ -4021,7 +4206,7 @@ cat list.size | awk '{ n=int(log($5)/log(2));                         \
         { a[1]=$1;                                                      \
           a[2]=0;                                                       \
           human(a);                                                     \
-          printf("%3d%s: %6d\n", a[1],substr("kMGTEPYZ",a[2]+1,1),$2) }' 
+          printf("%3d - %4d %s: %6d\n", a[1], a[1]*2,substr("kMGTEPYZ",a[2]+1,1),$2) }' 
 
 
 
