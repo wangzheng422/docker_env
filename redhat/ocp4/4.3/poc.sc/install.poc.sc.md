@@ -3674,6 +3674,8 @@ rclone sync /data_ext04/mnt/ /data_ext52/mnt/ -P -L --transfers 10
 rclone sync /data_ext04/mnt/ /data_ext52_12/mnt/ -P -L --transfers 10
 
 
+
+
 ```
 
 ### worker-2 nic bond
