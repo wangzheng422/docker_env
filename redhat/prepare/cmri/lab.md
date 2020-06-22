@@ -93,7 +93,7 @@ systemctl start cockpit.socket
 
 yum install rhvm-appliance
 
-
+# http://172.29.159.99:9090/
 
 
 ```
@@ -140,4 +140,18 @@ EOF
 systemctl restart chronyd
 systemctl status chronyd
 chronyc tracking
+
+
+
 ```
+
+## ocp install
+
+```bash
+
+
+
+```
+
+
+## 

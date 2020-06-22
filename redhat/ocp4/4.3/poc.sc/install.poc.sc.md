@@ -17,6 +17,7 @@
     - [worker-1 nic bond](#worker-1-nic-bond)
     - [worker-2 host](#worker-2-host)
     - [worker-2 disk](#worker-2-disk)
+    - [worker-2 disk tunning](#worker-2-disk-tunning)
     - [worker-2 nic bond](#worker-2-nic-bond)
     - [worker-3 host](#worker-3-host)
     - [worker-3 disk](#worker-3-disk)
@@ -29,6 +30,7 @@
     - [helper host add vm-router](#helper-host-add-vm-router)
     - [helper node zte tcp-router](#helper-node-zte-tcp-router)
     - [helper node cluster tunning](#helper-node-cluster-tunning)
+    - [helper node local storage](#helper-node-local-storage)
     - [bootstrap node day1](#bootstrap-node-day1)
     - [master1 node day1](#master1-node-day1)
     - [master0 node day1](#master0-node-day1)
@@ -39,6 +41,7 @@
     - [worker-1 day2 oper](#worker-1-day2-oper)
     - [worker-2 day2 oper](#worker-2-day2-oper)
   - [tips](#tips)
+
 ## rhel host maintain
 
 ### aliyun host
@@ -860,6 +863,16 @@ EOF
 
 mount -a
 
+# https://access.redhat.com/solutions/769403
+fuser -km /data
+lvremove -f datavg/datalv
+vgremove datavg
+pvremove /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm
+
+pvcreate -y /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm
+vgcreate datavg /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm
+lvcreate --type raid0 -L 400G --stripes 12 -n monitorlv datavg
+
 yum install -y sysstat
 lsblk | grep disk | awk '{print $1}' | xargs -I DEMO echo -n "DEMO "
 # sda sdb sdc sdd sde sdf sdg sdh sdi sdj sdk sdl sdm
@@ -976,6 +989,16 @@ cat << EOF >> /etc/fstab
 EOF
 
 mount -a
+
+# https://access.redhat.com/solutions/769403
+fuser -km /data
+lvremove -f datavg/datalv
+vgremove datavg
+pvremove /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm
+
+pvcreate -y /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm
+vgcreate datavg /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm
+lvcreate --type raid0 -L 400G --stripes 12 -n monitorlv datavg
 
 yum install -y sysstat
 lsblk | grep disk | awk '{print $1}' | xargs -I DEMO echo -n "DEMO "
@@ -1353,7 +1376,7 @@ blktrace /dev/datavg/hddlv /dev/nvme0n1 /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev
 # https://superuser.com/questions/565443/generate-distribution-of-file-sizes-from-the-command-prompt
 find /data/mnt/ -type f > list
 cat list | xargs ls -l > list.size
-cat list.size | awk '{ n=int(log($5)/log(2))+1;                         \
+cat list.size | awk '{ n=int(log($5)/log(2));                         \
           if (n<10) n=10;                                               \
           size[n]++ }                                                   \
       END { for (i in size) printf("%d %d\n", 2^i, size[i]) }'          \
@@ -1395,6 +1418,7 @@ done < list
 find /data_mix/mnt/ -type f > list
 
 cat list | shuf > list.shuf.all
+
 cat list.16k | shuf > list.shuf.16k
 cat list.128k | shuf > list.shuf.128k
 cat list.+128k | shuf > list.shuf.+128k
@@ -1402,13 +1426,16 @@ cat list.128k list.+128k | shuf > list.shuf.+16k
 
 # zte use 1800
 var_total=10
+rm -f split.list.*
+
+
 split -n l/$var_total list.shuf.all split.list.all.
+
 split -n l/$var_total list.shuf.16k split.list.16k.
 split -n l/$var_total list.shuf.128k split.list.128k.
 split -n l/$var_total list.shuf.+128k split.list.+128k.
 split -n l/$var_total list.shuf.+16k split.list.+16k.
 
-rm -f split.list.*
 
 for f in split.list.16k.*; do 
     cat $f | xargs -I DEMO cat DEMO > /dev/null &
@@ -1426,6 +1453,8 @@ done
 for f in split.list.all.*; do 
     cat $f | xargs -I DEMO cat DEMO > /dev/null &
 done
+
+ps -ef | grep /data_ssd/mnt | grep cat | awk '{print $2}' | xargs -I DEMO kill DEMO
 
 echo "wait to finish"
 wait
@@ -1720,7 +1749,7 @@ lvcreate --type raid0 -L 400G --stripesize 128k --stripes 12 -n testfslv datavg 
 # Generate distribution of file sizes from the command prompt
 # https://superuser.com/questions/565443/generate-distribution-of-file-sizes-from-the-command-prompt
 cat list | xargs ls -l > list.size
-cat list.size | awk '{ n=int(log($5)/log(2))+1;                         \
+cat list.size | awk '{ n=int(log($5)/log(2));                         \
           if (n<10) n=10;                                               \
           size[n]++ }                                                   \
       END { for (i in size) printf("%d %d\n", 2^i, size[i]) }'          \
@@ -1924,7 +1953,7 @@ cat list.10m list.100m | shuf > list.shuf.+2m
 
 # zte use 1800
 var_total=10
-# split -n l/$var_total list.shuf.all split.list.all.
+split -n l/$var_total list.shuf.all split.list.all.
 split -n l/$var_total list.shuf.2m split.list.2m.
 split -n l/$var_total list.shuf.10m split.list.10m.
 split -n l/$var_total list.shuf.100m split.list.100m.
@@ -1945,20 +1974,23 @@ for f in split.list.100m.*; do
     cat $f | xargs -I DEMO cat DEMO > /dev/null &
 done
 
-echo "wait to finish"
-wait
-# while true; do
-#   for f in split.list.all.*; do 
-#       cat $f | xargs -I DEMO cat DEMO > /dev/null &
-#   done
-#   echo "wait to finish"
-#   wait
-# done
-kill -9 $(jobs -p)
+for f in split.list.all.*; do 
+    cat $f | xargs -I DEMO cat DEMO > /dev/null &
+done
 
-ps -ef | grep /mnt/zxdfs | grep cat | awk '{print $2}' | xargs -I DEMO kill DEMO
+jobs -p | xargs kill
+
+
+ps -ef | grep xargs | grep DEMO | grep cat | awk '{print $2}' | xargs -I DEMO kill DEMO
 
 ps -ef | grep /data_mix/mnt | grep cat | awk '{print $2}' | xargs -I DEMO kill DEMO
+
+
+rclone sync /data/mnt/ /data/backup/mnt/ -P -L --transfers 64
+rclone sync /data/home/ /data/backup/home/ -P -L --transfers 64
+rclone sync /data/ztecdn/ /data/backup/ztecdn/ -P -L --transfers 64
+
+rclone sync /data/backup/mnt/ /data/mnt/ -P -L --transfers 64
 
 
 # check sn
@@ -3451,6 +3483,198 @@ ps -ef | grep /data_mix/mnt | grep cat | awk '{print $2}' | xargs -I DEMO kill D
 
 ```
 
+### worker-2 disk tunning
+
+```bash 
+
+# 8.6T cache / 130T hdd = 6.6%
+# 660G cache / 10T hdd 
+
+lvcreate --type raid0 -L 10T --stripesize 2048k --stripes 24 -n ext02lv datavg /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx
+
+lvcreate --type raid0 -L 10T --stripesize 4096k --stripes 24 -n ext04lv datavg /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx
+
+lvcreate --type raid5 -L 10T --stripesize 2048k --stripes 23 -n ext52lv datavg /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx
+
+lvcreate --type raid5 -L 10T --stripesize 2048k --stripes 11 -n ext52lv12 datavg /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl 
+
+
+
+lvcreate --type raid0 -L 10T --stripesize 2048k --stripes 24 -n xfs02lv datavg /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx
+
+lvcreate --type raid0 -L 10T --stripesize 4096k --stripes 24 -n xfs04lv datavg /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx
+
+lvcreate --type raid5 -L 10T --stripesize 2048k --stripes 23 -n xfs52lv datavg /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx
+
+lvcreate --type raid5 -L 10T --stripesize 2048k --stripes 11 -n xfs52lv12 datavg /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx
+
+
+lvcreate --type raid0 -L 3.5T --stripesize 1024k --stripes 10 -n ext01lvssd datavg /dev/sdz /dev/sdaa /dev/sdab /dev/sdac /dev/sdad /dev/sdae /dev/sdaf /dev/sdag /dev/sdah /dev/sdai
+
+lvcreate --type raid0 -L 3.5T --stripesize 1024k --stripes 10 -n xfs01lvssd datavg /dev/sdz /dev/sdaa /dev/sdab /dev/sdac /dev/sdad /dev/sdae /dev/sdaf /dev/sdag /dev/sdah /dev/sdai
+
+lvcreate --type raid0 -L 700G --stripesize 2048k --stripes 10 -n cachelv datavg /dev/sdz /dev/sdaa /dev/sdab /dev/sdac /dev/sdad /dev/sdae /dev/sdaf /dev/sdag /dev/sdah /dev/sdai
+
+lvconvert --type cache-pool datavg/cachelv
+
+lvconvert --type cache --cachepool datavg/cachelv datavg/ext02lv
+
+# lvconvert --splitcache datavg/ext02lv
+# lvconvert --uncache datavg/ext02lv
+
+lvs -o+layout,stripesize
+  # LV         VG     Attr       LSize  Pool      Origin          Data%  Meta%  Move Log Cpy%Sync Convert Layout              Stripe
+  # ext01lvssd datavg rwi-a-r---  3.50t                                                                   raid,raid0           1.00m
+  # ext02lv    datavg Cwi-a-C--- 10.00t [cachelv] [ext02lv_corig] 0.01   16.41           0.00             cache                   0
+  # ext04lv    datavg rwi-a-r--- 10.00t                                                                   raid,raid0           4.00m
+  # ext52lv    datavg rwi-a-r--- 10.00t                                                  9.72             raid,raid5,raid5_ls  2.00m
+  # xfs01lvssd datavg rwi-a-r---  3.50t                                                                   raid,raid0           1.00m
+
+mkdir -p /data_ext02
+mkdir -p /data_ext04
+mkdir -p /data_ext52
+mkdir -p /data_ext01
+mkdir -p /data_xfs01
+mkdir -p /data_xfs02
+mkdir -p /data_xfs04
+mkdir -p /data_xfs52
+
+mkdir -p /data_ext52_12
+mkdir -p /data_xfs52_12
+
+mkfs.ext4 /dev/datavg/ext02lv
+mkfs.ext4 /dev/datavg/ext04lv
+mkfs.ext4 /dev/datavg/ext52lv
+mkfs.ext4 /dev/datavg/ext01lvssd
+mkfs.xfs  /dev/datavg/xfs01lvssd
+mkfs.xfs  /dev/datavg/xfs02lv
+mkfs.xfs  /dev/datavg/xfs04lv
+mkfs.xfs  /dev/datavg/xfs52lv
+
+mkfs.ext4 /dev/datavg/ext52lv12
+mkfs.xfs  /dev/datavg/xfs52lv12
+
+mount /dev/datavg/ext02lv /data_ext02
+mount /dev/datavg/ext04lv /data_ext04
+mount /dev/datavg/ext52lv /data_ext52
+mount /dev/datavg/ext01lvssd /data_ext01
+mount /dev/datavg/xfs01lvssd /data_xfs01
+mount /dev/datavg/xfs02lv /data_xfs02
+mount /dev/datavg/xfs04lv /data_xfs04
+mount /dev/datavg/xfs52lv /data_xfs52
+
+mount /dev/datavg/ext52lv12 /data_ext52_12
+mount /dev/datavg/xfs52lv12 /data_xfs52_12
+
+dstat -d -D /dev/datavg/ext02lv,/dev/datavg/ext04lv,/dev/datavg/ext52lv,/dev/datavg/ext01lvssd,/dev/datavg/xfs01lvssd,/dev/datavg/xfs02lv,/dev/datavg/xfs04lv,/dev/datavg/xfs52lv,/dev/datavg/ext52lv12,/dev/datavg/xfs52lv12,/dev/sdaa
+dstat -d -D /dev/datavg/ext02lv,/dev/datavg/ext04lv,/dev/datavg/ext52lv,/dev/datavg/ext01lvssd,/dev/datavg/xfs01lvssd,/dev/datavg/xfs02lv,/dev/datavg/xfs04lv,/dev/datavg/xfs52lv,/dev/datavg/ext52lv12,/dev/datavg/xfs52lv12,/dev/sdaa,/dev/sdb --disk-util
+bmon -p bond0,enp*
+
+# on worker1
+rclone config
+rclone lsd worker-2:
+rclone sync /data_ssd/mnt/ worker-2:/data_ext01/mnt/ -P -L --transfers 64
+
+
+# on worker-2
+
+# fill data
+# for 256M
+var_basedir_ext="/data_ext04/mnt"
+
+mkdir -p $var_basedir_ext
+
+# how may write concurrency
+var_total_write=10
+# how much size each file, this value is in MB
+# 512M
+var_size=512
+# how much size to write totally, in TB
+# write 3T
+var_total_size=3
+
+var_number=$(echo "scale=0;$var_total_size*1024*1024/$var_size/$var_total_write"|bc -l)
+var_len=$(echo "scale=0;$var_size*1024/1"|bc -l)
+
+for ((i=1; i<=$var_number; i++)); do
+  for ((j=1; j<=$var_total_write; j++)); do
+    head -c ${var_len}K < /dev/urandom > $var_basedir_ext/$var_size-$j-$i &
+  done
+  echo "wait to finish: $i"
+  wait
+done
+
+
+
+# fill data
+# for 1G
+var_basedir_ext="/data_ext04/mnt"
+
+mkdir -p $var_basedir_ext
+
+# how may write concurrency
+var_total_write=10
+# how much size each file, this value is in MB
+# 512M
+var_size=1024
+# how much size to write totally, in TB
+# write 3T
+var_total_size=3
+
+var_number=$(echo "scale=0;$var_total_size*1024*1024/$var_size/$var_total_write"|bc -l)
+var_len=$(echo "scale=0;$var_size*1024/1"|bc -l)
+
+for ((i=1; i<=$var_number; i++)); do
+  for ((j=1; j<=$var_total_write; j++)); do
+    head -c ${var_len}K < /dev/urandom > $var_basedir_ext/$var_size-$j-$i &
+  done
+  echo "wait to finish: $i"
+  wait
+done
+
+
+
+# fill data
+# for 2G
+var_basedir_ext="/data_ext04/mnt"
+
+mkdir -p $var_basedir_ext
+
+# how may write concurrency
+var_total_write=10
+# how much size each file, this value is in MB
+# 512M
+var_size=2048
+# how much size to write totally, in TB
+# write 3T
+var_total_size=3
+
+var_number=$(echo "scale=0;$var_total_size*1024*1024/$var_size/$var_total_write"|bc -l)
+var_len=$(echo "scale=0;$var_size*1024/1"|bc -l)
+
+for ((i=1; i<=$var_number; i++)); do
+  for ((j=1; j<=$var_total_write; j++)); do
+    head -c ${var_len}K < /dev/urandom > $var_basedir_ext/$var_size-$j-$i &
+  done
+  echo "wait to finish: $i"
+  wait
+done
+
+
+# copy data
+rclone sync /data_ext01/mnt/ /data_xfs01/mnt/ -P -L --transfers 64
+rclone sync /data_ext04/mnt/ /data_xfs02/mnt/ -P -L --transfers 64
+
+rclone sync /data_ext04/mnt/ /data_xfs04/mnt/ -P -L --transfers 10
+rclone sync /data_ext04/mnt/ /data_xfs52/mnt/ -P -L --transfers 10
+rclone sync /data_ext04/mnt/ /data_xfs52_12/mnt/ -P -L --transfers 10
+
+rclone sync /data_ext04/mnt/ /data_ext02/mnt/ -P -L --transfers 10
+rclone sync /data_ext04/mnt/ /data_ext52/mnt/ -P -L --transfers 10
+rclone sync /data_ext04/mnt/ /data_ext52_12/mnt/ -P -L --transfers 10
+
+```
+
 ### worker-2 nic bond
 ```bash
 ip link show
@@ -3738,19 +3962,94 @@ chronyc tracking
 lshw -class disk
 
 lsblk | grep 5.5 | awk '{print $1}' | xargs -I DEMO echo -n "/dev/DEMO "
-# /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk
+# /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx /dev/sdy
 lsblk | grep 5.5 | awk '{print $1}' | wc -l
+# 24
 
-pvcreate -y /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp
+pvcreate -y /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx /dev/sdy
 
-vgcreate datavg /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp
+vgcreate datavg /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx /dev/sdy
 
 lsblk -d -o name,rota
 
+lvcreate --type raid0 -L 120T  --stripesize 128k --stripes 24 -n hddlv datavg /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx /dev/sdy
 
-lvcreate --type raid0 -L 75T  --stripesize 128k --stripes 14 -n hddlv datavg /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp
 
 mkfs.ext4 /dev/datavg/hddlv
+
+
+
+lvcreate --type raid0 -L 5T  --stripesize 512k --stripes 24 -n xfslv datavg /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx /dev/sdy
+
+lvcreate --type raid0 -L 110T  --stripesize 4096k --stripes 24 -n extzxlv datavg /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx /dev/sdy
+
+lvcreate --type raid0 -L 3.5T  --stripesize 4096k --stripes 24 -n ext04lv datavg /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx /dev/sdy
+
+lvcreate --type raid6 -L 3.5T  --stripesize 2048k --stripes 22 -n ext62lv datavg /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx /dev/sdy
+
+lvcreate --type raid5 -L 3.5T  --stripesize 2048k --stripes 23 -n ext52lv datavg /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk /dev/sdl /dev/sdm /dev/sdn /dev/sdo /dev/sdp /dev/sdq /dev/sdr /dev/sds /dev/sdt /dev/sdu /dev/sdv /dev/sdw /dev/sdx /dev/sdy
+
+
+
+mkfs.ext4 -E lazy_itable_init=0,lazy_journal_init=0 /dev/mapper/fc-root
+
+mkfs.xfs /dev/datavg/xfslv
+mkfs.ext4 /dev/datavg/extlv
+
+
+
+mkfs.ext4 /dev/datavg/ext04lv
+mkfs.ext4 /dev/datavg/ext62lv
+
+mkfs.ext4 /dev/datavg/ext52lv
+
+mkfs.ext4 /dev/datavg/extzxlv
+# mkfs.xfs /dev/datavg/extzxlv
+mount /dev/datavg/extzxlv /data
+rclone sync /data_ext04/mnt/ /data/redhat_mnt/  -P -L --transfers 64
+
+mount /dev/datavg/xfslv /data_xfs
+mount /dev/datavg/extlv /data_ext
+
+mkdir -p /data_ext02
+mkdir -p /data_ext04
+mkdir -p /data_ext62
+mkdir -p /data_ext52
+
+mount /dev/datavg/ext02lv /data_ext02
+mount /dev/datavg/ext04lv /data_ext04
+# mount /dev/datavg/ext62lv /data_ext62
+mount /dev/datavg/ext52lv /data_ext52
+
+umount /data_xfs
+lvremove -f datavg/xfslv
+# rsync --info=progress2 -P -ar  /data_ext/mnt/ /data_xfs/mnt/
+rclone sync /data_ext/mnt/ /data_xfs/mnt/ -P -L --transfers 64
+
+umount /data_ext
+lvremove -f datavg/extlv
+rclone sync /data_xfs/mnt/ /data_ext/mnt/ -P -L --transfers 64
+
+umount /data_ext52
+rclone sync /data_xfs/mnt/ /data_ext04/mnt/ -P -L --transfers 64
+rclone sync /data_xfs/mnt/ /data_ext62/mnt/ -P -L --transfers 64
+rclone sync /data_xfs/mnt/ /data_ext52/mnt/ -P -L --transfers 64
+
+lvs -o+stripesize
+
+dstat -D /dev/datavg/xfslv,/dev/datavg/extlv,/dev/sdb,/dev/sdc 5
+dstat -D /dev/datavg/xfslv,/dev/datavg/extlv,/dev/sdb,/dev/sdc --disk-util
+bmon -p bond0,enp*
+
+blockdev --report 
+# https://access.redhat.com/solutions/3588841
+# orig: 12288
+/sbin/blockdev --setra 131072 /dev/datavg/xfslv
+/sbin/blockdev --setra 131072 /dev/datavg/extlv
+
+/sbin/blockdev --setra 12288 /dev/datavg/xfslv
+/sbin/blockdev --setra 12288 /dev/datavg/extlv
+
 
 mkdir -p /data/
 
@@ -3763,7 +4062,202 @@ EOF
 mount -a
 df -h | grep \/data
 
+while true; do df -h | grep /data; sleep 10; done
+
 dstat -D /dev/datavg/hddlv 
+dstat -D /dev/sdb,/dev/sdc
+dstat -D /dev/sdb,/dev/sdc --disk-util
+
+mkfs.xfs -f /dev/sdb
+mkfs.ext4 -F /dev/sdc
+
+mkdir -p /data_xfs
+mkdir -p /data_ext
+
+mount /dev/sdb /data_xfs
+mount /dev/sdc /data_ext
+
+
+# fill data
+# for 1.5M
+var_basedir_xfs="/data_xfs/mnt"
+var_basedir_ext="/data_ext/mnt"
+
+mkdir -p $var_basedir_xfs
+mkdir -p $var_basedir_ext
+
+
+var_basedir_xfs="/data_xfs/mnt"
+var_basedir_ext="/data_ext/mnt"
+var_total=10
+# 512k
+var_size=0.5
+# write 1T
+var_number=$(echo "scale=0;1024*1024/$var_size/$var_total"|bc -l)
+var_len=$(echo "scale=0;$var_size*1024/1"|bc -l)
+
+for ((i=1; i<=$var_number; i++)); do
+  for ((j=1; j<=$var_total; j++)); do
+    # echo "Welcome $i times"
+    head -c ${var_len}K < /dev/urandom > $var_basedir_xfs/$var_size-$j-$i &
+    head -c ${var_len}K < /dev/urandom > $var_basedir_ext/$var_size-$j-$i &
+  done
+  echo "wait to finish: $i"
+  wait
+done
+
+var_basedir_xfs="/data_xfs/mnt"
+var_basedir_ext="/data_ext/mnt"
+var_total=10
+# 4M
+var_size=4
+# write 1T
+var_number=$(echo "scale=0;1024*1024/$var_size/$var_total"|bc -l)
+var_len=$(echo "scale=0;$var_size*1024/1"|bc -l)
+
+for ((i=1; i<=$var_number; i++)); do
+  for ((j=1; j<=$var_total; j++)); do
+    # echo "Welcome $i times"
+    head -c ${var_len}K < /dev/urandom > $var_basedir_xfs/$var_size-$j-$i &
+    head -c ${var_len}K < /dev/urandom > $var_basedir_ext/$var_size-$j-$i &
+  done
+  echo "wait to finish: $i"
+  wait
+done
+
+
+var_basedir_xfs="/data_xfs/mnt"
+var_basedir_ext="/data_ext/mnt"
+var_total=10
+# 8M
+var_size=8
+# write 1T
+var_number=$(echo "scale=0;1024*1024/$var_size/$var_total"|bc -l)
+var_len=$(echo "scale=0;$var_size*1024/1"|bc -l)
+
+for ((i=1; i<=$var_number; i++)); do
+  for ((j=1; j<=$var_total; j++)); do
+    # echo "Welcome $i times"
+    head -c ${var_len}K < /dev/urandom > $var_basedir_xfs/$var_size-$j-$i &
+    head -c ${var_len}K < /dev/urandom > $var_basedir_ext/$var_size-$j-$i &
+  done
+  echo "wait to finish: $i"
+  wait
+done
+
+var_basedir_xfs="/data_xfs/mnt"
+var_basedir_ext="/data_ext/mnt"
+var_total=10
+# 32M
+var_size=32
+# write 1T
+var_number=$(echo "scale=0;1024*1024/$var_size/$var_total"|bc -l)
+var_len=$(echo "scale=0;$var_size*1024/1"|bc -l)
+
+for ((i=1; i<=$var_number; i++)); do
+  for ((j=1; j<=$var_total; j++)); do
+    # echo "Welcome $i times"
+    head -c ${var_len}K < /dev/urandom > $var_basedir_xfs/$var_size-$j-$i &
+    head -c ${var_len}K < /dev/urandom > $var_basedir_ext/$var_size-$j-$i &
+  done
+  echo "wait to finish: $i"
+  wait
+done
+
+var_basedir_xfs="/data_xfs/mnt"
+var_basedir_ext="/data_ext/mnt"
+var_total=10
+# 64M
+var_size=64
+# write 1T
+var_number=$(echo "scale=0;1024*1024/$var_size/$var_total"|bc -l)
+var_len=$(echo "scale=0;$var_size*1024/1"|bc -l)
+
+for ((i=1; i<=$var_number; i++)); do
+  for ((j=1; j<=$var_total; j++)); do
+    # echo "Welcome $i times"
+    head -c ${var_len}K < /dev/urandom > $var_basedir_xfs/$var_size-$j-$i &
+    head -c ${var_len}K < /dev/urandom > $var_basedir_ext/$var_size-$j-$i &
+  done
+  echo "wait to finish: $i"
+  wait
+done
+
+mkdir -p /data_xfs/list.tmp
+cd /data_xfs/list.tmp
+var_basedir="/data_xfs/mnt"
+find $var_basedir -type f -size -2M  > list.2m
+find $var_basedir -type f -size -10M  -size +2M > list.10m
+find $var_basedir -type f -size +10M > list.100m
+find $var_basedir -type f > list
+
+
+var_truebase="/data"
+mkdir -p $var_truebase/list.tmp
+cd $var_truebase/list.tmp
+
+var_basedir="$var_truebase/redhat_mnt"
+find $var_basedir -type f -size -2M  > list.2m
+find $var_basedir -type f -size -10M  -size +2M > list.10m
+find $var_basedir -type f -size +10M > list.100m
+find $var_basedir -type f > list
+
+cat list | xargs ls -l > list.size
+cat list.size | awk '{ n=int(log($5)/log(2));                         \
+          if (n<10) n=10;                                               \
+          size[n]++ }                                                   \
+      END { for (i in size) printf("%d %d\n", 2^i, size[i]) }'          \
+ | sort -n                                                              \
+ | awk 'function human(x) { x[1]/=1024;                                 \
+                            if (x[1]>=1024) { x[2]++;                   \
+                                              human(x) } }              \
+        { a[1]=$1;                                                      \
+          a[2]=0;                                                       \
+          human(a);                                                     \
+          printf("%3d - %4d %s: %6d\n", a[1], a[1]*2,substr("kMGTEPYZ",a[2]+1,1),$2) }' 
+
+
+
+
+
+cat list | shuf > list.shuf.all
+
+cat list.2m | shuf > list.shuf.2m
+cat list.10m | shuf > list.shuf.10m
+cat list.100m | shuf > list.shuf.100m
+cat list.10m list.100m | shuf > list.shuf.+2m
+
+rm -f split.list.*
+# zte use 1800
+var_total=10
+split -n l/$var_total list.shuf.all split.list.all.
+split -n l/$var_total list.shuf.2m split.list.2m.
+split -n l/$var_total list.shuf.10m split.list.10m.
+split -n l/$var_total list.shuf.100m split.list.100m.
+split -n l/$var_total list.shuf.+2m split.list.+2m.
+
+for f in split.list.2m.*; do 
+    cat $f | xargs -I DEMO cat DEMO > /dev/null &
+done
+# for f in split.list.+2m.*; do 
+#     cat $f | xargs -I DEMO cat DEMO > /dev/null &
+# done
+
+for f in split.list.10m.*; do 
+    cat $f | xargs -I DEMO cat DEMO > /dev/null &
+done
+for f in split.list.100m.*; do 
+    cat $f | xargs -I DEMO cat DEMO > /dev/null &
+done
+
+for f in split.list.all.*; do 
+    cat $f | xargs -I DEMO cat DEMO > /dev/null &
+done
+
+jobs -p | xargs kill
+
+ps -ef | grep xargs | grep DEMO | grep cat | awk '{print $2}' | xargs -I DEMO kill DEMO
+
 
 
 ```
@@ -4119,6 +4613,14 @@ data:
     prometheusK8s:
       nodeSelector:
         node-role.kubernetes.io/infra: ""
+      volumeClaimTemplate:
+        metadata:
+          name: localpvc
+        spec:
+          storageClassName: local-sc
+          resources:
+            requests:
+              storage: 400Gi
     prometheusOperator:
       nodeSelector:
         node-role.kubernetes.io/infra: ""
@@ -4796,6 +5298,37 @@ spec:
    pidsLimit: 10240
 EOF
 oc apply -f crio.yaml
+
+
+```
+
+### helper node local storage 
+https://docs.openshift.com/container-platform/4.3/storage/persistent_storage/persistent-storage-local.html
+```bash
+
+oc new-project local-storage
+
+
+apiVersion: "local.storage.openshift.io/v1"
+kind: "LocalVolume"
+metadata:
+  name: "local-disks"
+  namespace: "local-storage" 
+spec:
+  nodeSelector: 
+    nodeSelectorTerms:
+    - matchExpressions:
+        - key: kubernetes.io/hostname
+          operator: In
+          values:
+          - infra0.hsc.redhat.ren
+          - infra1.hsc.redhat.ren
+  storageClassDevices:
+    - storageClassName: "local-sc"
+      volumeMode: Filesystem 
+      fsType: xfs 
+      devicePaths: 
+        - /dev/datavg/monitorlv
 
 
 ```
@@ -5869,4 +6402,5 @@ systemctl disable libvirtd
 
 1. config local storage operator
 2. config monitor storage
+3. benchmark the storage using real senario
 

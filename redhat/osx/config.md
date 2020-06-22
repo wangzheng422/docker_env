@@ -39,5 +39,18 @@ conda config --set proxy_servers.http http://127.0.0.1:5084
 conda config --set proxy_servers.https http://127.0.0.1:5084
 
 # from ggplot import *
+# https://www.codenong.com/42859781/
+conda create --name py36 python=3.6
+conda search python
+conda info -e
+
+# source activate py36 
+conda activate py36
+
+conda install -c anaconda jupyter
+conda install -c conda-forge ggplot
+conda install -c anaconda seaborn
+conda install -c anaconda scikit-learn
+conda install -c conda-forge scikit-plot
 
 ```
