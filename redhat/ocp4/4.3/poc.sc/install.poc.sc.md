@@ -3663,7 +3663,15 @@ done
 
 # copy data
 rclone sync /data_ext01/mnt/ /data_xfs01/mnt/ -P -L --transfers 64
+rclone sync /data_ext04/mnt/ /data_xfs02/mnt/ -P -L --transfers 64
 
+rclone sync /data_ext04/mnt/ /data_xfs04/mnt/ -P -L --transfers 10
+rclone sync /data_ext04/mnt/ /data_xfs52/mnt/ -P -L --transfers 10
+rclone sync /data_ext04/mnt/ /data_xfs52_12/mnt/ -P -L --transfers 10
+
+rclone sync /data_ext04/mnt/ /data_ext02/mnt/ -P -L --transfers 10
+rclone sync /data_ext04/mnt/ /data_ext52/mnt/ -P -L --transfers 10
+rclone sync /data_ext04/mnt/ /data_ext52_12/mnt/ -P -L --transfers 10
 
 ```
 
@@ -5321,7 +5329,6 @@ spec:
       fsType: xfs 
       devicePaths: 
         - /dev/datavg/monitorlv
-
 
 
 ```
