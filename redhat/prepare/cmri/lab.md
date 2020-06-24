@@ -65,7 +65,7 @@ chronyc tracking
 
 # https://access.redhat.com/documentation/en-us/red_hat_virtualization/4.3/html-single/installing_red_hat_virtualization_as_a_self-hosted_engine_using_the_cockpit_web_interface/index
 
-# nfs server
+# nfs server, no need, later will use ansible to provide
 # https://qizhanming.com/blog/2018/08/08/how-to-install-nfs-on-centos-7
 yum -y install nfs-utils 
 
@@ -141,6 +141,24 @@ systemctl restart chronyd
 systemctl status chronyd
 chronyc tracking
 
+nmcli connection modify enp2s0f0 ipv4.dns 172.29.159.99
+nmcli connection reload
+nmcli connection up enp2s0f0
+
+
+```
+
+## rhv install
+
+```bash
+
+# on redhat-01
+mkdir -p /data/ocp4/ocp4-upi-helpernode-master
+cd /data/ocp4/ocp4-upi-helpernode-master
+ansible-playbook -e @vars-static.yaml -e staticips=true tasks/main.yml
+
+# create manager host
+# http://172.29.159.99:9090/
 
 
 ```
@@ -148,6 +166,7 @@ chronyc tracking
 ## ocp install
 
 ```bash
+
 
 
 
