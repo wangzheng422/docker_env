@@ -31,6 +31,7 @@ data:
             allow   117.177.241.0/24;
             allow   39.137.101.0/24;
             allow   39.134.201.0/24;
+            allow   39.135.196.0/24;
             deny    all;
 
           location / {
@@ -110,7 +111,7 @@ metadata:
   annotations:
     k8s.v1.cni.cncf.io/networks: '
     [{
-      "name": "webcache-001-macvlan",
+      "name": "ottcache-001-macvlan",
       "default-route": ["39.134.201.94"] 
     }]'
 spec:
@@ -133,11 +134,11 @@ spec:
 
       resources:
         requests:
-          cpu: 8.0
-          memory: 48Gi
+          cpu: 4.0
+          memory: 5Gi
         limits:
-          cpu: 8.0
-          memory: 48Gi
+          cpu: 4.0
+          memory: 5Gi
       securityContext:
         privileged: true
         runAsUser: 0
@@ -155,65 +156,65 @@ spec:
             path: nginx.conf
     - name: log
       emptyDir: {}
----
-apiVersion: v1
-kind: Pod
-metadata:
-  name: redhat-002
-  namespace: zxcdn
-  labels: 
-    pod: redhat-002
-  annotations:
-    k8s.v1.cni.cncf.io/networks: '
-    [{
-      "name": "webcache-002-macvlan",
-      "default-route": ["39.134.201.94"] 
-    }]'
-spec:
-  nodeSelector:
-    kubernetes.io/hostname: 'worker-1.ocpsc.redhat.ren'
-  restartPolicy: Always
-  containers:
-    - name: webcache-001-main
-      image: registry.redhat.ren:5443/docker.io/nginx:latest
-      imagePullPolicy: Always
+# ---
+# apiVersion: v1
+# kind: Pod
+# metadata:
+#   name: redhat-002
+#   namespace: zxcdn
+#   labels: 
+#     pod: redhat-002
+#   annotations:
+#     k8s.v1.cni.cncf.io/networks: '
+#     [{
+#       "name": "ottcache-002-macvlan",
+#       "default-route": ["39.134.201.94"] 
+#     }]'
+# spec:
+#   nodeSelector:
+#     kubernetes.io/hostname: 'worker-1.ocpsc.redhat.ren'
+#   restartPolicy: Always
+#   containers:
+#     - name: webcache-001-main
+#       image: registry.redhat.ren:5443/docker.io/nginx:latest
+#       imagePullPolicy: Always
   
-      volumeMounts:
-        - name: webcache-volumes
-          mountPath: /www/data
-        - mountPath: /etc/nginx # mount nginx-conf volumn to /etc/nginx
-          readOnly: true
-          name: nginx-conf
-        - mountPath: /var/log/nginx
-          name: log
+#       volumeMounts:
+#         - name: webcache-volumes
+#           mountPath: /www/data
+#         - mountPath: /etc/nginx # mount nginx-conf volumn to /etc/nginx
+#           readOnly: true
+#           name: nginx-conf
+#         - mountPath: /var/log/nginx
+#           name: log
 
-      resources:
-        requests:
-          cpu: 8.0
-          memory: 48Gi
-        limits:
-          cpu: 8.0
-          memory: 48Gi
-      securityContext:
-        privileged: true
-        runAsUser: 0
+#       resources:
+#         requests:
+#           cpu: 8.0
+#           memory: 10Gi
+#         limits:
+#           cpu: 8.0
+#           memory: 10Gi
+#       securityContext:
+#         privileged: true
+#         runAsUser: 0
 
-  serviceAccount: zxcdn-app
-  volumes:
-    - name: webcache-volumes
-      hostPath:
-        path: /data/mnt/zxdfs
-    - name: nginx-conf
-      configMap:
-        name: redhat-nginx-conf # place ConfigMap `nginx-conf` on /etc/nginx
-        items:
-          - key: nginx.conf
-            path: nginx.conf
-    - name: log
-      emptyDir: {}
+#   serviceAccount: zxcdn-app
+#   volumes:
+#     - name: webcache-volumes
+#       hostPath:
+#         path: /data/mnt/zxdfs
+#     - name: nginx-conf
+#       configMap:
+#         name: redhat-nginx-conf # place ConfigMap `nginx-conf` on /etc/nginx
+#         items:
+#           - key: nginx.conf
+#             path: nginx.conf
+#     - name: log
+#       emptyDir: {}
 
 EOF
-oc apply -f nginx.yaml
+oc create -f nginx.yaml
 
 oc delete -f nginx.yaml
 
@@ -231,27 +232,44 @@ oc delete -f nginx.yaml
 
 # on worker1
 var_basedir="/data/mnt"
-find $var_basedir -type f -size -2M  > list.2m
-find $var_basedir -type f -size -10M  -size +2M > list.10m
-find $var_basedir -type f -size +10M > list.100m
+find $var_basedir -type f -size -2M  > list.1m
+find $var_basedir -type f -size -6M  -size +2M > list.5m
+find $var_basedir -type f -size -11M  -size +6M > list.10m
+find $var_basedir -type f -size -51M  -size +11M > list.50m
+find $var_basedir -type f -size +51M > list.+50m
 find $var_basedir -type f > list
 
-cat list.2m | sed "s/\/data\/mnt\/zxdfs//" > list.2m.web
-cat list.10m | sed "s/\/data\/mnt\/zxdfs//" > list.10m.web
-cat list.100m | sed "s/\/data\/mnt\/zxdfs//" > list.100m.web
+for i in 1m 5m 10m 50m +50m ; do
+  cat list.$i | sed "s/\/data\/mnt\/zxdfs//" > list.$i.web
+done
 
-cat list.2m.web | shuf > list.shuf.2m
-cat list.10m.web | shuf > list.shuf.10m
-cat list.100m.web | shuf > list.shuf.100m
-cat list.10m.web list.100m.web | shuf > list.shuf.+2m
+# cat list.1m | sed "s/\/data\/mnt\/zxdfs//" > list.1m.web
+# cat list.5m | sed "s/\/data\/mnt\/zxdfs//" > list.2m.web
+# cat list.2m | sed "s/\/data\/mnt\/zxdfs//" > list.2m.web
+# cat list.10m | sed "s/\/data\/mnt\/zxdfs//" > list.10m.web
+# cat list.100m | sed "s/\/data\/mnt\/zxdfs//" > list.100m.web
+
+for i in 1m 5m 10m 50m +50m ; do
+  cat list.$i.web | shuf > list.shuf.$i
+done
+
+# cat list.2m.web | shuf > list.shuf.2m
+# cat list.10m.web | shuf > list.shuf.10m
+# cat list.100m.web | shuf > list.shuf.100m
+# cat list.10m.web list.100m.web | shuf > list.shuf.+2m
 
 rm -f split.list.*
 
-var_total=4
-split -n l/$var_total list.shuf.2m split.list.2m.
-split -n l/$var_total list.shuf.10m split.list.10m.
-split -n l/$var_total list.shuf.100m split.list.100m.
-split -n l/$var_total list.shuf.+2m split.list.+2m.
+var_total=2
+
+for i in 1m 5m 10m 50m +50m ; do
+  split -n l/$var_total list.shuf.$i split.list.$i.
+done
+
+# split -n l/$var_total list.shuf.2m split.list.2m.
+# split -n l/$var_total list.shuf.10m split.list.10m.
+# split -n l/$var_total list.shuf.100m split.list.100m.
+# split -n l/$var_total list.shuf.+2m split.list.+2m.
 
 scp split.list.*.aa 39.134.201.66:~/
 scp split.list.*.ab 39.137.101.28:~/
@@ -259,11 +277,15 @@ scp split.list.*.ac 117.177.241.23:~/
 scp split.list.*.ad 117.177.241.24:~/
 
 # worker-2
-./cassowary run -u http://39.134.201.77/ -c 10 -t 30 -n 1 -f split.list.2m.aa
+./cassowary run -u http://39.134.201.70/ -c 200 -t 30 -n 1 -f split.list.1m.aa
 
-./cassowary run -u http://39.134.201.77/ -c 10 -t 30 -n 1 -f split.list.10m.aa
+./cassowary run -u http://39.134.201.70/ -c 50 -t 30 -n 1 -f split.list.5m.aa
 
-./cassowary run -u http://39.134.201.77/ -c 10 -t 30 -n 1 -f split.list.100m.aa
+./cassowary run -u http://39.134.201.70/ -c 25 -t 30 -n 1 -f split.list.10m.aa
+
+./cassowary run -u http://39.134.201.70/ -c 12 -t 30 -n 1 -f split.list.50m.aa
+
+./cassowary run -u http://39.134.201.70/ -c 10 -t 30 -n 1 -f split.list.100m.aa
 
 # worker-0
 ./cassowary run -u http://39.134.201.77/ -c 10 -t 30 -n 1 -f split.list.2m.ab
@@ -304,11 +326,11 @@ cat access.log | sed 's/^.*GET//' | sed 's/HTTP.*//' | sort | uniq -d | wc -l
 oc apply -f zte-macvlan.yaml
 
 
-cat << 'EOF'> nginx.yaml
+cat << 'EOF'> nginx1.yaml
 apiVersion: v1
 kind: Pod
 metadata:
-  name: redhat-001
+  name: redhat-003
   namespace: zxcdn
   labels: 
     pod: redhat-001
@@ -339,10 +361,10 @@ spec:
       resources:
         requests:
           cpu: 8.0
-          memory: 48Gi
+          memory: 10Gi
         limits:
           cpu: 8.0
-          memory: 48Gi
+          memory: 10Gi
       securityContext:
         privileged: true
         runAsUser: 0
@@ -351,7 +373,7 @@ spec:
   volumes:
     - name: webcache-volumes
       hostPath:
-        path: /data_ext04/mnt/
+        path: /data/redhat_mnt/
     - name: nginx-conf
       configMap:
         name: redhat-nginx-conf # place ConfigMap `nginx-conf` on /etc/nginx
@@ -360,125 +382,142 @@ spec:
             path: nginx.conf
     - name: log
       emptyDir: {}
----
-apiVersion: v1
-kind: Pod
-metadata:
-  name: redhat-002
-  namespace: zxcdn
-  labels: 
-    pod: redhat-002
-  annotations:
-    k8s.v1.cni.cncf.io/networks: '
-    [{
-      "name": "redhat-002-macvlan",
-      "default-route": ["39.134.204.65"] 
-    }]'
-spec:
-  nodeSelector:
-    kubernetes.io/hostname: 'worker-3.ocpsc.redhat.ren'
-  restartPolicy: Always
-  containers:
-    - name: webcache-001-main
-      image: registry.redhat.ren:5443/docker.io/nginx:latest
-      imagePullPolicy: Always
+# ---
+# apiVersion: v1
+# kind: Pod
+# metadata:
+#   name: redhat-004
+#   namespace: zxcdn
+#   labels: 
+#     pod: redhat-002
+#   annotations:
+#     k8s.v1.cni.cncf.io/networks: '
+#     [{
+#       "name": "redhat-002-macvlan",
+#       "default-route": ["39.134.204.65"] 
+#     }]'
+# spec:
+#   nodeSelector:
+#     kubernetes.io/hostname: 'worker-3.ocpsc.redhat.ren'
+#   restartPolicy: Always
+#   containers:
+#     - name: webcache-001-main
+#       image: registry.redhat.ren:5443/docker.io/nginx:latest
+#       imagePullPolicy: Always
   
-      volumeMounts:
-        - name: webcache-volumes
-          mountPath: /www/data
-        - mountPath: /etc/nginx # mount nginx-conf volumn to /etc/nginx
-          readOnly: true
-          name: nginx-conf
-        - mountPath: /var/log/nginx
-          name: log
+#       volumeMounts:
+#         - name: webcache-volumes
+#           mountPath: /www/data
+#         - mountPath: /etc/nginx # mount nginx-conf volumn to /etc/nginx
+#           readOnly: true
+#           name: nginx-conf
+#         - mountPath: /var/log/nginx
+#           name: log
 
-      resources:
-        requests:
-          cpu: 8.0
-          memory: 48Gi
-        limits:
-          cpu: 8.0
-          memory: 48Gi
-      securityContext:
-        privileged: true
-        runAsUser: 0
+#       resources:
+#         requests:
+#           cpu: 8.0
+#           memory: 48Gi
+#         limits:
+#           cpu: 8.0
+#           memory: 48Gi
+#       securityContext:
+#         privileged: true
+#         runAsUser: 0
 
-  serviceAccount: zxcdn-app
-  volumes:
-    - name: webcache-volumes
-      hostPath:
-        path: /data_ext04/mnt/
-    - name: nginx-conf
-      configMap:
-        name: redhat-nginx-conf # place ConfigMap `nginx-conf` on /etc/nginx
-        items:
-          - key: nginx.conf
-            path: nginx.conf
-    - name: log
-      emptyDir: {}
+#   serviceAccount: zxcdn-app
+#   volumes:
+#     - name: webcache-volumes
+#       hostPath:
+#         path: /data_ext04/mnt/
+#     - name: nginx-conf
+#       configMap:
+#         name: redhat-nginx-conf # place ConfigMap `nginx-conf` on /etc/nginx
+#         items:
+#           - key: nginx.conf
+#             path: nginx.conf
+#     - name: log
+#       emptyDir: {}
 
----
-kind: Pod
-apiVersion: v1
-metadata:
-  name: demo
-  namespace: zxcdn
-  annotations:
-    k8s.v1.cni.cncf.io/networks: '
-    [{
-      "name": "redhat-003-macvlan",
-      "default-route": ["39.134.204.65"] 
-    }]'
-spec:
-  nodeSelector:
-    kubernetes.io/hostname: 'worker-3.ocpsc.redhat.ren'
-  restartPolicy: Always
-  containers:
-    - name: demo1
-      image: >- 
-        registry.redhat.ren:5443/docker.io/wangzheng422/centos:centos7-test
-      env:
-        - name: key
-          value: value
-      command: ["iperf3", "-s", "-p" ]
-      args: [ "6666" ]
-      imagePullPolicy: Always
+# ---
+# kind: Pod
+# apiVersion: v1
+# metadata:
+#   name: demo
+#   namespace: zxcdn
+#   annotations:
+#     k8s.v1.cni.cncf.io/networks: '
+#     [{
+#       "name": "redhat-003-macvlan",
+#       "default-route": ["39.134.204.65"] 
+#     }]'
+# spec:
+#   nodeSelector:
+#     kubernetes.io/hostname: 'worker-3.ocpsc.redhat.ren'
+#   restartPolicy: Always
+#   containers:
+#     - name: demo1
+#       image: >- 
+#         registry.redhat.ren:5443/docker.io/wangzheng422/centos:centos7-test
+#       env:
+#         - name: key
+#           value: value
+#       command: ["iperf3", "-s", "-p" ]
+#       args: [ "6666" ]
+#       imagePullPolicy: Always
 
 
 EOF
-oc apply -f nginx.yaml
+oc create -f nginx1.yaml
 
-oc delete -f nginx.yaml
+oc delete -f nginx1.yaml
 
 
 # on worker3
 # var_basedir="/data_ext04"
-var_truebase="data_ext04"
-var_basedir="/$var_truebase/mnt"
+var_truebase="data"
+var_datadir="redhat_mnt"
+var_basedir="/$var_truebase/$var_datadir"
 
 mkdir -p /$var_truebase/list.tmp
 cd /$var_truebase/list.tmp
-find $var_basedir -type f -size -2M  > list.2m
-find $var_basedir -type f -size -10M  -size +2M > list.10m
-find $var_basedir -type f -size +10M > list.100m
+
+find $var_basedir -type f -size -2M  > list.1m
+find $var_basedir -type f -size -6M  -size +2M > list.5m
+find $var_basedir -type f -size -11M  -size +6M > list.10m
+find $var_basedir -type f -size -51M  -size +11M > list.50m
+find $var_basedir -type f -size +51M > list.+50m
 find $var_basedir -type f > list
 
-cat list.2m | sed "s/\/$var_truebase\/mnt//" > list.2m.web
-cat list.10m | sed "s/\/$var_truebase\/mnt//" > list.10m.web
-cat list.100m | sed "s/\/$var_truebase\/mnt//" > list.100m.web
+for i in 1m 5m 10m 50m +50m ; do
+  cat list.$i | sed "s/\/$var_truebase\/$var_datadir//" > list.$i.web
+done
 
-cat list.2m.web | shuf > list.shuf.2m
-cat list.10m.web | shuf > list.shuf.10m
-cat list.100m.web | shuf > list.shuf.100m
-cat list.10m.web list.100m.web | shuf > list.shuf.+2m
+# cat list.2m | sed "s/\/$var_truebase\/mnt//" > list.2m.web
+# cat list.10m | sed "s/\/$var_truebase\/mnt//" > list.10m.web
+# cat list.100m | sed "s/\/$var_truebase\/mnt//" > list.100m.web
+
+for i in 1m 5m 10m 50m +50m ; do
+  cat list.$i.web | shuf > list.shuf.$i
+done
+
+# cat list.2m.web | shuf > list.shuf.2m
+# cat list.10m.web | shuf > list.shuf.10m
+# cat list.100m.web | shuf > list.shuf.100m
+# cat list.10m.web list.100m.web | shuf > list.shuf.+2m
 
 rm -f split.list.*
 
-var_total=4
-split -n l/$var_total list.shuf.2m split.list.2m.
-split -n l/$var_total list.shuf.10m split.list.10m.
-split -n l/$var_total list.shuf.100m split.list.100m.
-split -n l/$var_total list.shuf.+2m split.list.+2m.
+var_total=2
+
+for i in 1m 5m 10m 50m +50m ; do
+  split -n l/$var_total list.shuf.$i split.list.$i.
+done
+
+# split -n l/$var_total list.shuf.2m split.list.2m.
+# split -n l/$var_total list.shuf.10m split.list.10m.
+# split -n l/$var_total list.shuf.100m split.list.100m.
+# split -n l/$var_total list.shuf.+2m split.list.+2m.
 
 scp split.list.*.aa 39.134.201.66:~/
 scp split.list.*.ab 39.137.101.28:~/
@@ -486,11 +525,17 @@ scp split.list.*.ac 117.177.241.23:~/
 scp split.list.*.ad 117.177.241.24:~/
 
 # worker-2
-./cassowary run -u http://39.134.204.76/ -c 20 -t 30 -n 1 -f split.list.2m.aa
 
-./cassowary run -u http://39.134.204.76/ -c 30 -t 30 -n 1 -f split.list.10m.aa
+./cassowary run -u http://39.134.204.76/ -c 200 -t 30 -n 1 -f split.list.1m.aa
 
-./cassowary run -u http://39.134.204.76/ -c 30 -t 30 -n 1 -f split.list.100m.aa
+./cassowary run -u http://39.134.204.76/ -c 50 -t 30 -n 1 -f split.list.5m.aa
+
+./cassowary run -u http://39.134.204.76/ -c 25 -t 30 -n 1 -f split.list.10m.aa
+
+./cassowary run -u http://39.134.204.76/ -c 12 -t 30 -n 1 -f split.list.50m.aa
+
+./cassowary run -u http://39.134.204.76/ -c 10 -t 30 -n 1 -f split.list.100m.aa
+
 
 # worker-0
 ./cassowary run -u http://39.134.204.77/ -c 30 -t 30 -n 1  -f split.list.2m.ab
