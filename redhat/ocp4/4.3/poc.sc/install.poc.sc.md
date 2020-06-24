@@ -3675,6 +3675,163 @@ rclone sync /data_ext04/mnt/ /data_ext52_12/mnt/ -P -L --transfers 10
 
 
 
+
+var_truebase="/data_xfs52"
+mkdir -p $var_truebase/list.tmp
+cd $var_truebase/list.tmp
+
+var_basedir="$var_truebase/mnt"
+find $var_basedir -type f -size -600M  > list.512m
+find $var_basedir -type f -size -1100M  -size +600M > list.1g
+find $var_basedir -type f -size +1100M > list.+1g
+find $var_basedir -type f > list
+
+cat list | xargs ls -l > list.size
+cat list.size | awk '{ n=int(log($5)/log(2));                         \
+          if (n<10) n=10;                                               \
+          size[n]++ }                                                   \
+      END { for (i in size) printf("%d %d\n", 2^i, size[i]) }'          \
+ | sort -n                                                              \
+ | awk 'function human(x) { x[1]/=1024;                                 \
+                            if (x[1]>=1024) { x[2]++;                   \
+                                              human(x) } }              \
+        { a[1]=$1;                                                      \
+          a[2]=0;                                                       \
+          human(a);                                                     \
+          printf("%3d - %4d %s: %6d\n", a[1], a[1]*2,substr("kMGTEPYZ",a[2]+1,1),$2) }' 
+
+
+# seperate read
+for i in 512m 1g +1g ; do
+  cat list.$i | shuf > list.shuf.$i
+done
+
+rm -f split.list.*
+# zte use 1800
+var_total=30
+
+for i in 512m 1g +1g ; do
+  split -n l/$var_total list.shuf.$i split.list.$i.
+done
+
+
+for f in split.list.512m.*; do 
+  cat $f | xargs -I DEMO cat DEMO > /dev/null &
+done
+
+for f in split.list.1g.*; do 
+  cat $f | xargs -I DEMO cat DEMO > /dev/null &
+done
+
+for f in split.list.+1g.*; do 
+  cat $f | xargs -I DEMO cat DEMO > /dev/null &
+done
+
+
+# mix read
+for i in 512m 1g +1g ; do
+  cat list.$i | shuf > list.shuf.$i
+done
+
+rm -f split.list.*
+# zte use 1800
+var_total=10
+
+for i in 512m 1g +1g ; do
+  split -n l/$var_total list.shuf.$i split.list.$i.
+done
+
+for i in 512m 1g +1g ; do
+  for f in split.list.$i.*; do 
+    cat $f | xargs -I DEMO cat DEMO > /dev/null &
+  done
+done
+
+
+
+ps -ef | grep xargs | grep DEMO | grep cat | awk '{print $2}' | xargs -I DEMO kill DEMO
+
+ps -ef | grep cat | grep /data | awk '{print $2}' | xargs -I DEMO kill -9 DEMO
+
+lvconvert --splitcache datavg/ext02lv
+
+
+
+var_truebase="/data_ext01"
+mkdir -p $var_truebase/list.tmp
+cd $var_truebase/list.tmp
+
+var_basedir="$var_truebase/mnt"
+find $var_basedir -type f -size -16k  > list.16k
+find $var_basedir -type f -size -128k  -size +16k > list.128k
+find $var_basedir -type f -size +128k > list.+128k
+find $var_basedir -type f > list
+
+cat list | xargs ls -l > list.size
+cat list.size | awk '{ n=int(log($5)/log(2));                         \
+          if (n<10) n=10;                                               \
+          size[n]++ }                                                   \
+      END { for (i in size) printf("%d %d\n", 2^i, size[i]) }'          \
+ | sort -n                                                              \
+ | awk 'function human(x) { x[1]/=1024;                                 \
+                            if (x[1]>=1024) { x[2]++;                   \
+                                              human(x) } }              \
+        { a[1]=$1;                                                      \
+          a[2]=0;                                                       \
+          human(a);                                                     \
+          printf("%3d - %4d %s: %6d\n", a[1], a[1]*2,substr("kMGTEPYZ",a[2]+1,1),$2) }' 
+
+
+# seperate read
+for i in 16k 128k +128k ; do
+  cat list.$i | shuf > list.shuf.$i
+done
+
+rm -f split.list.*
+# zte use 1800
+var_total=30
+
+for i in 16k 128k +128k ; do
+  split -n l/$var_total list.shuf.$i split.list.$i.
+done
+
+
+for f in split.list.16k.*; do 
+  cat $f | xargs -I DEMO cat DEMO > /dev/null &
+done
+
+for f in split.list.128k.*; do 
+  cat $f | xargs -I DEMO cat DEMO > /dev/null &
+done
+
+for f in split.list.+128k.*; do 
+  cat $f | xargs -I DEMO cat DEMO > /dev/null &
+done
+
+
+# mix read
+for i in 16k 128k +128k ; do
+  cat list.$i | shuf > list.shuf.$i
+done
+
+rm -f split.list.*
+# zte use 1800
+var_total=10
+
+for i in 16k 128k +128k ; do
+  split -n l/$var_total list.shuf.$i split.list.$i.
+done
+
+for i in 16k 128k +128k ; do
+  for f in split.list.$i.*; do 
+    cat $f | xargs -I DEMO cat DEMO > /dev/null &
+  done
+done
+
+ps -ef | grep xargs | grep DEMO | grep cat | awk '{print $2}' | xargs -I DEMO kill DEMO
+
+
+
 ```
 
 ### worker-2 nic bond
