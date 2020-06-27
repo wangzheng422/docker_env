@@ -5,7 +5,7 @@
 目前仓库中，最重要的目录，就是和ocp4相关的安装和使用相关，请前往[这里探索](redhat/ocp4/4.3/4.3.disconnect.operator.md)。
 
 作者还有很多视频演示，欢迎前往作者的频道订阅
-- [bilibil](https://space.bilibili.com/19536819)
+- [bilibili](https://space.bilibili.com/19536819)
 - [西瓜视频](https://www.ixigua.com/home/1134309560818120)
 - [youtube](https://www.youtube.com/user/wangzheng422)
 
