@@ -4355,7 +4355,7 @@ var_truebase="/data"
 mkdir -p $var_truebase/list.tmp
 cd $var_truebase/list.tmp
 
-var_basedir="$var_truebase/redhat_mnt"
+var_basedir="$var_truebase/mnt"
 find $var_basedir -type f -size -2M  > list.2m
 find $var_basedir -type f -size -10M  -size +2M > list.10m
 find $var_basedir -type f -size +10M > list.100m
@@ -4363,7 +4363,7 @@ find $var_basedir -type f > list
 
 cat list | xargs ls -l > list.size
 cat list.size | awk '{ n=int(log($5)/log(2));                         \
-          if (n<10) n=10;                                               \
+          if (n<10) n=10;                                              \
           size[n]++ }                                                   \
       END { for (i in size) printf("%d %d\n", 2^i, size[i]) }'          \
  | sort -n                                                              \
