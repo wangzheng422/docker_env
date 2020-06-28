@@ -4432,6 +4432,7 @@ mkdir -p /Users/wzh/Documents/redhat/tools/redhat.ren/etc
 mkdir -p /Users/wzh/Documents/redhat/tools/redhat.ren/lib
 mkdir -p /Users/wzh/Documents/redhat/tools/ocpsc.redhat.ren/etc
 mkdir -p /Users/wzh/Documents/redhat/tools/ocpsc.redhat.ren/lib
+rm -rf /Users/wzh/Documents/redhat/tools/apps.ocpsc.redhat.ren/
 mkdir -p /Users/wzh/Documents/redhat/tools/apps.ocpsc.redhat.ren/etc
 mkdir -p /Users/wzh/Documents/redhat/tools/apps.ocpsc.redhat.ren/lib
 
@@ -4683,6 +4684,12 @@ oc patch --type=merge --namespace openshift-ingress-operator ingresscontrollers/
 
 oc get --namespace openshift-ingress-operator ingresscontrollers/default \
   --output jsonpath='{.spec.defaultCertificate}'
+
+# upgrade ingress ca
+oc --namespace openshift-ingress create secret tls custom-certs-default-01 --cert=/data/cert/apps.ocpsc.redhat.ren.crt --key=/data/cert/apps.ocpsc.redhat.ren.key
+
+oc patch --type=merge --namespace openshift-ingress-operator ingresscontrollers/default \
+  --patch '{"spec":{"defaultCertificate":{"name":"custom-certs-default-01"}}}'
 
 ##################################################3
 # add rhel hw node, and remove vm worker node
