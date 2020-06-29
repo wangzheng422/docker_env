@@ -1,4 +1,4 @@
-# 
+# cmri labs install
 
 ## jumpbox
 
@@ -17,8 +17,76 @@ rsync -e ssh --info=progress2 -P --delete -arz  /data/is.samples/ root@172.29.15
 
 
 ```
+## try with ovs
+https://pinrojas.com/2017/05/03/how-to-use-virt-install-to-connect-at-openvswitch-bridges/
 
-## redhat-01
+https://blog.csdn.net/wuliangtianzu/article/details/81870551
+
+https://stackoverflow.com/questions/30622680/kvm-ovs-bridged-network-how-to-configure
+
+https://stackoverflow.com/questions/31566658/setup-private-networking-between-two-hosts-and-two-vms-with-libvirt-openvswitc
+
+### redhat-01
+```bash
+
+mkdir /etc/yum.repos.d.bak
+mv /etc/yum.repos.d/* /etc/yum.repos.d.bak/
+cat << EOF > /etc/yum.repos.d/remote.repo
+[remote]
+name=RHEL FTP
+baseurl=ftp://172.29.159.3/wzh/rhel-data/data
+enabled=1
+gpgcheck=0
+
+EOF
+
+yum clean all
+yum repolist
+
+yum -y install byobu htop glances dstat bmon lvm2
+
+yum -y update
+
+systemctl disable firewalld.service
+systemctl stop firewalld.service
+
+hostnamectl set-hostname redhat-01.cntp.redhat.ren
+
+
+
+```
+
+### redhat-02
+```bash
+
+mkdir /etc/yum.repos.d.bak
+mv /etc/yum.repos.d/* /etc/yum.repos.d.bak/
+cat << EOF > /etc/yum.repos.d/remote.repo
+[remote]
+name=RHEL FTP
+baseurl=ftp://172.29.159.3/wzh/rhel-data/data
+enabled=1
+gpgcheck=0
+
+EOF
+
+yum clean all
+yum repolist
+
+yum -y install byobu htop glances dstat bmon lvm2
+
+yum -y update
+
+systemctl disable firewalld.service
+systemctl stop firewalld.service
+
+hostnamectl set-hostname redhat-02.cntp.redhat.ren
+
+```
+
+## try with rhv
+
+### redhat-01
 
 ```bash
 mkdir /etc/yum.repos.d.bak
@@ -114,9 +182,9 @@ gnome-session &
 EOF
 chmod +x ~/.vnc/xstartup
 
-vncserver :3 -geometry 1280x800
+vncserver :1 -geometry 1280x800
 # 如果你想停掉vnc server，这么做
-vncserver -kill :3
+vncserver -kill :1
 
 firewall-cmd --permanent --add-port=6001/tcp
 firewall-cmd --permanent --add-port=5901/tcp
@@ -125,7 +193,7 @@ firewall-cmd --reload
 
 ```
 
-## redhat-02
+### redhat-02
 
 ```bash
 mkdir /etc/yum.repos.d.bak
@@ -177,7 +245,7 @@ nmcli connection up enp2s0f0
 
 ```
 
-## rhv install
+### rhv install
 
 ```bash
 
@@ -201,7 +269,8 @@ ansible-playbook -e @vars-static.yaml -e staticips=true tasks/main.yml
 
 点击下一步，等待一段时间，就安装成功了。
 
-### vnc
+vnc
+
 到了这一步，需要浏览器登录rhv manager了，由于代理配置太复杂，我们就简单点，直接用 vnc去宿主机，firefox访问吧
 
 http://manager.rhv.redhat.ren
@@ -222,14 +291,4 @@ chmod 0755 /data /data/images
 
 
 
-## ocp install
 
-```bash
-
-
-
-
-```
-
-
-## 
