@@ -26,65 +26,48 @@ https://stackoverflow.com/questions/30622680/kvm-ovs-bridged-network-how-to-conf
 
 https://stackoverflow.com/questions/31566658/setup-private-networking-between-two-hosts-and-two-vms-with-libvirt-openvswitc
 
-### redhat-01
+follow this to setup ovs network:
+https://github.com/wangzheng422/docker_env/blob/master/redhat/ocp4/4.4/4.4.ovs.md
+
 ```bash
+# on redhat-01
+timedatectl set-timezone Asia/Shanghai
 
-mkdir /etc/yum.repos.d.bak
-mv /etc/yum.repos.d/* /etc/yum.repos.d.bak/
-cat << EOF > /etc/yum.repos.d/remote.repo
-[remote]
-name=RHEL FTP
-baseurl=ftp://172.29.159.3/wzh/rhel-data/data
-enabled=1
-gpgcheck=0
+pvcreate /dev/sdb
+vgcreate datavg /dev/sdb
 
-EOF
+mkdir -p /data/kvm
+cd /data/kvm
 
-yum clean all
-yum repolist
+lvremove -f datavg/helperlv
+lvcreate -y -L 230G -n helperlv datavg
 
-yum -y install byobu htop glances dstat bmon lvm2
+# 230G
+virt-install --name="ocp4-aHelper" --vcpus=2 --ram=4096 \
+--disk path=/dev/datavg/helperlv,device=disk,bus=virtio,format=raw \
+--os-variant centos7.0 --network network:br-int,model=virtio \
+--boot menu=on --location /data/kvm/rhel-server-7.8-x86_64-dvd.iso \
+--initrd-inject /data/kvm/helper-ks.cfg --extra-args "inst.ks=file:/helper-ks.cfg" 
 
-yum -y update
 
-systemctl disable firewalld.service
-systemctl stop firewalld.service
+# on redhat-02
 
-hostnamectl set-hostname redhat-01.cntp.redhat.ren
+mkdir -p /data/kvm
+cd /data/kvm
+
+lvremove -f datavg/helperlv
+lvcreate -y -L 230G -n helperlv datavg
+
+# 230G
+virt-install --name="ocp4-aHelper" --vcpus=2 --ram=4096 \
+--disk path=/dev/datavg/helperlv,device=disk,bus=virtio,format=raw \
+--os-variant centos7.0 --network network:br-int,model=virtio \
+--boot menu=on --location /data/kvm/rhel-server-7.8-x86_64-dvd.iso \
+--initrd-inject /data/kvm/helper-ks.cfg --extra-args "inst.ks=file:/helper-ks.cfg" 
 
 
 
 ```
-
-### redhat-02
-```bash
-
-mkdir /etc/yum.repos.d.bak
-mv /etc/yum.repos.d/* /etc/yum.repos.d.bak/
-cat << EOF > /etc/yum.repos.d/remote.repo
-[remote]
-name=RHEL FTP
-baseurl=ftp://172.29.159.3/wzh/rhel-data/data
-enabled=1
-gpgcheck=0
-
-EOF
-
-yum clean all
-yum repolist
-
-yum -y install byobu htop glances dstat bmon lvm2
-
-yum -y update
-
-systemctl disable firewalld.service
-systemctl stop firewalld.service
-
-hostnamectl set-hostname redhat-02.cntp.redhat.ren
-
-```
-
-### try with ovs
 
 
 ## try with rhv
@@ -138,21 +121,21 @@ chronyc tracking
 
 # nfs server, no need, later will use ansible to provide
 # https://qizhanming.com/blog/2018/08/08/how-to-install-nfs-on-centos-7
-yum -y install nfs-utils 
+# yum -y install nfs-utils 
 
-mkdir -p /exports/data
+# mkdir -p /exports/data
 
-groupadd kvm -g 36
-useradd vdsm -u 36 -g 36
-chown -R 36:36 /exports/data
-chmod 0755 /exports/data
+# groupadd kvm -g 36
+# useradd vdsm -u 36 -g 36
+# chown -R 36:36 /exports/data
+# chmod 0755 /exports/data
 
-cat << EOF > /etc/exports
-/exports/data     172.29.159.0/24(rw,sync,no_root_squash,no_all_squash)
-EOF
+# cat << EOF > /etc/exports
+# /exports/data     172.29.159.0/24(rw,sync,no_root_squash,no_all_squash)
+# EOF
 
-systemctl restart nfs
-systemctl enable nfs
+# systemctl restart nfs
+# systemctl enable nfs
 
 showmount -e localhost
 
