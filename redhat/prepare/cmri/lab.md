@@ -84,6 +84,9 @@ hostnamectl set-hostname redhat-02.cntp.redhat.ren
 
 ```
 
+### try with ovs
+
+
 ## try with rhv
 
 ### redhat-01
