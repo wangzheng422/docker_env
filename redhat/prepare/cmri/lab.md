@@ -15,6 +15,11 @@ rsync -e ssh --info=progress2 -P --delete -arz  /data/registry/  root@172.29.159
 
 rsync -e ssh --info=progress2 -P --delete -arz  /data/is.samples/ root@172.29.159.3:/home/wzh/is.samples/
 
+tar -cvf - is.samples/ | pigz -c > is.samples.tgz
+tar -cvf - ocp4/ | pigz -c > ocp4.tgz
+tar -cvf - registry/ | pigz -c > registry.tgz
+tar -cvf - rhel-data/ | pigz -c > rhel-data.tgz
+
 
 ```
 ## try with ovs
@@ -29,6 +34,8 @@ https://stackoverflow.com/questions/31566658/setup-private-networking-between-tw
 follow this to setup ovs network:
 https://github.com/wangzheng422/docker_env/blob/master/redhat/ocp4/4.4/4.4.ovs.md
 
+### redhat-01
+
 ```bash
 # on redhat-01
 timedatectl set-timezone Asia/Shanghai
@@ -36,20 +43,46 @@ timedatectl set-timezone Asia/Shanghai
 pvcreate /dev/sdb
 vgcreate datavg /dev/sdb
 
+lvcreate -L 1T -n datalv datavg
+mkfs.ext4 /dev/datavg/datalv
+mount /dev/datavg/datalv /data
+
+rclone config
+rclone lsd jumpbox:
+rclone sync jumpbox:/home/wzh/  /data/down/ -P -L --transfers 10
+
+pigz -dc registry.tgz | tar xf -
+pigz -dc is.samples.tgz | tar xf -
+pigz -dc rhel-data.tgz | tar xf -
+pigz -dc ocp4.tgz | tar xf -
+
+yum -y install vsftpd
+systemctl enable --now vsftpd
+
+mkdir -p /var/ftp/data
+mount --bind /data/down/rhel-data/data /var/ftp/data
+chcon -R -t public_content_t  /var/ftp/data
+
 mkdir -p /data/kvm
 cd /data/kvm
 
 lvremove -f datavg/helperlv
-lvcreate -y -L 230G -n helperlv datavg
+lvcreate -y -L 430G -n helperlv datavg
 
-# 230G
+wipefs --all --force /dev/datavg/helperlv
+
+# 430G
 virt-install --name="ocp4-aHelper" --vcpus=2 --ram=4096 \
 --disk path=/dev/datavg/helperlv,device=disk,bus=virtio,format=raw \
 --os-variant centos7.0 --network network:br-int,model=virtio \
 --boot menu=on --location /data/kvm/rhel-server-7.8-x86_64-dvd.iso \
 --initrd-inject /data/kvm/helper-ks.cfg --extra-args "inst.ks=file:/helper-ks.cfg" 
 
+```
 
+### redhat-02
+
+```bash
 # on redhat-02
 
 mkdir -p /data/kvm
@@ -65,6 +98,13 @@ virt-install --name="ocp4-aHelper" --vcpus=2 --ram=4096 \
 --boot menu=on --location /data/kvm/rhel-server-7.8-x86_64-dvd.iso \
 --initrd-inject /data/kvm/helper-ks.cfg --extra-args "inst.ks=file:/helper-ks.cfg" 
 
+
+
+```
+
+### helper
+
+```bash
 
 
 ```
