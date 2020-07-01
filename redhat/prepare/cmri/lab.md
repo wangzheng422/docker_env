@@ -63,6 +63,38 @@ mkdir -p /var/ftp/data
 mount --bind /data/down/rhel-data/data /var/ftp/data
 chcon -R -t public_content_t  /var/ftp/data
 
+mkdir /etc/crts/ && cd /etc/crts
+openssl req \
+   -newkey rsa:2048 -nodes -keyout redhat.ren.key \
+   -x509 -days 3650 -out redhat.ren.crt -subj \
+   "/C=CN/ST=GD/L=SZ/O=Global Security/OU=IT Department/CN=*.redhat.ren"
+
+cp /etc/crts/redhat.ren.crt /etc/pki/ca-trust/source/anchors/
+update-ca-trust extract
+
+yum -y install podman docker-distribution pigz skopeo
+# pigz -dc registry.tgz | tar xf -
+cat << EOF > /etc/docker-distribution/registry/config.yml
+version: 0.1
+log:
+  fields:
+    service: registry
+storage:
+    cache:
+        layerinfo: inmemory
+    filesystem:
+        rootdirectory: /data/down/registry
+    delete:
+        enabled: true
+http:
+    addr: :5443
+    tls:
+       certificate: /etc/crts/redhat.ren.crt
+       key: /etc/crts/redhat.ren.key
+EOF
+
+systemctl enable --now docker-distribution
+
 mkdir -p /data/kvm
 cd /data/kvm
 
@@ -77,6 +109,11 @@ virt-install --name="ocp4-aHelper" --vcpus=2 --ram=4096 \
 --os-variant centos7.0 --network network:br-int,model=virtio \
 --boot menu=on --location /data/kvm/rhel-server-7.8-x86_64-dvd.iso \
 --initrd-inject /data/kvm/helper-ks.cfg --extra-args "inst.ks=file:/helper-ks.cfg" 
+
+scp /etc/crts/* 192.168.7.11:/root/
+scp /data/down/ocp4.tgz 192.168.7.11:/root/
+scp /data/down/ocp4-upi-helpernode.zip 192.168.7.11:/root/ocp4
+
 
 ```
 
@@ -106,6 +143,26 @@ virt-install --name="ocp4-aHelper" --vcpus=2 --ram=4096 \
 
 ```bash
 
+mkdir /etc/yum.repos.d.bak
+mv /etc/yum.repos.d/* /etc/yum.repos.d.bak/
+cat << EOF > /etc/yum.repos.d/remote.repo
+[remote]
+name=RHEL FTP
+baseurl=ftp://192.168.7.1/data
+enabled=1
+gpgcheck=0
+
+EOF
+
+yum clean all
+yum repolist
+
+yum -y install ansible git unzip podman
+
+# scp ocp4.tgz to /root
+cd /root
+tar zvxf ocp4.tgz
+cd /root/ocp4
 
 ```
 
