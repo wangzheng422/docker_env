@@ -96,6 +96,8 @@ wget --recursive --no-directories --no-parent https://mirror.openshift.com/pub/o
 
 wget -O ocp4-upi-helpernode-master.zip https://github.com/wangzheng422/ocp4-upi-helpernode/archive/master.zip
 
+wget -O docker_env-master.zip https://github.com/wangzheng422/docker_env/archive/master.zip
+
 # wget -O filetranspiler-master.zip https://github.com/wangzheng422/filetranspiler/archive/master.zip
 
 podman pull quay.io/wangzheng422/filetranspiler
