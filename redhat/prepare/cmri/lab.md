@@ -173,7 +173,10 @@ unzip ocp4-upi-helpernode-master.zip
 # podman load -i fedora.tgz
 podman load -i filetranspiler.tgz
 # 根据现场环境，修改 ocp4-upi-helpernode-master/vars-static.yaml
-cd ocp4-upi-helpernode-master
+cd ocp4-upi-helpernode
+
+vi vars-static.yaml
+
 ansible-playbook -e @vars-static.yaml -e staticips=true tasks/main.yml
 
 
@@ -304,7 +307,7 @@ guestfish -a ${NGINX_DIRECTORY}/rhcos-${RHCOSVERSION}-x86_64-installer.x86_64.is
 modify_cfg(){
   for file in "EFI/redhat/grub.cfg" "isolinux/isolinux.cfg"; do
     # Append the proper image and ignition urls
-    sed -e '/coreos.inst=yes/s|$| coreos.inst.install_dev=vda coreos.inst.image_url='"${URL}"'\/install\/'"${BIOSMODE}"'.raw.gz coreos.inst.ignition_url='"${URL}"'\/ignition\/'"${NODE}"'.ign ip='"${IP}"'::'"${GATEWAY}"':'"${NETMASK}"':'"${FQDN}"':'"${NET_INTERFACE}"':none:'"1450"' nameserver='"${DNS}"'|' ${file} > $(pwd)/${NODE}_${file##*/}
+    sed -e '/coreos.inst=yes/s|$| coreos.inst.install_dev=vda coreos.inst.image_url='"${URL}"'\/install\/'"${BIOSMODE}"'.raw.gz coreos.inst.ignition_url='"${URL}"'\/ignition\/'"${NODE}"'.ign ip='"${IP}"'::'"${GATEWAY}"':'"${NETMASK}"':'"${FQDN}"':'"${NET_INTERFACE}"':none:'"${MTU}"' nameserver='"${DNS}"'|' ${file} > $(pwd)/${NODE}_${file##*/}
     # Boot directly in the installation
     sed -i -e 's/default vesamenu.c32/default linux/g' -e 's/timeout 600/timeout 10/g' $(pwd)/${NODE}_${file##*/}
   done
@@ -314,6 +317,7 @@ URL="http://192.168.7.11:8080/"
 GATEWAY="192.168.7.1"
 NETMASK="255.255.255.0"
 DNS="192.168.7.11"
+MTU="1450"
 
 # BOOTSTRAP
 # TYPE="bootstrap"
@@ -447,18 +451,28 @@ for i in vnet0 vnet1 vnet2 vnet3 vnet4 vnet5; do
     ovs-vsctl set int $i mtu_request=1450
 done 
 
+
+
+yum -y install haproxy
+# scp haproxy.cfg to /data/ocp4/haproxy。cfg
+/bin/cp -f /data/ocp4/haproxy.cfg /etc/haproxy/haproxy.cfg
+setsebool -P haproxy_connect_any 1
+systemctl enable --now haproxy
+systemctl restart haproxy
+
 ```
 
 ### redhat-02
 
 ```bash
+
 export NGINX_DIRECTORY=/data/ocp4
 
 create_lv() {
     var_name=$1
     lvremove -f datavg/$var_name
     lvcreate -y -L 120G -n $var_name datavg
-    wipefs --all --force /dev/datavg/$var_name
+    # wipefs --all --force /dev/datavg/$var_name
 }
 
 create_lv worker1lv
@@ -469,14 +483,108 @@ virt-install --name=ocp4-worker1 --vcpus=8 --ram=32768 \
 --os-variant rhel8.0 --network network:br-int,model=virtio \
 --boot menu=on --cdrom ${NGINX_DIRECTORY}/worker-1.iso 
 
-ovs-vsctl set int vnet0 mtu_request=1450
-ovs-vsctl set int br-int mtu_request=1450
+# ovs-vsctl set int br-int mtu_request=1450
 
 virt-install --name=ocp4-worker2 --vcpus=8 --ram=32768 \
---disk path=/dev/datavg/worker1lv,device=disk,bus=virtio,format=raw \
+--disk path=/dev/datavg/worker2lv,device=disk,bus=virtio,format=raw \
 --os-variant rhel8.0 --network network:br-int,model=virtio \
 --boot menu=on --cdrom ${NGINX_DIRECTORY}/worker-2.iso 
 
+
+```
+
+### helper
+
+```bash
+
+openshift-install wait-for bootstrap-complete --log-level debug
+
+cd ~/ocp4
+export KUBECONFIG=/root/ocp4/auth/kubeconfig
+echo "export KUBECONFIG=/root/ocp4/auth/kubeconfig" >> ~/.bashrc
+source ~/.bashrc
+oc get nodes
+
+yum -y install jq
+oc get csr -ojson | jq -r '.items[] | select(.status == {} ) | .metadata.name' | xargs oc adm certificate approve
+
+openshift-install wait-for install-complete
+# INFO Waiting up to 30m0s for the cluster at https://api.cmri.redhat.ren:6443 to initialize...
+# INFO Waiting up to 10m0s for the openshift-console route to be created...
+# INFO Install complete!
+# INFO To access the cluster as the system:admin user when using 'oc', run 'export KUBECONFIG=/root/ocp4/auth/kubeconfig'
+# INFO Access the OpenShift web-console here: https://console-openshift-console.apps.cmri.redhat.ren
+# INFO Login to the console with user: kubeadmin, password: 3sIr7-Fgbty-qiKLt-VByee
+
+bash ocp4-upi-helpernode-master/files/nfs-provisioner-setup.sh
+
+oc patch configs.imageregistry.operator.openshift.io cluster -p '{"spec":{"managementState": "Managed","storage":{"pvc":{"claim":""}}}}' --type=merge
+
+oc get clusteroperator image-registry
+
+oc get configs.imageregistry.operator.openshift.io cluster -o yaml
+
+oc patch OperatorHub cluster --type json -p '[{"op": "add", "path": "/spec/disableAllDefaultSources", "value": true}]'
+
+
+# 如果想看到redhat的operator，这样做
+# 镜像源在 docker.io/wangzheng422/custom-registry-redhat
+cat <<EOF > redhat-operator-catalog.yaml
+apiVersion: operators.coreos.com/v1alpha1
+kind: CatalogSource
+metadata:
+  name: redhat-operator-catalog
+  namespace: openshift-marketplace
+spec:
+  displayName: Redhat Operator Catalog
+  sourceType: grpc
+  image: registry.redhat.ren:5443/docker.io/wangzheng422/operator-catalog:redhat-4.4-2020-06-08
+  publisher: Red Hat
+EOF
+oc create -f redhat-operator-catalog.yaml
+
+# 如果想看到certified的operator，这样做
+# 镜像源在 docker.io/wangzheng422/custom-registry-certified
+cat <<EOF > certified-operator-catalog.yaml
+apiVersion: operators.coreos.com/v1alpha1
+kind: CatalogSource
+metadata:
+  name: certified-operator-catalog
+  namespace: openshift-marketplace
+spec:
+  displayName: Certified Operator Catalog
+  sourceType: grpc
+  image: registry.redhat.ren:5443/docker.io/wangzheng422/operator-catalog:certified-4.4-2020-06-08
+  publisher: Certified
+EOF
+oc create -f certified-operator-catalog.yaml
+
+
+# 如果想看到community的operator，这样做
+# 镜像源在 docker.io/wangzheng422/custom-registry-community
+cat <<EOF > community-operator-catalog.yaml
+apiVersion: operators.coreos.com/v1alpha1
+kind: CatalogSource
+metadata:
+  name: community-operator-catalog
+  namespace: openshift-marketplace
+spec:
+  displayName: Community Operator Catalog
+  sourceType: grpc
+  image: registry.redhat.ren:5443/docker.io/wangzheng422/operator-catalog:community-4.4-2020-06-08
+  publisher: Community
+EOF
+oc create -f community-operator-catalog.yaml
+
+
+oc get pods -n openshift-marketplace
+oc get catalogsource -n openshift-marketplace
+oc get packagemanifest -n openshift-marketplace
+
+find . -name "*-operator-catalog.yaml" -exec oc delete -f {} \;
+
+oc get imagepruner.imageregistry.operator.openshift.io/cluster
+oc patch imagepruner.imageregistry.operator.openshift.io/cluster -p '{"spec":{"suspend": false}}' --type=merge
 
 ```
 
