@@ -94,6 +94,7 @@ http:
 EOF
 
 systemctl enable --now docker-distribution
+systemctl restart docker-distribution
 
 mkdir -p /data/kvm
 cd /data/kvm
@@ -196,13 +197,76 @@ StrictHostKeyChecking no
 UserKnownHostsFile=/dev/null
 EOF
 
+cat << 'EOF' >> /etc/sysconfig/network-scripts/ifcfg-eth0
+MTU=1450
+EOF
+systemctl restart network
+
 cd /root/ocp4
 
 vi install-config.yaml 
 
 /bin/rm -rf *.ign .openshift_install_state.json auth bootstrap master0 master1 master2 worker0 worker1 worker2
 
+# openshift-install create ignition-configs --dir=/root/ocp4
+openshift-install create manifests --dir=/root/ocp4
+# scp calico/manifests to manifests
+
+# https://access.redhat.com/solutions/5092381
+cat << 'EOF' > /root/ocp4/30-mtu.sh
+#!/bin/sh
+MTU=1450
+INTERFACE=ens3
+
+IFACE=$1
+STATUS=$2
+if [ "$IFACE" = "$INTERFACE" -a "$STATUS" = "up" ]; then
+    ip link set "$IFACE" mtu $MTU
+fi
+EOF
+
+cat /root/ocp4/30-mtu.sh | base64 -w0
+
+cat << EOF > /root/ocp4/manifests/30-mtu.yaml
+kind: MachineConfig
+apiVersion: machineconfiguration.openshift.io/v1
+metadata:
+  name: 99-worker-mtu
+  creationTimestamp: 
+  labels:
+    machineconfiguration.openshift.io/role: worker
+spec:
+  osImageURL: ''
+  config:
+    ignition:
+      version: 2.2.0
+    storage:
+      files:
+      - filesystem: root
+        path: "/etc/NetworkManager/dispatcher.d/30-mtu"
+        contents:
+          source: data:text/plain;charset=utf-8;base64,IyEvYmluL3NoCk1UVT05MDAwCklOVEVSRkFDRT1lbnM0CgpJRkFDRT0kMQpTVEFUVVM9JDIKaWYgWyAiJElGQUNFIiA9ICIkSU5URVJGQUNFIiAtYSAiJFNUQVRVUyIgPSAidXAiIF07IHRoZW4KICAgIGlwIGxpbmsgc2V0ICIkSUZBQ0UiIG10dSAkTVRVCmZpCg==
+          verification: {}
+        mode: 0755
+    systemd:
+      units:
+        - contents: |
+            [Unit]
+            Requires=systemd-udevd.target
+            After=systemd-udevd.target
+            Before=NetworkManager.service
+            DefaultDependencies=no
+            [Service]
+            Type=oneshot
+            ExecStart=/usr/sbin/restorecon /etc/NetworkManager/dispatcher.d/30-mtu
+            [Install]
+            WantedBy=multi-user.target
+          name: one-shot-mtu.service
+          enabled: true
+EOF
+
 openshift-install create ignition-configs --dir=/root/ocp4
+
 
 /bin/cp -f bootstrap.ign /var/www/html/ignition/bootstrap-static.ign
 /bin/cp -f master.ign /var/www/html/ignition/master-0.ign
@@ -240,7 +304,7 @@ guestfish -a ${NGINX_DIRECTORY}/rhcos-${RHCOSVERSION}-x86_64-installer.x86_64.is
 modify_cfg(){
   for file in "EFI/redhat/grub.cfg" "isolinux/isolinux.cfg"; do
     # Append the proper image and ignition urls
-    sed -e '/coreos.inst=yes/s|$| coreos.inst.install_dev=vda coreos.inst.image_url='"${URL}"'\/install\/'"${BIOSMODE}"'.raw.gz coreos.inst.ignition_url='"${URL}"'\/ignition\/'"${NODE}"'.ign ip='"${IP}"'::'"${GATEWAY}"':'"${NETMASK}"':'"${FQDN}"':'"${NET_INTERFACE}"':none:'"${DNS}"' nameserver='"${DNS}"'|' ${file} > $(pwd)/${NODE}_${file##*/}
+    sed -e '/coreos.inst=yes/s|$| coreos.inst.install_dev=vda coreos.inst.image_url='"${URL}"'\/install\/'"${BIOSMODE}"'.raw.gz coreos.inst.ignition_url='"${URL}"'\/ignition\/'"${NODE}"'.ign ip='"${IP}"'::'"${GATEWAY}"':'"${NETMASK}"':'"${FQDN}"':'"${NET_INTERFACE}"':none:'"1450"' nameserver='"${DNS}"'|' ${file} > $(pwd)/${NODE}_${file##*/}
     # Boot directly in the installation
     sed -i -e 's/default vesamenu.c32/default linux/g' -e 's/timeout 600/timeout 10/g' $(pwd)/${NODE}_${file##*/}
   done
@@ -335,7 +399,7 @@ create_lv() {
     var_name=$1
     lvremove -f datavg/$var_name
     lvcreate -y -L 120G -n $var_name datavg
-    wipefs --all --force /dev/datavg/$var_name
+    # wipefs --all --force /dev/datavg/$var_name
 }
 
 create_lv bootstraplv
@@ -348,8 +412,8 @@ create_lv worker0lv
 # 你可以一口气把虚拟机都创建了，然后喝咖啡等着。
 # 从这一步开始，到安装完毕，大概30分钟。
 virt-install --name=ocp4-bootstrap --vcpus=4 --ram=8192 \
---disk path=/data/kvm/ocp4-bootstrap.qcow2,bus=virtio,size=120 \
---os-variant rhel8.0 --network network=openshift4,model=virtio \
+--disk path=/dev/datavg/bootstraplv,device=disk,bus=virtio,format=raw \
+--os-variant rhel8.0 --network network:br-int,model=virtio \
 --boot menu=on --cdrom ${NGINX_DIRECTORY}/bootstrap-static.iso   
 
 # 想登录进coreos一探究竟？那么这么做
@@ -357,27 +421,31 @@ virt-install --name=ocp4-bootstrap --vcpus=4 --ram=8192 \
 # journalctl -b -f -u bootkube.service
 
 virt-install --name=ocp4-master0 --vcpus=4 --ram=24576 \
---disk path=/data/kvm/ocp4-master0.qcow2,bus=virtio,size=120 \
---os-variant rhel8.0 --network network=openshift4,model=virtio \
+--disk path=/dev/datavg/master0lv,device=disk,bus=virtio,format=raw \
+--os-variant rhel8.0 --network network:br-int,model=virtio \
 --boot menu=on --cdrom ${NGINX_DIRECTORY}/master-0.iso 
 
 # ssh core@192.168.7.13
 
 virt-install --name=ocp4-master1 --vcpus=4 --ram=24576 \
---disk path=/data/kvm/ocp4-master1.qcow2,bus=virtio,size=120 \
---os-variant rhel8.0 --network network=openshift4,model=virtio \
+--disk path=/dev/datavg/master1lv,device=disk,bus=virtio,format=raw \
+--os-variant rhel8.0 --network network:br-int,model=virtio \
 --boot menu=on --cdrom ${NGINX_DIRECTORY}/master-1.iso 
 
 virt-install --name=ocp4-master2 --vcpus=4 --ram=24576 \
---disk path=/data/kvm/ocp4-master2.qcow2,bus=virtio,size=120 \
---os-variant rhel8.0 --network network=openshift4,model=virtio \
+--disk path=/dev/datavg/master2lv,device=disk,bus=virtio,format=raw \
+--os-variant rhel8.0 --network network:br-int,model=virtio \
 --boot menu=on --cdrom ${NGINX_DIRECTORY}/master-2.iso 
 
 virt-install --name=ocp4-worker0 --vcpus=8 --ram=32768 \
---disk path=/data/kvm/ocp4-worker0.qcow2,bus=virtio,size=120 \
---os-variant rhel8.0 --network network=openshift4,model=virtio \
+--disk path=/dev/datavg/worker0lv,device=disk,bus=virtio,format=raw \
+--os-variant rhel8.0 --network network:br-int,model=virtio \
 --boot menu=on --cdrom ${NGINX_DIRECTORY}/worker-0.iso 
 
+
+for i in vnet0 vnet1 vnet2 vnet3 vnet4 vnet5; do
+    ovs-vsctl set int $i mtu_request=1450
+done 
 
 ```
 
@@ -397,13 +465,16 @@ create_lv worker1lv
 create_lv worker2lv
 
 virt-install --name=ocp4-worker1 --vcpus=8 --ram=32768 \
---disk path=/data/kvm/ocp4-worker1.qcow2,bus=virtio,size=120 \
---os-variant rhel8.0 --network network=openshift4,model=virtio \
+--disk path=/dev/datavg/worker1lv,device=disk,bus=virtio,format=raw \
+--os-variant rhel8.0 --network network:br-int,model=virtio \
 --boot menu=on --cdrom ${NGINX_DIRECTORY}/worker-1.iso 
 
+ovs-vsctl set int vnet0 mtu_request=1450
+ovs-vsctl set int br-int mtu_request=1450
+
 virt-install --name=ocp4-worker2 --vcpus=8 --ram=32768 \
---disk path=/data/kvm/ocp4-worker2.qcow2,bus=virtio,size=120 \
---os-variant rhel8.0 --network network=openshift4,model=virtio \
+--disk path=/dev/datavg/worker1lv,device=disk,bus=virtio,format=raw \
+--os-variant rhel8.0 --network network:br-int,model=virtio \
 --boot menu=on --cdrom ${NGINX_DIRECTORY}/worker-2.iso 
 
 
