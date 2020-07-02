@@ -53,4 +53,12 @@ conda install -c anaconda seaborn
 conda install -c anaconda scikit-learn
 conda install -c conda-forge scikit-plot
 
+
+# ssh
+eval `ssh-agent`
+
+ssh-add
+
+ssh-add -L 
+
 ```
