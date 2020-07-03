@@ -51,7 +51,7 @@ export VULTR_HOST=zero.pvg.redhat.ren
 
 export VULTR_HOST=vcdn.redhat.ren
 
-export VULTR_HOST=bastion.e1be.example.opentlc.com
+export VULTR_HOST=bastion.acf0.example.opentlc.com
 
 cat << EOF > /root/.ssh/config
 StrictHostKeyChecking no
@@ -72,7 +72,7 @@ rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/registry /dat
 
 rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/ocp4 /data/
 
-rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/mirror_dir ./
+rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/mirror_dir /data/is.samples/
 
 ## sync from aws to pvg
 cd /data/remote/4.4.7
