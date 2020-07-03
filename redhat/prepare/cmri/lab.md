@@ -424,19 +424,19 @@ virt-install --name=ocp4-bootstrap --vcpus=4 --ram=8192 \
 # ssh core@192.168.7.12 
 # journalctl -b -f -u bootkube.service
 
-virt-install --name=ocp4-master0 --vcpus=4 --ram=24576 \
+virt-install --name=ocp4-master0 --vcpus=4 --ram=16384 \
 --disk path=/dev/datavg/master0lv,device=disk,bus=virtio,format=raw \
 --os-variant rhel8.0 --network network:br-int,model=virtio \
 --boot menu=on --cdrom ${NGINX_DIRECTORY}/master-0.iso 
 
 # ssh core@192.168.7.13
 
-virt-install --name=ocp4-master1 --vcpus=4 --ram=24576 \
+virt-install --name=ocp4-master1 --vcpus=4 --ram=16384 \
 --disk path=/dev/datavg/master1lv,device=disk,bus=virtio,format=raw \
 --os-variant rhel8.0 --network network:br-int,model=virtio \
 --boot menu=on --cdrom ${NGINX_DIRECTORY}/master-1.iso 
 
-virt-install --name=ocp4-master2 --vcpus=4 --ram=24576 \
+virt-install --name=ocp4-master2 --vcpus=4 --ram=16384 \
 --disk path=/dev/datavg/master2lv,device=disk,bus=virtio,format=raw \
 --os-variant rhel8.0 --network network:br-int,model=virtio \
 --boot menu=on --cdrom ${NGINX_DIRECTORY}/master-2.iso 
@@ -524,6 +524,10 @@ oc get clusteroperator image-registry
 
 oc get configs.imageregistry.operator.openshift.io cluster -o yaml
 
+oc patch configs.samples.operator.openshift.io/cluster -p '{"spec":{"managementState": "Managed"}}' --type=merge
+
+oc patch configs.samples.operator.openshift.io/cluster -p '{"spec":{"managementState": "Unmanaged"}}' --type=merge
+
 oc patch OperatorHub cluster --type json -p '[{"op": "add", "path": "/spec/disableAllDefaultSources", "value": true}]'
 
 
@@ -586,7 +590,46 @@ find . -name "*-operator-catalog.yaml" -exec oc delete -f {} \;
 oc get imagepruner.imageregistry.operator.openshift.io/cluster
 oc patch imagepruner.imageregistry.operator.openshift.io/cluster -p '{"spec":{"suspend": false}}' --type=merge
 
+
+cat << EOF >>  /etc/hosts
+127.0.0.1 registry.redhat.ren
+EOF
+
+export OCP_RELEASE=4.4.7
+
+sudo tar xzf /data/ocp4/$OCP_RELEASE/openshift-client-linux-$OCP_RELEASE.tar.gz -C /usr/local/sbin/ oc kubectl
+
+sudo tar xzf /data/ocp4/$OCP_RELEASE/openshift-install-linux-$OCP_RELEASE.tar.gz -C /usr/local/sbin/ openshift-install
+
+which oc
+which openshift-install
+
+oc completion bash | sudo tee /etc/bash_completion.d/openshift > /dev/null
+
+
+cd /data/ocp4
+bash add.image.load.sh /data/down/is.samples/mirror_dir
+
+
+
+
+
+ansible-playbook -i localhost, -c local ./configs/ocp-workloads/ocp-workload.yml \
+                    -e ocp_workload=ocp-workload-3scale-multitenant \
+                    -e ACTION=create \
+                    -e subdomain_base=$SUBDOMAIN_BASE \
+                    -e admin_username=$ADM_USERNAME
+
 ```
+
+### image stream sync
+
+```bash
+
+bash add.image.sh is.openshift.list
+
+```
+
 
 ## try with rhv
 

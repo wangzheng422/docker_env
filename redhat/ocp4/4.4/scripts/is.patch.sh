@@ -25,7 +25,7 @@ for var_is_name in $(echo $var_json | jq -r '.items[].metadata.name' ); do
 
                 var_new_is_image_name=$(echo $var_is_image_name | sed "s|quay.io/openshift-release-dev/ocp-v4.0-art-dev|${LOCAL_REG}/ocp4/openshift4|g")
 
-                echo "###############################"
+                echo "############################### ocp-v4.0-art-dev@sha256"
                 echo $var_is_name
                 echo $var_is_tag
                 echo $var_is_image_name
@@ -33,11 +33,11 @@ for var_is_name in $(echo $var_json | jq -r '.items[].metadata.name' ); do
 
                 echo $var_new_is_image_name
 
-                set -x
+                # set -x
 
-                oc patch -n openshift is ${var_is_name} --type='json' -p="[{\"op\": \"replace\", \"path\": \"/spec/tags/${var_j}/from/name\", \"value\":\"${var_new_is_image_name}\"}]"
+                # oc patch -n openshift is ${var_is_name} --type='json' -p="[{\"op\": \"replace\", \"path\": \"/spec/tags/${var_j}/from/name\", \"value\":\"${var_new_is_image_name}\"}]"
 
-                set +x
+                # set +x
 
             elif [[ $var_is_image_name =~ ^.*\.(io|com|org)/.* ]]; then
 
