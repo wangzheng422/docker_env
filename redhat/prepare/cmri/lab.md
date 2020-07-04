@@ -599,20 +599,6 @@ oc get imagepruner.imageregistry.operator.openshift.io/cluster
 oc patch imagepruner.imageregistry.operator.openshift.io/cluster -p '{"spec":{"suspend": false}}' --type=merge
 
 
-cat << EOF >>  /etc/hosts
-127.0.0.1 registry.redhat.ren
-EOF
-
-export OCP_RELEASE=4.4.7
-
-sudo tar xzf /data/ocp4/$OCP_RELEASE/openshift-client-linux-$OCP_RELEASE.tar.gz -C /usr/local/sbin/ oc kubectl
-
-sudo tar xzf /data/ocp4/$OCP_RELEASE/openshift-install-linux-$OCP_RELEASE.tar.gz -C /usr/local/sbin/ openshift-install
-
-which oc
-which openshift-install
-
-oc completion bash | sudo tee /etc/bash_completion.d/openshift > /dev/null
 
 cd /root/ocp4
 
@@ -644,6 +630,11 @@ ansible-playbook -i localhost, -c local ./configs/ocp-workloads/ocp-workload.yml
 image sync
 ```bash
 # on vultr
+export OCP_RELEASE=4.4.11
+wget https://mirror.openshift.com/pub/openshift-v4/clients/ocp/$OCP_RELEASE/openshift-client-linux-$OCP_RELEASE.tar.gz
+sudo tar xzf /data/ocp4/openshift-client-linux-$OCP_RELEASE.tar.gz -C /usr/local/sbin/ oc kubectl
+
+
 bash add.image.sh is.openshift.list
 
 # on redhat-01
@@ -652,6 +643,22 @@ bash add.image.load.sh /data/down/is.samples/mirror_dir
 
 bash add.image.load.sh /data/down/mirror_dir
 
+
+
+cat << EOF >>  /etc/hosts
+127.0.0.1 registry.redhat.ren
+EOF
+
+export OCP_RELEASE=4.4.7
+
+sudo tar xzf /data/ocp4/$OCP_RELEASE/openshift-client-linux-$OCP_RELEASE.tar.gz -C /usr/local/sbin/ oc kubectl
+
+sudo tar xzf /data/ocp4/$OCP_RELEASE/openshift-install-linux-$OCP_RELEASE.tar.gz -C /usr/local/sbin/ openshift-install
+
+which oc
+which openshift-install
+
+oc completion bash | sudo tee /etc/bash_completion.d/openshift > /dev/null
 
 ```
 
