@@ -15,6 +15,8 @@ rsync -e ssh --info=progress2 -P --delete -arz  /data/registry/  root@172.29.159
 
 rsync -e ssh --info=progress2 -P --delete -arz  /data/is.samples/ root@172.29.159.3:/home/wzh/is.samples/
 
+rsync -e ssh --info=progress2 -P --delete -arz  /data/mirror_dir/ root@172.29.159.3:/home/wzh/mirror_dir/
+
 tar -cvf - is.samples/ | pigz -c > is.samples.tgz
 tar -cvf - ocp4/ | pigz -c > ocp4.tgz
 tar -cvf - registry/ | pigz -c > registry.tgz
@@ -50,6 +52,10 @@ mount /dev/datavg/datalv /data
 # rclone config
 # rclone lsd jumpbox:
 # rclone sync jumpbox:/home/wzh/  /data/down/ -P -L --transfers 10
+
+rsync -e ssh --info=progress2 -P --delete -arz  root@172.29.159.3:/home/wzh/is.samples/  /data/down/is.samples/
+
+rsync -e ssh --info=progress2 -P --delete -arz  root@172.29.159.3:/home/wzh/mirror_dir/  /data/down/mirror_dir/
 
 pigz -dc registry.tgz | tar xf -
 pigz -dc is.samples.tgz | tar xf -
@@ -528,6 +534,8 @@ oc patch configs.samples.operator.openshift.io/cluster -p '{"spec":{"managementS
 
 oc patch configs.samples.operator.openshift.io/cluster -p '{"spec":{"managementState": "Unmanaged"}}' --type=merge
 
+oc get configs.samples.operator.openshift.io/cluster -o yaml
+
 oc patch OperatorHub cluster --type json -p '[{"op": "add", "path": "/spec/disableAllDefaultSources", "value": true}]'
 
 
@@ -606,11 +614,21 @@ which openshift-install
 
 oc completion bash | sudo tee /etc/bash_completion.d/openshift > /dev/null
 
+cd /root/ocp4
 
-cd /data/ocp4
-bash add.image.load.sh /data/down/is.samples/mirror_dir
+# scp /etc/crts/redhat.ren.crt 192.168.7.11:/root/ocp4/
+oc project openshift-config
+oc create configmap ca.for.registry \
+    --from-file=registry.redhat.ren=/root/redhat.ren.crt
+# 如果你想删除这个config map，这么做
+# oc delete configmap ca.for.registry
+oc patch image.config.openshift.io/cluster -p '{"spec":{"additionalTrustedCA":{"name":"ca.for.registry"}}}'  --type=merge
+# oc patch image.config.openshift.io/cluster -p '{"spec":{"registrySources":{"insecureRegistries":["registry.redhat.ren"]}}}'  --type=merge
+oc get image.config.openshift.io/cluster -o yaml
 
 
+cd /root/ocp4
+bash is.patch.sh
 
 
 
@@ -622,11 +640,18 @@ ansible-playbook -i localhost, -c local ./configs/ocp-workloads/ocp-workload.yml
 
 ```
 
-### image stream sync
-
+### redhat-01
+image sync
 ```bash
-
+# on vultr
 bash add.image.sh is.openshift.list
+
+# on redhat-01
+cd /data/ocp4
+bash add.image.load.sh /data/down/is.samples/mirror_dir
+
+bash add.image.load.sh /data/down/mirror_dir
+
 
 ```
 

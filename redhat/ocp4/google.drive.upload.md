@@ -74,6 +74,8 @@ rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/ocp4 /data/
 
 rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/mirror_dir /data/is.samples/
 
+rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/mirror_dir/ /data/mirror_dir/
+
 ## sync from aws to pvg
 cd /data/remote/4.4.7
 

@@ -1,21 +1,21 @@
 #!/usr/bin/env bash
 
 set -e
-# set -x
+set -x
 
 export LOCAL_REG='registry.redhat.ren:5443'
 
-# var_json=$(oc get is -n openshift -l samples.operator.openshift.io/managed=true -o json)
-var_json=$(oc get is -n openshift -o json)
+var_json=$(oc get is -n openshift -l samples.operator.openshift.io/managed=true -o json)
+# var_json=$(oc get is -n openshift -o json)
 
 var_i=0
-for var_is_name in $(echo $var_json | jq -r '.items[].metadata.name' ); do
+for var_is_name in $( jq -r '.items[].metadata.name' <<< $var_json ); do
     var_j=0
-    for var_is_tag in $(echo $var_json | jq -r ".items[${var_i}].spec.tags[].name"); do
+    for var_is_tag in $( jq -r ".items[${var_i}].spec.tags[].name"  <<< $var_json ); do
 
-        var_is_image_name=$(echo $var_json | jq -r ".items[${var_i}].spec.tags[${var_j}].from.name")
+        var_is_image_name=$( jq -r ".items[${var_i}].spec.tags[${var_j}].from.name" <<< $var_json )
         
-        var_is_image_kind=$(echo $var_json | jq -r ".items[${var_i}].spec.tags[${var_j}].from.kind")
+        var_is_image_kind=$( jq -r ".items[${var_i}].spec.tags[${var_j}].from.kind" <<< $var_json )
         
         if [[ $var_is_image_kind =~ 'DockerImage'  ]]; then
 
@@ -35,7 +35,7 @@ for var_is_name in $(echo $var_json | jq -r '.items[].metadata.name' ); do
 
                 # set -x
 
-                # oc patch -n openshift is ${var_is_name} --type='json' -p="[{\"op\": \"replace\", \"path\": \"/spec/tags/${var_j}/from/name\", \"value\":\"${var_new_is_image_name}\"}]"
+                oc patch -n openshift is ${var_is_name} --type='json' -p="[{\"op\": \"replace\", \"path\": \"/spec/tags/${var_j}/from/name\", \"value\":\"${var_new_is_image_name}\"}]"
 
                 # set +x
 
@@ -51,19 +51,23 @@ for var_is_name in $(echo $var_json | jq -r '.items[].metadata.name' ); do
 
                 echo $var_new_is_image_name
 
-                set -x
+                # set -x
 
                 oc patch -n openshift is ${var_is_name} --type='json' -p="[{\"op\": \"replace\", \"path\": \"/spec/tags/${var_j}/from/name\", \"value\":\"${var_new_is_image_name}\"}]"
 
                 # oc patch -n openshift is ${var_is_name} -p "{\"spec\":{\"tags\" : [ { \"name\" : \"$var_is_tag\", \"from\" :{\"name\" : \"${var_new_is_image_name}\" , \"kind\" : \"DockerImage\" } } ] } }" --type=merge 
 
-                set +x
+                # set +x
             fi
 
         fi
 
         var_j=$((var_j+1))
     done
+
+    sleep 10
+    oc import-image --all $var_is_name -n openshift
+
     var_i=$((var_i+1))
 done
 
