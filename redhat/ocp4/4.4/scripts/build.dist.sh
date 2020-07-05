@@ -94,9 +94,11 @@ wget --recursive --no-directories --no-parent https://mirror.openshift.com/pub/o
 
 # wget --recursive --no-directories --no-parent https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/4.2/latest/
 
-wget -O ocp4-upi-helpernode-master.zip https://github.com/wangzheng422/ocp4-upi-helpernode/archive/master.zip
+wget -O ocp4-upi-helpernode.zip https://github.com/wangzheng422/ocp4-upi-helpernode/archive/master.zip
 
-wget -O docker_env-master.zip https://github.com/wangzheng422/docker_env/archive/master.zip
+wget -O docker_env.zip https://github.com/wangzheng422/docker_env/archive/master.zip
+
+wget -O agnosticd.zip https://github.com/wangzheng422/agnosticd/archive/development.zip
 
 # wget -O filetranspiler-master.zip https://github.com/wangzheng422/filetranspiler/archive/master.zip
 
