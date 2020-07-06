@@ -113,7 +113,7 @@ mirror_image() {
     # if oc image mirror $docker_image $local_image_url; then
     if [[ $var_skip == 0 ]]; then
         # if skopeo copy "docker://"$docker_image "docker://"$local_image_url; then
-        if oc image mirror $docker_image $local_image_url; then
+        if oc image mirror --filter-by-os='.*' $docker_image $local_image_url; then
             echo -e "${docker_image}\t${local_image_url}" >> pull.image.ok.list
             # echo -e "${yaml_image}\t${yaml_local_image}" >> yaml.image.ok.list
             echo -e "${domain_part}" >> yaml.image.ok.list
@@ -144,7 +144,7 @@ mirror_sample_image() {
     # if oc image mirror $docker_image $local_image_url; then
     if [[ $var_skip == 0 ]]; then
         # if skopeo copy "docker://"$docker_image "docker://"$local_image_url; then
-        if oc image mirror $docker_image $local_image_url; then
+        if oc image mirror --filter-by-os='.*' $docker_image $local_image_url; then
             echo -e "${docker_image}\t${local_image_url}" >> pull.sample.image.ok.list
             # echo -e "${yaml_image}\t${yaml_local_image}" >> yaml.sample.image.ok.list
             # echo -e "${domain_part}" >> yaml.sample.image.ok.list
@@ -162,7 +162,7 @@ add_image() {
     # if oc image mirror $docker_image $local_image_url; then
     if [[ $var_skip == 0 ]]; then
         # if skopeo copy "docker://"$docker_image "docker://"$local_image_url; then
-        if oc image mirror $docker_image $local_image_url ; then
+        if oc image mirror --filter-by-os='.*' $docker_image $local_image_url ; then
             echo -e "${docker_image}\t${local_image_url}" >> pull.add.image.ok.list
             # echo -e "${yaml_image}\t${yaml_local_image}" >> yaml.add.image.ok.list
             # echo -e "${domain_part}" >> yaml.add.image.ok.list
@@ -191,7 +191,7 @@ add_image_file() {
     # if oc image mirror $docker_image $local_image_url; then
     if [[ $var_skip == 0 ]]; then
         # if skopeo copy "docker://"$docker_image "docker://"$local_image_url; then
-        if oc image mirror -a /data/pull-secret.json --dir=${MIRROR_DIR}/oci/ $docker_image file://$local_image_url ; then
+        if oc image mirror --filter-by-os='.*' -a /data/pull-secret.json --dir=${MIRROR_DIR}/oci/ $docker_image file://$local_image_url ; then
             echo -e "${docker_image}\t${local_image_url}" >> pull.add.image.ok.list
             # echo -e "${yaml_image}\t${yaml_local_image}" >> yaml.add.image.ok.list
             # echo -e "${domain_part}" >> yaml.add.image.ok.list
@@ -332,7 +332,7 @@ add_image_load() {
     # if oc image mirror $docker_image $local_image_url; then
     if [[ $var_skip == 0 ]]; then
         # if skopeo copy "docker://"$docker_image "docker://"$local_image_url; then
-        if oc image mirror $docker_image $local_image_url; then
+        if oc image mirror --filter-by-os='.*' $docker_image $local_image_url; then
             echo -e "${docker_image}\t${local_image_url}" >> pull.add.image.ok.list
             # echo -e "${yaml_image}\t${yaml_local_image}" >> yaml.add.image.ok.list
             # echo -e "${domain_part}" >> yaml.add.image.ok.list
@@ -352,7 +352,7 @@ add_image_load_oci_file() {
     # if oc image mirror $docker_image $local_image_url; then
     if [[ $var_skip == 0 ]]; then
         # if skopeo copy "docker://"$docker_image "docker://"$local_image_url; then
-        if oc image mirror --from-dir=${MIRROR_DIR}/oci/ file:/${file_name} $local_image_url ; then
+        if oc image mirror --filter-by-os='.*' --from-dir=${MIRROR_DIR}/oci/ file:/${file_name} $local_image_url ; then
             echo -e "${docker_image}\t${local_image_url}" >> pull.add.image.ok.list
             # echo -e "${yaml_image}\t${yaml_local_image}" >> yaml.add.image.ok.list
             # echo -e "${domain_part}" >> yaml.add.image.ok.list
