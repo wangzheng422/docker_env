@@ -618,12 +618,6 @@ bash is.patch.sh
 
 
 
-ansible-playbook -i localhost, -c local ./configs/ocp-workloads/ocp-workload.yml \
-                    -e ocp_workload=ocp-workload-3scale-multitenant \
-                    -e ACTION=create \
-                    -e subdomain_base=$SUBDOMAIN_BASE \
-                    -e admin_username=$ADM_USERNAME
-
 ```
 
 ### redhat-01
@@ -659,6 +653,30 @@ which oc
 which openshift-install
 
 oc completion bash | sudo tee /etc/bash_completion.d/openshift > /dev/null
+
+
+nmcli connection modify enp2s0f0 ipv4.dns 192.168.7.11
+nmcli connection reload
+nmcli connection up enp2s0f0
+
+
+# disable firefox cert validation
+# firefox --ignore-certificate-errors
+
+yum install -y chromium
+
+chromium-browser --no-sandbox --ignore-certificate-errors &> /dev/null &
+
+
+
+
+
+
+
+
+
+
+
 
 ```
 
@@ -750,6 +768,8 @@ yum install -y    qgnomeplatform   xdg-desktop-portal-gtk   NetworkManager-libre
 
 yum install -y    cjkuni-uming-fonts   dejavu-sans-fonts   dejavu-sans-mono-fonts   dejavu-serif-fonts   gnu-free-mono-fonts   gnu-free-sans-fonts   gnu-free-serif-fonts   google-crosextra-caladea-fonts   google-crosextra-carlito-fonts   google-noto-emoji-fonts   jomolhari-fonts   khmeros-base-fonts   liberation-mono-fonts   liberation-sans-fonts   liberation-serif-fonts   lklug-fonts   lohit-assamese-fonts   lohit-bengali-fonts   lohit-devanagari-fonts   lohit-gujarati-fonts   lohit-kannada-fonts   lohit-malayalam-fonts   lohit-marathi-fonts   lohit-nepali-fonts   lohit-oriya-fonts   lohit-punjabi-fonts   lohit-tamil-fonts   lohit-telugu-fonts   madan-fonts   nhn-nanum-gothic-fonts   open-sans-fonts   overpass-fonts   paktype-naskh-basic-fonts   paratype-pt-sans-fonts   sil-abyssinica-fonts   sil-nuosu-fonts   sil-padauk-fonts   smc-meera-fonts   stix-fonts   thai-scalable-waree-fonts   ucs-miscfixed-fonts   vlgothic-fonts   wqy-microhei-fonts   wqy-zenhei-fonts
 
+yum install -y google-noto-sans-simplified-chinese-fonts google-noto-fonts-common
+
 
 vncpasswd
 
@@ -757,10 +777,12 @@ cat << EOF > ~/.vnc/xstartup
 #!/bin/sh
 unset SESSION_MANAGER
 unset DBUS_SESSION_BUS_ADDRESS
+vncconfig &
 gnome-session &
 EOF
 chmod +x ~/.vnc/xstartup
 
+# vncserver :1 -geometry 1500x850
 vncserver :1 -geometry 1280x800
 # 如果你想停掉vnc server，这么做
 vncserver -kill :1
