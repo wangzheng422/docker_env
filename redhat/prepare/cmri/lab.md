@@ -667,7 +667,7 @@ yum install -y chromium
 
 chromium-browser --no-sandbox --ignore-certificate-errors &> /dev/null &
 
-
+scp -3 root@v.redhat.ren:/data/mirror_dir.tgz root@172.29.159.99:/data/down/
 
 
 
