@@ -41,6 +41,8 @@ subscription-manager repos \
 # subscription-manager repos --disable="rhel-7-server-ose-4.2-rpms"
 subscription-manager repos --disable="rhel-server-rhscl-7-rpms"
 
+subscription-manager repos --list
+
 subscription-manager repos --list-enabled
 
 yum -y install wget yum-utils createrepo docker git 

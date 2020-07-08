@@ -21,3 +21,9 @@ RUN cd /tmp && git clone https://github.com/wangzheng422/cloud-native-workshop-v
 
 RUN cd /tmp && git clone https://github.com/wangzheng422/cloud-native-workshop-v2m4-labs && cd cloud-native-workshop-v2m4-labs && git checkout ocp-4.4 && for proj in *-service  ; do mvn -fn -f ./$proj dependency:resolve-plugins dependency:resolve dependency:go-offline clean compile -DskipTests ;  mvn -fn -f ./$proj  clean package  ; done && cd /tmp/cloud-native-workshop-v2m4-labs/coolstore-ui && npm install --save-dev nodeshift && cd /tmp && rm -rf /tmp/cloud-native-workshop-v2m4-labs 
 
+USER root
+RUN chown -R jboss /home/jboss/.m2
+RUN chown -R jboss /home/jboss/.config
+RUN chmod -R a+rwx /home/jboss/.m2
+RUN chmod -R a+rwx /home/jboss/.config
+RUN chmod -R a+rwx /home/jboss/.siege
