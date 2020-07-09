@@ -11,7 +11,7 @@ touch pull.add.image.ok.list
 touch pull.add.image.docker.ok.list
 
 export MIRROR_DIR='/data/mirror_dir'
-# /bin/rm -rf ${MIRROR_DIR}
+/bin/rm -rf ${MIRROR_DIR}
 mkdir -p ${MIRROR_DIR}/oci
 mkdir -p ${MIRROR_DIR}/docker
 export LOCAL_REG=''

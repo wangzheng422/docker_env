@@ -15,6 +15,8 @@ rsync -e ssh --info=progress2 -P --delete -arz  /data/registry/  root@172.29.159
 
 rsync -e ssh --info=progress2 -P --delete -arz  /data/is.samples/ root@172.29.159.3:/home/wzh/is.samples/
 
+rsync -e ssh --info=progress2 -P --delete -arz  /data/mirror_dir/ root@172.29.159.3:/home/wzh/mirror_dir/
+
 tar -cvf - is.samples/ | pigz -c > is.samples.tgz
 tar -cvf - ocp4/ | pigz -c > ocp4.tgz
 tar -cvf - registry/ | pigz -c > registry.tgz
@@ -50,6 +52,10 @@ mount /dev/datavg/datalv /data
 # rclone config
 # rclone lsd jumpbox:
 # rclone sync jumpbox:/home/wzh/  /data/down/ -P -L --transfers 10
+
+rsync -e ssh --info=progress2 -P --delete -arz  root@172.29.159.3:/home/wzh/is.samples/  /data/down/is.samples/
+
+rsync -e ssh --info=progress2 -P --delete -arz  root@172.29.159.3:/home/wzh/mirror_dir/  /data/down/mirror_dir/
 
 pigz -dc registry.tgz | tar xf -
 pigz -dc is.samples.tgz | tar xf -
@@ -424,19 +430,19 @@ virt-install --name=ocp4-bootstrap --vcpus=4 --ram=8192 \
 # ssh core@192.168.7.12 
 # journalctl -b -f -u bootkube.service
 
-virt-install --name=ocp4-master0 --vcpus=4 --ram=24576 \
+virt-install --name=ocp4-master0 --vcpus=4 --ram=16384 \
 --disk path=/dev/datavg/master0lv,device=disk,bus=virtio,format=raw \
 --os-variant rhel8.0 --network network:br-int,model=virtio \
 --boot menu=on --cdrom ${NGINX_DIRECTORY}/master-0.iso 
 
 # ssh core@192.168.7.13
 
-virt-install --name=ocp4-master1 --vcpus=4 --ram=24576 \
+virt-install --name=ocp4-master1 --vcpus=4 --ram=16384 \
 --disk path=/dev/datavg/master1lv,device=disk,bus=virtio,format=raw \
 --os-variant rhel8.0 --network network:br-int,model=virtio \
 --boot menu=on --cdrom ${NGINX_DIRECTORY}/master-1.iso 
 
-virt-install --name=ocp4-master2 --vcpus=4 --ram=24576 \
+virt-install --name=ocp4-master2 --vcpus=4 --ram=16384 \
 --disk path=/dev/datavg/master2lv,device=disk,bus=virtio,format=raw \
 --os-variant rhel8.0 --network network:br-int,model=virtio \
 --boot menu=on --cdrom ${NGINX_DIRECTORY}/master-2.iso 
@@ -524,6 +530,12 @@ oc get clusteroperator image-registry
 
 oc get configs.imageregistry.operator.openshift.io cluster -o yaml
 
+oc patch configs.samples.operator.openshift.io/cluster -p '{"spec":{"managementState": "Managed"}}' --type=merge
+
+oc patch configs.samples.operator.openshift.io/cluster -p '{"spec":{"managementState": "Unmanaged"}}' --type=merge
+
+oc get configs.samples.operator.openshift.io/cluster -o yaml
+
 oc patch OperatorHub cluster --type json -p '[{"op": "add", "path": "/spec/disableAllDefaultSources", "value": true}]'
 
 
@@ -586,7 +598,88 @@ find . -name "*-operator-catalog.yaml" -exec oc delete -f {} \;
 oc get imagepruner.imageregistry.operator.openshift.io/cluster
 oc patch imagepruner.imageregistry.operator.openshift.io/cluster -p '{"spec":{"suspend": false}}' --type=merge
 
+
+
+cd /root/ocp4
+
+# scp /etc/crts/redhat.ren.crt 192.168.7.11:/root/ocp4/
+oc project openshift-config
+oc create configmap ca.for.registry \
+    --from-file=registry.redhat.ren=/root/redhat.ren.crt
+# 如果你想删除这个config map，这么做
+# oc delete configmap ca.for.registry
+oc patch image.config.openshift.io/cluster -p '{"spec":{"additionalTrustedCA":{"name":"ca.for.registry"}}}'  --type=merge
+# oc patch image.config.openshift.io/cluster -p '{"spec":{"registrySources":{"insecureRegistries":["registry.redhat.ren"]}}}'  --type=merge
+oc get image.config.openshift.io/cluster -o yaml
+
+
+cd /root/ocp4
+bash is.patch.sh
+
+
+
 ```
+
+### redhat-01
+image sync
+```bash
+# on vultr
+export OCP_RELEASE=4.4.11
+wget https://mirror.openshift.com/pub/openshift-v4/clients/ocp/$OCP_RELEASE/openshift-client-linux-$OCP_RELEASE.tar.gz
+sudo tar xzf /data/ocp4/openshift-client-linux-$OCP_RELEASE.tar.gz -C /usr/local/sbin/ oc kubectl
+
+
+bash add.image.sh is.openshift.list
+
+# on redhat-01
+cd /data/ocp4
+bash add.image.load.sh /data/down/is.samples/mirror_dir
+
+bash add.image.load.sh /data/down/mirror_dir
+
+
+
+cat << EOF >>  /etc/hosts
+127.0.0.1 registry.redhat.ren
+EOF
+
+export OCP_RELEASE=4.4.7
+
+sudo tar xzf /data/ocp4/$OCP_RELEASE/openshift-client-linux-$OCP_RELEASE.tar.gz -C /usr/local/sbin/ oc kubectl
+
+sudo tar xzf /data/ocp4/$OCP_RELEASE/openshift-install-linux-$OCP_RELEASE.tar.gz -C /usr/local/sbin/ openshift-install
+
+which oc
+which openshift-install
+
+oc completion bash | sudo tee /etc/bash_completion.d/openshift > /dev/null
+
+
+nmcli connection modify enp2s0f0 ipv4.dns 192.168.7.11
+nmcli connection reload
+nmcli connection up enp2s0f0
+
+
+# disable firefox cert validation
+# firefox --ignore-certificate-errors
+
+yum install -y chromium
+
+chromium-browser --no-sandbox --ignore-certificate-errors &> /dev/null &
+
+scp -3 root@v.redhat.ren:/data/mirror_dir.tgz root@172.29.159.99:/data/down/
+
+
+
+
+
+
+
+
+
+
+```
+
 
 ## try with rhv
 
@@ -675,6 +768,8 @@ yum install -y    qgnomeplatform   xdg-desktop-portal-gtk   NetworkManager-libre
 
 yum install -y    cjkuni-uming-fonts   dejavu-sans-fonts   dejavu-sans-mono-fonts   dejavu-serif-fonts   gnu-free-mono-fonts   gnu-free-sans-fonts   gnu-free-serif-fonts   google-crosextra-caladea-fonts   google-crosextra-carlito-fonts   google-noto-emoji-fonts   jomolhari-fonts   khmeros-base-fonts   liberation-mono-fonts   liberation-sans-fonts   liberation-serif-fonts   lklug-fonts   lohit-assamese-fonts   lohit-bengali-fonts   lohit-devanagari-fonts   lohit-gujarati-fonts   lohit-kannada-fonts   lohit-malayalam-fonts   lohit-marathi-fonts   lohit-nepali-fonts   lohit-oriya-fonts   lohit-punjabi-fonts   lohit-tamil-fonts   lohit-telugu-fonts   madan-fonts   nhn-nanum-gothic-fonts   open-sans-fonts   overpass-fonts   paktype-naskh-basic-fonts   paratype-pt-sans-fonts   sil-abyssinica-fonts   sil-nuosu-fonts   sil-padauk-fonts   smc-meera-fonts   stix-fonts   thai-scalable-waree-fonts   ucs-miscfixed-fonts   vlgothic-fonts   wqy-microhei-fonts   wqy-zenhei-fonts
 
+yum install -y google-noto-sans-simplified-chinese-fonts google-noto-fonts-common
+
 
 vncpasswd
 
@@ -682,10 +777,12 @@ cat << EOF > ~/.vnc/xstartup
 #!/bin/sh
 unset SESSION_MANAGER
 unset DBUS_SESSION_BUS_ADDRESS
+vncconfig &
 gnome-session &
 EOF
 chmod +x ~/.vnc/xstartup
 
+# vncserver :1 -geometry 1500x850
 vncserver :1 -geometry 1280x800
 # 如果你想停掉vnc server，这么做
 vncserver -kill :1
