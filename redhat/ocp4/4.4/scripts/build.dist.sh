@@ -108,9 +108,9 @@ podman save quay.io/wangzheng422/filetranspiler | pigz -c > filetranspiler.tgz
 podman pull docker.io/library/registry:2
 podman save docker.io/library/registry:2 | pigz -c > registry.tgz
 
-oc image mirror docker.io/wangzheng422/operator-catalog:redhat-${var_major_version}-${var_date} ${LOCAL_REG}/docker.io/wangzheng422/operator-catalog:redhat-${var_major_version}-${var_date}
-oc image mirror docker.io/wangzheng422/operator-catalog:certified-${var_major_version}-${var_date} ${LOCAL_REG}/docker.io/wangzheng422/operator-catalog:certified-${var_major_version}-${var_date}
-oc image mirror docker.io/wangzheng422/operator-catalog:community-${var_major_version}-${var_date} ${LOCAL_REG}/docker.io/wangzheng422/operator-catalog:community-${var_major_version}-${var_date}
+oc image mirror --filter-by-os='linux/amd64' docker.io/wangzheng422/operator-catalog:redhat-${var_major_version}-${var_date} ${LOCAL_REG}/docker.io/wangzheng422/operator-catalog:redhat-${var_major_version}-${var_date}
+oc image mirror --filter-by-os='linux/amd64' docker.io/wangzheng422/operator-catalog:certified-${var_major_version}-${var_date} ${LOCAL_REG}/docker.io/wangzheng422/operator-catalog:certified-${var_major_version}-${var_date}
+oc image mirror --filter-by-os='linux/amd64' docker.io/wangzheng422/operator-catalog:community-${var_major_version}-${var_date} ${LOCAL_REG}/docker.io/wangzheng422/operator-catalog:community-${var_major_version}-${var_date}
 
 # /bin/rm -f pull-secret.json
 
