@@ -641,6 +641,7 @@ bash add.image.load.sh /data/down/mirror_dir
 
 cat << EOF >>  /etc/hosts
 127.0.0.1 registry.redhat.ren
+127.0.0.1 maxcdn.bootstrapcdn.com ajax.googleapis.com at.alicdn.com
 EOF
 
 export OCP_RELEASE=4.4.7
