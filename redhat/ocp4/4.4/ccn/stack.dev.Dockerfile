@@ -45,7 +45,7 @@ COPY .bowerrc /home/jboss/
 
 # RUN cd /tmp && git clone https://github.com/wangzheng422/cloud-native-workshop-v2m4-labs && cd cloud-native-workshop-v2m4-labs && git checkout ocp-4.4 && for proj in *-service  ; do mvn -fn -f ./$proj dependency:resolve-plugins dependency:resolve dependency:go-offline clean compile -DskipTests ;  mvn -fn -f ./$proj  clean package  ; done && cd /tmp/cloud-native-workshop-v2m4-labs/coolstore-ui && npm install --save-dev nodeshift && cd /tmp && rm -rf /tmp/cloud-native-workshop-v2m4-labs 
 
-RUN cd /tmp && git clone https://github.com/wangzheng422/cloud-native-workshop-v2m4-labs && cd cloud-native-workshop-v2m4-labs && git checkout ocp-4.4 && cd /tmp/cloud-native-workshop-v2m4-labs/coolstore-ui && npm install --save-dev nodeshift && npm install -g bower && npm install -g bower-nexus3-resolver && npm run bower -- install 
+RUN cd /tmp && git clone https://github.com/wangzheng422/cloud-native-workshop-v2m4-labs && cd cloud-native-workshop-v2m4-labs && git checkout ocp-4.4 && cd /tmp/cloud-native-workshop-v2m4-labs/coolstore-ui && npm install --save-dev nodeshift && npm install -g bower && npm install -g bower-nexus3-resolver && bower install 
 
 USER root
 RUN rm -rf /root/.m2
@@ -60,4 +60,5 @@ RUN chmod -R a+rwx /home/jboss/.siege
 # RUN chmod -R a+rwx /home/jboss/.npm
 
 RUN rm -rf /tmp/*
+RUN cd && ls -ahl
 
