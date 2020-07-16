@@ -13,6 +13,7 @@ USER jboss
 RUN mkdir -p /home/jboss/.m2/
 COPY settings.xml /home/jboss/.m2/
 COPY .npmrc /home/jboss/
+COPY .bowerrc /home/jboss/
 
 # COPY order-service.tgz /tmp/
 
