@@ -2,6 +2,7 @@ FROM quay.io/openshiftlabs/cloudnative-workspaces-quarkus:2.1
 
 RUN rm -rf /root/.m2
 RUN rm -rf /home/jboss/.m2
+RUN rm -rf /home/jboss/.npm
 
 RUN mkdir -p /root/.m2
 COPY settings.xml /root/.m2/
