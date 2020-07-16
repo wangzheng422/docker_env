@@ -47,14 +47,16 @@ COPY .npmrc /home/jboss/
 RUN cd /tmp && git clone https://github.com/wangzheng422/cloud-native-workshop-v2m4-labs && cd cloud-native-workshop-v2m4-labs && git checkout ocp-4.4 && cd /tmp/cloud-native-workshop-v2m4-labs/coolstore-ui && npm install --save-dev nodeshift && npm install --save-dev nodeshift
 
 USER root
+RUN rm -rf /root/.m2
+RUN rm -rf /home/jboss/.m2/repository
+RUN rm -rf /home/jboss/.npm
 RUN chown -R jboss /home/jboss/.m2
 RUN chown -R jboss /home/jboss/.config
-RUN chown -R jboss /home/jboss/.npm
+# RUN chown -R jboss /home/jboss/.npm
 RUN chmod -R a+rwx /home/jboss/.m2
 RUN chmod -R a+rwx /home/jboss/.config
 RUN chmod -R a+rwx /home/jboss/.siege
-RUN chmod -R a+rwx /home/jboss/.npm
+# RUN chmod -R a+rwx /home/jboss/.npm
 
 RUN rm -rf /tmp/*
-RUN ls /tmp
 
