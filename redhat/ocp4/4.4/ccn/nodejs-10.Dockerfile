@@ -4,4 +4,4 @@ RUN npm config list
 
 # USER 1001
 
-# COPY .npmrc /root/
+COPY .npmrc /opt/app-root/src/
