@@ -25,9 +25,9 @@ COPY .npmrc /home/jboss/
 # RUN cd /tmp && rm -rf /tmp/cloud-native*
 
 
-RUN cd /tmp && git clone https://github.com/wangzheng422/cloud-native-workshop-v2-labs-solutions && cd cloud-native-workshop-v2-labs-solutions && git checkout master && cd m4  && for proj in order-service  ; do mvn -fn quarkus:add-extension -Dextensions="resteasy-jsonb,mongodb-client" -f ./$proj  ; mvn -fn  dependency:resolve-plugins dependency:resolve dependency:go-offline clean compile -DskipTests -f ./$proj ;  mvn -fn  clean package -DskipTests -f ./$proj ;  done 
+# RUN cd /tmp && git clone https://github.com/wangzheng422/cloud-native-workshop-v2-labs-solutions && cd cloud-native-workshop-v2-labs-solutions && git checkout master && cd m4  && for proj in order-service  ; do mvn -fn quarkus:add-extension -Dextensions="resteasy-jsonb,mongodb-client" -f ./$proj  ; mvn -fn  dependency:resolve-plugins dependency:resolve dependency:go-offline clean compile -DskipTests -f ./$proj ;  mvn -fn  clean package -DskipTests -f ./$proj ;  done 
 
-RUN cd /tmp && rm -rf /tmp/cloud-native*
+# RUN cd /tmp && rm -rf /tmp/cloud-native*
 
 # RUN cd /tmp && git clone https://github.com/RedHat-Middleware-Workshops/cloud-native-workshop-v2m4-labs && cd cloud-native-workshop-v2m4-labs && git checkout ocp-4.4  && for proj in order-service  ; do mvn -fn quarkus:add-extension -Dextensions="resteasy-jsonb,mongodb-client" -f ./$proj  ; mvn -fn  clean package -DskipTests -f ./$proj ;  done 
 
@@ -43,7 +43,7 @@ RUN cd /tmp && rm -rf /tmp/cloud-native*
 
 # RUN cd /tmp && git clone https://github.com/wangzheng422/cloud-native-workshop-v2m4-labs && cd cloud-native-workshop-v2m4-labs && git checkout ocp-4.4 && for proj in *-service  ; do mvn -fn -f ./$proj dependency:resolve-plugins dependency:resolve dependency:go-offline clean compile -DskipTests ;  mvn -fn -f ./$proj  clean package  ; done && cd /tmp/cloud-native-workshop-v2m4-labs/coolstore-ui && npm install --save-dev nodeshift && cd /tmp && rm -rf /tmp/cloud-native-workshop-v2m4-labs 
 
-RUN cd /tmp && git clone https://github.com/wangzheng422/cloud-native-workshop-v2m4-labs && cd cloud-native-workshop-v2m4-labs && git checkout ocp-4.4 && cd /tmp/cloud-native-workshop-v2m4-labs/coolstore-ui && npm install --save-dev nodeshift && cd /tmp && rm -rf /tmp/cloud-native-workshop-v2m4-labs 
+RUN cd /tmp && git clone https://github.com/wangzheng422/cloud-native-workshop-v2m4-labs && cd cloud-native-workshop-v2m4-labs && git checkout ocp-4.4 && cd /tmp/cloud-native-workshop-v2m4-labs/coolstore-ui && npm install --save-dev nodeshift && npm install --save-dev nodeshift
 
 USER root
 RUN chown -R jboss /home/jboss/.m2
