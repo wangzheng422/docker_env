@@ -18,6 +18,9 @@ RUN cd /tmp && git clone https://github.com/RedHat-Middleware-Workshops/cloud-na
 
 RUN cd /tmp && git clone https://github.com/wangzheng422/cloud-native-workshop-v2m4-labs && cd cloud-native-workshop-v2m4-labs && git checkout ocp-4.4  && for proj in cart-service catalog-service  inventory-service  order-service  payment-service ; do  mvn -fn  clean package -DskipTests -f ./$proj ;  done 
 
+RUN cd /tmp && rm -rf /tmp/cloud-native*
+
+
 RUN cd /tmp && git clone https://github.com/wangzheng422/cloud-native-workshop-v2m4-labs && cd cloud-native-workshop-v2m4-labs && git checkout ocp-4.4  && for proj in cart-service  ; do  mvn -fn  clean package -DskipTests -f ./$proj ;  done 
 
 
