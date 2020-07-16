@@ -21,7 +21,7 @@ COPY .npmrc /home/jboss/
 # RUN cd /tmp && rm -rf /tmp/cloud-native*
 
 
-RUN cd /tmp && git clone https://github.com/wangzheng422/cloud-native-workshop-v2-labs-solutions && cd cloud-native-workshop-v2-labs-solutions && git checkout master && cd m4  && for proj in cart-service  ; do  mvn -fn  clean package -DskipTests -f ./$proj ;  done 
+RUN cd /tmp && git clone https://github.com/wangzheng422/cloud-native-workshop-v2-labs-solutions && cd cloud-native-workshop-v2-labs-solutions && git checkout master && cd m4  && for proj in order-service  ; do  mvn -fn  clean package -DskipTests -f ./$proj ;  done 
 
 
 RUN cd /tmp && rm -rf /tmp/cloud-native*
