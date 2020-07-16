@@ -51,7 +51,9 @@ USER root
 RUN npm install -g bower && npm install -g bower-nexus3-resolver
 
 USER jboss
-RUN cd /tmp/cloud-native-workshop-v2m4-labs/coolstore-ui && bower install 
+RUN cd /tmp/cloud-native-workshop-v2m4-labs/coolstore-ui && bower install && ls -ahl bower_components/
+
+
 
 USER root
 RUN rm -rf /root/.m2
