@@ -53,14 +53,17 @@ COPY .bowerrc /home/jboss/
 # USER jboss
 # RUN cd /tmp/cloud-native-workshop-v2m4-labs/coolstore-ui && bower install && ls -ahlR bower_components/ && ls -ahl
 
-RUN mkdir /tmp/hello && cd /tmp/hello && \
-mvn io.quarkus:quarkus-maven-plugin:1.3.2.Final-redhat-00001:create \
-    -DprojectGroupId=org.acme \
-    -DprojectArtifactId=getting-started \
-    -DplatformGroupId=com.redhat.quarkus \
-    -DplatformVersion=1.3.2.Final-redhat-00001 \
-    -DclassName="org.acme.quickstart.GreetingResource" \
-    -Dpath="/hello" && mvn -f /tmp/hello/getting-started/pom.xml clean package -Pnative -DskipTests
+# RUN mkdir /tmp/hello && cd /tmp/hello && \
+# mvn io.quarkus:quarkus-maven-plugin:1.3.2.Final-redhat-00001:create \
+#     -DprojectGroupId=org.acme \
+#     -DprojectArtifactId=getting-started \
+#     -DplatformGroupId=com.redhat.quarkus \
+#     -DplatformVersion=1.3.2.Final-redhat-00001 \
+#     -DclassName="org.acme.quickstart.GreetingResource" \
+#     -Dpath="/hello" && mvn -f /tmp/hello/getting-started/pom.xml clean package -Pnative -DskipTests
+
+RUN cd /tmp && git clone https://github.com/spring-projects/spring-petclinic.git && cd spring-petclinic && ./mvnw package
+
 
 USER root
 RUN rm -rf /root/.m2
