@@ -67,6 +67,6 @@ RUN chmod -R a+rwx /home/jboss/.config
 RUN chmod -R a+rwx /home/jboss/.siege
 # RUN chmod -R a+rwx /home/jboss/.npm
 
-RUN rm -rf /tmp/*
+# RUN rm -rf /tmp/*
 RUN cd && ls -ahl
 
