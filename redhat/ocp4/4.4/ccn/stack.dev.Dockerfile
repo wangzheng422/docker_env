@@ -60,7 +60,7 @@ mvn io.quarkus:quarkus-maven-plugin:1.3.2.Final-redhat-00001:create \
     -DplatformGroupId=com.redhat.quarkus \
     -DplatformVersion=1.3.2.Final-redhat-00001 \
     -DclassName="org.acme.quickstart.GreetingResource" \
-    -Dpath="/hello"
+    -Dpath="/hello" && mvn -f /tmp/hello/getting-started/pom.xml clean package -Pnative -DskipTests
 
 USER root
 RUN rm -rf /root/.m2
