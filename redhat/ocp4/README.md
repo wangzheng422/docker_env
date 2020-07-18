@@ -195,4 +195,8 @@ env TZ=Asia/Shanghai date
 oc proxy 8001
 curl localhost:8001/openapi/v2 | jq
 
+
+kubectl get nodes -o jsonpath='{.items[*].status.addresses[?(@.type=="ExternalIP")].address}'
+
+oc patch etcd cluster -p='{"spec": {"unsupportedConfigOverrides": {"useUnsupportedUnsafeNonHANonProductionUnstableEtcd": true}}}' --type=merge
 ```
