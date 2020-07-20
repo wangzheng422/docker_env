@@ -399,8 +399,7 @@ done
 
 # Optionally, clean up
 cd
-rm -Rf ${TEMPDIR}
-
+export NGINX_DIRECTORY=/data/ocp4
 cd ${NGINX_DIRECTORY}
 
 scp *.iso root@172.29.159.100:/data/ocp4/
@@ -520,9 +519,9 @@ openshift-install wait-for install-complete
 # INFO Install complete!
 # INFO To access the cluster as the system:admin user when using 'oc', run 'export KUBECONFIG=/root/ocp4/auth/kubeconfig'
 # INFO Access the OpenShift web-console here: https://console-openshift-console.apps.cmri.redhat.ren
-# INFO Login to the console with user: kubeadmin, password: 3sIr7-Fgbty-qiKLt-VByee
+# INFO Login to the console with user: kubeadmin, password: 7mAHF-tUZPh-TSp5T-Ar5u4
 
-bash ocp4-upi-helpernode-master/files/nfs-provisioner-setup.sh
+bash ocp4-upi-helpernode/files/nfs-provisioner-setup.sh
 
 oc patch configs.imageregistry.operator.openshift.io cluster -p '{"spec":{"managementState": "Managed","storage":{"pvc":{"claim":""}}}}' --type=merge
 
