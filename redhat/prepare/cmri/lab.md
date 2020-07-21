@@ -519,7 +519,7 @@ openshift-install wait-for install-complete
 # INFO Install complete!
 # INFO To access the cluster as the system:admin user when using 'oc', run 'export KUBECONFIG=/root/ocp4/auth/kubeconfig'
 # INFO Access the OpenShift web-console here: https://console-openshift-console.apps.cmri.redhat.ren
-# INFO Login to the console with user: kubeadmin, password: 7mAHF-tUZPh-TSp5T-Ar5u4
+# INFO Login to the console with user: kubeadmin, password: K7SDB-ERsvV-rN9PH-3fKDG
 
 bash ocp4-upi-helpernode/files/nfs-provisioner-setup.sh
 
@@ -611,6 +611,8 @@ oc patch image.config.openshift.io/cluster -p '{"spec":{"additionalTrustedCA":{"
 # oc patch image.config.openshift.io/cluster -p '{"spec":{"registrySources":{"insecureRegistries":["registry.redhat.ren"]}}}'  --type=merge
 oc get image.config.openshift.io/cluster -o yaml
 
+oc apply -f ./99-worker-zzz-container-registries.yaml -n openshift-config
+oc apply -f ./99-master-zzz-container-registries.yaml -n openshift-config
 
 cd /root/ocp4
 bash is.patch.sh
