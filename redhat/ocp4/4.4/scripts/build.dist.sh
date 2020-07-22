@@ -148,17 +148,17 @@ bash image.mirror.install.sh
 bash demos.sh
 
 # build operator catalog
-oc adm catalog mirror \
+oc adm catalog mirror --filter-by-os='linux/amd64' \
     docker.io/wangzheng422/operator-catalog:redhat-${var_major_version}-$var_date \
     registry.redhat.ren:5443/ocp-operator 
 /bin/cp -f operator-catalog-manifests/mapping.txt mapping-redhat.txt
 
-oc adm catalog mirror \
+oc adm catalog mirror --filter-by-os='linux/amd64' \
     docker.io/wangzheng422/operator-catalog:certified-${var_major_version}-$var_date \
     registry.redhat.ren:5443/ocp-operator 
 /bin/cp -f operator-catalog-manifests/mapping.txt mapping-certified.txt
 
-oc adm catalog mirror \
+oc adm catalog mirror --filter-by-os='linux/amd64' \
     docker.io/wangzheng422/operator-catalog:community-${var_major_version}-$var_date \
     registry.redhat.ren:5443/ocp-operator 
 /bin/cp -f operator-catalog-manifests/mapping.txt mapping-community.txt
