@@ -98,7 +98,7 @@ wget -O ocp4-upi-helpernode.zip https://github.com/wangzheng422/ocp4-upi-helpern
 
 wget -O docker_env.zip https://github.com/wangzheng422/docker_env/archive/master.zip
 
-wget -O agnosticd.zip https://github.com/wangzheng422/agnosticd/archive/development.zip
+wget -O agnosticd.zip https://github.com/wangzheng422/agnosticd/archive/wzh-ccn-ocp-4.4.zip
 
 # wget -O filetranspiler-master.zip https://github.com/wangzheng422/filetranspiler/archive/master.zip
 
