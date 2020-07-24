@@ -245,7 +245,43 @@ metadata:
   labels:
     machineconfiguration.openshift.io/role: worker
 spec:
-  osImageURL: ''
+  config:
+    ignition:
+      version: 2.2.0
+    storage:
+      files:
+      - filesystem: root
+        path: "/etc/NetworkManager/dispatcher.d/30-mtu"
+        contents:
+          source: data:text/plain;charset=utf-8;base64,IyEvYmluL3NoCk1UVT05MDAwCklOVEVSRkFDRT1lbnM0CgpJRkFDRT0kMQpTVEFUVVM9JDIKaWYgWyAiJElGQUNFIiA9ICIkSU5URVJGQUNFIiAtYSAiJFNUQVRVUyIgPSAidXAiIF07IHRoZW4KICAgIGlwIGxpbmsgc2V0ICIkSUZBQ0UiIG10dSAkTVRVCmZpCg==
+          verification: {}
+        mode: 0755
+    systemd:
+      units:
+        - contents: |
+            [Unit]
+            Requires=systemd-udevd.target
+            After=systemd-udevd.target
+            Before=NetworkManager.service
+            DefaultDependencies=no
+            [Service]
+            Type=oneshot
+            ExecStart=/usr/sbin/restorecon /etc/NetworkManager/dispatcher.d/30-mtu
+            [Install]
+            WantedBy=multi-user.target
+          name: one-shot-mtu.service
+          enabled: true
+EOF
+
+cat << EOF > /root/ocp4/manifests/30-mtu.yaml
+kind: MachineConfig
+apiVersion: machineconfiguration.openshift.io/v1
+metadata:
+  name: 99-worker-mtu
+  creationTimestamp: 
+  labels:
+    machineconfiguration.openshift.io/role: master
+spec:
   config:
     ignition:
       version: 2.2.0
@@ -398,12 +434,11 @@ for node in master-0 master-1 master-2 worker-0 worker-1 worker-2 bootstrap-stat
 done
 
 # Optionally, clean up
-cd
-rm -Rf ${TEMPDIR}
 
+export NGINX_DIRECTORY=/data/ocp4
 cd ${NGINX_DIRECTORY}
 
-scp *.iso root@172.29.159.100:/data/ocp4/
+# scp *.iso root@172.29.159.100:/data/ocp4/
 
 create_lv() {
     var_name=$1
@@ -417,6 +452,8 @@ create_lv master0lv
 create_lv master1lv
 create_lv master2lv
 create_lv worker0lv
+create_lv worker0vdblv
+create_lv worker0vdclv
 
 # finally, we can start install :)
 # 你可以一口气把虚拟机都创建了，然后喝咖啡等着。
@@ -449,6 +486,8 @@ virt-install --name=ocp4-master2 --vcpus=4 --ram=16384 \
 
 virt-install --name=ocp4-worker0 --vcpus=8 --ram=32768 \
 --disk path=/dev/datavg/worker0lv,device=disk,bus=virtio,format=raw \
+--disk path=/dev/datavg/worker0vdblv,device=disk,bus=virtio,format=raw \
+--disk path=/dev/datavg/worker0vdclv,device=disk,bus=virtio,format=raw \
 --os-variant rhel8.0 --network network:br-int,model=virtio \
 --boot menu=on --cdrom ${NGINX_DIRECTORY}/worker-0.iso 
 
@@ -473,6 +512,7 @@ systemctl restart haproxy
 ```bash
 
 export NGINX_DIRECTORY=/data/ocp4
+cd $NGINX_DIRECTORY
 
 create_lv() {
     var_name=$1
@@ -483,9 +523,15 @@ create_lv() {
 
 create_lv worker1lv
 create_lv worker2lv
+create_lv worker1vdblv
+create_lv worker1vdclv
+create_lv worker2vdblv
+create_lv worker2vdclv
 
 virt-install --name=ocp4-worker1 --vcpus=8 --ram=32768 \
 --disk path=/dev/datavg/worker1lv,device=disk,bus=virtio,format=raw \
+--disk path=/dev/datavg/worker1vdblv,device=disk,bus=virtio,format=raw \
+--disk path=/dev/datavg/worker1vdclv,device=disk,bus=virtio,format=raw \
 --os-variant rhel8.0 --network network:br-int,model=virtio \
 --boot menu=on --cdrom ${NGINX_DIRECTORY}/worker-1.iso 
 
@@ -493,8 +539,15 @@ virt-install --name=ocp4-worker1 --vcpus=8 --ram=32768 \
 
 virt-install --name=ocp4-worker2 --vcpus=8 --ram=32768 \
 --disk path=/dev/datavg/worker2lv,device=disk,bus=virtio,format=raw \
+--disk path=/dev/datavg/worker2vdblv,device=disk,bus=virtio,format=raw \
+--disk path=/dev/datavg/worker2vdclv,device=disk,bus=virtio,format=raw \
 --os-variant rhel8.0 --network network:br-int,model=virtio \
 --boot menu=on --cdrom ${NGINX_DIRECTORY}/worker-2.iso 
+
+
+for i in vnet0 vnet1 vnet2 vnet3 vnet4 vnet5; do
+    ovs-vsctl set int $i mtu_request=1450
+done 
 
 
 ```
@@ -520,9 +573,9 @@ openshift-install wait-for install-complete
 # INFO Install complete!
 # INFO To access the cluster as the system:admin user when using 'oc', run 'export KUBECONFIG=/root/ocp4/auth/kubeconfig'
 # INFO Access the OpenShift web-console here: https://console-openshift-console.apps.cmri.redhat.ren
-# INFO Login to the console with user: kubeadmin, password: 3sIr7-Fgbty-qiKLt-VByee
+# INFO Login to the console with user: kubeadmin, password: H7FBT-xQmfg-3Lrgj-3dIiv
 
-bash ocp4-upi-helpernode-master/files/nfs-provisioner-setup.sh
+bash ocp4-upi-helpernode/files/nfs-provisioner-setup.sh
 
 oc patch configs.imageregistry.operator.openshift.io cluster -p '{"spec":{"managementState": "Managed","storage":{"pvc":{"claim":""}}}}' --type=merge
 
@@ -612,6 +665,8 @@ oc patch image.config.openshift.io/cluster -p '{"spec":{"additionalTrustedCA":{"
 # oc patch image.config.openshift.io/cluster -p '{"spec":{"registrySources":{"insecureRegistries":["registry.redhat.ren"]}}}'  --type=merge
 oc get image.config.openshift.io/cluster -o yaml
 
+oc apply -f ./99-worker-zzz-container-registries.yaml -n openshift-config
+oc apply -f ./99-master-zzz-container-registries.yaml -n openshift-config
 
 cd /root/ocp4
 bash is.patch.sh
