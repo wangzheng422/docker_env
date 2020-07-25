@@ -34,6 +34,7 @@ tar -cf - registry/ | pigz -c > /mnt/hgfs/ocp.4.2.8/registry.tgz
 OCP_VERION="4.4.7.ccn"
 
 mkdir -p /mnt/hgfs/ocp.archive/ocp.tgz.${OCP_VERION}
+ls /mnt/hgfs/ocp.archive/ocp.tgz.${OCP_VERION}
 
 cd /root
 tar -cf - data/ | pigz -c > /mnt/hgfs/ocp.archive/ocp.tgz.${OCP_VERION}/rhel-data.tgz
