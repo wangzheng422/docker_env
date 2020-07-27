@@ -79,4 +79,9 @@ journalctl --list-boot
 # https://access.redhat.com/solutions/696893
 sed -i 's/#Storage=auto/Storage=persistent/' /etc/systemd/journald.conf
 systemctl restart systemd-journald.service
+
+spec:
+  unsupportedConfigOverrides:
+    servicesNodePortRange: <range-low>-<range-high>
+    
 ```
