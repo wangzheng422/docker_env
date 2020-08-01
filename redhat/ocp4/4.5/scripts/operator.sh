@@ -5,6 +5,8 @@ set -x
 
 var_date=$(date '+%Y-%m-%d')
 echo $var_date
+export var_major_version='4.5'
+echo ${var_major_version}
 
 cd /data/ocp4
 /bin/rm -rf /data/ocp4/operator
@@ -15,18 +17,18 @@ cd /data/ocp4/operator/
 
 oc adm catalog build --filter-by-os='linux/amd64' \
     --appregistry-org redhat-operators \
-    --from=registry.redhat.io/openshift4/ose-operator-registry:v4.4 \
-    --to=docker.io/wangzheng422/operator-catalog:redhat-4.4-$var_date 
+    --from=registry.redhat.io/openshift4/ose-operator-registry:v${var_major_version} \
+    --to=docker.io/wangzheng422/operator-catalog:redhat-${var_major_version}-$var_date 
 
 oc adm catalog build --filter-by-os='linux/amd64' \
     --appregistry-org certified-operators \
-    --from=registry.redhat.io/openshift4/ose-operator-registry:v4.4 \
-    --to=docker.io/wangzheng422/operator-catalog:certified-4.4-$var_date  
+    --from=registry.redhat.io/openshift4/ose-operator-registry:v${var_major_version} \
+    --to=docker.io/wangzheng422/operator-catalog:certified-${var_major_version}-$var_date  
 
 oc adm catalog build --filter-by-os='linux/amd64' \
     --appregistry-org community-operators \
-    --from=registry.redhat.io/openshift4/ose-operator-registry:v4.4 \
-    --to=docker.io/wangzheng422/operator-catalog:community-4.4-$var_date  
+    --from=registry.redhat.io/openshift4/ose-operator-registry:v${var_major_version} \
+    --to=docker.io/wangzheng422/operator-catalog:community-${var_major_version}-$var_date  
 
 
 curl https://quay.io/cnr/api/v1/packages?namespace=redhat-operators > packages.txt
@@ -146,8 +148,8 @@ buildah from --name onbuild-container docker.io/library/centos:centos7
 buildah copy onbuild-container operator.tgz /
 buildah copy onbuild-container operator.image.list.uniq /
 buildah umount onbuild-container 
-buildah commit --rm --format=docker onbuild-container docker.io/wangzheng422/operator-catalog:fs-4.4-$var_date
+buildah commit --rm --format=docker onbuild-container docker.io/wangzheng422/operator-catalog:fs-${var_major_version}-$var_date
 # buildah rm onbuild-container
-buildah push docker.io/wangzheng422/operator-catalog:fs-4.4-$var_date
+buildah push docker.io/wangzheng422/operator-catalog:fs-${var_major_version}-$var_date
 
 
