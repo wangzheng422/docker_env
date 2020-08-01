@@ -10,9 +10,9 @@ build_number_list=$(cat << EOF
 EOF
 )
 
-export var_date='2020-06-08'
+export var_date='2020-08-01'
 echo $var_date
-export var_major_version='4.4'
+export var_major_version='4.5'
 echo ${var_major_version}
 
 # export MIRROR_DIR='/data/mirror_dir'
