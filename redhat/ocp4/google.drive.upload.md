@@ -51,7 +51,7 @@ export VULTR_HOST=zero.pvg.redhat.ren
 
 export VULTR_HOST=vcdn.redhat.ren
 
-export VULTR_HOST=bastion.fd21.example.opentlc.com
+export VULTR_HOST=bastion.53ec.example.opentlc.com
 
 cat << EOF > /root/.ssh/config
 StrictHostKeyChecking no
