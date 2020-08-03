@@ -3,7 +3,7 @@
 set -e
 set -x
 
-var_date=$(date '+%Y-%m-%d')
+var_date=$(date '+%Y-%m-%d-%H%M')
 echo $var_date
 export var_major_version='4.5'
 echo ${var_major_version}
@@ -33,7 +33,7 @@ oc adm catalog build --filter-by-os='linux/amd64' \
 oc adm catalog build --filter-by-os='linux/amd64' \
     --appregistry-org redhat-marketplace \
     --from=registry.redhat.io/openshift4/ose-operator-registry:v${var_major_version} \
-    --to=docker.io/wangzheng422/operator-catalog:community-${var_major_version}-$var_date  
+    --to=docker.io/wangzheng422/operator-catalog:redhat-marketplace-${var_major_version}-$var_date  
 
 
 curl https://quay.io/cnr/api/v1/packages?namespace=redhat-operators > packages.txt
