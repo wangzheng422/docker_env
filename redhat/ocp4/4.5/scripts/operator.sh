@@ -30,10 +30,16 @@ oc adm catalog build --filter-by-os='linux/amd64' \
     --from=registry.redhat.io/openshift4/ose-operator-registry:v${var_major_version} \
     --to=docker.io/wangzheng422/operator-catalog:community-${var_major_version}-$var_date  
 
+oc adm catalog build --filter-by-os='linux/amd64' \
+    --appregistry-org redhat-marketplace \
+    --from=registry.redhat.io/openshift4/ose-operator-registry:v${var_major_version} \
+    --to=docker.io/wangzheng422/operator-catalog:community-${var_major_version}-$var_date  
+
 
 curl https://quay.io/cnr/api/v1/packages?namespace=redhat-operators > packages.txt
 curl https://quay.io/cnr/api/v1/packages?namespace=certified-operators >> packages.txt
 curl https://quay.io/cnr/api/v1/packages?namespace=community-operators >> packages.txt
+curl https://quay.io/cnr/api/v1/packages?namespace=redhat-marketplace >> packages.txt
 
 cat packages.txt | jq -r ".[] | [.namespace, .name, .releases[0]] | @tsv" | awk -v FS="\t" '{printf "https://quay.io/cnr/api/v1/packages/%s/%s\t%s\t%s%s",$2,$3,$2,$3,ORS}' > url.txt
 
