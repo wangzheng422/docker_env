@@ -111,6 +111,7 @@ podman save docker.io/library/registry:2 | pigz -c > registry.tgz
 oc image mirror --filter-by-os='linux/amd64' docker.io/wangzheng422/operator-catalog:redhat-${var_major_version}-${var_date} ${LOCAL_REG}/docker.io/wangzheng422/operator-catalog:redhat-${var_major_version}-${var_date}
 oc image mirror --filter-by-os='linux/amd64' docker.io/wangzheng422/operator-catalog:certified-${var_major_version}-${var_date} ${LOCAL_REG}/docker.io/wangzheng422/operator-catalog:certified-${var_major_version}-${var_date}
 oc image mirror --filter-by-os='linux/amd64' docker.io/wangzheng422/operator-catalog:community-${var_major_version}-${var_date} ${LOCAL_REG}/docker.io/wangzheng422/operator-catalog:community-${var_major_version}-${var_date}
+oc image mirror --filter-by-os='linux/amd64' docker.io/wangzheng422/operator-catalog:redhat-marketplace-${var_major_version}-${var_date} ${LOCAL_REG}/docker.io/wangzheng422/operator-catalog:redhat-marketplace-${var_major_version}-${var_date}
 
 # /bin/rm -f pull-secret.json
 
@@ -162,6 +163,11 @@ oc adm catalog mirror --filter-by-os='linux/amd64' \
     docker.io/wangzheng422/operator-catalog:community-${var_major_version}-$var_date \
     registry.redhat.ren:5443/ocp-operator 
 /bin/cp -f operator-catalog-manifests/mapping.txt mapping-community.txt
+
+oc adm catalog mirror --filter-by-os='linux/amd64' \
+    docker.io/wangzheng422/operator-catalog:redhat-marketplace-${var_major_version}-$var_date \
+    registry.redhat.ren:5443/ocp-operator 
+/bin/cp -f operator-catalog-manifests/mapping.txt mapping-redhat-marketplace.txt
 
 bash image.registries.conf.sh
 
