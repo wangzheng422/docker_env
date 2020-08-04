@@ -164,10 +164,10 @@ oc adm catalog mirror --filter-by-os='linux/amd64' \
     registry.redhat.ren:5443/ocp-operator 
 /bin/cp -f operator-catalog-manifests/mapping.txt mapping-community.txt
 
-oc adm catalog mirror --filter-by-os='linux/amd64' \
-    docker.io/wangzheng422/operator-catalog:redhat-marketplace-${var_major_version}-$var_date \
-    registry.redhat.ren:5443/ocp-operator 
-/bin/cp -f operator-catalog-manifests/mapping.txt mapping-redhat-marketplace.txt
+# oc adm catalog mirror --filter-by-os='linux/amd64' \
+#     docker.io/wangzheng422/operator-catalog:redhat-marketplace-${var_major_version}-$var_date \
+#     registry.redhat.ren:5443/ocp-operator 
+# /bin/cp -f operator-catalog-manifests/mapping.txt mapping-redhat-marketplace.txt
 
 bash image.registries.conf.sh
 
