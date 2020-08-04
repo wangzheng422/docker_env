@@ -2,7 +2,7 @@
 # GUID, is: 2192
 export GUID=2192
 
-ssh -tt zhengwan-redhat.com@bastion.f93a.sandbox744.opentlc.com "bash -c byobu"
+ssh -tt zhengwan-redhat.com@bastion.5ddb.sandbox45.opentlc.com "bash -l -c byobu"
 
 # ansible localhost -m lineinfile -a 'path=$HOME/.bashrc regexp="^export OCP_RELEASE" line="export OCP_RELEASE=4.2.12"'
 
@@ -10,7 +10,7 @@ yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarc
 
 yum install -y byobu
 
-ansible localhost -m lineinfile -a 'path=$HOME/.bashrc regexp="^export OCP_RELEASE" line="export OCP_RELEASE=4.3.19"'
+ansible localhost -m lineinfile -a 'path=$HOME/.bashrc regexp="^export OCP_RELEASE" line="export OCP_RELEASE=4.5.4"'
 
 source $HOME/.bashrc
 
