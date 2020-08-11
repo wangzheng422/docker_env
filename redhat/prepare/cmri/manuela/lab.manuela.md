@@ -1,5 +1,7 @@
 # cmri labs install for manuela
+
 https://github.com/sa-mw-dach/manuela/blob/master/docs/BOOTSTRAP.md
+
 ## jumpbox
 
 ```bash
@@ -24,6 +26,7 @@ tar -cvf - rhel-data/ | pigz -c > rhel-data.tgz
 
 
 ```
+
 ## try with ovs
 https://pinrojas.com/2017/05/03/how-to-use-virt-install-to-connect-at-openvswitch-bridges/
 
@@ -35,6 +38,8 @@ https://stackoverflow.com/questions/31566658/setup-private-networking-between-tw
 
 follow this to setup ovs network:
 https://github.com/wangzheng422/docker_env/blob/master/redhat/ocp4/4.4/4.4.ovs.md
+
+## cluser-01
 
 ### redhat-01
 
@@ -124,31 +129,6 @@ scp /data/down/ocp4-upi-helpernode.zip 192.168.7.11:/root/ocp4
 
 ```
 
-### redhat-02
-
-```bash
-# on redhat-02
-
-lvcreate -L 1T -n datalv datavg
-mkfs.ext4 /dev/datavg/datalv
-mount /dev/datavg/datalv /data
-
-mkdir -p /data/kvm
-cd /data/kvm
-
-lvremove -f datavg/helperlv
-lvcreate -y -L 230G -n helperlv datavg
-
-# 230G
-virt-install --name="ocp4-aHelper" --vcpus=2 --ram=4096 \
---disk path=/dev/datavg/helperlv,device=disk,bus=virtio,format=raw \
---os-variant centos7.0 --network network:br-int,model=virtio \
---boot menu=on --location /data/kvm/rhel-server-7.8-x86_64-dvd.iso \
---initrd-inject /data/kvm/helper-ks.cfg --extra-args "inst.ks=file:/helper-ks.cfg" 
-
-
-
-```
 
 ### helper
 
@@ -452,8 +432,7 @@ create_lv master0lv
 create_lv master1lv
 create_lv master2lv
 create_lv worker0lv
-create_lv worker0vdblv
-create_lv worker0vdclv
+create_lv worker1lv
 
 # finally, we can start install :)
 # 你可以一口气把虚拟机都创建了，然后喝咖啡等着。
@@ -486,10 +465,13 @@ virt-install --name=ocp4-master2 --vcpus=4 --ram=16384 \
 
 virt-install --name=ocp4-worker0 --vcpus=8 --ram=32768 \
 --disk path=/dev/datavg/worker0lv,device=disk,bus=virtio,format=raw \
---disk path=/dev/datavg/worker0vdblv,device=disk,bus=virtio,format=raw \
---disk path=/dev/datavg/worker0vdclv,device=disk,bus=virtio,format=raw \
 --os-variant rhel8.0 --network network:br-int,model=virtio \
 --boot menu=on --cdrom ${NGINX_DIRECTORY}/worker-0.iso 
+
+virt-install --name=ocp4-worker1 --vcpus=8 --ram=32768 \
+--disk path=/dev/datavg/worker1lv,device=disk,bus=virtio,format=raw \
+--os-variant rhel8.0 --network network:br-int,model=virtio \
+--boot menu=on --cdrom ${NGINX_DIRECTORY}/worker-1.iso 
 
 
 for i in vnet0 vnet1 vnet2 vnet3 vnet4 vnet5; do
@@ -507,50 +489,6 @@ systemctl restart haproxy
 
 ```
 
-### redhat-02
-
-```bash
-
-export NGINX_DIRECTORY=/data/ocp4
-cd $NGINX_DIRECTORY
-
-create_lv() {
-    var_name=$1
-    lvremove -f datavg/$var_name
-    lvcreate -y -L 120G -n $var_name datavg
-    # wipefs --all --force /dev/datavg/$var_name
-}
-
-create_lv worker1lv
-create_lv worker2lv
-create_lv worker1vdblv
-create_lv worker1vdclv
-create_lv worker2vdblv
-create_lv worker2vdclv
-
-virt-install --name=ocp4-worker1 --vcpus=8 --ram=32768 \
---disk path=/dev/datavg/worker1lv,device=disk,bus=virtio,format=raw \
---disk path=/dev/datavg/worker1vdblv,device=disk,bus=virtio,format=raw \
---disk path=/dev/datavg/worker1vdclv,device=disk,bus=virtio,format=raw \
---os-variant rhel8.0 --network network:br-int,model=virtio \
---boot menu=on --cdrom ${NGINX_DIRECTORY}/worker-1.iso 
-
-# ovs-vsctl set int br-int mtu_request=1450
-
-virt-install --name=ocp4-worker2 --vcpus=8 --ram=32768 \
---disk path=/dev/datavg/worker2lv,device=disk,bus=virtio,format=raw \
---disk path=/dev/datavg/worker2vdblv,device=disk,bus=virtio,format=raw \
---disk path=/dev/datavg/worker2vdclv,device=disk,bus=virtio,format=raw \
---os-variant rhel8.0 --network network:br-int,model=virtio \
---boot menu=on --cdrom ${NGINX_DIRECTORY}/worker-2.iso 
-
-
-for i in vnet0 vnet1 vnet2 vnet3 vnet4 vnet5; do
-    ovs-vsctl set int $i mtu_request=1450
-done 
-
-
-```
 
 ### helper
 
@@ -725,14 +663,292 @@ chromium-browser --no-sandbox --ignore-certificate-errors &> /dev/null &
 
 scp -3 root@v.redhat.ren:/data/mirror_dir.tgz root@172.29.159.99:/data/down/
 
+```
+
+## cluster-02
 
 
+### redhat-02
+
+```bash
+# on redhat-02
+
+lvcreate -L 1T -n datalv datavg
+mkfs.ext4 /dev/datavg/datalv
+mount /dev/datavg/datalv /data
+
+mkdir -p /data/kvm
+cd /data/kvm
+
+lvremove -f datavg/helperlv
+lvcreate -y -L 430G -n helperlv datavg
+
+# 230G
+virt-install --name="ocp4-aHelper" --vcpus=2 --ram=4096 \
+--disk path=/dev/datavg/helperlv,device=disk,bus=virtio,format=raw \
+--os-variant centos7.0 --network network:br-int,model=virtio \
+--boot menu=on --location /data/kvm/rhel-server-7.8-x86_64-dvd.iso \
+--initrd-inject /data/kvm/helper-ks.cfg --extra-args "inst.ks=file:/helper-ks.cfg" 
 
 
-
-
-
+scp root@172.29.159.99:/etc/crts/redhat.ren.crt /etc/pki/ca-trust/source/anchors/
+update-ca-trust extract
 
 
 ```
 
+
+
+### helper
+
+```bash
+
+mkdir /etc/yum.repos.d.bak
+mv /etc/yum.repos.d/* /etc/yum.repos.d.bak/
+cat << EOF > /etc/yum.repos.d/remote.repo
+[remote]
+name=RHEL FTP
+baseurl=ftp://172.29.159.99/data
+enabled=1
+gpgcheck=0
+
+EOF
+
+yum clean all
+yum repolist
+
+yum -y install ansible git unzip podman
+
+# scp ocp4.tgz to /root
+cd /root
+tar zvxf ocp4.tgz
+cd /root/ocp4
+
+unzip ocp4-upi-helpernode-master.zip
+# podman load -i fedora.tgz
+podman load -i filetranspiler.tgz
+# 根据现场环境，修改 ocp4-upi-helpernode-master/vars-static.yaml
+cd ocp4-upi-helpernode
+
+vi vars-static.yaml
+
+ansible-playbook -e @vars-static.yaml -e staticips=true tasks/main.yml
+
+
+# on helper node
+cd /root/ocp4
+mkdir -p /data
+# export BUILDNUMBER=$(cat release.txt | grep 'Name:' | awk '{print $NF}')
+export BUILDNUMBER=4.4.7
+echo ${BUILDNUMBER}
+# export BUILDNUMBER=4.2.4
+export OCP_RELEASE=${BUILDNUMBER}
+export LOCAL_REG='registry.redhat.ren:5443'
+export LOCAL_REPO='ocp4/openshift4'
+export UPSTREAM_REPO='openshift-release-dev'
+export LOCAL_SECRET_JSON="/data/pull-secret.json"
+export OPENSHIFT_INSTALL_RELEASE_IMAGE_OVERRIDE=${LOCAL_REG}/${LOCAL_REPO}:${OCP_RELEASE}
+export RELEASE_NAME="ocp-release"
+
+cat << EOF > /root/.ssh/config
+StrictHostKeyChecking no
+UserKnownHostsFile=/dev/null
+EOF
+
+cat << 'EOF' >> /etc/sysconfig/network-scripts/ifcfg-eth0
+MTU=1450
+EOF
+systemctl restart network
+
+cd /root/ocp4
+
+vi install-config.yaml 
+
+/bin/rm -rf *.ign .openshift_install_state.json auth bootstrap master0 master1 master2 worker0 worker1 worker2
+
+# openshift-install create ignition-configs --dir=/root/ocp4
+openshift-install create manifests --dir=/root/ocp4
+# scp calico/manifests to manifests
+
+# https://access.redhat.com/solutions/5092381
+cat << 'EOF' > /root/ocp4/30-mtu.sh
+#!/bin/sh
+MTU=1450
+INTERFACE=ens3
+
+IFACE=$1
+STATUS=$2
+if [ "$IFACE" = "$INTERFACE" -a "$STATUS" = "up" ]; then
+    ip link set "$IFACE" mtu $MTU
+fi
+EOF
+
+cat /root/ocp4/30-mtu.sh | base64 -w0
+
+cat << EOF > /root/ocp4/manifests/30-mtu.yaml
+kind: MachineConfig
+apiVersion: machineconfiguration.openshift.io/v1
+metadata:
+  name: 99-worker-mtu
+  creationTimestamp: 
+  labels:
+    machineconfiguration.openshift.io/role: worker
+spec:
+  config:
+    ignition:
+      version: 2.2.0
+    storage:
+      files:
+      - filesystem: root
+        path: "/etc/NetworkManager/dispatcher.d/30-mtu"
+        contents:
+          source: data:text/plain;charset=utf-8;base64,IyEvYmluL3NoCk1UVT05MDAwCklOVEVSRkFDRT1lbnM0CgpJRkFDRT0kMQpTVEFUVVM9JDIKaWYgWyAiJElGQUNFIiA9ICIkSU5URVJGQUNFIiAtYSAiJFNUQVRVUyIgPSAidXAiIF07IHRoZW4KICAgIGlwIGxpbmsgc2V0ICIkSUZBQ0UiIG10dSAkTVRVCmZpCg==
+          verification: {}
+        mode: 0755
+    systemd:
+      units:
+        - contents: |
+            [Unit]
+            Requires=systemd-udevd.target
+            After=systemd-udevd.target
+            Before=NetworkManager.service
+            DefaultDependencies=no
+            [Service]
+            Type=oneshot
+            ExecStart=/usr/sbin/restorecon /etc/NetworkManager/dispatcher.d/30-mtu
+            [Install]
+            WantedBy=multi-user.target
+          name: one-shot-mtu.service
+          enabled: true
+EOF
+
+cat << EOF > /root/ocp4/manifests/30-mtu.yaml
+kind: MachineConfig
+apiVersion: machineconfiguration.openshift.io/v1
+metadata:
+  name: 99-worker-mtu
+  creationTimestamp: 
+  labels:
+    machineconfiguration.openshift.io/role: master
+spec:
+  config:
+    ignition:
+      version: 2.2.0
+    storage:
+      files:
+      - filesystem: root
+        path: "/etc/NetworkManager/dispatcher.d/30-mtu"
+        contents:
+          source: data:text/plain;charset=utf-8;base64,IyEvYmluL3NoCk1UVT05MDAwCklOVEVSRkFDRT1lbnM0CgpJRkFDRT0kMQpTVEFUVVM9JDIKaWYgWyAiJElGQUNFIiA9ICIkSU5URVJGQUNFIiAtYSAiJFNUQVRVUyIgPSAidXAiIF07IHRoZW4KICAgIGlwIGxpbmsgc2V0ICIkSUZBQ0UiIG10dSAkTVRVCmZpCg==
+          verification: {}
+        mode: 0755
+    systemd:
+      units:
+        - contents: |
+            [Unit]
+            Requires=systemd-udevd.target
+            After=systemd-udevd.target
+            Before=NetworkManager.service
+            DefaultDependencies=no
+            [Service]
+            Type=oneshot
+            ExecStart=/usr/sbin/restorecon /etc/NetworkManager/dispatcher.d/30-mtu
+            [Install]
+            WantedBy=multi-user.target
+          name: one-shot-mtu.service
+          enabled: true
+EOF
+
+openshift-install create ignition-configs --dir=/root/ocp4
+
+
+/bin/cp -f bootstrap.ign /var/www/html/ignition/bootstrap-static.ign
+/bin/cp -f master.ign /var/www/html/ignition/master-0.ign
+/bin/cp -f master.ign /var/www/html/ignition/master-1.ign
+/bin/cp -f master.ign /var/www/html/ignition/master-2.ign
+/bin/cp -f worker.ign /var/www/html/ignition/worker-0.ign
+/bin/cp -f worker.ign /var/www/html/ignition/worker-1.ign
+/bin/cp -f worker.ign /var/www/html/ignition/worker-2.ign
+
+chmod 644 /var/www/html/ignition/*
+
+```
+
+
+
+
+### redhat-02
+
+```bash
+
+export NGINX_DIRECTORY=/data/ocp4
+cd $NGINX_DIRECTORY
+
+create_lv() {
+    var_name=$1
+    lvremove -f datavg/$var_name
+    lvcreate -y -L 120G -n $var_name datavg
+    # wipefs --all --force /dev/datavg/$var_name
+}
+
+create_lv bootstraplv
+create_lv master0lv
+create_lv master1lv
+create_lv master2lv
+create_lv worker0lv
+create_lv worker1lv
+
+# finally, we can start install :)
+# 你可以一口气把虚拟机都创建了，然后喝咖啡等着。
+# 从这一步开始，到安装完毕，大概30分钟。
+virt-install --name=ocp4-bootstrap --vcpus=4 --ram=8192 \
+--disk path=/dev/datavg/bootstraplv,device=disk,bus=virtio,format=raw \
+--os-variant rhel8.0 --network network:br-int,model=virtio \
+--boot menu=on --cdrom ${NGINX_DIRECTORY}/bootstrap-static.iso   
+
+# 想登录进coreos一探究竟？那么这么做
+# ssh core@192.168.7.12 
+# journalctl -b -f -u bootkube.service
+
+virt-install --name=ocp4-master0 --vcpus=4 --ram=16384 \
+--disk path=/dev/datavg/master0lv,device=disk,bus=virtio,format=raw \
+--os-variant rhel8.0 --network network:br-int,model=virtio \
+--boot menu=on --cdrom ${NGINX_DIRECTORY}/master-0.iso 
+
+# ssh core@192.168.7.13
+
+virt-install --name=ocp4-master1 --vcpus=4 --ram=16384 \
+--disk path=/dev/datavg/master1lv,device=disk,bus=virtio,format=raw \
+--os-variant rhel8.0 --network network:br-int,model=virtio \
+--boot menu=on --cdrom ${NGINX_DIRECTORY}/master-1.iso 
+
+virt-install --name=ocp4-master2 --vcpus=4 --ram=16384 \
+--disk path=/dev/datavg/master2lv,device=disk,bus=virtio,format=raw \
+--os-variant rhel8.0 --network network:br-int,model=virtio \
+--boot menu=on --cdrom ${NGINX_DIRECTORY}/master-2.iso 
+
+virt-install --name=ocp4-worker0 --vcpus=8 --ram=32768 \
+--disk path=/dev/datavg/worker0lv,device=disk,bus=virtio,format=raw \
+--os-variant rhel8.0 --network network:br-int,model=virtio \
+--boot menu=on --cdrom ${NGINX_DIRECTORY}/worker-0.iso 
+
+virt-install --name=ocp4-worker1 --vcpus=8 --ram=32768 \
+--disk path=/dev/datavg/worker1lv,device=disk,bus=virtio,format=raw \
+--os-variant rhel8.0 --network network:br-int,model=virtio \
+--boot menu=on --cdrom ${NGINX_DIRECTORY}/worker-1.iso 
+
+
+for i in vnet0 vnet1 vnet2 vnet3 vnet4 vnet5; do
+    ovs-vsctl set int $i mtu_request=1450
+done 
+
+
+
+yum -y install haproxy
+# scp haproxy.cfg to /data/ocp4/haproxy。cfg
+/bin/cp -f /data/ocp4/haproxy.cfg /etc/haproxy/haproxy.cfg
+setsebool -P haproxy_connect_any 1
+systemctl enable --now haproxy
+systemctl restart haproxy
+
+```
