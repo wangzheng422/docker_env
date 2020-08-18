@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-export tag="v3.11.117"
-export private_repo="aws-registry.redhat.ren"
+export tag="v3.11.248"
+export private_repo="registry.redhat.ren:5443"
 export major_tag="v3.11"
 # https://access.redhat.com/articles/2834301
 # docker search rhgs3 | grep redhat.io | awk '{print $2}'
@@ -16,16 +16,12 @@ registry.redhat.io/openshift3/csi-driver-registrar:$tag
 registry.redhat.io/openshift3/csi-livenessprobe:$tag
 registry.redhat.io/openshift3/csi-provisioner:$tag
 registry.redhat.io/openshift3/grafana:$tag
-
-registry.redhat.io/openshift3/image-inspector:v3.11
-
 registry.redhat.io/openshift3/local-storage-provisioner:$tag
 registry.redhat.io/openshift3/manila-provisioner:$tag
 registry.redhat.io/openshift3/mariadb-apb:$tag
 registry.redhat.io/openshift3/mediawiki:$tag
 registry.redhat.io/openshift3/mediawiki-apb:$tag
 registry.redhat.io/openshift3/mysql-apb:$tag
-registry.redhat.io/openshift3/ose-ansible:$tag
 registry.redhat.io/openshift3/ose-ansible-service-broker:$tag
 registry.redhat.io/openshift3/ose-cli:$tag
 registry.redhat.io/openshift3/ose-cluster-autoscaler:$tag
@@ -65,6 +61,8 @@ registry.redhat.io/openshift3/postgresql-apb:$tag
 registry.redhat.io/openshift3/registry-console:$tag
 registry.redhat.io/openshift3/snapshot-controller:$tag
 registry.redhat.io/openshift3/snapshot-provisioner:$tag
+
+registry.redhat.io/openshift3/ose-efs-provisioner:$tag
 registry.redhat.io/openshift3/metrics-cassandra:$tag
 registry.redhat.io/openshift3/metrics-hawkular-metrics:$tag
 registry.redhat.io/openshift3/metrics-hawkular-openshift-agent:$tag
@@ -77,26 +75,57 @@ registry.redhat.io/openshift3/ose-logging-eventrouter:$tag
 registry.redhat.io/openshift3/ose-logging-fluentd:$tag
 registry.redhat.io/openshift3/ose-logging-kibana5:$tag
 registry.redhat.io/openshift3/prometheus:$tag
-
-registry.redhat.io/openshift3/prometheus-alert-buffer:v3.11
-
 registry.redhat.io/openshift3/prometheus-alertmanager:$tag
 registry.redhat.io/openshift3/prometheus-node-exporter:$tag
-
+registry.redhat.io/cloudforms46/cfme-openshift-postgresql
+registry.redhat.io/cloudforms46/cfme-openshift-memcached
+registry.redhat.io/cloudforms46/cfme-openshift-app-ui
+registry.redhat.io/cloudforms46/cfme-openshift-app
+registry.redhat.io/cloudforms46/cfme-openshift-embedded-ansible
+registry.redhat.io/cloudforms46/cfme-openshift-httpd
+registry.redhat.io/cloudforms46/cfme-httpd-configmap-generator
+registry.redhat.io/rhgs3/rhgs-server-rhel7
+registry.redhat.io/rhgs3/rhgs-volmanager-rhel7
+registry.redhat.io/rhgs3/rhgs-gluster-block-prov-rhel7
+registry.redhat.io/rhgs3/rhgs-s3-server-rhel7
+registry.redhat.io/jboss-amq-6/amq63-openshift:$tag
+registry.redhat.io/jboss-datagrid-7/datagrid71-openshift:$tag
+registry.redhat.io/jboss-datagrid-7/datagrid71-client-openshift:$tag
+registry.redhat.io/jboss-datavirt-6/datavirt63-openshift:$tag
+registry.redhat.io/jboss-datavirt-6/datavirt63-driver-openshift:$tag
+registry.redhat.io/jboss-decisionserver-6/decisionserver64-openshift:$tag
+registry.redhat.io/jboss-processserver-6/processserver64-openshift:$tag
+registry.redhat.io/jboss-eap-6/eap64-openshift:$tag
+registry.redhat.io/jboss-eap-7/eap71-openshift:$tag
+registry.redhat.io/jboss-webserver-3/webserver31-tomcat7-openshift:$tag
+registry.redhat.io/jboss-webserver-3/webserver31-tomcat8-openshift:$tag
 registry.redhat.io/openshift3/jenkins-2-rhel7:$tag
 registry.redhat.io/openshift3/jenkins-agent-maven-35-rhel7:$tag
 registry.redhat.io/openshift3/jenkins-agent-nodejs-8-rhel7:$tag
 registry.redhat.io/openshift3/jenkins-slave-base-rhel7:$tag
 registry.redhat.io/openshift3/jenkins-slave-maven-rhel7:$tag
 registry.redhat.io/openshift3/jenkins-slave-nodejs-rhel7:$tag
+registry.redhat.io/rhscl/mongodb-32-rhel7:$tag
+registry.redhat.io/rhscl/mysql-57-rhel7:$tag
+registry.redhat.io/rhscl/perl-524-rhel7:$tag
+registry.redhat.io/rhscl/php-56-rhel7:$tag
+registry.redhat.io/rhscl/postgresql-95-rhel7:$tag
+registry.redhat.io/rhscl/python-35-rhel7:$tag
+registry.redhat.io/redhat-sso-7/sso70-openshift:$tag
+registry.redhat.io/rhscl/ruby-24-rhel7:$tag
+registry.redhat.io/redhat-openjdk-18/openjdk18-openshift:$tag
+registry.redhat.io/redhat-sso-7/sso71-openshift:$tag
+registry.redhat.io/rhscl/nodejs-6-rhel7:$tag
+registry.redhat.io/rhscl/mariadb-101-rhel7:$tag
 
+registry.redhat.io/openshift3/ose-ansible:v3.11
 EOF
 )
 
 ## 后续导入的时候，不要更改版本号
 ose3_optional_imags=$(cat << EOF
 
-registry.redhat.io/rhel7/etcd:3.2.22
+registry.redhat.io/rhel7/etcd:3.2.26
 
 EOF
 )
