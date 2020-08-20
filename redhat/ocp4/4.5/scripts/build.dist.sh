@@ -35,6 +35,7 @@ wget -O demos.sh https://raw.githubusercontent.com/wangzheng422/docker_env/dev/r
 # podman login registry.redhat.ren -u a -p a
 
 mkdir -p /data/ocp4
+/bin/rm -f /data/finished
 cd /data/ocp4
 # wget https://mirror.openshift.com/pub/openshift-v4/clients/ocp/latest-4.2/release.txt
 
@@ -196,4 +197,7 @@ cd /data
 
 # find ./ -maxdepth 1 -name "*.tgz" -exec skicka upload {}  /"zhengwan.share/shared_docs/2020.02/ocp.ccn.4.3.3/" \;
 # find ./ -maxdepth 1 -name "*.txt" -exec skicka upload {}  /"zhengwan.share/shared_docs/2020.02/ocp.ccn.4.3.3/" \;
+
+var_finish_date=$(date '+%Y-%m-%d-%H%M')
+echo $var_finish_date > /data/finished
 
