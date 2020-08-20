@@ -18,12 +18,13 @@ subscription-manager repos \
     --enable="rhel-7-server-extras-rpms" \
     --enable="rhel-7-server-supplementary-rpms" \
     --enable="rhel-7-server-ansible-2.9-rpms" \
-    --enable="rhel-7-server-ose-3.11-rpms" \
     --enable="rhel-7-server-ose-4.5-rpms" \
     --enable="rhel-7-server-optional-rpms" \
     --enable="rhel-7-server-cnv-2.4-rpms" \
+    --enable="rhel-7-server-rhv-4-mgmt-agent-rpms" \
     # this is the end
 
+    --enable="rhel-7-server-ose-3.11-rpms" \
     # --enable="rhel-7-server-ansible-2.8-rpms" \
     # --enable="rhel-7-server-ose-4.2-rpms" \
     # --enable="rhel-7-server-ose-4.3-rpms" \
@@ -171,6 +172,7 @@ cd /data/yum
 reposync -n -d -l -m
 reposync -d -l -m
 yum repolist
+
 reposync -n -d -l -m -r rhel-7-server-openstack-14-rpms
 reposync -n -d -l -m -r rhel-7-server-optional-rpms
 createrepo ./
