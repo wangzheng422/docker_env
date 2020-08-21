@@ -31,7 +31,7 @@ tar -cf - registry/ | pigz -c > /mnt/hgfs/ocp.4.2.8/registry.tgz
 
 
 # back up to disk
-OCP_VERION="4.4.7.ccn"
+OCP_VERION="4.5.7"
 
 mkdir -p /mnt/hgfs/ocp.archive/ocp.tgz.${OCP_VERION}
 ls /mnt/hgfs/ocp.archive/ocp.tgz.${OCP_VERION}
