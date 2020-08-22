@@ -46,9 +46,9 @@ tar -cf - is.samples/ | pigz -c > /mnt/hgfs/ocp.archive/ocp.tgz.${OCP_VERION}/is
 
 cd /mnt/hgfs/ocp.archive/ocp.tgz.${OCP_VERION}/
 split -b 5000m ocp4.tgz ocp4.
-split -b 5000m registry.tgz registry.
-split -b 5000m is.samples.tgz is.samples.
 split -b 5000m rhel-data.tgz rhel-data.
+split -b 5000m is.samples.tgz is.samples.
+split -b 5000m registry.tgz registry.
 
 
 cd 
