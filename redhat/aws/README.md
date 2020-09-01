@@ -24,7 +24,7 @@ subscription-manager repos \
     --enable="rhel-7-server-rhv-4-mgmt-agent-rpms" \
     # this is the end
 
-    --enable="rhel-7-server-ose-3.11-rpms" \
+    # --enable="rhel-7-server-ose-3.11-rpms" \
     # --enable="rhel-7-server-ansible-2.8-rpms" \
     # --enable="rhel-7-server-ose-4.2-rpms" \
     # --enable="rhel-7-server-ose-4.3-rpms" \
