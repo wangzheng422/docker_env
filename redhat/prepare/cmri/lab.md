@@ -573,7 +573,7 @@ openshift-install wait-for install-complete
 # INFO Install complete!
 # INFO To access the cluster as the system:admin user when using 'oc', run 'export KUBECONFIG=/root/ocp4/auth/kubeconfig'
 # INFO Access the OpenShift web-console here: https://console-openshift-console.apps.cmri.redhat.ren
-# INFO Login to the console with user: kubeadmin, password: H7FBT-xQmfg-3Lrgj-3dIiv
+# INFO Login to the console with user: kubeadmin, password: XF8ny-Unfey-LgPuf-d3oDG
 
 bash ocp4-upi-helpernode/files/nfs-provisioner-setup.sh
 
