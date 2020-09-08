@@ -236,7 +236,7 @@ EOF
 
 cat /root/ocp4/30-mtu.sh | base64 -w0
 
-cat << EOF > /root/ocp4/manifests/30-mtu.yaml
+cat << EOF > /root/ocp4/manifests/30-mtu-worker.yaml
 kind: MachineConfig
 apiVersion: machineconfiguration.openshift.io/v1
 metadata:
@@ -273,11 +273,11 @@ spec:
           enabled: true
 EOF
 
-cat << EOF > /root/ocp4/manifests/30-mtu.yaml
+cat << EOF > /root/ocp4/manifests/30-mtu-master.yaml
 kind: MachineConfig
 apiVersion: machineconfiguration.openshift.io/v1
 metadata:
-  name: 99-worker-mtu
+  name: 99-master-mtu
   creationTimestamp: 
   labels:
     machineconfiguration.openshift.io/role: master

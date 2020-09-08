@@ -762,7 +762,7 @@ cd /root/ocp4
 
 vi install-config.yaml 
 
-/bin/rm -rf *.ign .openshift_install_state.json auth bootstrap master0 master1 master2 worker0 worker1 worker2
+/bin/rm -rf *.ign .openshift_install_state.json auth bootstrap manifests master0 master1 master2 worker0 worker1 worker2
 
 # openshift-install create ignition-configs --dir=/root/ocp4
 openshift-install create manifests --dir=/root/ocp4
@@ -781,9 +781,9 @@ if [ "$IFACE" = "$INTERFACE" -a "$STATUS" = "up" ]; then
 fi
 EOF
 
-cat /root/ocp4/30-mtu.sh | base64 -w0
+cat /root/ocp4/30-mtu.sh | base64 -w0 > /root/ocp4/30-mtu.sh.encode
 
-cat << EOF > /root/ocp4/manifests/30-mtu.yaml
+cat << EOF > /root/ocp4/manifests/30-mtu-worker.yaml
 kind: MachineConfig
 apiVersion: machineconfiguration.openshift.io/v1
 metadata:
@@ -800,7 +800,7 @@ spec:
       - filesystem: root
         path: "/etc/NetworkManager/dispatcher.d/30-mtu"
         contents:
-          source: data:text/plain;charset=utf-8;base64,IyEvYmluL3NoCk1UVT05MDAwCklOVEVSRkFDRT1lbnM0CgpJRkFDRT0kMQpTVEFUVVM9JDIKaWYgWyAiJElGQUNFIiA9ICIkSU5URVJGQUNFIiAtYSAiJFNUQVRVUyIgPSAidXAiIF07IHRoZW4KICAgIGlwIGxpbmsgc2V0ICIkSUZBQ0UiIG10dSAkTVRVCmZpCg==
+          source: data:text/plain;charset=utf-8;base64,$(cat /root/ocp4/30-mtu.sh.encode )
           verification: {}
         mode: 0755
     systemd:
@@ -820,11 +820,11 @@ spec:
           enabled: true
 EOF
 
-cat << EOF > /root/ocp4/manifests/30-mtu.yaml
+cat << EOF > /root/ocp4/manifests/30-mtu-master.yaml
 kind: MachineConfig
 apiVersion: machineconfiguration.openshift.io/v1
 metadata:
-  name: 99-worker-mtu
+  name: 99-master-mtu
   creationTimestamp: 
   labels:
     machineconfiguration.openshift.io/role: master
@@ -837,7 +837,7 @@ spec:
       - filesystem: root
         path: "/etc/NetworkManager/dispatcher.d/30-mtu"
         contents:
-          source: data:text/plain;charset=utf-8;base64,IyEvYmluL3NoCk1UVT05MDAwCklOVEVSRkFDRT1lbnM0CgpJRkFDRT0kMQpTVEFUVVM9JDIKaWYgWyAiJElGQUNFIiA9ICIkSU5URVJGQUNFIiAtYSAiJFNUQVRVUyIgPSAidXAiIF07IHRoZW4KICAgIGlwIGxpbmsgc2V0ICIkSUZBQ0UiIG10dSAkTVRVCmZpCg==
+          source: data:text/plain;charset=utf-8;base64,$(cat /root/ocp4/30-mtu.sh.encode )
           verification: {}
         mode: 0755
     systemd:
@@ -881,6 +881,115 @@ chmod 644 /var/www/html/ignition/*
 
 export NGINX_DIRECTORY=/data/ocp4
 cd $NGINX_DIRECTORY
+
+yum -y install genisoimage libguestfs-tools
+systemctl start libvirtd
+
+export NGINX_DIRECTORY=/data/ocp4
+export RHCOSVERSION=4.4.3
+export VOLID=$(isoinfo -d -i ${NGINX_DIRECTORY}/rhcos-${RHCOSVERSION}-x86_64-installer.iso | awk '/Volume id/ { print $3 }')
+TEMPDIR=$(mktemp -d)
+echo $VOLID
+echo $TEMPDIR
+
+cd ${TEMPDIR}
+# Extract the ISO content using guestfish (to avoid sudo mount)
+guestfish -a ${NGINX_DIRECTORY}/rhcos-${RHCOSVERSION}-x86_64-installer.iso \
+  -m /dev/sda tar-out / - | tar xvf -
+
+# Helper function to modify the config files
+modify_cfg(){
+  for file in "EFI/redhat/grub.cfg" "isolinux/isolinux.cfg"; do
+    # Append the proper image and ignition urls
+    sed -e '/coreos.inst=yes/s|$| coreos.inst.install_dev=vda coreos.inst.image_url='"${URL}"'\/install\/'"${BIOSMODE}"'.raw.gz coreos.inst.ignition_url='"${URL}"'\/ignition\/'"${NODE}"'.ign ip='"${IP}"'::'"${GATEWAY}"':'"${NETMASK}"':'"${FQDN}"':'"${NET_INTERFACE}"':none:'"${DNS}"' nameserver='"${DNS}"'|' ${file} > $(pwd)/${NODE}_${file##*/}
+    # Boot directly in the installation
+    sed -i -e 's/default vesamenu.c32/default linux/g' -e 's/timeout 600/timeout 10/g' $(pwd)/${NODE}_${file##*/}
+  done
+}
+
+URL="http://192.168.7.11:8080/"
+GATEWAY="192.168.7.1"
+NETMASK="255.255.255.0"
+DNS="192.168.7.11"
+
+# BOOTSTRAP
+# TYPE="bootstrap"
+NODE="bootstrap-static"
+IP="192.168.7.12"
+FQDN="bootstrap"
+BIOSMODE="bios"
+NET_INTERFACE="ens3"
+modify_cfg
+
+# MASTERS
+# TYPE="master"
+# MASTER-0
+NODE="master-0"
+IP="192.168.7.13"
+FQDN="master-0"
+BIOSMODE="bios"
+NET_INTERFACE="ens3"
+modify_cfg
+
+# MASTER-1
+NODE="master-1"
+IP="192.168.7.14"
+FQDN="master-1"
+BIOSMODE="bios"
+NET_INTERFACE="ens3"
+modify_cfg
+
+# MASTER-2
+NODE="master-2"
+IP="192.168.7.15"
+FQDN="master-2"
+BIOSMODE="bios"
+NET_INTERFACE="ens3"
+modify_cfg
+
+# WORKERS
+NODE="worker-0"
+IP="192.168.7.16"
+FQDN="worker-0"
+BIOSMODE="bios"
+NET_INTERFACE="ens3"
+modify_cfg
+
+NODE="worker-1"
+IP="192.168.7.17"
+FQDN="worker-1"
+BIOSMODE="bios"
+NET_INTERFACE="ens3"
+modify_cfg
+
+NODE="worker-2"
+IP="192.168.7.18"
+FQDN="worker-2"
+BIOSMODE="bios"
+NET_INTERFACE="ens3"
+modify_cfg
+
+# Generate the images, one per node as the IP configuration is different...
+# https://github.com/coreos/coreos-assembler/blob/master/src/cmd-buildextend-installer#L97-L103
+for node in master-0 master-1 master-2 worker-0 worker-1 worker-2 bootstrap-static; do
+  # Overwrite the grub.cfg and isolinux.cfg files for each node type
+  for file in "EFI/redhat/grub.cfg" "isolinux/isolinux.cfg"; do
+    /bin/cp -f $(pwd)/${node}_${file##*/} ${file}
+  done
+  # As regular user!
+  genisoimage -verbose -rock -J -joliet-long -volset ${VOLID} \
+    -eltorito-boot isolinux/isolinux.bin -eltorito-catalog isolinux/boot.cat \
+    -no-emul-boot -boot-load-size 4 -boot-info-table \
+    -eltorito-alt-boot -efi-boot images/efiboot.img -no-emul-boot \
+    -o ${NGINX_DIRECTORY}/${node}.iso .
+done
+
+# Optionally, clean up
+cd
+rm -Rf ${TEMPDIR}
+
+cd ${NGINX_DIRECTORY}
+
 
 create_lv() {
     var_name=$1
