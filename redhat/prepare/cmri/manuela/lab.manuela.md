@@ -697,8 +697,6 @@ update-ca-trust extract
 
 ```
 
-
-
 ### helper
 
 ```bash
