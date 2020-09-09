@@ -1120,7 +1120,7 @@ done
 # INFO Install complete!
 # INFO To access the cluster as the system:admin user when using 'oc', run 'export KUBECONFIG=/root/ocp4/auth/kubeconfig'
 # INFO Access the OpenShift web-console here: https://console-openshift-console.apps.cmri-edge.redhat.ren
-# INFO Login to the console with user: kubeadmin, password: aWDAo-N73Qz-bSDsr-FWrQD
+# INFO Login to the console with user: kubeadmin, password: ftZms-9neEb-H33He-VtFXJ
 
 yum -y install haproxy
 # scp haproxy.cfg to /data/ocp4/haproxy。cfg
@@ -1130,3 +1130,6 @@ systemctl enable --now haproxy
 systemctl restart haproxy
 
 ```
+
+# manula labs
+

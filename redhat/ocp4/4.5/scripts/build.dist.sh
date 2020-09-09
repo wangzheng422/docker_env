@@ -10,6 +10,7 @@ build_number_list=$(cat << EOF
 EOF
 )
 
+# params for operator hub images
 export var_date='2020-08-19-0913'
 echo $var_date
 export var_major_version='4.5'
