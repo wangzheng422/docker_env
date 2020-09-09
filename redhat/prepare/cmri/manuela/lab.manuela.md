@@ -214,9 +214,9 @@ if [ "$IFACE" = "$INTERFACE" -a "$STATUS" = "up" ]; then
 fi
 EOF
 
-cat /root/ocp4/30-mtu.sh | base64 -w0
+cat /root/ocp4/30-mtu.sh | base64 -w0 > /root/ocp4/30-mtu.sh.encode
 
-cat << EOF > /root/ocp4/manifests/30-mtu.yaml
+cat << EOF > /root/ocp4/manifests/30-mtu-worker.yaml
 kind: MachineConfig
 apiVersion: machineconfiguration.openshift.io/v1
 metadata:
@@ -233,7 +233,7 @@ spec:
       - filesystem: root
         path: "/etc/NetworkManager/dispatcher.d/30-mtu"
         contents:
-          source: data:text/plain;charset=utf-8;base64,IyEvYmluL3NoCk1UVT05MDAwCklOVEVSRkFDRT1lbnM0CgpJRkFDRT0kMQpTVEFUVVM9JDIKaWYgWyAiJElGQUNFIiA9ICIkSU5URVJGQUNFIiAtYSAiJFNUQVRVUyIgPSAidXAiIF07IHRoZW4KICAgIGlwIGxpbmsgc2V0ICIkSUZBQ0UiIG10dSAkTVRVCmZpCg==
+          source: data:text/plain;charset=utf-8;base64,$(cat /root/ocp4/30-mtu.sh.encode )
           verification: {}
         mode: 0755
     systemd:
@@ -253,11 +253,11 @@ spec:
           enabled: true
 EOF
 
-cat << EOF > /root/ocp4/manifests/30-mtu.yaml
+cat << EOF > /root/ocp4/manifests/30-mtu-master.yaml
 kind: MachineConfig
 apiVersion: machineconfiguration.openshift.io/v1
 metadata:
-  name: 99-worker-mtu
+  name: 99-master-mtu
   creationTimestamp: 
   labels:
     machineconfiguration.openshift.io/role: master
@@ -270,7 +270,7 @@ spec:
       - filesystem: root
         path: "/etc/NetworkManager/dispatcher.d/30-mtu"
         contents:
-          source: data:text/plain;charset=utf-8;base64,IyEvYmluL3NoCk1UVT05MDAwCklOVEVSRkFDRT1lbnM0CgpJRkFDRT0kMQpTVEFUVVM9JDIKaWYgWyAiJElGQUNFIiA9ICIkSU5URVJGQUNFIiAtYSAiJFNUQVRVUyIgPSAidXAiIF07IHRoZW4KICAgIGlwIGxpbmsgc2V0ICIkSUZBQ0UiIG10dSAkTVRVCmZpCg==
+          source: data:text/plain;charset=utf-8;base64,$(cat /root/ocp4/30-mtu.sh.encode )
           verification: {}
         mode: 0755
     systemd:
@@ -760,7 +760,44 @@ systemctl restart network
 
 cd /root/ocp4
 
-vi install-config.yaml 
+ls /root/.ssh/
+
+# vi install-config.yaml 
+cat << EOF > /root/ocp4/install-config.yaml 
+apiVersion: v1
+baseDomain: redhat.ren
+compute:
+- hyperthreading: Enabled
+  name: worker
+  replicas: 2
+controlPlane:
+  hyperthreading: Enabled
+  name: master
+  replicas: 3
+metadata:
+  name: cmri-edge
+networking:
+  clusterNetworks:
+  - cidr: 10.254.0.0/16
+    hostPrefix: 24
+  networkType: OpenShiftSDN
+  serviceNetwork:
+  - 172.30.0.0/16
+platform:
+  none: {}
+pullSecret: '{"auths":{"registry.redhat.ren:5443": {"auth": "ZHVtbXk6ZHVtbXk=","email": "noemail@localhost"},"registry.ppa.redhat.ren:5443": {"auth": "ZHVtbXk6ZHVtbXk=","email": "noemail@localhost"}}}'
+sshKey: |
+$( cat /root/.ssh/id_rsa.pub| sed 's/^/   /g' )
+additionalTrustBundle: |
+$( cat /etc/pki/ca-trust/source/anchors/redhat.ren.crt | sed 's/^/   /g' )
+imageContentSources:
+- mirrors:
+  - registry.redhat.ren:5443/ocp4/openshift4
+  source: quay.io/openshift-release-dev/ocp-release
+- mirrors:
+  - registry.redhat.ren:5443/ocp4/openshift4
+  source: quay.io/openshift-release-dev/ocp-v4.0-art-dev
+EOF
 
 /bin/rm -rf *.ign .openshift_install_state.json auth bootstrap manifests master0 master1 master2 worker0 worker1 worker2
 
@@ -887,14 +924,14 @@ systemctl start libvirtd
 
 export NGINX_DIRECTORY=/data/ocp4
 export RHCOSVERSION=4.4.3
-export VOLID=$(isoinfo -d -i ${NGINX_DIRECTORY}/rhcos-${RHCOSVERSION}-x86_64-installer.iso | awk '/Volume id/ { print $3 }')
+export VOLID=$(isoinfo -d -i ${NGINX_DIRECTORY}/rhcos-${RHCOSVERSION}-x86_64-installer.x86_64.iso | awk '/Volume id/ { print $3 }')
 TEMPDIR=$(mktemp -d)
 echo $VOLID
 echo $TEMPDIR
 
 cd ${TEMPDIR}
 # Extract the ISO content using guestfish (to avoid sudo mount)
-guestfish -a ${NGINX_DIRECTORY}/rhcos-${RHCOSVERSION}-x86_64-installer.iso \
+guestfish -a ${NGINX_DIRECTORY}/rhcos-${RHCOSVERSION}-x86_64-installer.x86_64.iso \
   -m /dev/sda tar-out / - | tar xvf -
 
 # Helper function to modify the config files
@@ -907,15 +944,15 @@ modify_cfg(){
   done
 }
 
-URL="http://192.168.7.11:8080/"
+URL="http://192.168.7.71:8080/"
 GATEWAY="192.168.7.1"
 NETMASK="255.255.255.0"
-DNS="192.168.7.11"
+DNS="192.168.7.71"
 
 # BOOTSTRAP
 # TYPE="bootstrap"
 NODE="bootstrap-static"
-IP="192.168.7.12"
+IP="192.168.7.72"
 FQDN="bootstrap"
 BIOSMODE="bios"
 NET_INTERFACE="ens3"
@@ -925,7 +962,7 @@ modify_cfg
 # TYPE="master"
 # MASTER-0
 NODE="master-0"
-IP="192.168.7.13"
+IP="192.168.7.73"
 FQDN="master-0"
 BIOSMODE="bios"
 NET_INTERFACE="ens3"
@@ -933,7 +970,7 @@ modify_cfg
 
 # MASTER-1
 NODE="master-1"
-IP="192.168.7.14"
+IP="192.168.7.74"
 FQDN="master-1"
 BIOSMODE="bios"
 NET_INTERFACE="ens3"
@@ -941,7 +978,7 @@ modify_cfg
 
 # MASTER-2
 NODE="master-2"
-IP="192.168.7.15"
+IP="192.168.7.75"
 FQDN="master-2"
 BIOSMODE="bios"
 NET_INTERFACE="ens3"
@@ -949,25 +986,19 @@ modify_cfg
 
 # WORKERS
 NODE="worker-0"
-IP="192.168.7.16"
+IP="192.168.7.76"
 FQDN="worker-0"
 BIOSMODE="bios"
 NET_INTERFACE="ens3"
 modify_cfg
 
 NODE="worker-1"
-IP="192.168.7.17"
+IP="192.168.7.77"
 FQDN="worker-1"
 BIOSMODE="bios"
 NET_INTERFACE="ens3"
 modify_cfg
 
-NODE="worker-2"
-IP="192.168.7.18"
-FQDN="worker-2"
-BIOSMODE="bios"
-NET_INTERFACE="ens3"
-modify_cfg
 
 # Generate the images, one per node as the IP configuration is different...
 # https://github.com/coreos/coreos-assembler/blob/master/src/cmd-buildextend-installer#L97-L103
@@ -1049,7 +1080,10 @@ for i in vnet0 vnet1 vnet2 vnet3 vnet4 vnet5; do
     ovs-vsctl set int $i mtu_request=1450
 done 
 
-
+# INFO Install complete!
+# INFO To access the cluster as the system:admin user when using 'oc', run 'export KUBECONFIG=/root/ocp4/auth/kubeconfig'
+# INFO Access the OpenShift web-console here: https://console-openshift-console.apps.cmri-edge.redhat.ren
+# INFO Login to the console with user: kubeadmin, password: aWDAo-N73Qz-bSDsr-FWrQD
 
 yum -y install haproxy
 # scp haproxy.cfg to /data/ocp4/haproxy。cfg
