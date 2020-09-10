@@ -1117,6 +1117,7 @@ for i in vnet0 vnet1 vnet2 vnet3 vnet4 vnet5; do
     ovs-vsctl set int $i mtu_request=1450
 done 
 
+openshift-install wait-for install-complete --log-level debug
 # INFO Install complete!
 # INFO To access the cluster as the system:admin user when using 'oc', run 'export KUBECONFIG=/root/ocp4/auth/kubeconfig'
 # INFO Access the OpenShift web-console here: https://console-openshift-console.apps.cmri-edge.redhat.ren
@@ -1132,4 +1133,27 @@ systemctl restart haproxy
 ```
 
 # manula labs
+
+https://github.com/sa-mw-dach/manuela/blob/master/docs/BOOTSTRAP.md
+
+## manula gogs
+
+```bash
+
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
 
