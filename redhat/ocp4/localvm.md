@@ -66,6 +66,22 @@ rsync --info=progress2 -P --delete -arz --no-o --no-g --no-perms  /data/is.sampl
 
 
 
+# rhsm china
+yum install yum-plugin-fastestmirror
+# rhsm proxy
+# https://access.redhat.com/solutions/57669
+# an http proxy server to use
+proxy_hostname =
+
+# port for http proxy server
+proxy_port =
+
+subscription-manager config --rhsm.baseurl=https://china.cdn.redhat.com
+subscription-manager refresh
+yum clean all
+yum makecache
+
+
 ######################
 ## on kvm host
 systemctl stop docker-distribution
