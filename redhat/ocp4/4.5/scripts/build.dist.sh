@@ -33,6 +33,19 @@ wget -O add.image.sh https://raw.githubusercontent.com/wangzheng422/docker_env/d
 
 wget -O demos.sh https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/${var_major_version}/scripts/demos.sh
 
+mkdir -p /data/ocp4/clients
+# client for camle-k
+wget  -nd -np -e robots=off --reject="index.html*" -P /data/ocp4/clients --recursive https://mirror.openshift.com/pub/openshift-v4/clients/camel-k/latest/
+
+# client for helm
+wget  -nd -np -e robots=off --reject="index.html*" -P /data/ocp4/clients --recursive https://mirror.openshift.com/pub/openshift-v4/clients/helm/latest/
+
+# client for pipeline
+wget  -nd -np -e robots=off --reject="index.html*" -P /data/ocp4/clients --recursive https://mirror.openshift.com/pub/openshift-v4/clients/pipeline/latest/
+
+# client for serverless
+wget  -nd -np -e robots=off --reject="index.html*" -P /data/ocp4/clients --recursive https://mirror.openshift.com/pub/openshift-v4/clients/serverless/latest/
+
 # podman login registry.redhat.ren -u a -p a
 
 mkdir -p /data/ocp4
@@ -92,7 +105,7 @@ done <<< "$build_number_list"
 
 cd /data/ocp4
 
-wget --recursive --no-directories --no-parent https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/${var_major_version}/latest/
+wget --recursive --no-directories --no-parent -e robots=off --reject="index.html*"  https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/${var_major_version}/latest/
 
 # wget --recursive --no-directories --no-parent https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/4.2/latest/
 
