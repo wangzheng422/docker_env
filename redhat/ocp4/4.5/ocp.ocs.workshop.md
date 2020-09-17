@@ -23,3 +23,12 @@ https://github.com/openshift/openshift-cns-testdrive
 - [Cluster Metering](https://1drv.ms/b/s!AqLmU5b8zhHEo1mtc9lSRdzwp0uQ?e=1QD43U)
 - [Taints and Tolerations](https://1drv.ms/b/s!AqLmU5b8zhHEo1pb5Czs_S8_pM5b?e=tN1uwZ)
 
+## ocs
+
+![](imgs/2020-09-17-14-34-10.png)
+
+- bilibili
+- xigua
+- youtube
+
+
