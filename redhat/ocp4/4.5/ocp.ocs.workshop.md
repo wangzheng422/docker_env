@@ -25,7 +25,7 @@ https://github.com/openshift/openshift-cns-testdrive
 
 ## ocs
 
-[<img src="https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/4.5/imgs/2020-09-17-14-34-10.png" width="600">](https://www.bilibili.com/video/BV1Ta4y1j7Bk/){:target="_blank"}
+[<img src="https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/4.5/imgs/2020-09-17-14-34-10.png" width="600">](https://www.bilibili.com/video/BV1Ta4y1j7Bk/)
 
 - [bilibili](https://www.bilibili.com/video/BV1Ta4y1j7Bk/)
 - [xigua](https://www.ixigua.com/6873344400114582030)
