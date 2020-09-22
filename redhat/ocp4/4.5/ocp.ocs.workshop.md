@@ -31,4 +31,10 @@ https://github.com/openshift/openshift-cns-testdrive
 - [xigua](https://www.ixigua.com/6873344400114582030)
 - [youtube](https://www.youtube.com/watch?v=BQ46mIkDZjo)
 
+## 集中日志
 
+![](imgs/2020-09-22-15-17-20.png)
+
+- bilibili
+- xiguoa
+- youtube
