@@ -23,7 +23,7 @@ https://github.com/openshift/openshift-cns-testdrive
 - [Cluster Metering](https://1drv.ms/b/s!AqLmU5b8zhHEo1mtc9lSRdzwp0uQ?e=1QD43U)
 - [Taints and Tolerations](https://1drv.ms/b/s!AqLmU5b8zhHEo1pb5Czs_S8_pM5b?e=tN1uwZ)
 
-## ocs
+## ocs (openshift container storage)
 
 [<img src="https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/4.5/imgs/2020-09-17-14-34-10.png" width="600">](https://www.bilibili.com/video/BV1Ta4y1j7Bk/)
 
@@ -33,8 +33,10 @@ https://github.com/openshift/openshift-cns-testdrive
 
 ## 集中日志
 
-![](imgs/2020-09-22-15-17-20.png)
+[<img src="https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/4.5/imgs/2020-09-22-15-17-20.png" width="600">](https://www.bilibili.com/video/BV11h411X7h5/)
 
-- bilibili
+- [bilibili](https://www.bilibili.com/video/BV11h411X7h5/)
 - xiguoa
-- youtube
+- [youtube](https://www.youtube.com/watch?v=xZ1pDMx_gho)
+
+
