@@ -33,10 +33,10 @@ https://github.com/openshift/openshift-cns-testdrive
 
 ## 集中日志
 
-[<img src="https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/4.5/imgs/2020-09-22-15-17-20.png" width="600">](https://www.bilibili.com/video/BV11h411X7h5/)
+[<img src="https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/4.5/imgs/2020-09-23-06-33-45.png" width="600">](https://www.bilibili.com/video/BV11h411X7h5/)
 
 - [bilibili](https://www.bilibili.com/video/BV11h411X7h5/)
-- xiguoa
+- [xiguoa](https://www.ixigua.com/6875209638690849294)
 - [youtube](https://www.youtube.com/watch?v=xZ1pDMx_gho)
 
 
