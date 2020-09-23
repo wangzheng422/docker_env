@@ -36,7 +36,13 @@ https://github.com/openshift/openshift-cns-testdrive
 [<img src="https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/4.5/imgs/2020-09-23-06-33-45.png" width="600">](https://www.bilibili.com/video/BV11h411X7h5/)
 
 - [bilibili](https://www.bilibili.com/video/BV11h411X7h5/)
-- [xiguoa](https://www.ixigua.com/6875209638690849294)
+- [xigua](https://www.ixigua.com/6875209638690849294)
 - [youtube](https://www.youtube.com/watch?v=xZ1pDMx_gho)
 
+## 计量计费
 
+![](imgs/2020-09-23-12-18-19.png)
+
+- bilibili
+- xigua
+- [youtube](https://youtu.be/jMrz_Rvd89U)
