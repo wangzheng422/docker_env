@@ -1,10 +1,14 @@
 # OpenShift and Container Storage for Administrators
 
+本文讲述openshift4的管理员上手培训，主要亮点是openshift的存储模块ocs，openshift的集中日志，和openshift的计量计费，这几个模块需要的底层资源比较多，平时难得有环境可以尝试。
+
 workshop upstream github: 
 https://github.com/openshift/openshift-cns-testdrive
 
 
 ## WORKSHOP MODULES
+
+以下是培训的各个模块的教材。
 
 - [Environment Overview](https://1drv.ms/b/s!AqLmU5b8zhHEo0sRBCH5BMaZddhi?e=KEudMv)
 - [Installation and Verification](https://1drv.ms/b/s!AqLmU5b8zhHEo0wqS3v9yTSoklce?e=pQYdyU)
@@ -41,8 +45,8 @@ https://github.com/openshift/openshift-cns-testdrive
 
 ## 计量计费
 
-![](imgs/2020-09-23-12-18-19.png)
+[<img src="https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/4.5/imgs/2020-09-23-12-18-19.png" width="600">](https://www.bilibili.com/video/BV1AZ4y1K7GE/)
 
-- bilibili
-- xigua
+- [bilibili](https://www.bilibili.com/video/BV1AZ4y1K7GE/)
+- [xigua](https://www.ixigua.com/6875534619349877261)
 - [youtube](https://youtu.be/jMrz_Rvd89U)
