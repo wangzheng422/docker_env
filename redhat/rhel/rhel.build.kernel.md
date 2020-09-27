@@ -1,6 +1,13 @@
 # rhel/centos build kernel
 
-## self
+本文描述如何在rhel8上编译自定义的内核。
+
+讲解视频
+
+- bilibili
+- xigua
+- youtube
+
 ```bash
 # https://access.redhat.com/articles/3938081
 # grubby --info=ALL | grep title
@@ -113,6 +120,10 @@ INSTALLKV=4.18.0-221.el8.wzh
 
 yum install ./kernel-$INSTALLKV.x86_64.rpm ./kernel-core-$INSTALLKV.x86_64.rpm ./kernel-modules-$INSTALLKV.x86_64.rpm
 
+grep -R --include=Makefile CONFIG_NET_ACT_IFE
+# rpmbuild/BUILD/kernel-4.18.0-221.el8/linux-4.18.0-221.el8.wzh.x86_64/net/sched/Makefile:obj-$(CONFIG_NET_ACT_IFE)	+= act_ife.o
+modprobe act_ife
+lsmod | grep act_ife
 
 ```
 
