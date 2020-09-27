@@ -103,26 +103,3 @@ rpmbuild -bb --target=`uname -m` kernel.spec 2> build-err.log | tee build-out.lo
 ```
 
 
-## gps
-```bash
-# https://access.redhat.com/downloads/content/479/ver=/rhel---8/8.2/x86_64/packages
-# download kernel source rpm 
-
-# rpm -ivh  kernel-4.18.0补全路径（刚才传的源包）
-# cd rpmbuild/SPECS  然后执行ls 能看到 kernel.spec文件
-rpmbuild -bp --target=x86_64 kernel.spec
-
-# https://www.jianshu.com/p/482d5d68f81f
-
-cd /usr/src/kernels/4.18.0-193.el8.x86_64
-
-# 打开编辑 .config
-
-# 切换路径 rpmbuild/BUILD/kernel（补全）/linux（补全） 
-make menuconfig
-make
-
-
-```
-
-
