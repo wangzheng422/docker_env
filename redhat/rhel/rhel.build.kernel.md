@@ -1,7 +1,5 @@
 # rhel/centos build kernel
 
-
-
 ## self
 ```bash
 # https://access.redhat.com/articles/3938081
@@ -65,7 +63,8 @@ KERNELRV=$(uname -r)
 
 cd /root/rpmbuild/BUILD/kernel-${KERNELVERION}/linux-${KERNELRV}/
 
-/bin/cp -f configs/kernel-4.18.0-`uname -m`.config .config
+# /bin/cp -f configs/kernel-4.18.0-`uname -m`.config .config
+cp /boot/config-`uname -r`   .config
 
 make oldconfig
 
@@ -91,6 +90,7 @@ make menuconfig
 sed -i '1s/^/# x86_64\n/' .config
 
 /bin/cp -f .config configs/kernel-4.18.0-`uname -m`.config
+/bin/cp -f .config configs/kernel-x86_64.config
 
 /bin/cp -f configs/* /root/rpmbuild/SOURCES/
 
@@ -101,16 +101,17 @@ cd /root/rpmbuild/SPECS
 
 sed -i "s/# define buildid \\.local/%define buildid \\.wzh/" kernel.spec
 
-rpmbuild -bb --target=`uname -m` --without kabichk  kernel.spec 2> build-err.log | tee build-out.log
+# rpmbuild -bb --target=`uname -m` --without kabichk  kernel.spec 2> build-err.log | tee build-out.log
 
-rpmbuild -bb --target=`uname -m` --without debug --without debuginfo --without kabichk kernel.spec 2> build-err.log | tee build-out.log
+# rpmbuild -bb --target=`uname -m` --without debug --without debuginfo --without kabichk kernel.spec 2> build-err.log | tee build-out.log
 
 rpmbuild -bb --target=`uname -m` --with baseonly --without debug --without debuginfo --without kabichk kernel.spec 2> build-err.log | tee build-out.log
 
 cd /root/rpmbuild/RPMS/x86_64/
 
-yum install ./kernel-4.18.0-221.el8.x86_64.rpm
+INSTALLKV=4.18.0-221.el8.wzh
 
+yum install ./kernel-$INSTALLKV.x86_64.rpm ./kernel-core-$INSTALLKV.x86_64.rpm ./kernel-modules-$INSTALLKV.x86_64.rpm
 
 
 ```
