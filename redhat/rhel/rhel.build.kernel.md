@@ -5,15 +5,13 @@
 ## self
 ```bash
 # https://access.redhat.com/articles/3938081
-grubby --info=ALL | grep title
+# grubby --info=ALL | grep title
 
 # https://blog.packagecloud.io/eng/2015/04/20/working-with-source-rpms/
 
-
 subscription-manager --proxy=192.168.253.1:5084 register --username **** --password ********
 
-
-subscription-manager config --rhsm.baseurl=https://cdn.redhat.com
+# subscription-manager config --rhsm.baseurl=https://cdn.redhat.com
 # subscription-manager config --rhsm.baseurl=https://cdn.redhat.com
 subscription-manager --proxy=192.168.253.1:5084 refresh
 
@@ -37,10 +35,14 @@ subscription-manager --proxy=192.168.253.1:5084 repos \
     # --enable="dirsrv-beta-for-rhel-8-x86_64-rpms" \
     # ansible-2.9-for-rhel-8-x86_64-rpms
 
-yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
-dnf config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/rhel8/x86_64/cuda-rhel8.repo
+cat << EOF >> /etc/dnf/dnf.conf
+proxy=http://192.168.253.1:5084
+EOF
 
-yum install yum-utils rpm-build
+yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+dnf -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
+
+yum -y install yum-utils rpm-build
 
 yum list kernel.x86_64
 
@@ -96,9 +98,20 @@ cd /root/rpmbuild/SPECS
 
 # cp kernel.spec kernel.spec.orig
 # https://fedoraproject.org/wiki/Building_a_custom_kernel
-# sed -i "s/# define buildid \\.local/%define buildid \\.local/" kernel.spec
 
-rpmbuild -bb --target=`uname -m` kernel.spec 2> build-err.log | tee build-out.log
+sed -i "s/# define buildid \\.local/%define buildid \\.wzh/" kernel.spec
+
+rpmbuild -bb --target=`uname -m` --without kabichk  kernel.spec 2> build-err.log | tee build-out.log
+
+rpmbuild -bb --target=`uname -m` --without debug --without debuginfo --without kabichk kernel.spec 2> build-err.log | tee build-out.log
+
+rpmbuild -bb --target=`uname -m` --with baseonly --without debug --without debuginfo --without kabichk kernel.spec 2> build-err.log | tee build-out.log
+
+cd /root/rpmbuild/RPMS/x86_64/
+
+yum install ./kernel-4.18.0-221.el8.x86_64.rpm
+
+
 
 ```
 
