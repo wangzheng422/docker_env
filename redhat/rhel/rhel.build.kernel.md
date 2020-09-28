@@ -82,8 +82,8 @@ KERNELRV=$(uname -r)
 
 cd /root/rpmbuild/BUILD/kernel-${KERNELVERION}/linux-${KERNELRV}/
 
-# /bin/cp -f configs/kernel-4.18.0-`uname -m`.config .config
-cp /boot/config-`uname -r`   .config
+/bin/cp -f configs/kernel-4.18.0-`uname -m`.config .config
+# cp /boot/config-`uname -r`   .config
 
 make oldconfig
 # 自定义配置，请观看视频
