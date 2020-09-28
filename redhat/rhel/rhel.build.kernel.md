@@ -4,13 +4,15 @@
 
 业务背景是，客户需要使用mellanox网卡高级功能，需要kernel打开相应的选项，才可以使用，所以我们就编译一个新的内核出来。
 
-讲解视频
+## 讲解视频
 
 [<img src="https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/rhel/imgs/2020-09-28-10-33-03.png" width="600">](https://www.bilibili.com/video/BV1ya4y1j7R3/)
 
 - [bilibili](https://www.bilibili.com/video/BV1ya4y1j7R3/)
 - [xigua](https://www.ixigua.com/6877362547456999943)
 - [youtube](https://youtu.be/jYCUVSv4Faw)
+
+## 实验步骤
 
 ```bash
 # https://access.redhat.com/articles/3938081
