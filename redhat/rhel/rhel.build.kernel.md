@@ -6,7 +6,7 @@
 
 讲解视频
 
-[<img src="https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/4.5/imgs/2020-09-28-10-33-03.png" width="600">](https://www.bilibili.com/video/BV1ya4y1j7R3/)
+[<img src="https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/rhel/imgs/2020-09-28-10-33-03.png" width="600">](https://www.bilibili.com/video/BV1ya4y1j7R3/)
 
 - [bilibili](https://www.bilibili.com/video/BV1ya4y1j7R3/)
 - [xigua](https://www.ixigua.com/6877362547456999943)
