@@ -6,9 +6,11 @@
 
 讲解视频
 
-- bilibili
-- xigua
-- youtube
+[<img src="https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/4.5/imgs/2020-09-28-10-33-03.png" width="600">](https://www.bilibili.com/video/BV1ya4y1j7R3/)
+
+- [bilibili](https://www.bilibili.com/video/BV1ya4y1j7R3/)
+- [xigua](https://www.ixigua.com/6877362547456999943)
+- [youtube](https://youtu.be/jYCUVSv4Faw)
 
 ```bash
 # https://access.redhat.com/articles/3938081
