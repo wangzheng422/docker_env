@@ -1,4 +1,4 @@
-# RHEL/centos8 build kernel
+# RHEL/centos 8 build kernel
 
 本文描述如何在rhel8上编译自定义的内核。
 
