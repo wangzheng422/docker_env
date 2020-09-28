@@ -5,7 +5,8 @@
 目前仓库中，有很多经验分享，其中的一些文章，比较重要：
 - [和ocp4相关的安装经验，以及介质制作脚本](redhat/ocp4/4.5/4.5.disconnect.operator.md)
 - [应用上云系列教程 containerized cloud native (CCN)](redhat/ocp4/4.4/4.4.ccn.devops.deploy.md)
-- [容器云承载虚拟化CNV](redhat/ocp4/4.5/4.5.ocp.ocs.cnv.ceph.md)
+- [容器云承载虚拟化业务(CNV)](redhat/ocp4/4.5/4.5.ocp.ocs.cnv.ceph.md)
+- [RHEL8编译定制化内核](redhat/rhel/rhel.build.kernel.md)
 
 作者还有很多视频演示，欢迎前往作者的频道订阅
 - [bilibili](https://space.bilibili.com/19536819)
