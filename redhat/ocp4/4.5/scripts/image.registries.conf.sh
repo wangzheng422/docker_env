@@ -6,7 +6,7 @@ set -x
 parm_local_reg=$1
 parm_file=$2
 
-export LOCAL_REG='registry.redhat.ren:5443'
+#export LOCAL_REG='registry.redhat.ren:5443'
 # export MID_REG="registry.redhat.ren"
 
 # export OCP_RELEASE=${BUILDNUMBER}
