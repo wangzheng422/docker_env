@@ -84,4 +84,8 @@ spec:
   unsupportedConfigOverrides:
     servicesNodePortRange: <range-low>-<range-high>
     
+# The original worker.ign has a certificate that expires after 24 hours.  To get the current data to use for worker.ign use this command:
+oc extract -n openshift-machine-api secret/worker-user-data --keys=userData --to=-
+
+
 ```
