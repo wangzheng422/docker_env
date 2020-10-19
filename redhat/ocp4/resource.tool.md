@@ -88,4 +88,28 @@ spec:
 oc extract -n openshift-machine-api secret/worker-user-data --keys=userData --to=-
 
 
+oc get pod -n openshift-controller-manager
+oc get pod -n openshift-controller-manager-operator
+oc get pod -n openshift-kube-controller-manager
+oc get pod -n openshift-kube-controller-manager-operator
+
+oc delete pod --all -n openshift-controller-manager
+oc delete pod --all -n openshift-controller-manager-operator
+oc delete pod --all -n openshift-kube-controller-manager
+oc delete pod --all -n openshift-kube-controller-manager-operator
+
+oc get pod -n openshift-kube-scheduler
+oc get pod -n openshift-kube-scheduler-operator
+
+POD_NAME=$(oc get pod -n openshift-kube-scheduler-operator -o json | jq -r .items[0].metadata.name)
+oc logs $POD_NAME -n openshift-kube-scheduler-operator
+
+oc delete pod --all -n openshift-kube-scheduler-operator
+oc delete pod --all -n openshift-kube-scheduler
+
+oc get pod -n openshift-apiserver
+oc get pod -n openshift-apiserver-operator
+
+oc logs openshift-apiserver-operator-f79557665-8gvnm -n openshift-apiserver-operator
+
 ```
