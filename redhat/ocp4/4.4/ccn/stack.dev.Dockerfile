@@ -62,7 +62,7 @@ RUN cd /tmp/cloud-native-workshop-v2m4-labs/coolstore-ui && npm install && NODE_
 #     -DclassName="org.acme.quickstart.GreetingResource" \
 #     -Dpath="/hello" && mvn -f /tmp/hello/getting-started/pom.xml clean package -Pnative -DskipTests
 
-RUN cd /tmp && git clone https://github.com/spring-projects/spring-petclinic.git && cd spring-petclinic && ./mvnw package
+# RUN cd /tmp && git clone https://github.com/spring-projects/spring-petclinic.git && cd spring-petclinic && ./mvnw package
 
 
 USER root
