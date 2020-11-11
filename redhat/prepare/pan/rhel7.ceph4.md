@@ -149,6 +149,17 @@ virt-install --name=ceph --vcpus=16 --ram=32768 \
   --boot menu=on --location /data/rhel-server-7.9-x86_64-dvd.iso \
   --initrd-inject /data/rhel7-ks-ceph.cfg --extra-args "inst.ks=file:/rhel7-ks-ceph.cfg" 
 
+virsh list --all
+virsh autostart ceph
+
+virsh start ceph
+
+yum -y install cockpit cockpit-dashboard
+
+firewall-cmd --add-port=9090/tcp
+firewall-cmd --permanent --add-port=9090/tcp
+systemctl enable --now cockpit.socket
+
 ```
 
 # ceph on rhel7
