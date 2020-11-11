@@ -5,6 +5,7 @@
 subscription-manager --proxy=127.0.0.1:6666 register --username **** --password ********
 
 subscription-manager config --rhsm.baseurl=https://china.cdn.redhat.com
+# subscription-manager config --rhsm.baseurl=https://cdn.redhat.com
 subscription-manager --proxy=127.0.0.1:6666 refresh
 
 subscription-manager --proxy=127.0.0.1:6666 repos --disable="*"
@@ -35,13 +36,14 @@ pvcreate /dev/nvme0n1
 vgcreate nvme /dev/nvme0n1
 
 lvremove -f nvme/cephlv
-lvcreate -y -L 50G -n cephlv nvme
 lvremove -f nvme/cephdata01lv
-lvcreate -y -l 33%FREE -n cephdata01lv nvme
 lvremove -f nvme/cephdata02lv
-lvcreate -y -l 33%FREE -n cephdata02lv nvme
 lvremove -f nvme/cephdata03lv
-lvcreate -y -l 34%FREE -n cephdata03lv nvme
+
+lvcreate -y -L 50G -n cephlv nvme
+lvcreate -y -L 100G -n cephdata01lv nvme
+lvcreate -y -L 100G -n cephdata02lv nvme
+lvcreate -y -L 100G -n cephdata03lv nvme
 
 yum -y install qemu-kvm libvirt libvirt-python libguestfs-tools virt-install virt-viewer virt-manager
 
@@ -123,6 +125,19 @@ nmcli con add type ethernet ifname p1p2 master br-ceph
 nmcli con add type ethernet ifname p3p1 master br-ceph
 nmcli con add type ethernet ifname p3p2 master br-ceph
 
+# create rhel8 for ceph
+# virt-install --name=ceph --vcpus=16 --ram=32768 \
+# --disk path=/dev/nvme/cephlv,device=disk,bus=virtio,format=raw \
+# --disk path=/dev/nvme/cephdata01lv,device=disk,bus=virtio,format=raw \
+# --disk path=/dev/nvme/cephdata02lv,device=disk,bus=virtio,format=raw \
+# --disk path=/dev/nvme/cephdata03lv,device=disk,bus=virtio,format=raw \
+# --network bridge=br0,model=virtio \
+# --network bridge=br-ceph,model=virtio \
+# --os-variant centos8 \
+# --boot menu=on --location /data/rhel-8.3-x86_64-dvd.iso \
+# --initrd-inject /data/rhel-ks-ceph.cfg --extra-args "inst.ks=file:/rhel-ks-ceph.cfg" 
+
+# create rhel7 for ceph
 virt-install --name=ceph --vcpus=16 --ram=32768 \
 --disk path=/dev/nvme/cephlv,device=disk,bus=virtio,format=raw \
 --disk path=/dev/nvme/cephdata01lv,device=disk,bus=virtio,format=raw \
@@ -130,10 +145,23 @@ virt-install --name=ceph --vcpus=16 --ram=32768 \
 --disk path=/dev/nvme/cephdata03lv,device=disk,bus=virtio,format=raw \
 --network bridge=br0,model=virtio \
 --network bridge=br-ceph,model=virtio \
---os-variant centos8 \
---boot menu=on --location /data/rhel-8.3-x86_64-dvd.iso \
---initrd-inject rhel-ks-ceph.cfg --extra-args "inst.ks=file://data/rhel-ks-ceph.cfg" 
+--os-variant centos7.0 \
+--boot menu=on --location /data/rhel-server-7.9-x86_64-dvd.iso \
+--initrd-inject /data/rhel-ks-ceph.cfg --extra-args "inst.ks=file:/rhel-ks-ceph.cfg" 
 
+```
+
+# ceph on rhel7
+
+```bash
+
+
+```
+
+
+# ceph on rhel8
+
+```bash
 #########################################################
 ## ceph node
 export PROXY="172.21.6.101:6666"
@@ -141,6 +169,7 @@ export PROXY="172.21.6.101:6666"
 subscription-manager --proxy=$PROXY register --auto-attach --username **** --password ********
 
 subscription-manager config --rhsm.baseurl=https://china.cdn.redhat.com
+# subscription-manager config --rhsm.baseurl=https://cdn.redhat.com
 
 # subscription-manager --proxy=$PROXY repos --list > list
 # cat list | grep 'Repo ID' | grep -v source | grep -v debug
@@ -158,6 +187,8 @@ subscription-manager --proxy=$PROXY repos \
     #
 
 yum update -y
+
+reboot
 
 systemctl enable --now firewalld
 # systemctl start firewalld
@@ -178,13 +209,14 @@ firewall-cmd --zone=public --add-port=443/tcp --permanent
 # firewall-cmd --zone=public --add-port=9090/tcp
 # firewall-cmd --zone=public --add-port=9090/tcp --permanent
 
-nmcli con add type ethernet ifname ens11 con-name ens11
-nmcli con modify ens11 ipv4.method manual ipv4.addresses 172.21.7.12/24
-nmcli con modify ens11 connection.autoconnect yes
+nmcli con del ens4
+nmcli con add type ethernet ifname ens4 con-name ens4
+nmcli con modify ens4 ipv4.method manual ipv4.addresses 172.21.7.12/24
+nmcli con modify ens4 connection.autoconnect yes
 nmcli con reload
-nmcli con up ens11
+nmcli con up ens4
 
-ssh-keygen
+ssh-keygen -t rsa -N '' -f ~/.ssh/id_rsa
 
 sed -i 's/#UseDNS yes/UseDNS no/' /etc/ssh/sshd_config
 systemctl restart sshd
@@ -193,8 +225,10 @@ ssh-copy-id root@lab101-ceph
 
 yum install -y ceph-ansible podman
 
+export PROXY="172.21.6.101:6666"
+
 cd /root
-curl -o rhceph-4.1-rhel-8-x86_64.iso "https://access.cdn.redhat.com/content/origin/files/sha256/b7/b7130b75f727073f99064f9df1df7e6c591a72853bbc792b951f96c76423ac66/rhceph-4.1-rhel-8-x86_64.iso?user=a768b217cf6ae8041b67586bb4dd5c77&_auth_=1605062405_acf4417e5810855f38ef3d8dfddf14a6"
+curl -o rhceph-4.1-rhel-8-x86_64.iso "https://access.cdn.redhat.com/content/origin/files/sha256/b7/b7130b75f727073f99064f9df1df7e6c591a72853bbc792b951f96c76423ac66/rhceph-4.1-rhel-8-x86_64.iso?user=a768b217cf6ae8041b67586bb4dd5c77&_auth_=1605071357_966a385795a8ee8a2f0f306cb9e23b22"
 
 cd /usr/share/ceph-ansible
 /bin/cp -f  group_vars/all.yml.sample group_vars/all.yml
@@ -211,7 +245,7 @@ cd /usr/share/ceph-ansible
 
 cat << EOF > ./group_vars/all.yml
 fetch_directory: ~/ceph-ansible-keys
-monitor_interface: ens11 
+monitor_interface: ens4 
 public_network: 172.21.7.0/24
 # ceph_docker_image: rhceph/rhceph-4-rhel8
 # ceph_docker_image_tag: "latest"
@@ -236,14 +270,14 @@ grafana_admin_password: Redhat!23
 grafana_container_image: registry.redhat.io/rhceph/rhceph-4-dashboard-rhel8
 prometheus_container_image: registry.redhat.io/openshift4/ose-prometheus:4.1
 alertmanager_container_image: registry.redhat.io/openshift4/ose-prometheus-alertmanager:4.1
-radosgw_interface: eth1
+radosgw_interface: ens4 
 radosgw_address_block: 172.21.7.0/24
 radosgw_civetweb_port: 8080
 radosgw_civetweb_num_threads: 512
 ceph_conf_overrides:
   global:
-    osd_pool_default_size: 1
-    osd_pool_default_min_size: 1
+    osd_pool_default_size: 3
+    osd_pool_default_min_size: 3
     osd_pool_default_pg_num: 32
     osd_pool_default_pgp_num: 32
   osd:
@@ -255,6 +289,8 @@ EOF
 cat << EOF > ./group_vars/osds.yml
 devices:
   - /dev/vdb
+  - /dev/vdc
+  - /dev/vdd
 EOF
 
 cat << EOF > ./hosts
@@ -329,7 +365,7 @@ ansible-playbook -vv site.yml --limit rgws -i hosts
 vi /etc/ceph/ceph.conf
 # [global]
 # mon_max_pg_per_osd = 1000
-# osd_max_pg_per_osd_hard_ratio = 100
+## osd_max_pg_per_osd_hard_ratio = 100
 
 systemctl restart ceph-mgr@lab101-ceph.service
 systemctl restart ceph-mon@lab101-ceph.service
