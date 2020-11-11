@@ -302,7 +302,7 @@ ansible all -m ping -i hosts
 
 ansible-playbook -vv site.yml -i hosts
 
-#  You can access your dashboard web UI at http://lab101-ceph:8443/ as an 'admin' user with 'Redhat!23' password
+#  You can access your dashboard web UI at http://172.21.7.12:8443/ as an 'admin' user with 'Redhat!23' password
 
 cd /root
 ceph osd getcrushmap -o crushmap
@@ -316,8 +316,8 @@ cd /usr/share/ceph-ansible
 # test the result
 ceph health detail
 ceph osd pool create test 8
-# ceph osd pool set test pg_num 128
-# ceph osd pool set test pgp_num 128
+ceph osd pool set test pg_num 32
+ceph osd pool set test pgp_num 32
 ceph osd pool application enable test rbd
 ceph -s
 ceph osd tree
@@ -371,16 +371,9 @@ ceph osd dump | grep 'replicated size'
 ```
 
 
+# (doesn't work) ceph on rhel8
 
-
-
-
-
-
-
-
-
-# ceph on rhel8
+不知道为什么，rhel8上的ceph总是报错，还是用rhel7去装把。
 
 ```bash
 #########################################################
@@ -446,10 +439,8 @@ ssh-copy-id root@lab101-ceph
 
 yum install -y ceph-ansible podman
 
-export PROXY="172.21.6.101:6666"
-
-cd /root
-curl -o rhceph-4.1-rhel-8-x86_64.iso "https://access.cdn.redhat.com/content/origin/files/sha256/b7/b7130b75f727073f99064f9df1df7e6c591a72853bbc792b951f96c76423ac66/rhceph-4.1-rhel-8-x86_64.iso?user=a768b217cf6ae8041b67586bb4dd5c77&_auth_=1605071357_966a385795a8ee8a2f0f306cb9e23b22"
+# cd /root
+# curl -o rhceph-4.1-rhel-8-x86_64.iso "https://access.cdn.redhat.com/content/origin/files/sha256/b7/b7130b75f727073f99064f9df1df7e6c591a72853bbc792b951f96c76423ac66/rhceph-4.1-rhel-8-x86_64.iso?user=a768b217cf6ae8041b67586bb4dd5c77&_auth_=1605071357_966a385795a8ee8a2f0f306cb9e23b22"
 
 cd /usr/share/ceph-ansible
 /bin/cp -f  group_vars/all.yml.sample group_vars/all.yml
@@ -549,8 +540,8 @@ cd /usr/share/ceph-ansible
 # test the result
 ceph health detail
 ceph osd pool create test 8
-ceph osd pool set test pg_num 128
-ceph osd pool set test pgp_num 128
+# ceph osd pool set test pg_num 128
+# ceph osd pool set test pgp_num 128
 ceph osd pool application enable test rbd
 ceph -s
 ceph osd tree
