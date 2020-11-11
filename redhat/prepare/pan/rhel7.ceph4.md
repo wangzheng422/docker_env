@@ -126,37 +126,258 @@ nmcli con add type ethernet ifname p3p1 master br-ceph
 nmcli con add type ethernet ifname p3p2 master br-ceph
 
 # create rhel8 for ceph
-# virt-install --name=ceph --vcpus=16 --ram=32768 \
-# --disk path=/dev/nvme/cephlv,device=disk,bus=virtio,format=raw \
-# --disk path=/dev/nvme/cephdata01lv,device=disk,bus=virtio,format=raw \
-# --disk path=/dev/nvme/cephdata02lv,device=disk,bus=virtio,format=raw \
-# --disk path=/dev/nvme/cephdata03lv,device=disk,bus=virtio,format=raw \
-# --network bridge=br0,model=virtio \
-# --network bridge=br-ceph,model=virtio \
-# --os-variant centos8 \
-# --boot menu=on --location /data/rhel-8.3-x86_64-dvd.iso \
-# --initrd-inject /data/rhel-ks-ceph.cfg --extra-args "inst.ks=file:/rhel-ks-ceph.cfg" 
+virt-install --name=ceph --vcpus=16 --ram=32768 \
+  --disk path=/dev/nvme/cephlv,device=disk,bus=virtio,format=raw \
+  --disk path=/dev/nvme/cephdata01lv,device=disk,bus=virtio,format=raw \
+  --disk path=/dev/nvme/cephdata02lv,device=disk,bus=virtio,format=raw \
+  --disk path=/dev/nvme/cephdata03lv,device=disk,bus=virtio,format=raw \
+  --network bridge=br0,model=virtio \
+  --network bridge=br-ceph,model=virtio \
+  --os-variant centos8 \
+  --boot menu=on --location /data/rhel-8.3-x86_64-dvd.iso \
+  --initrd-inject /data/rhel8-ks-ceph.cfg --extra-args "inst.ks=file:/rhel8-ks-ceph.cfg" 
 
 # create rhel7 for ceph
 virt-install --name=ceph --vcpus=16 --ram=32768 \
---disk path=/dev/nvme/cephlv,device=disk,bus=virtio,format=raw \
---disk path=/dev/nvme/cephdata01lv,device=disk,bus=virtio,format=raw \
---disk path=/dev/nvme/cephdata02lv,device=disk,bus=virtio,format=raw \
---disk path=/dev/nvme/cephdata03lv,device=disk,bus=virtio,format=raw \
---network bridge=br0,model=virtio \
---network bridge=br-ceph,model=virtio \
---os-variant centos7.0 \
---boot menu=on --location /data/rhel-server-7.9-x86_64-dvd.iso \
---initrd-inject /data/rhel-ks-ceph.cfg --extra-args "inst.ks=file:/rhel-ks-ceph.cfg" 
+  --disk path=/dev/nvme/cephlv,device=disk,bus=virtio,format=raw \
+  --disk path=/dev/nvme/cephdata01lv,device=disk,bus=virtio,format=raw \
+  --disk path=/dev/nvme/cephdata02lv,device=disk,bus=virtio,format=raw \
+  --disk path=/dev/nvme/cephdata03lv,device=disk,bus=virtio,format=raw \
+  --network bridge=br0,model=virtio \
+  --network bridge=br-ceph,model=virtio \
+  --os-variant centos7.0 \
+  --boot menu=on --location /data/rhel-server-7.9-x86_64-dvd.iso \
+  --initrd-inject /data/rhel7-ks-ceph.cfg --extra-args "inst.ks=file:/rhel7-ks-ceph.cfg" 
 
 ```
 
 # ceph on rhel7
 
 ```bash
+export PROXY="172.21.6.101:6666"
+
+subscription-manager --proxy=$PROXY register --auto-attach --username **** --password ********
+
+subscription-manager config --rhsm.baseurl=https://china.cdn.redhat.com
+# subscription-manager config --rhsm.baseurl=https://cdn.redhat.com
+
+# subscription-manager --proxy=$PROXY repos --list > list
+# cat list | grep 'Repo ID' | grep -v source | grep -v debug
+
+subscription-manager --proxy=$PROXY repos --disable=*
+subscription-manager --proxy=$PROXY repos \
+  --enable=rhel-7-server-rpms \
+  --enable=rhel-7-server-extras-rpms \
+  --enable=rhel-7-server-supplementary-rpms \
+  --enable=rhel-7-server-optional-rpms \
+  --enable=rhel-7-server-rhceph-4-tools-rpms --enable=rhel-7-server-ansible-2.8-rpms \
+  --enable=rhel-7-server-rhceph-4-mon-rpms \
+  --enable=rhel-7-server-rhceph-4-osd-rpms \
+  --enable=rhel-7-server-rhceph-4-tools-rpms \
+    #
+
+yum update -y
+
+reboot
+
+systemctl enable --now firewalld
+# systemctl start firewalld
+systemctl status firewalld
+
+firewall-cmd --zone=public --add-port=6789/tcp
+firewall-cmd --zone=public --add-port=6789/tcp --permanent
+firewall-cmd --zone=public --add-port=6800-7300/tcp
+firewall-cmd --zone=public --add-port=6800-7300/tcp --permanent
+firewall-cmd --zone=public --add-port=6800-7300/tcp
+firewall-cmd --zone=public --add-port=6800-7300/tcp --permanent
+firewall-cmd --zone=public --add-port=6800-7300/tcp
+firewall-cmd --zone=public --add-port=6800-7300/tcp --permanent
+firewall-cmd --zone=public --add-port=8080/tcp
+firewall-cmd --zone=public --add-port=8080/tcp --permanent
+firewall-cmd --zone=public --add-port=443/tcp
+firewall-cmd --zone=public --add-port=443/tcp --permanent
+# firewall-cmd --zone=public --add-port=9090/tcp
+# firewall-cmd --zone=public --add-port=9090/tcp --permanent
+
+# nmcli con del ens4
+# nmcli con add type ethernet ifname ens4 con-name ens4
+# nmcli con modify ens4 ipv4.method manual ipv4.addresses 172.21.7.12/24
+# nmcli con modify ens4 connection.autoconnect yes
+# nmcli con reload
+# nmcli con up ens4
+
+ssh-keygen -t rsa -N '' -f ~/.ssh/id_rsa
+
+sed -i 's/#UseDNS yes/UseDNS no/' /etc/ssh/sshd_config
+systemctl restart sshd
+
+ssh-copy-id root@lab101-ceph
+
+yum install -y ceph-ansible docker
+
+# cd /root
+# curl -o rhceph-4.1-rhel-8-x86_64.iso "https://access.cdn.redhat.com/content/origin/files/sha256/b7/b7130b75f727073f99064f9df1df7e6c591a72853bbc792b951f96c76423ac66/rhceph-4.1-rhel-8-x86_64.iso?user=a768b217cf6ae8041b67586bb4dd5c77&_auth_=1605071357_966a385795a8ee8a2f0f306cb9e23b22"
+
+# remember to set the env
+# https://access.redhat.com/RegistryAuthentication
+# REGISTRY_USER_NAME=
+# REGISTRY_TOKEN=
+
+cd /usr/share/ceph-ansible
+/bin/cp -f  group_vars/all.yml.sample group_vars/all.yml
+/bin/cp -f  group_vars/osds.yml.sample group_vars/osds.yml
+/bin/cp -f  site-docker.yml.sample site-docker.yml
+/bin/cp -f  site.yml.sample site.yml
+/bin/cp -f  group_vars/rgws.yml.sample group_vars/rgws.yml
+/bin/cp -f  group_vars/mdss.yml.sample group_vars/mdss.yml
+
+cat << EOF > ./group_vars/all.yml
+fetch_directory: ~/ceph-ansible-keys
+monitor_interface: eth1 
+public_network: 172.21.7.0/24
+# ceph_docker_image: rhceph/rhceph-4-rhel8
+# ceph_docker_image_tag: "latest"
+# containerized_deployment: true
+ceph_docker_registry: registry.redhat.io
+ceph_docker_registry_auth: true
+ceph_docker_registry_username: ${REGISTRY_USER_NAME}
+ceph_docker_registry_password: ${REGISTRY_TOKEN}
+ceph_origin: repository
+ceph_repository: rhcs
+# ceph_repository_type: cdn
+ceph_repository_type: iso
+ceph_rhcs_iso_path: /root/rhceph-4.1-rhel-7-x86_64.iso
+ceph_rhcs_version: 4
+bootstrap_dirs_owner: "167"
+bootstrap_dirs_group: "167"
+dashboard_admin_user: admin
+dashboard_admin_password: Redhat!23
+node_exporter_container_image: registry.redhat.io/openshift4/ose-prometheus-node-exporter:v4.1
+grafana_admin_user: admin
+grafana_admin_password: Redhat!23
+grafana_container_image: registry.redhat.io/rhceph/rhceph-4-dashboard-rhel8
+prometheus_container_image: registry.redhat.io/openshift4/ose-prometheus:4.1
+alertmanager_container_image: registry.redhat.io/openshift4/ose-prometheus-alertmanager:4.1
+radosgw_interface: eth1 
+radosgw_address_block: 172.21.7.0/24
+radosgw_civetweb_port: 8080
+radosgw_civetweb_num_threads: 512
+ceph_conf_overrides:
+  global:
+    osd_pool_default_size: 3
+    osd_pool_default_min_size: 3
+    osd_pool_default_pg_num: 32
+    osd_pool_default_pgp_num: 32
+  osd:
+   osd_scrub_begin_hour: 22
+   osd_scrub_end_hour: 7
+
+EOF
+
+cat << EOF > ./group_vars/osds.yml
+devices:
+  - /dev/vdb
+  - /dev/vdc
+  - /dev/vdd
+EOF
+
+cat << EOF > ./hosts
+[grafana-server]
+lab101-ceph
+[mons]
+lab101-ceph
+[osds]
+lab101-ceph
+[mgrs]
+lab101-ceph
+
+EOF
+
+sed -i "s/#copy_admin_key: false/copy_admin_key: true/" ./group_vars/rgws.yml
+
+cd /usr/share/ceph-ansible
+
+mkdir -p ~/ceph-ansible-keys
+ansible all -m ping -i hosts
+
+ansible-playbook -vv site.yml -i hosts
+
+#  You can access your dashboard web UI at http://lab101-ceph:8443/ as an 'admin' user with 'Redhat!23' password
+
+cd /root
+ceph osd getcrushmap -o crushmap
+crushtool -d crushmap -o crushmap.txt
+sed -i 's/step chooseleaf firstn 0 type host/step chooseleaf firstn 0 type osd/' crushmap.txt
+grep 'step chooseleaf' crushmap.txt
+crushtool -c crushmap.txt -o crushmap-new
+ceph osd setcrushmap -i crushmap-new
+cd /usr/share/ceph-ansible
+
+# test the result
+ceph health detail
+ceph osd pool create test 8
+# ceph osd pool set test pg_num 128
+# ceph osd pool set test pgp_num 128
+ceph osd pool application enable test rbd
+ceph -s
+ceph osd tree
+ceph osd pool ls
+ceph pg dump
+cat << EOF > hello-world.txt
+wangzheng
+EOF
+rados --pool test put hello-world hello-world.txt
+rados --pool test get hello-world fetch.txt
+cat fetch.txt
+
+# continue to install
+cat << EOF >> ./hosts
+[rgws]
+lab101-ceph
+[mdss]
+lab101-ceph
+
+EOF
+
+ansible-playbook -vv site.yml --limit mdss -i hosts
+
+ansible-playbook -vv site.yml --limit rgws -i hosts
+
+# change mon param for S3
+# 416 (InvalidRange)
+# https://www.cnblogs.com/flytor/p/11380026.html
+# https://www.cnblogs.com/fuhai0815/p/12144214.html
+# https://access.redhat.com/solutions/3328431
+# https://themeanti.me/technology/2018/03/14/ceph-pgs.html
+# add config line
+vi /etc/ceph/ceph.conf
+# [global]
+# mon_max_pg_per_osd = 1000
+## osd_max_pg_per_osd_hard_ratio = 100
+
+systemctl restart ceph-mgr@lab101-ceph.service
+systemctl restart ceph-mon@lab101-ceph.service
+
+# ceph tell mon.* injectargs '--mon_max_pg_per_osd=1000'
+
+ceph --admin-daemon /var/run/ceph/ceph-mon.`hostname -s`.asok config show | grep mon_max_pg_per_osd
+
+# ceph --admin-daemon /var/run/ceph/ceph-mgr.`hostname -s`.asok config set mon_max_pg_per_osd 1000
+
+ceph osd lspools
+ceph osd dump | grep 'replicated size'
 
 
 ```
+
+
+
+
+
+
+
+
+
 
 
 # ceph on rhel8
