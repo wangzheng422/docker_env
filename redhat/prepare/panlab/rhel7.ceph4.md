@@ -154,7 +154,7 @@ virsh autostart ceph
 
 virsh start ceph
 
-yum -y install cockpit cockpit-dashboard
+yum -y install cockpit cockpit-dashboard cockpit-machines
 
 firewall-cmd --add-port=9090/tcp
 firewall-cmd --permanent --add-port=9090/tcp
