@@ -45,11 +45,11 @@ subscription-manager --proxy=$PROXY repos \
     --enable="rhel-8-for-x86_64-baseos-source-rpms" \
     --enable="rhel-8-for-x86_64-appstream-rpms" \
     --enable="rhel-8-for-x86_64-supplementary-rpms" \
+    --enable="codeready-builder-for-rhel-8-x86_64-rpms" \
     # --enable="rhel-8-for-x86_64-rt-beta-rpms" \
     # --enable="rhel-8-for-x86_64-highavailability-beta-rpms" \
     # --enable="rhel-8-for-x86_64-nfv-beta-rpms" \
     # --enable="fast-datapath-beta-for-rhel-8-x86_64-rpms" \
-    # --enable="codeready-builder-beta-for-rhel-8-x86_64-rpms" \
     # --enable="dirsrv-beta-for-rhel-8-x86_64-rpms" \
     # ansible-2.9-for-rhel-8-x86_64-rpms
 
@@ -60,8 +60,8 @@ cat << EOF >> /etc/dnf/dnf.conf
 fastestmirror=1
 EOF
 
-# 编译内核，需要rhel7, rhel8里面的epel的包
-yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+# 编译内核，需要rhel8里面的epel的包
+# yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
 dnf -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
 
 yum -y install yum-utils rpm-build tar pigz dnf-plugins-core htop byobu  tlog cockpit-session-recording glances wget tigervnc-server tigervnc tigervnc-server-module createrepo
@@ -92,10 +92,20 @@ mkdir -p /data/dnf
 cd /data/dnf
 
 dnf reposync -m --download-metadata --delete -n
-createrepo ./
+# createrepo ./
 
 cd /data
 tar -cvf - dnf/ | pigz -c > rhel8.dnf.tgz
+
+split -b 5000m rhel8.dnf.tgz rhel8.dnf.tgz.
+mkdir -p tmp
+mv rhel8.dnf.tgz.* tmp/
+
+# https://github.com/houtianze/bypy
+yum -y install python3-pip
+pip3 install --user bypy 
+/root/.local/bin/bypy list
+/root/.local/bin/bypy upload
 
 dnf -y install vsftpd
 mkdir -p /var/ftp/dnf
@@ -103,8 +113,9 @@ mount --bind /data/dnf /var/ftp/dnf
 chcon -R -t public_content_t /var/ftp/dnf
 
 sed -i "s/anonymous_enable=NO/anonymous_enable=YES/" /etc/vsftpd/vsftpd.conf
-systemctl restart vsftpd
 
+systemctl enable --now vsftpd
+systemctl restart vsftpd
 
 ```
 
@@ -166,18 +177,82 @@ virt-install --name=rhel8-kernel --vcpus=16 --ram=32768 \
   --os-variant rhel8.3 \
   --boot menu=on --location /data/rhel-8.3-x86_64-dvd.iso
 
+virsh start rhel8-kernel
+
 ```
 
 ### build the kernel
 
 ```bash
+#####################################################
+# login to the vm
+mkdir /etc/yum.repos.d.bak
+mv /etc/yum.repos.d/* /etc/yum.repos.d.bak
+
+export YUMIP="192.168.7.1"
+cat << EOF > /etc/yum.repos.d/remote.repo
+[remote-epel]
+name=epel
+baseurl=ftp://${YUMIP}/dnf/epel
+enabled=1
+gpgcheck=0
+
+[remote-epel-modular]
+name=epel-modular
+baseurl=ftp://${YUMIP}/dnf/epel-modular
+enabled=1
+gpgcheck=0
+
+[remote-appstream]
+name=appstream
+baseurl=ftp://${YUMIP}/dnf/rhel-8-for-x86_64-appstream-rpms
+enabled=1
+gpgcheck=0
+
+[remote-baseos]
+name=baseos
+baseurl=ftp://${YUMIP}/dnf/rhel-8-for-x86_64-baseos-rpms
+enabled=1
+gpgcheck=0
+
+[remote-baseos-source]
+name=baseos-source
+baseurl=ftp://${YUMIP}/dnf/rhel-8-for-x86_64-baseos-source-rpms
+enabled=1
+gpgcheck=0
+
+[remote-supplementary]
+name=supplementary
+baseurl=ftp://${YUMIP}/dnf/rhel-8-for-x86_64-supplementary-rpms
+enabled=1
+gpgcheck=0
+
+[remote-codeready-builder]
+name=supplementary
+baseurl=ftp://${YUMIP}/dnf/codeready-builder-for-rhel-8-x86_64-rpms
+enabled=1
+gpgcheck=0
+
+EOF
+
+yum clean all
+yum makecache
+yum repolist
+
+yum -y update
+
+reboot
+
+######################################################
+# begin to build kernel
 yum list kernel.x86_64
 
 # 下载内核源码包
+yum -y install yum-utils rpm-build 
 yumdownloader --source kernel.x86_64
 
 # 安装源码包
-rpm -ivh /root/kernel-4.18.0-221.el8.src.rpm
+rpm -ivh /root/kernel-4.18.0-240.1.1.el8_3.src.rpm
 
 cd /root/rpmbuild/SPECS
 # https://stackoverflow.com/questions/13227162/automatically-install-build-dependencies-prior-to-building-an-rpm-package
@@ -192,9 +267,10 @@ rpmbuild -bp --target=x86_64 kernel.spec
 # https://www.cnblogs.com/luohaixian/p/9313863.html
 KERNELVERION=`uname -r | sed "s/.$(uname -m)//"`
 KERNELRV=$(uname -r)
-/bin/cp -f /root/rpmbuild/BUILD/kernel-${KERNELVERION}/linux-${KERNELRV}/configs/* /root/rpmbuild/SOURCES/
+KERNELSV=`echo $KERNELRV | sed 's/_.//'`
+/bin/cp -f /root/rpmbuild/BUILD/kernel-${KERNELVERION}/linux-${KERNELSV}/configs/* /root/rpmbuild/SOURCES/
 
-cd /root/rpmbuild/BUILD/kernel-${KERNELVERION}/linux-${KERNELRV}/
+cd /root/rpmbuild/BUILD/kernel-${KERNELVERION}/linux-${KERNELSV}/
 
 /bin/cp -f configs/kernel-4.18.0-`uname -m`.config .config
 # cp /boot/config-`uname -r`   .config
@@ -244,7 +320,7 @@ rpmbuild -bb --target=`uname -m` --with baseonly --without debug --without debug
 cd /root/rpmbuild/RPMS/x86_64/
 
 # 安装编译的内核
-INSTALLKV=4.18.0-221.el8.wzh
+INSTALLKV=4.18.0-240.1.1.el8.wzh
 
 yum install ./kernel-$INSTALLKV.x86_64.rpm ./kernel-core-$INSTALLKV.x86_64.rpm ./kernel-modules-$INSTALLKV.x86_64.rpm
 
