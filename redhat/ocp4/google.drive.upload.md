@@ -124,6 +124,16 @@ rsync -e ssh --info=progress2 -P --delete -arz /data/ocp4 ${VULTR_HOST}:/data/
 rsync -e ssh --info=progress2 -P --delete -arz /data/is.samples ${VULTR_HOST}:/data/
 
 
+#######################################
+# baidu pan on rhel8
+mkdir -p tmp
+mv rhel8.dnf.tgz.* tmp/
+
+# https://github.com/houtianze/bypy
+yum -y install python3-pip
+pip3 install --user bypy 
+/root/.local/bin/bypy list
+/root/.local/bin/bypy upload
 
 
 ####################

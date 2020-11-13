@@ -98,14 +98,6 @@ cd /data
 tar -cvf - dnf/ | pigz -c > rhel8.dnf.tgz
 
 split -b 5000m rhel8.dnf.tgz rhel8.dnf.tgz.
-mkdir -p tmp
-mv rhel8.dnf.tgz.* tmp/
-
-# https://github.com/houtianze/bypy
-yum -y install python3-pip
-pip3 install --user bypy 
-/root/.local/bin/bypy list
-/root/.local/bin/bypy upload
 
 dnf -y install vsftpd
 mkdir -p /var/ftp/dnf
