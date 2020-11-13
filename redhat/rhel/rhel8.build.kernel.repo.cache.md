@@ -42,6 +42,7 @@ subscription-manager --proxy=$PROXY repos --disable="*"
 
 subscription-manager --proxy=$PROXY repos \
     --enable="rhel-8-for-x86_64-baseos-rpms" \
+    --enable="rhel-8-for-x86_64-baseos-source-rpms" \
     --enable="rhel-8-for-x86_64-appstream-rpms" \
     --enable="rhel-8-for-x86_64-supplementary-rpms" \
     # --enable="rhel-8-for-x86_64-rt-beta-rpms" \
@@ -63,12 +64,22 @@ EOF
 yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
 dnf -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
 
-yum -y install yum-utils rpm-build tar pigz dnf-plugins-core htop byobu cockpit cockpit-dashboard cockpit-machines tlog cockpit-session-recording glances
+yum -y install yum-utils rpm-build tar pigz dnf-plugins-core htop byobu  tlog cockpit-session-recording glances wget tigervnc-server tigervnc tigervnc-server-module createrepo
+
+dnf -y install cockpit cockpit-dashboard cockpit-machines
+
+yum -y install virt-install virt-viewer libguestfs-tools virt-manager
+
+dnf -y module install virt
+
+yum -y groupinstall 'Server with GUI'
 
 yum -y update
 
 systemctl enable --now cockpit.socket
 systemctl disable --now firewalld
+
+systemctl enable --now libvirtd.service
 
 pvcreate -f /dev/nvme0n1
 vgcreate nvme /dev/nvme0n1
@@ -77,6 +88,89 @@ lvcreate -y -L 300G -n data nvme
 mkfs.xfs /dev/nvme/data
 mount /dev/nvme/data /data
 
+mkdir -p /data/dnf
+cd /data/dnf
+
+dnf reposync -m --download-metadata --delete -n
+createrepo ./
+
+cd /data
+tar -cvf - dnf/ | pigz -c > rhel8.dnf.tgz
+
+dnf -y install vsftpd
+mkdir -p /var/ftp/dnf
+mount --bind /data/dnf /var/ftp/dnf
+chcon -R -t public_content_t /var/ftp/dnf
+
+sed -i "s/anonymous_enable=NO/anonymous_enable=YES/" /etc/vsftpd/vsftpd.conf
+systemctl restart vsftpd
+
+
+```
+
+### create a disconnected kvm
+
+```bash
+
+vncpasswd
+
+cat << EOF > ~/.vnc/xstartup
+#!/bin/sh
+# unset SESSION_MANAGER
+# unset DBUS_SESSION_BUS_ADDRESS
+vncconfig &
+# gnome-session &
+EOF
+chmod +x ~/.vnc/xstartup
+
+cat << EOF > ~/.vnc/config
+session=gnome
+securitytypes=vncauth,tlsvnc
+desktop=sandbox
+geometry=1280x800
+alwaysshared
+EOF
+
+less /usr/share/doc/tigervnc/HOWTO.md
+
+cat << EOF >> /etc/tigervnc/vncserver.users
+:1=root
+EOF
+
+systemctl start vncserver@:1
+
+systemctl stop vncserver@:1
+
+journalctl -u vncserver@:1
+
+lvremove -f nvme/data01
+lvcreate -y -L 72G -n data01 nvme
+
+cat << EOF >  /data/virt-net.xml
+<network>
+  <name>openshift4</name>
+  <bridge name='openshift4' stp='on' delay='0'/>
+  <domain name='openshift4'/>
+  <ip address='192.168.7.1' netmask='255.255.255.0'>
+  </ip>
+</network>
+EOF
+
+virsh net-define --file /data/virt-net.xml
+virsh net-autostart openshift4
+virsh net-start openshift4
+
+virt-install --name=rhel8-kernel --vcpus=16 --ram=32768 \
+  --disk path=/dev/nvme/data01,device=disk,bus=virtio,format=raw \
+  --network network=openshift4,model=virtio \
+  --os-variant rhel8.3 \
+  --boot menu=on --location /data/rhel-8.3-x86_64-dvd.iso
+
+```
+
+### build the kernel
+
+```bash
 yum list kernel.x86_64
 
 # 下载内核源码包
