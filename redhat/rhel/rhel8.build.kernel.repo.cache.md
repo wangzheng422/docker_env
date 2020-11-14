@@ -15,7 +15,7 @@
 ## 实验步骤
 
 ### 先做一个离线repo源
-
+由于我们的目标编译环境，是一个外网隔离的主机环境，那么我们就需要给目标环境准备一个离线更新源，这个章节，我们就在公网环境里面，来准备一个rhel8的离线更新源。
 ```bash
 # https://access.redhat.com/articles/3938081
 # grubby --info=ALL | grep title
@@ -97,8 +97,10 @@ dnf reposync -m --download-metadata --delete -n
 cd /data
 tar -cvf - dnf/ | pigz -c > rhel8.dnf.tgz
 
+# 按照5G大小切分更新源的包，并上传百度盘
 split -b 5000m rhel8.dnf.tgz rhel8.dnf.tgz.
 
+# 用下载好的更新包，创建ftp的更新源，准备kvm进行内核编译测试
 dnf -y install vsftpd
 mkdir -p /var/ftp/dnf
 mount --bind /data/dnf /var/ftp/dnf
@@ -112,9 +114,10 @@ systemctl restart vsftpd
 ```
 
 ### create a disconnected kvm
-
+在这里，我们创建一个外网隔离的kvm，用宿主机上的ftp更新源来更新系统，并编译内核。本章节，我们来创建这个kvm虚拟机。
 ```bash
-
+# 先在宿主机上准备vncserver环境，
+# 注意rhel8情况下，vncserver的配置方法改变了。
 vncpasswd
 
 cat << EOF > ~/.vnc/xstartup
@@ -134,7 +137,7 @@ geometry=1280x800
 alwaysshared
 EOF
 
-less /usr/share/doc/tigervnc/HOWTO.md
+cat /usr/share/doc/tigervnc/HOWTO.md
 
 cat << EOF >> /etc/tigervnc/vncserver.users
 :1=root
@@ -146,9 +149,11 @@ systemctl stop vncserver@:1
 
 journalctl -u vncserver@:1
 
+# 给kvm准备一个逻辑卷做启动盘。
 lvremove -f nvme/data01
 lvcreate -y -L 72G -n data01 nvme
 
+# 创建一个宿主机host-only的网络
 cat << EOF >  /data/virt-net.xml
 <network>
   <name>openshift4</name>
@@ -163,21 +168,24 @@ virsh net-define --file /data/virt-net.xml
 virsh net-autostart openshift4
 virsh net-start openshift4
 
+# 创建并运行rhel8主机，开始安装
 virt-install --name=rhel8-kernel --vcpus=16 --ram=32768 \
   --disk path=/dev/nvme/data01,device=disk,bus=virtio,format=raw \
   --network network=openshift4,model=virtio \
   --os-variant rhel8.3 \
   --boot menu=on --location /data/rhel-8.3-x86_64-dvd.iso
 
+# 后续宿主机重启后，这样启动kvm
 virsh start rhel8-kernel
 
 ```
 
 ### build the kernel
-
+以上，我们就准备好了离线的kvm测试机，让我们在这个kvm里面，开始我们的内核编译。
 ```bash
 #####################################################
 # login to the vm
+# 使用宿主机上的ftp更新源
 mkdir /etc/yum.repos.d.bak
 mv /etc/yum.repos.d/* /etc/yum.repos.d.bak
 
@@ -237,6 +245,8 @@ reboot
 
 ######################################################
 # begin to build kernel
+# 真正开始我们的内核编译
+# 查找内核版本
 yum list kernel.x86_64
 
 # 下载内核源码包
@@ -246,6 +256,7 @@ yumdownloader --source kernel.x86_64
 # 安装源码包
 rpm -ivh /root/kernel-4.18.0-240.1.1.el8_3.src.rpm
 
+# 安装编译的依赖包
 cd /root/rpmbuild/SPECS
 # https://stackoverflow.com/questions/13227162/automatically-install-build-dependencies-prior-to-building-an-rpm-package
 # 安装辅助包
@@ -268,6 +279,8 @@ cd /root/rpmbuild/BUILD/kernel-${KERNELVERION}/linux-${KERNELSV}/
 # cp /boot/config-`uname -r`   .config
 
 make oldconfig
+
+# 按照编译内核的需求，调整内核参数
 # 自定义配置，请观看视频
 make menuconfig
 
@@ -312,6 +325,7 @@ rpmbuild -bb --target=`uname -m` --with baseonly --without debug --without debug
 cd /root/rpmbuild/RPMS/x86_64/
 
 # 安装编译的内核
+# 由于每次编译内核的名字都不一样，这里需要手动更新一下名字
 INSTALLKV=4.18.0-240.1.1.el8.wzh
 
 yum install ./kernel-$INSTALLKV.x86_64.rpm ./kernel-core-$INSTALLKV.x86_64.rpm ./kernel-modules-$INSTALLKV.x86_64.rpm
@@ -324,9 +338,20 @@ lsmod | grep act_ife
 
 ```
 
-本次实验编译完成的rhel kernel的包，在这里下载：
+## 下载和使用离线更新源
+本次实验 rhel8 的离线更新源，在这里下载：
 
 链接: https://pan.baidu.com/s/1AG07HxpXy9hoCLMq9qXi0Q  密码: 7hkt
 --来自百度网盘超级会员V3的分享
 
+```bash
+# 下载以后，这样使用
+cat rhel8.dnf.tgz.* > rhel8.dnf.tgz
 
+tar zvxf rhel8.dnf.tgz
+
+# 使用解压缩后的 dnf 目录，挂在到ftp或者http服务目录上
+# 更新主机的 /etc/yum.repos.d/remote.repo 即可
+
+
+```
