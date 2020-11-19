@@ -17,15 +17,30 @@ mkdir -p /data/ocp4/operator/manifests
 mkdir -p /data/ocp4/operator/tgz
 cd /data/ocp4/operator/
 
-oc adm catalog build --filter-by-os='linux/amd64' \
-    --appregistry-org redhat-operators \
-    --from=registry.redhat.io/openshift4/ose-operator-registry:v${var_major_version} \
-    --to=docker.io/wangzheng422/operator-catalog:redhat-${var_major_version}-$var_date 
+# oc adm catalog build --filter-by-os='linux/amd64' \
+#     --appregistry-org redhat-operators \
+#     --from=registry.redhat.io/openshift4/ose-operator-registry:v${var_major_version} \
+#     --to=docker.io/wangzheng422/operator-catalog:redhat-${var_major_version}-$var_date 
+
+# oc adm catalog mirror \
+#     registry.redhat.io/redhat/redhat-operator-index:v4.6 \
+#     registry.redhat.ren:5443/ocp-operator \
+#     --filter-by-os='linux/amd64' \
+#     --manifests-only
+
+skopeo copy \
+    docker://registry.redhat.io/redhat/redhat-operator-index:v4.6 \
+    docker://docker.io/wangzheng422/operator-catalog:redhat-${var_major_version}-$var_date
 
 oc adm catalog build --filter-by-os='linux/amd64' \
     --appregistry-org certified-operators \
     --from=registry.redhat.io/openshift4/ose-operator-registry:v${var_major_version} \
     --to=docker.io/wangzheng422/operator-catalog:certified-${var_major_version}-$var_date  
+
+skopeo copy \
+    docker://registry.redhat.io/redhat/redhat-operator-index:v4.6 \
+    docker://docker.io/wangzheng422/operator-catalog:redhat-${var_major_version}-$var_date
+
 
 oc adm catalog build --filter-by-os='linux/amd64' \
     --appregistry-org community-operators \

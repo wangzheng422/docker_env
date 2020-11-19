@@ -1,5 +1,6 @@
 # checklist
 
+- ocp update api server cert, https://docs.openshift.com/container-platform/4.6/security/certificates/api-server.html
 - book
 - ebpf learning and self tool
 - ocp 4.6, bm ipi disconnect

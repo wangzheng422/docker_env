@@ -112,4 +112,10 @@ oc get pod -n openshift-apiserver-operator
 
 oc logs openshift-apiserver-operator-f79557665-8gvnm -n openshift-apiserver-operator
 
+IMG=registry.redhat.io/openshift-serverless-1/client-kn-rhel8@sha256:47bd682ee37236edbbf45ba584cf25a69be13fbf3116d0a139b48ab916eb984d
+echo ${IMG##*/}
+SIMG=${IMG##*/}
+echo ${SIMG%@*}
+sed 's/=.*//g' mapping.txt > test
+
 ```
