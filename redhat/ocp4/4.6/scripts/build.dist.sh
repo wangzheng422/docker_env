@@ -41,6 +41,9 @@ wget  -nd -np -e robots=off --reject="index.html*" -P /data/ocp4/clients --recur
 # client for serverless
 wget  -nd -np -e robots=off --reject="index.html*" -P /data/ocp4/clients --recursive https://mirror.openshift.com/pub/openshift-v4/clients/serverless/latest/
 
+# coreos-installer
+wget  -nd -np -e robots=off --reject="index.html*" -P /data/ocp4/clients --recursive https://mirror.openshift.com/pub/openshift-v4/clients/coreos-installer/latest/
+
 mkdir -p /data/ocp4
 /bin/rm -f /data/finished
 cd /data/ocp4
@@ -82,7 +85,7 @@ done <<< "$build_number_list"
 
 cd /data/ocp4
 
-wget --recursive --no-directories --no-parent -e robots=off --reject="index.html*"  https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/${var_major_version}/latest/
+wget --recursive --no-directories --no-parent -e robots=off --reject="index.html*,*aws*,*azure*,*gcp*,*vmware*,*ostree*,"  https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/${var_major_version}/latest/
 
 wget -O ocp4-upi-helpernode.zip https://github.com/wangzheng422/ocp4-upi-helpernode/archive/master.zip
 
