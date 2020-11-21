@@ -3,8 +3,6 @@
 set -e
 set -x
 
-# export BUILDNUMBER="4.2.13"
-# stable 4.3.5
 build_number_list=$(cat << EOF
 4.6.5
 EOF
@@ -15,9 +13,6 @@ export var_date='2020.11.21.1108'
 echo $var_date
 export var_major_version='4.6'
 echo ${var_major_version}
-
-# export MIRROR_DIR='/data/mirror_dir'
-# mkdir -p ${MIRROR_DIR}
 
 wget -O image.mirror.fn.sh https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/${var_major_version}/scripts/image.mirror.fn.sh
 
@@ -49,9 +44,6 @@ wget  -nd -np -e robots=off --reject="index.html*" -P /data/ocp4/clients --recur
 mkdir -p /data/ocp4
 /bin/rm -f /data/finished
 cd /data/ocp4
-# wget https://mirror.openshift.com/pub/openshift-v4/clients/ocp/latest-4.2/release.txt
-
-# export BUILDNUMBER=$(cat release.txt | grep 'Name:' | awk '{print $NF}')
 
 install_build() {
     BUILDNUMBER=$1
@@ -82,19 +74,6 @@ install_build() {
     --to-release-image=${LOCAL_REG}/${LOCAL_REPO}:${OCP_RELEASE} \
     --to=${LOCAL_REG}/${LOCAL_REPO}
 
-    # oc adm release extract --command=openshift-install "${LOCAL_REG}/${LOCAL_REPO}:${OCP_RELEASE}"
-
-    # oc adm release mirror -a ${LOCAL_SECRET_JSON} \
-    # --from=quay.io/${UPSTREAM_REPO}/${RELEASE_NAME}:${OCP_RELEASE}-x86_64 \
-    # --to-dir=${MIRROR_DIR}
-
-    # oc image mirror --dir=mirror file://ocp4/openshift4/release:* registry.redhat.ren:5443/ocp4/openshift4 --registry-config=/root/merged_pullsecret.json
-
-    # oc adm release mirror -a ${LOCAL_SECRET_JSON} \
-    # --from=quay.io/${UPSTREAM_REPO}/${RELEASE_NAME}:${OCP_RELEASE}-s390 \
-    # --to-release-image=${LOCAL_REG}/${LOCAL_REPO}:${OCP_RELEASE} \
-    # --to=${LOCAL_REG}/${LOCAL_REPO}
-
 }
 
 while read -r line; do
@@ -105,15 +84,11 @@ cd /data/ocp4
 
 wget --recursive --no-directories --no-parent -e robots=off --reject="index.html*"  https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/${var_major_version}/latest/
 
-# wget --recursive --no-directories --no-parent https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/4.2/latest/
-
 wget -O ocp4-upi-helpernode.zip https://github.com/wangzheng422/ocp4-upi-helpernode/archive/master.zip
 
 wget -O docker_env.zip https://github.com/wangzheng422/docker_env/archive/dev.zip
 
 wget -O agnosticd.zip https://github.com/wangzheng422/agnosticd/archive/wzh-ccn-ocp-4.4.zip
-
-# wget -O filetranspiler-master.zip https://github.com/wangzheng422/filetranspiler/archive/master.zip
 
 podman pull quay.io/wangzheng422/filetranspiler
 podman save quay.io/wangzheng422/filetranspiler | pigz -c > filetranspiler.tgz
