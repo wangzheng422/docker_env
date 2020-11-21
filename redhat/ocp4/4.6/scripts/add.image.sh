@@ -3,7 +3,8 @@
 set -e
 set -x
 
-parm_file=$1
+parm_local_reg=$1
+parm_file=$2
 
 /bin/rm -f pull.add.image.failed.list pull.add.image*.ok.list yaml.add.image.ok.list
 

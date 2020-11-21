@@ -144,7 +144,7 @@ sed -i 's/=.*//g' mapping-redhat-marketplace.txt
 bash image.registries.conf.sh registry.redhat.ren:5443
 
 /bin/rm -f index.html*
-/bin/rm -f operator-catalog-manifests
+/bin/rm -rf operator-catalog-manifests
 
 cd /data
 
