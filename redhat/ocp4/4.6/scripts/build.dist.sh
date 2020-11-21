@@ -46,8 +46,6 @@ wget  -nd -np -e robots=off --reject="index.html*" -P /data/ocp4/clients --recur
 # client for serverless
 wget  -nd -np -e robots=off --reject="index.html*" -P /data/ocp4/clients --recursive https://mirror.openshift.com/pub/openshift-v4/clients/serverless/latest/
 
-# podman login registry.redhat.ren -u a -p a
-
 mkdir -p /data/ocp4
 /bin/rm -f /data/finished
 cd /data/ocp4
