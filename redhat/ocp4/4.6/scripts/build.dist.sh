@@ -85,7 +85,7 @@ done <<< "$build_number_list"
 
 cd /data/ocp4
 
-wget --recursive --no-directories --no-parent -e robots=off --reject="index.html*,*aws*,*azure*,*gcp*,*vmware*,*ostree*,"  https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/${var_major_version}/latest/
+wget --recursive --no-directories --no-parent -e robots=off --accept="*live*,*installer*"  https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/${var_major_version}/latest/
 
 wget -O ocp4-upi-helpernode.zip https://github.com/wangzheng422/ocp4-upi-helpernode/archive/master.zip
 
@@ -141,7 +141,7 @@ oc adm catalog mirror --filter-by-os='linux/amd64' \
 /bin/cp -f operator-catalog-manifests/mapping.txt mapping-redhat-marketplace.txt
 sed -i 's/=.*//g' mapping-redhat-marketplace.txt
 
-bash image.registries.conf.sh registry.redhat.ren:5443 install.image.list
+bash image.registries.conf.sh registry.redhat.ren:5443
 
 /bin/rm -f index.html*
 /bin/rm -f operator-catalog-manifests

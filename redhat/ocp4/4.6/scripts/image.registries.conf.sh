@@ -4,74 +4,20 @@ set -e
 set -x
 
 parm_local_reg=$1
-parm_file=$2
-
-#export LOCAL_REG='registry.redhat.ren:5443'
-# export MID_REG="registry.redhat.ren"
-
-# export OCP_RELEASE=${BUILDNUMBER}
-# export LOCAL_REG='registry.redhat.ren'
-# export LOCAL_REPO='ocp4/openshift4'
-# export UPSTREAM_REPO='openshift-release-dev'
-# export LOCAL_SECRET_JSON="pull-secret.json"
-# export OPENSHIFT_INSTALL_RELEASE_IMAGE_OVERRIDE=${LOCAL_REG}/${LOCAL_REPO}:${OCP_RELEASE}
-# export RELEASE_NAME="ocp-release"
-
-# /bin/rm -rf ./operator/yaml/
-# mkdir -p ./operator/yaml/
-
-cat pull.image.ok.list ${parm_file} mapping-*.txt | sed 's/\/.*$//g' | egrep "^.*\.(io|com|org|net)$"  | sort | uniq > mirror.domain.list
-# cat pull.image.ok.list ${parm_file} mapping-*.txt | sed 's/\/.*$//g' | sort | uniq > mirror.domain.list
 
 cat << EOF > ./image.registries.conf
-unqualified-search-registries = ["registry.access.redhat.com", "docker.io"]
-
-EOF
-
-yaml_docker_image(){
-
-    docker_image=$1
-    # local_image=$(echo $2 | sed "s/${MID_REG}/${LOCAL_REG}/")
-    num=$2
-    # echo $docker_image
-
-cat << EOF >> ./image.registries.conf
+unqualified-search-registries = ["registry.redhat.io", "registry.access.redhat.com", "docker.io"]
 
 [[registry]]
-  location = "${docker_image}"
+  location = ""
   insecure = false
   blocked = false
   mirror-by-digest-only = false
-  prefix = "${docker_image}"
+  prefix = ""
 
   [[registry.mirror]]
     location = "${parm_local_reg}/ocp4"
     insecure = true
-
-EOF
-
-}
-
-declare -i num=1
-
-while read -r line; do
-
-    # docker_image=$(echo $line | awk  '{split($0,a,"\t"); print a[1]}')
-    # local_image=$(echo $line | awk  '{split($0,a,"\t"); print a[2]}')
-
-    docker_image=$line
-
-    echo $docker_image
-    # echo $local_image
-
-    # yaml_docker_image $docker_image $local_image $num
-    yaml_docker_image $docker_image $num
-    num=${num}+1;
-
-done < mirror.domain.list
-
-
-cat << EOF >> ./image.registries.conf
 
 [[registry]]
   location = "quay.io/openshift-release-dev/ocp-release"
