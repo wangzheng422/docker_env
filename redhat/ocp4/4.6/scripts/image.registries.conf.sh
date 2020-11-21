@@ -45,11 +45,7 @@ cat << EOF >> ./image.registries.conf
   prefix = "${docker_image}"
 
   [[registry.mirror]]
-    location = "${parm_local_reg}/${docker_image}"
-    insecure = true
-  
-  [[registry.mirror]]
-    location = "${parm_local_reg}/ocp-operator"
+    location = "${parm_local_reg}/ocp4"
     insecure = true
 
 EOF
@@ -120,7 +116,7 @@ metadata:
 spec:
   config:
     ignition:
-      version: 2.2.0
+      version: 3.1.0
     storage:
       files:
       - contents:
@@ -141,7 +137,7 @@ metadata:
 spec:
   config:
     ignition:
-      version: 2.2.0
+      version: 3.1.0
     storage:
       files:
       - contents:

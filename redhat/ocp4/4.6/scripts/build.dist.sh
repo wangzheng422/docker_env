@@ -96,10 +96,10 @@ podman save quay.io/wangzheng422/filetranspiler | pigz -c > filetranspiler.tgz
 podman pull docker.io/library/registry:2
 podman save docker.io/library/registry:2 | pigz -c > registry.tgz
 
-oc image mirror --filter-by-os='linux/amd64' docker.io/wangzheng422/operator-catalog:redhat-${var_major_version}-${var_date} ${LOCAL_REG}/docker.io/wangzheng422/operator-catalog:redhat-${var_major_version}-${var_date}
-oc image mirror --filter-by-os='linux/amd64' docker.io/wangzheng422/operator-catalog:certified-${var_major_version}-${var_date} ${LOCAL_REG}/docker.io/wangzheng422/operator-catalog:certified-${var_major_version}-${var_date}
-oc image mirror --filter-by-os='linux/amd64' docker.io/wangzheng422/operator-catalog:community-${var_major_version}-${var_date} ${LOCAL_REG}/docker.io/wangzheng422/operator-catalog:community-${var_major_version}-${var_date}
-oc image mirror --filter-by-os='linux/amd64' docker.io/wangzheng422/operator-catalog:redhat-marketplace-${var_major_version}-${var_date} ${LOCAL_REG}/docker.io/wangzheng422/operator-catalog:redhat-marketplace-${var_major_version}-${var_date}
+oc image mirror --filter-by-os='linux/amd64' docker.io/wangzheng422/operator-catalog:redhat-${var_major_version}-${var_date} ${LOCAL_REG}/ocp4/operator-catalog:redhat-${var_major_version}-${var_date}
+oc image mirror --filter-by-os='linux/amd64' docker.io/wangzheng422/operator-catalog:certified-${var_major_version}-${var_date} ${LOCAL_REG}/ocp4/operator-catalog:certified-${var_major_version}-${var_date}
+oc image mirror --filter-by-os='linux/amd64' docker.io/wangzheng422/operator-catalog:community-${var_major_version}-${var_date} ${LOCAL_REG}/ocp4/operator-catalog:community-${var_major_version}-${var_date}
+oc image mirror --filter-by-os='linux/amd64' docker.io/wangzheng422/operator-catalog:redhat-marketplace-${var_major_version}-${var_date} ${LOCAL_REG}/ocp4/operator-catalog:redhat-marketplace-${var_major_version}-${var_date}
 
 cd /data/ocp4
 
@@ -112,19 +112,19 @@ bash demos.sh
 # build operator catalog
 oc adm catalog mirror --filter-by-os='linux/amd64' \
     docker.io/wangzheng422/operator-catalog:redhat-${var_major_version}-$var_date \
-    registry.redhat.ren:5443/ocp-operator \
+    registry.redhat.ren:5443/ocp4 \
     --manifests-only
 /bin/cp -f operator-catalog-manifests/mapping.txt mapping-redhat.txt
 
 oc adm catalog mirror --filter-by-os='linux/amd64' \
     docker.io/wangzheng422/operator-catalog:certified-${var_major_version}-$var_date \
-    registry.redhat.ren:5443/ocp-operator \
+    registry.redhat.ren:5443/ocp4 \
     --manifests-only
 /bin/cp -f operator-catalog-manifests/mapping.txt mapping-certified.txt
 
 oc adm catalog mirror --filter-by-os='linux/amd64' \
     docker.io/wangzheng422/operator-catalog:community-${var_major_version}-$var_date \
-    registry.redhat.ren:5443/ocp-operator \
+    registry.redhat.ren:5443/ocp4 \
     --manifests-only
 /bin/cp -f operator-catalog-manifests/mapping.txt mapping-community.txt
 
