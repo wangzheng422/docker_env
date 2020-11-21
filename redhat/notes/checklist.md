@@ -17,6 +17,7 @@
 - lms, fuse: https://learning.redhat.com/totara/program/view.php?id=90
 - lms, amq, https://learning.redhat.com/totara/program/view.php?id=97
 - https://zh.d2l.ai/
+- chrome bing wall pic new tab, https://codingcat.cn/ataraxia/
 
 soft:
 - ppt
