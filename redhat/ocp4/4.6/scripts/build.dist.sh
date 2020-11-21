@@ -6,14 +6,14 @@ set -x
 # export BUILDNUMBER="4.2.13"
 # stable 4.3.5
 build_number_list=$(cat << EOF
-4.6.4
+4.6.5
 EOF
 )
 
 # params for operator hub images
-export var_date='2020-08-19-0913'
+export var_date='2020.11.21.1108'
 echo $var_date
-export var_major_version='4.5'
+export var_major_version='4.6'
 echo ${var_major_version}
 
 # export MIRROR_DIR='/data/mirror_dir'
@@ -128,37 +128,10 @@ oc image mirror --filter-by-os='linux/amd64' docker.io/wangzheng422/operator-cat
 oc image mirror --filter-by-os='linux/amd64' docker.io/wangzheng422/operator-catalog:community-${var_major_version}-${var_date} ${LOCAL_REG}/docker.io/wangzheng422/operator-catalog:community-${var_major_version}-${var_date}
 oc image mirror --filter-by-os='linux/amd64' docker.io/wangzheng422/operator-catalog:redhat-marketplace-${var_major_version}-${var_date} ${LOCAL_REG}/docker.io/wangzheng422/operator-catalog:redhat-marketplace-${var_major_version}-${var_date}
 
-# /bin/rm -f pull-secret.json
-
-# cd /root
-# https://blog.csdn.net/ffzhihua/article/details/85237411
-# wget http://mirror.centos.org/centos/7/os/x86_64/Packages/python-rhsm-certificates-1.19.10-1.el7_4.x86_64.rpm
-# rpm2cpio python-rhsm-certificates-1.19.10-1.el7_4.x86_64.rpm | cpio -iv --to-stdout ./etc/rhsm/ca/redhat-uep.pem | tee /etc/rhsm/ca/redhat-uep.pem
-
 cd /data/ocp4
-# download additinal images
-# scp files/4.2/docker_image/* 
-
-# yum -y install jq python3-pip pigz docker
-# pip3 install yq
-
-# systemctl start docker
-
-# docker login -u ****** -p ******** registry.redhat.io
-# docker login -u ****** -p ******** registry.access.redhat.com
-# docker login -u ****** -p ******** registry.connect.redhat.com
-
-# podman login -u ****** -p ******** registry.redhat.io
-# podman login -u ****** -p ******** registry.access.redhat.com
-# podman login -u ****** -p ******** registry.connect.redhat.com
-
-# operator images
-# podman run -d --name catalog-fs --entrypoint "tail" docker.io/wangzheng422/operator-catalog:fs-$var_date -f /dev/null
-# podman cp catalog-fs:/operator.image.list.uniq /data/ocp4/
-# podman rm -fv catalog-fs
 
 # 以下命令要运行 2-3个小时，耐心等待。。。
-bash image.mirror.install.sh
+# bash image.mirror.install.sh
 
 # some github, and so on
 bash demos.sh
@@ -166,51 +139,27 @@ bash demos.sh
 # build operator catalog
 oc adm catalog mirror --filter-by-os='linux/amd64' \
     docker.io/wangzheng422/operator-catalog:redhat-${var_major_version}-$var_date \
-    registry.redhat.ren:5443/ocp-operator 
+    registry.redhat.ren:5443/ocp-operator \
+    --manifests-only
 /bin/cp -f operator-catalog-manifests/mapping.txt mapping-redhat.txt
 
 oc adm catalog mirror --filter-by-os='linux/amd64' \
     docker.io/wangzheng422/operator-catalog:certified-${var_major_version}-$var_date \
-    registry.redhat.ren:5443/ocp-operator 
+    registry.redhat.ren:5443/ocp-operator \
+    --manifests-only
 /bin/cp -f operator-catalog-manifests/mapping.txt mapping-certified.txt
 
 oc adm catalog mirror --filter-by-os='linux/amd64' \
     docker.io/wangzheng422/operator-catalog:community-${var_major_version}-$var_date \
-    registry.redhat.ren:5443/ocp-operator 
+    registry.redhat.ren:5443/ocp-operator \
+    --manifests-only
 /bin/cp -f operator-catalog-manifests/mapping.txt mapping-community.txt
 
-# oc adm catalog mirror --filter-by-os='linux/amd64' \
-#     docker.io/wangzheng422/operator-catalog:redhat-marketplace-${var_major_version}-$var_date \
-#     registry.redhat.ren:5443/ocp-operator 
-# /bin/cp -f operator-catalog-manifests/mapping.txt mapping-redhat-marketplace.txt
-
-bash image.registries.conf.sh
+bash image.registries.conf.sh registry.redhat.ren:5443
 
 /bin/rm -f index.html*
 
 cd /data
-# tar cf - registry/ | pigz -c > registry.tgz 
-
-# cd /data/ocp4
-# bash image.mirror.sh
-# cd /data
-# tar cf - registry/ | pigz -c > registry.with.operator.image.tgz  
-
-# cd /data/ocp4
-# bash image.mirror.sample.sh
-# cd /data
-# tar cf - registry/ | pigz -c > registry.full.with.sample.tgz 
-
-# cd /data
-# tar cf - ocp4/ | pigz -c > ocp4.tgz 
-
-# split -b 10G registry.with.operator.image.tgz registry.
-# find /data -maxdepth 1 -type f -exec sha256sum {} \;
-# echo "$build_number_list" > versions.txt
-# find /data -maxdepth 1 -type f -exec sha256sum {} \; > checksum.txt
-
-# find ./ -maxdepth 1 -name "*.tgz" -exec skicka upload {}  /"zhengwan.share/shared_docs/2020.02/ocp.ccn.4.3.3/" \;
-# find ./ -maxdepth 1 -name "*.txt" -exec skicka upload {}  /"zhengwan.share/shared_docs/2020.02/ocp.ccn.4.3.3/" \;
 
 var_finish_date=$(date '+%Y-%m-%d-%H%M')
 echo $var_finish_date > /data/finished

@@ -47,5 +47,12 @@ oc adm catalog build --filter-by-os='linux/amd64' \
     --from=registry.redhat.io/openshift4/ose-operator-registry:v${var_major_version} \
     --to=docker.io/wangzheng422/operator-catalog:redhat-marketplace-${var_major_version}-$var_date  
 
+echo "docker.io/wangzheng422/operator-catalog:redhat-${var_major_version}-$var_date "
 echo $var_date
 echo ${var_major_version}
+
+# docker.io/wangzheng422/operator-catalog:redhat-marketplace-4.6-2020.11.21.1108
+# + echo 2020.11.21.1108
+# 2020.11.21.1108
+# + echo 4.6
+# 4.6
