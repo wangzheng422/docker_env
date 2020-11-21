@@ -115,22 +115,33 @@ oc adm catalog mirror --filter-by-os='linux/amd64' \
     registry.redhat.ren:5443/ocp4 \
     --manifests-only
 /bin/cp -f operator-catalog-manifests/mapping.txt mapping-redhat.txt
+sed -i 's/=.*//g' mapping-redhat.txt
 
 oc adm catalog mirror --filter-by-os='linux/amd64' \
     docker.io/wangzheng422/operator-catalog:certified-${var_major_version}-$var_date \
     registry.redhat.ren:5443/ocp4 \
     --manifests-only
 /bin/cp -f operator-catalog-manifests/mapping.txt mapping-certified.txt
+sed -i 's/=.*//g' mapping-certified.txt
 
 oc adm catalog mirror --filter-by-os='linux/amd64' \
     docker.io/wangzheng422/operator-catalog:community-${var_major_version}-$var_date \
     registry.redhat.ren:5443/ocp4 \
     --manifests-only
 /bin/cp -f operator-catalog-manifests/mapping.txt mapping-community.txt
+sed -i 's/=.*//g' mapping-community.txt
 
-bash image.registries.conf.sh registry.redhat.ren:5443
+oc adm catalog mirror --filter-by-os='linux/amd64' \
+    docker.io/wangzheng422/operator-catalog:redhat-marketplace-${var_major_version}-$var_date \
+    registry.redhat.ren:5443/ocp4 \
+    --manifests-only
+/bin/cp -f operator-catalog-manifests/mapping.txt mapping-redhat-marketplace.txt
+sed -i 's/=.*//g' mapping-redhat-marketplace.txt
+
+bash image.registries.conf.sh registry.redhat.ren:5443 install.image.list
 
 /bin/rm -f index.html*
+/bin/rm -f operator-catalog-manifests
 
 cd /data
 
