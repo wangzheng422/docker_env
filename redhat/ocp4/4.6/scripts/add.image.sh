@@ -3,8 +3,7 @@
 set -e
 set -x
 
-parm_local_reg=$1
-parm_file=$2
+parm_file=$1
 
 /bin/rm -f pull.add.image.ok.list
 /bin/rm -f pull.add.image.docker.ok.list
@@ -14,7 +13,7 @@ export MIRROR_DIR='/data/mirror_dir'
 mkdir -p ${MIRROR_DIR}/oci
 mkdir -p ${MIRROR_DIR}/docker
 
-source image.mirror.fn.sh
+source fn.sh
 
 while read -r line; do
 
