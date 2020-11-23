@@ -7,6 +7,7 @@ parm_file=$1
 
 /bin/rm -f pull.add.image.ok.list
 /bin/rm -f pull.add.image.docker.ok.list
+/bin/rm -f pull.add.image.failed.list
 
 export MIRROR_DIR='/data/mirror_dir'
 # /bin/rm -rf ${MIRROR_DIR}
