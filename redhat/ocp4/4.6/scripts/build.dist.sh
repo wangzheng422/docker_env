@@ -30,7 +30,6 @@ wget -O add.image.sh https://raw.githubusercontent.com/wangzheng422/docker_env/d
 
 wget -O add.image.resume.sh https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/${var_major_version}/scripts/add.image.resume.sh
 
-
 wget -O demos.sh https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/${var_major_version}/scripts/demos.sh
 
 mkdir -p /data/ocp4/clients
