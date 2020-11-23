@@ -63,8 +63,9 @@ echo "docker.io/wangzheng422/operator-catalog:redhat-${var_major_version}-$var_d
 echo $var_date
 echo ${var_major_version}
 
-# docker.io/wangzheng422/operator-catalog:redhat-marketplace-4.6-2020.11.21.1108
-# + echo 2020.11.21.1108
-# 2020.11.21.1108
+# + echo 'docker.io/wangzheng422/operator-catalog:redhat-4.6-2020.11.23.0135 '
+# docker.io/wangzheng422/operator-catalog:redhat-4.6-2020.11.23.0135
+# + echo 2020.11.23.0135
+# 2020.11.23.0135
 # + echo 4.6
 # 4.6
