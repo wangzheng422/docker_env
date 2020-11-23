@@ -16,7 +16,7 @@ unqualified-search-registries = ["registry.redhat.io", "registry.access.redhat.c
   prefix = ""
 
   [[registry.mirror]]
-    location = "${parm_local_reg}/ocp4"
+    location = "${parm_local_reg}/"
     insecure = true
 
 [[registry]]

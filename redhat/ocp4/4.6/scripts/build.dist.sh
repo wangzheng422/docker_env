@@ -16,6 +16,8 @@ echo ${var_major_version}
 
 wget -O image.mirror.fn.sh https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/${var_major_version}/scripts/image.mirror.fn.sh
 
+wget -O fn.sh https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/${var_major_version}/scripts/fn.sh
+
 wget -O image.mirror.install.sh https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/${var_major_version}/scripts/image.mirror.install.sh
 
 wget -O image.registries.conf.sh https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/${var_major_version}/scripts/image.registries.conf.sh
