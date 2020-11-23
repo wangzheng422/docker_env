@@ -14,7 +14,7 @@ echo $var_date
 export var_major_version='4.6'
 echo ${var_major_version}
 
-wget -O image.mirror.fn.sh https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/${var_major_version}/scripts/image.mirror.fn.sh
+# wget -O image.mirror.fn.sh https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/${var_major_version}/scripts/image.mirror.fn.sh
 
 wget -O fn.sh https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/${var_major_version}/scripts/fn.sh
 
