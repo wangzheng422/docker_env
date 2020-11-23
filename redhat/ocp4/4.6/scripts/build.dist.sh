@@ -115,26 +115,55 @@ cd /data/ocp4
 bash demos.sh
 
 # build operator catalog
+find /tmp -type d -regex '^/tmp/[0-9]+$' -exec rm -rf {} \; 
+
 oc adm catalog mirror --filter-by-os='linux/amd64' \
     docker.io/wangzheng422/operator-catalog:redhat-${var_major_version}-$var_date \
     registry.redhat.ren:5443/ocp4 \
-    --manifests-only
+    --manifests-only 
 /bin/cp -f operator-catalog-manifests/mapping.txt mapping-redhat.txt
 sed -i 's/=.*//g' mapping-redhat.txt
+
+VAR_DIR=`find /tmp -type d -regex '^/tmp/[0-9]+$' `
+echo "select * from related_image ;" \
+  | sqlite3 -line $VAR_DIR/index.db \
+  | paste -d " " - - - | sed 's/ *image = //g' \
+  | sed 's/operatorbundle_name =//g' \
+  | sort | uniq > redhat-operator-image.list
+
+find /tmp -type d -regex '^/tmp/[0-9]+$' -exec rm -rf {} \; 
 
 oc adm catalog mirror --filter-by-os='linux/amd64' \
     docker.io/wangzheng422/operator-catalog:certified-${var_major_version}-$var_date \
     registry.redhat.ren:5443/ocp4 \
-    --manifests-only
+    --manifests-only 
 /bin/cp -f operator-catalog-manifests/mapping.txt mapping-certified.txt
 sed -i 's/=.*//g' mapping-certified.txt
+
+VAR_DIR=`find /tmp -type d -regex '^/tmp/[0-9]+$' `
+echo "select * from related_image ;" \
+  | sqlite3 -line $VAR_DIR/index.db \
+  | paste -d " " - - - | sed 's/ *image = //g' \
+  | sed 's/operatorbundle_name =//g' \
+  | sort | uniq > certified-operator-image.list
+
+find /tmp -type d -regex '^/tmp/[0-9]+$' -exec rm -rf {} \; 
 
 oc adm catalog mirror --filter-by-os='linux/amd64' \
     docker.io/wangzheng422/operator-catalog:community-${var_major_version}-$var_date \
     registry.redhat.ren:5443/ocp4 \
-    --manifests-only
+    --manifests-only 
 /bin/cp -f operator-catalog-manifests/mapping.txt mapping-community.txt
 sed -i 's/=.*//g' mapping-community.txt
+
+VAR_DIR=`find /tmp -type d -regex '^/tmp/[0-9]+$' `
+echo "select * from related_image ;" \
+  | sqlite3 -line $VAR_DIR/index.db \
+  | paste -d " " - - - | sed 's/ *image = //g' \
+  | sed 's/operatorbundle_name =//g' \
+  | sort | uniq > community-operator-image.list
+
+find /tmp -type d -regex '^/tmp/[0-9]+$' -exec rm -rf {} \; 
 
 oc adm catalog mirror --filter-by-os='linux/amd64' \
     docker.io/wangzheng422/operator-catalog:redhat-marketplace-${var_major_version}-$var_date \
@@ -143,10 +172,18 @@ oc adm catalog mirror --filter-by-os='linux/amd64' \
 /bin/cp -f operator-catalog-manifests/mapping.txt mapping-redhat-marketplace.txt
 sed -i 's/=.*//g' mapping-redhat-marketplace.txt
 
+VAR_DIR=`find /tmp -type d -regex '^/tmp/[0-9]+$' `
+echo "select * from related_image ;" \
+  | sqlite3 -line $VAR_DIR/index.db \
+  | paste -d " " - - - | sed 's/ *image = //g' \
+  | sed 's/operatorbundle_name =//g' \
+  | sort | uniq > redhat-marketplace-image.list
+
 bash image.registries.conf.sh registry.redhat.ren:5443
 
 /bin/rm -f index.html*
 /bin/rm -rf operator-catalog-manifests
+find /tmp -type d -regex '^/tmp/[0-9]+$' -exec rm -rf {} \; 
 
 cd /data
 

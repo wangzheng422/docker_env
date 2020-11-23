@@ -12,10 +12,12 @@ echo ${var_major_version}
 
 cd /data/ocp4
 /bin/rm -rf /data/ocp4/operator
-/bin/rm -f operator.ok.list operator.failed.list
-mkdir -p /data/ocp4/operator/manifests
-mkdir -p /data/ocp4/operator/tgz
-cd /data/ocp4/operator/
+# /bin/rm -f operator.ok.list operator.failed.list
+# mkdir -p /data/ocp4/operator/manifests
+# mkdir -p /data/ocp4/operator/tgz
+# cd /data/ocp4/operator/
+
+# find /tmp -type d -regex '^/tmp/[0-9]+$' -exec rm -rf {} \; 
 
 # oc adm catalog build --filter-by-os='linux/amd64' \
 #     --appregistry-org redhat-operators \
@@ -31,6 +33,13 @@ cd /data/ocp4/operator/
 skopeo copy \
     docker://registry.redhat.io/redhat/redhat-operator-index:v4.6 \
     docker://docker.io/wangzheng422/operator-catalog:redhat-${var_major_version}-$var_date
+
+# VAR_DIR=`find /tmp -type d -regex '^/tmp/[0-9]+$' `
+# echo "select * from related_image ;" \
+#   | sqlite3 -line $VAR_DIR/index.db \
+#   | paste -d " " - - - | sed 's/ *image = //g' \
+#   | sed 's/operatorbundle_name =//g' \
+#   > redhat-operator-index.list
 
 # oc adm catalog build --filter-by-os='linux/amd64' \
 #     --appregistry-org certified-operators \
