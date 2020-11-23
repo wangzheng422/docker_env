@@ -32,20 +32,32 @@ skopeo copy \
     docker://registry.redhat.io/redhat/redhat-operator-index:v4.6 \
     docker://docker.io/wangzheng422/operator-catalog:redhat-${var_major_version}-$var_date
 
-oc adm catalog build --filter-by-os='linux/amd64' \
-    --appregistry-org certified-operators \
-    --from=registry.redhat.io/openshift4/ose-operator-registry:v${var_major_version} \
-    --to=docker.io/wangzheng422/operator-catalog:certified-${var_major_version}-$var_date  
+# oc adm catalog build --filter-by-os='linux/amd64' \
+#     --appregistry-org certified-operators \
+#     --from=registry.redhat.io/openshift4/ose-operator-registry:v${var_major_version} \
+#     --to=docker.io/wangzheng422/operator-catalog:certified-${var_major_version}-$var_date  
 
-oc adm catalog build --filter-by-os='linux/amd64' \
-    --appregistry-org community-operators \
-    --from=registry.redhat.io/openshift4/ose-operator-registry:v${var_major_version} \
-    --to=docker.io/wangzheng422/operator-catalog:community-${var_major_version}-$var_date  
+skopeo copy \
+    docker://registry.redhat.io/redhat/certified-operator-index:v4.6 \
+    docker://docker.io/wangzheng422/operator-catalog:certified-${var_major_version}-$var_date
 
-oc adm catalog build --filter-by-os='linux/amd64' \
-    --appregistry-org redhat-marketplace \
-    --from=registry.redhat.io/openshift4/ose-operator-registry:v${var_major_version} \
-    --to=docker.io/wangzheng422/operator-catalog:redhat-marketplace-${var_major_version}-$var_date  
+# oc adm catalog build --filter-by-os='linux/amd64' \
+#     --appregistry-org community-operators \
+#     --from=registry.redhat.io/openshift4/ose-operator-registry:v${var_major_version} \
+#     --to=docker.io/wangzheng422/operator-catalog:community-${var_major_version}-$var_date  
+
+skopeo copy \
+    docker://registry.redhat.io/redhat/community-operator-index:latest \
+    docker://docker.io/wangzheng422/operator-catalog:community-${var_major_version}-$var_date
+
+# oc adm catalog build --filter-by-os='linux/amd64' \
+#     --appregistry-org redhat-marketplace \
+#     --from=registry.redhat.io/openshift4/ose-operator-registry:v${var_major_version} \
+#     --to=docker.io/wangzheng422/operator-catalog:redhat-marketplace-${var_major_version}-$var_date  
+
+skopeo copy \
+    docker://registry.redhat.io/redhat/redhat-marketplace-index:v4.6 \
+    docker://docker.io/wangzheng422/operator-catalog:redhat-marketplace-${var_major_version}-$var_date
 
 echo "docker.io/wangzheng422/operator-catalog:redhat-${var_major_version}-$var_date "
 echo $var_date
