@@ -20,6 +20,7 @@ git clone https://github.com/wangzheng422/docker_env
 
 cd /data/ocp4/tmp/docker_env
 git checkout dev
+git pull origin dev
 /bin/cp -f /data/ocp4/tmp/docker_env/redhat/ocp4/4.6/scripts/* /data/ocp4/
 
 cd /data/ocp4/
