@@ -78,6 +78,18 @@ split_image(){
         local_image_file=${local_image_url#*/}
 
         local_image_dest="${LOCAL_REG}/${local_image_url#*/}"
+    
+    elif [[ $docker_image =~ ^.*@sha256:.* ]]; then
+        # echo "docker with tag: $docker_image"
+        docker_image="docker.io/library/${docker_image}"       
+
+        image_part=${docker_image%@*}
+
+        local_image_url="${image_part}:${sha_part}"
+
+        local_image_file=${local_image_url#*/}
+
+        local_image_dest="${LOCAL_REG}/${local_image_url#*/}"
 
     elif [[ $docker_image =~ ^.*:.* ]]; then
         # echo "docker with tag: $docker_image"
