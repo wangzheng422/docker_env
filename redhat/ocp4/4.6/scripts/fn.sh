@@ -22,10 +22,14 @@ split_image(){
 
         local_image_url="${image_part}:${sha_part}"
 
+        local_image_dest="${LOCAL_REG}/${docker_image#*/}"
+
     elif [[ $docker_image =~ ^.*\.(io|com|org)/.*:.* ]]; then
         # echo "io, com, org with tag: $docker_image"
 
         local_image_url="$docker_image"
+
+        local_image_dest="${LOCAL_REG}/${docker_image#*/}"
 
     elif [[ $docker_image =~ ^.*\.(io|com|org)/[^:]*  ]]; then
         # echo "io, com, org without tag: $docker_image"
@@ -33,6 +37,8 @@ split_image(){
         docker_image+=":latest"
 
         local_image_url="$docker_image"
+
+        local_image_dest="${LOCAL_REG}/${docker_image#*/}"
 
     elif [[ $docker_image =~ ^.*/.*@sha256:.* ]]; then
         # echo "docker with tag: $docker_image"
@@ -43,11 +49,15 @@ split_image(){
 
         local_image_url="${image_part}:${sha_part}"
 
+        local_image_dest="${LOCAL_REG}/${docker_image#*/}"
+
     elif [[ $docker_image =~ ^.*/.*:.* ]]; then
         # echo "docker with tag: $docker_image"
         docker_image="docker.io/${docker_image}"        
 
         local_image_url="$docker_image"
+
+        local_image_dest="${LOCAL_REG}/${docker_image#*/}"
 
     elif [[ $docker_image =~ ^.*/[^:]* ]]; then
         # echo "docker without tag: $docker_image"
@@ -55,11 +65,15 @@ split_image(){
 
         local_image_url="$docker_image"
 
+        local_image_dest="${LOCAL_REG}/${docker_image#*/}"
+
     elif [[ $docker_image =~ ^.*:.* ]]; then
         # echo "docker with tag: $docker_image"
         docker_image="docker.io/library/${docker_image}"       
 
         local_image_url="$docker_image"
+
+        local_image_dest="${LOCAL_REG}/${docker_image#*/}"
 
     fi
 

@@ -17,6 +17,7 @@ echo ${var_major_version}
 mkdir /data/ocp4/tmp/
 cd /data/ocp4/tmp/
 git clone https://github.com/wangzheng422/docker_env
+
 cd /data/ocp4/tmp/docker_env
 git checkout dev
 /bin/cp -f /data/ocp4/tmp/docker_env/redhat/ocp4/4.6/scripts/* /data/ocp4/
