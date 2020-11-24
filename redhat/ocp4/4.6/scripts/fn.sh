@@ -113,7 +113,7 @@ add_image_file() {
                 buildah commit --format=docker onbuild-container ${docker_image}
                 buildah rm onbuild-container
                 buildah push ${docker_image} docker-archive:/${MIRROR_DIR}/docker/$sha_part
-                echo -e "${docker_image}\t${MIRROR_DIR}/docker/$sha_part" >> pull.add.image.docker.ok.list
+                echo -e "${docker_image}" >> pull.add.image.docker.ok.list
                 # echo -e "${yaml_image}\t${yaml_local_image}" >> yaml.add.image.ok.list
                 # echo -e "${domain_part}" >> yaml.add.image.ok.list
             else
@@ -133,6 +133,26 @@ add_image_load_oci_file() {
     if [[ $var_skip == 0 ]]; then
         # if skopeo copy "docker://"$docker_image "docker://"$local_image_url; then
         if oc image mirror --filter-by-os=linux/amd64 --keep-manifest-list=true --from-dir=${MIRROR_DIR}/oci/ file://$local_image_url $local_image_dest ; then
+            echo -e "${docker_image}" >> pull.add.image.ok.list
+            # echo -e "${yaml_image}\t${yaml_local_image}" >> yaml.add.image.ok.list
+            # echo -e "${domain_part}" >> yaml.add.image.ok.list
+        else
+            echo "$docker_image" >> pull.add.image.failed.list
+        fi
+    fi
+}
+
+
+add_image_load_docker_file() {
+
+    docker_image=$1
+
+    split_image $docker_image
+
+    # if oc image mirror $docker_image $local_image_url; then
+    if [[ $var_skip == 0 ]]; then
+        if skopeo copy docker-archive:/${MIRROR_DIR}/docker/${sha_part} "docker://"$local_image_dest; then
+        # if oc image mirror --from-dir=${MIRROR_DIR}/oci/ file:/${file_name} $local_image_url ; then
             echo -e "${docker_image}" >> pull.add.image.ok.list
             # echo -e "${yaml_image}\t${yaml_local_image}" >> yaml.add.image.ok.list
             # echo -e "${domain_part}" >> yaml.add.image.ok.list
