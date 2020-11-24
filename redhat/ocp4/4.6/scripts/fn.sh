@@ -94,3 +94,24 @@ add_image_file() {
         fi
     fi
 }
+
+
+
+add_image_load_oci_file() {
+
+    docker_image=$1
+
+    split_image $docker_image
+
+    # if oc image mirror $docker_image $local_image_url; then
+    if [[ $var_skip == 0 ]]; then
+        # if skopeo copy "docker://"$docker_image "docker://"$local_image_url; then
+        if oc image mirror --filter-by-os=linux/amd64 --keep-manifest-list=true --from-dir=${MIRROR_DIR}/oci/ file://$local_image_url $local_image_dest ; then
+            echo -e "${docker_image}" >> pull.add.image.ok.list
+            # echo -e "${yaml_image}\t${yaml_local_image}" >> yaml.add.image.ok.list
+            # echo -e "${domain_part}" >> yaml.add.image.ok.list
+        else
+            echo "$docker_image" >> pull.add.image.failed.list
+        fi
+    fi
+}

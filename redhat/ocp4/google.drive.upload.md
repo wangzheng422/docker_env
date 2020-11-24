@@ -51,7 +51,7 @@ export VULTR_HOST=zero.pvg.redhat.ren
 
 export VULTR_HOST=vcdn.redhat.ren
 
-export VULTR_HOST=bastion.5311.example.opentlc.com
+export VULTR_HOST=bastion.0646.example.opentlc.com
 
 cat << EOF > /root/.ssh/config
 StrictHostKeyChecking no
@@ -71,6 +71,8 @@ cd /data
 rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/ocp4 /data/
 
 rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/registry /data/
+
+rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/redhat-operator/ /data/redhat-operator/
 
 rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/mirror_dir /data/is.samples/
 
