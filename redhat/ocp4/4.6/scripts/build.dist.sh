@@ -14,23 +14,14 @@ echo $var_date
 export var_major_version='4.6'
 echo ${var_major_version}
 
-# wget -O image.mirror.fn.sh https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/${var_major_version}/scripts/image.mirror.fn.sh
+mkdir /data/ocp4/tmp/
+cd /data/ocp4/tmp/
+git clone https://github.com/wangzheng422/docker_env
+cd /data/ocp4/tmp/docker_env
+git checkout dev
+/bin/cp -f /data/ocp4/tmp/docker_env/redhat/ocp4/4.6/scripts/* /data/ocp4/
 
-wget -O fn.sh https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/${var_major_version}/scripts/fn.sh
-
-wget -O image.mirror.install.sh https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/${var_major_version}/scripts/image.mirror.install.sh
-
-wget -O image.registries.conf.sh https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/${var_major_version}/scripts/image.registries.conf.sh
-
-wget -O install.image.list https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/${var_major_version}/scripts/install.image.list
-
-wget -O add.image.load.sh https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/${var_major_version}/scripts/add.image.load.sh
-
-wget -O add.image.sh https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/${var_major_version}/scripts/add.image.sh
-
-wget -O add.image.resume.sh https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/${var_major_version}/scripts/add.image.resume.sh
-
-wget -O demos.sh https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/${var_major_version}/scripts/demos.sh
+cd /data/ocp4/
 
 mkdir -p /data/ocp4/clients
 # client for camle-k
@@ -186,6 +177,7 @@ bash image.registries.conf.sh registry.redhat.ren:5443
 /bin/rm -f index.html*
 /bin/rm -rf operator-catalog-manifests
 /bin/rm -f sha256sum.txt*
+/bin/rm -rf /data/ocp4/tmp
 find /tmp -type d -regex '^/tmp/[0-9]+$' -exec rm -rf {} \; 
 
 cd /data
