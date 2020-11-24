@@ -4,12 +4,13 @@ set -e
 set -x
 
 parm_file=$1
+parm_dir=$2
 
 /bin/rm -f pull.add.image.ok.list
 /bin/rm -f pull.add.image.docker.ok.list
 /bin/rm -f pull.add.image.failed.list
 
-export MIRROR_DIR='/data/mirror_dir'
+export MIRROR_DIR="$parm_dir"
 # /bin/rm -rf ${MIRROR_DIR}
 mkdir -p ${MIRROR_DIR}/oci
 mkdir -p ${MIRROR_DIR}/docker

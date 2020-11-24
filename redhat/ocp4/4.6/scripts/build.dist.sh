@@ -185,6 +185,7 @@ bash image.registries.conf.sh registry.redhat.ren:5443
 
 /bin/rm -f index.html*
 /bin/rm -rf operator-catalog-manifests
+/bin/rm -f sha256sum.txt*
 find /tmp -type d -regex '^/tmp/[0-9]+$' -exec rm -rf {} \; 
 
 cd /data
