@@ -22,12 +22,16 @@ split_image(){
 
         local_image_url="${image_part}:${sha_part}"
 
+        local_image_file=${local_image_url#*/}
+
         local_image_dest="${LOCAL_REG}/${local_image_url#*/}"
 
     elif [[ $docker_image =~ ^.*\.(io|com|org)/.*:.* ]]; then
         # echo "io, com, org with tag: $docker_image"
 
         local_image_url="$docker_image"
+
+        local_image_file=${local_image_url#*/}
 
         local_image_dest="${LOCAL_REG}/${local_image_url#*/}"
 
@@ -37,6 +41,8 @@ split_image(){
         docker_image+=":latest"
 
         local_image_url="$docker_image"
+
+        local_image_file=${local_image_url#*/}
 
         local_image_dest="${LOCAL_REG}/${local_image_url#*/}"
 
@@ -49,6 +55,8 @@ split_image(){
 
         local_image_url="${image_part}:${sha_part}"
 
+        local_image_file=${local_image_url#*/}
+
         local_image_dest="${LOCAL_REG}/${local_image_url#*/}"
 
     elif [[ $docker_image =~ ^.*/.*:.* ]]; then
@@ -56,6 +64,8 @@ split_image(){
         docker_image="docker.io/${docker_image}"        
 
         local_image_url="$docker_image"
+
+        local_image_file=${local_image_url#*/}
 
         local_image_dest="${LOCAL_REG}/${local_image_url#*/}"
 
@@ -65,6 +75,8 @@ split_image(){
 
         local_image_url="$docker_image"
 
+        local_image_file=${local_image_url#*/}
+
         local_image_dest="${LOCAL_REG}/${local_image_url#*/}"
 
     elif [[ $docker_image =~ ^.*:.* ]]; then
@@ -72,6 +84,8 @@ split_image(){
         docker_image="docker.io/library/${docker_image}"       
 
         local_image_url="$docker_image"
+
+        local_image_file=${local_image_url#*/}
 
         local_image_dest="${LOCAL_REG}/${local_image_url#*/}"
 
@@ -118,7 +132,7 @@ add_image_load_oci_file() {
     # if oc image mirror $docker_image $local_image_url; then
     if [[ $var_skip == 0 ]]; then
         # if skopeo copy "docker://"$docker_image "docker://"$local_image_url; then
-        if oc image mirror --filter-by-os=linux/amd64 --keep-manifest-list=true --from-dir=${MIRROR_DIR}/oci/ file://$local_image_url $local_image_dest ; then
+        if oc image mirror --filter-by-os=linux/amd64 --keep-manifest-list=true --from-dir=${MIRROR_DIR}/oci/ file://$local_image_file $local_image_dest ; then
             echo -e "${docker_image}" >> pull.add.image.ok.list
             # echo -e "${yaml_image}\t${yaml_local_image}" >> yaml.add.image.ok.list
             # echo -e "${domain_part}" >> yaml.add.image.ok.list
