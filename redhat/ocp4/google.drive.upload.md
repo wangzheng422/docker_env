@@ -74,6 +74,10 @@ rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/registry /dat
 
 rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/redhat-operator/ /data/redhat-operator/
 
+rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/certified-operator/ /data/certified-operator/
+
+rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/community-operator/ /data/community-operator/
+
 rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/mirror_dir /data/is.samples/
 
 rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/mirror_dir/ /data/mirror_dir/
