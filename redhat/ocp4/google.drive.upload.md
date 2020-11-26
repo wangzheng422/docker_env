@@ -72,15 +72,15 @@ rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/ocp4 /data/
 
 rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/registry /data/
 
+rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/install.image/ /data/install.image/
+
 rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/redhat-operator/ /data/redhat-operator/
 
 rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/certified-operator/ /data/certified-operator/
 
 rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/community-operator/ /data/community-operator/
 
-rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/mirror_dir /data/is.samples/
-
-rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/mirror_dir/ /data/mirror_dir/
+rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/is.samples/ /data/is.samples/
 
 ## sync from aws to pvg
 cd /data/remote/4.4.7

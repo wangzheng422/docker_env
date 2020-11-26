@@ -13,6 +13,8 @@ rsync -e ssh --info=progress2 -P --delete -arz  /data/ocp4/ root@172.29.159.3:/h
 
 rsync -e ssh --info=progress2 -P --delete -arz  /data/registry/  root@172.29.159.3:/home/wzh/4.6.5/registry/
 
+rsync -e ssh --info=progress2 -P --delete -arz  /data/install.image/  root@172.29.159.3:/home/wzh/4.6.5/install.image/
+
 rsync -e ssh --info=progress2 -P --delete -arz  /data/is.samples/ root@172.29.159.3:/home/wzh/is.samples/
 
 rsync -e ssh --info=progress2 -P --delete -arz  /data/mirror_dir/ root@172.29.159.3:/home/wzh/mirror_dir/
