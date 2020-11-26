@@ -14,7 +14,8 @@ echo $var_date
 export var_major_version='4.6'
 echo ${var_major_version}
 
-mkdir /data/ocp4/tmp/
+/bin/rm -rf /data/ocp4/tmp/
+mkdir -p /data/ocp4/tmp/
 cd /data/ocp4/tmp/
 git clone https://github.com/wangzheng422/docker_env
 
