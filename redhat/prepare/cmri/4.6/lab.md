@@ -74,10 +74,20 @@ mount --bind /data/down/rhel-data/data /var/ftp/data
 chcon -R -t public_content_t  /var/ftp/data
 
 mkdir /etc/crts/ && cd /etc/crts
-openssl req \
-   -newkey rsa:2048 -nodes -keyout redhat.ren.key \
-   -x509 -days 3650 -out redhat.ren.crt -subj \
-   "/C=CN/ST=GD/L=SZ/O=Global Security/OU=IT Department/CN=*.redhat.ren"
+openssl genrsa -out ca.key 2048
+openssl req -x509 -new -nodes -key ca.key -subj "/CN=*.redhat.ren" -days 365000 -out ca.crt
+openssl req -new -sha256 \
+    -key ca.key \
+    -subj "/C=CN/ST=Beijing/L=Beijing/O=RedHatRen/OU=Devops/CN=*.redhat.ren" \
+    -reqexts SAN \
+    -config <(cat /etc/pki/tls/openssl.cnf \
+        <(printf "[SAN]\nsubjectAltName=DNS:registry.redhat.ren,DNS:ocp.redhat.ren,DNS:*.redhat.ren")) \
+    -out redhat.ren.csr    
+openssl x509 -req -days 365000 \
+    -in redhat.ren.csr -CA ca.crt -CAkey ca.key -CAcreateserial \
+    -extfile <(printf "subjectAltName=DNS:registry.redhat.ren,DNS:ocp.redhat.ren,DNS:*.redhat.ren") \
+    -out redhat.ren.crt
+/bin/cp -f /etc/crts/ca.key /etc/crts/redhat.ren.key
 
 cp /etc/crts/redhat.ren.crt /etc/pki/ca-trust/source/anchors/
 update-ca-trust extract
@@ -101,6 +111,9 @@ http:
     tls:
        certificate: /etc/crts/redhat.ren.crt
        key: /etc/crts/redhat.ren.key
+compatibility:
+  schema1:
+    enabled: true
 EOF
 
 systemctl enable --now docker-distribution
@@ -128,31 +141,6 @@ scp /data/down/ocp4-upi-helpernode.zip 192.168.7.11:/root/ocp4
 
 ```
 
-### redhat-02
-
-```bash
-# on redhat-02
-
-lvcreate -L 1T -n datalv datavg
-mkfs.ext4 /dev/datavg/datalv
-mount /dev/datavg/datalv /data
-
-mkdir -p /data/kvm
-cd /data/kvm
-
-lvremove -f datavg/helperlv
-lvcreate -y -L 230G -n helperlv datavg
-
-# 230G
-virt-install --name="ocp4-aHelper" --vcpus=2 --ram=4096 \
---disk path=/dev/datavg/helperlv,device=disk,bus=virtio,format=raw \
---os-variant centos7.0 --network network:br-int,model=virtio \
---boot menu=on --location /data/kvm/rhel-server-7.8-x86_64-dvd.iso \
---initrd-inject /data/kvm/helper-ks.cfg --extra-args "inst.ks=file:/helper-ks.cfg" 
-
-
-
-```
 
 ### helper
 
