@@ -111,7 +111,7 @@ cd /data/ocp4
 bash demos.sh
 
 # build operator catalog
-find /tmp -type d -regex '^/tmp/[0-9]+$' -exec rm -rf {} \; 
+find /tmp -type d -regex '^/tmp/[0-9]+$' -exec rm -rf {} + 
 
 oc adm catalog mirror --filter-by-os='linux/amd64' \
     docker.io/wangzheng422/operator-catalog:redhat-${var_major_version}-$var_date \
@@ -127,7 +127,7 @@ echo "select * from related_image ;" \
   | sed 's/operatorbundle_name =//g' \
   | sort | uniq > redhat-operator-image.list
 
-find /tmp -type d -regex '^/tmp/[0-9]+$' -exec rm -rf {} \; 
+find /tmp -type d -regex '^/tmp/[0-9]+$' -exec rm -rf {} + 
 
 oc adm catalog mirror --filter-by-os='linux/amd64' \
     docker.io/wangzheng422/operator-catalog:certified-${var_major_version}-$var_date \
@@ -143,7 +143,7 @@ echo "select * from related_image ;" \
   | sed 's/operatorbundle_name =//g' \
   | sort | uniq > certified-operator-image.list
 
-find /tmp -type d -regex '^/tmp/[0-9]+$' -exec rm -rf {} \; 
+find /tmp -type d -regex '^/tmp/[0-9]+$' -exec rm -rf {} + 
 
 oc adm catalog mirror --filter-by-os='linux/amd64' \
     docker.io/wangzheng422/operator-catalog:community-${var_major_version}-$var_date \
@@ -159,7 +159,7 @@ echo "select * from related_image ;" \
   | sed 's/operatorbundle_name =//g' \
   | sort | uniq > community-operator-image.list
 
-find /tmp -type d -regex '^/tmp/[0-9]+$' -exec rm -rf {} \; 
+find /tmp -type d -regex '^/tmp/[0-9]+$' -exec rm -rf {} + 
 
 oc adm catalog mirror --filter-by-os='linux/amd64' \
     docker.io/wangzheng422/operator-catalog:redhat-marketplace-${var_major_version}-$var_date \
@@ -181,7 +181,7 @@ bash image.registries.conf.sh registry.redhat.ren:5443
 /bin/rm -rf operator-catalog-manifests
 /bin/rm -f sha256sum.txt*
 /bin/rm -rf /data/ocp4/tmp
-find /tmp -type d -regex '^/tmp/[0-9]+$' -exec rm -rf {} \; 
+find /tmp -type d -regex '^/tmp/[0-9]+$' -exec rm -rf {} + 
 
 cd /data
 
