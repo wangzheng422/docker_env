@@ -124,6 +124,7 @@ add_image_file() {
                 buildah unmount onbuild-container
                 buildah commit --format=docker onbuild-container ${docker_image}
                 buildah rm onbuild-container
+                /bin/rm -f ${MIRROR_DIR}/docker/$sha_part
                 buildah push ${docker_image} docker-archive:/${MIRROR_DIR}/docker/$sha_part
                 echo -e "${docker_image}" >> pull.add.image.docker.ok.list
                 # echo -e "${yaml_image}\t${yaml_local_image}" >> yaml.add.image.ok.list
