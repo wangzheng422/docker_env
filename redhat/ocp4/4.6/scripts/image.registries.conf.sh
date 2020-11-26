@@ -45,7 +45,7 @@ cat << EOF >> ./image.registries.conf
   prefix = "${docker_image}"
 
   [[registry.mirror]]
-    location = "${parm_local_reg}/"
+    location = "${parm_local_reg}"
     insecure = true
 
 EOF
