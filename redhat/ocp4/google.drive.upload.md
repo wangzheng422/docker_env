@@ -92,13 +92,19 @@ rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/registry /dat
 # copy to local disk
 # localvm.md
 
+var_version='4.6.5'
+
 cd /root
 tar -cvf - data/ | pigz -c > /mnt/hgfs/ocp/rhel-data-7.8.tgz
 
 cd /data
-tar -cvf - ocp4/ | pigz -c > /mnt/hgfs/ocp/ocp.4.3.21.tgz
-tar -cvf - registry/ | pigz -c > /mnt/hgfs/ocp/registry.4.3.21.tgz
-tar -cvf - is.samples/ | pigz -c > /mnt/hgfs/ocp/is.samples.4.3.5.tgz
+tar -cvf - ocp4/ | pigz -c > /mnt/hgfs/ocp.archive/ocp.tgz.$var_version/ocp4.tgz
+tar -cvf - registry/ | pigz -c > /mnt/hgfs/ocp.archive/ocp.tgz.$var_version/registry.tgz
+tar -cvf - install.image/ | pigz -c > /mnt/hgfs/ocp.archive/ocp.tgz.$var_version/install.image.tgz
+tar -cvf - redhat-operator/ | pigz -c > /mnt/hgfs/ocp.archive/ocp.tgz.$var_version/redhat-operator.tgz
+tar -cvf - certified-operator/ | pigz -c > /mnt/hgfs/ocp.archive/ocp.tgz.$var_version/certified-operator.tgz
+tar -cvf - community-operator/ | pigz -c > /mnt/hgfs/ocp.archive/ocp.tgz.$var_version/community-operatorn.tgz
+tar -cvf - is.samples/ | pigz -c > /mnt/hgfs/ocp.archive/ocp.tgz.$var_version/is.samples.tgz
 
 # sync to base-pvg
 rsync -e ssh --info=progress2 -P --delete -arz  /root/data ${VULTR_HOST}:/var/ftp/
