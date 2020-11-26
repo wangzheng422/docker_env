@@ -17,6 +17,8 @@ mkdir -p ${MIRROR_DIR}/docker
 
 source fn.sh
 
+buildah rm -a
+
 while read -r line; do
 
     add_image_file $line
