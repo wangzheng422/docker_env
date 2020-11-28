@@ -74,28 +74,6 @@ done < mirror.domain.list
 cat << EOF >> ./image.registries.conf
 
 [[registry]]
-  location = "quay.io/openshift-release-dev/ocp-release"
-  insecure = false
-  blocked = false
-  mirror-by-digest-only = true
-  prefix = ""
-
-  [[registry.mirror]]
-    location = "${parm_local_reg}/ocp4/openshift4"
-    insecure = true
-
-[[registry]]
-  location = "quay.io/openshift-release-dev/ocp-v4.0-art-dev"
-  insecure = false
-  blocked = false
-  mirror-by-digest-only = true
-  prefix = ""
-
-  [[registry.mirror]]
-    location = "${parm_local_reg}/ocp4/openshift4"
-    insecure = true
-
-[[registry]]
   location = "${parm_local_reg}"
   insecure = true
   blocked = false
@@ -106,13 +84,13 @@ EOF
 
 config_source=$(cat ./image.registries.conf | python3 -c "import sys, urllib.parse; print(urllib.parse.quote(''.join(sys.stdin.readlines())))"  )
 
-cat <<EOF > 99-worker-zzz-container-registries.yaml
+cat <<EOF > 99-worker-container-registries.yaml
 apiVersion: machineconfiguration.openshift.io/v1
 kind: MachineConfig
 metadata:
   labels:
     machineconfiguration.openshift.io/role: worker
-  name: 99-worker-zzz-container-registries
+  name: 99-worker-container-registries
 spec:
   config:
     ignition:
@@ -124,16 +102,16 @@ spec:
           verification: {}
         filesystem: root
         mode: 420
-        path: /etc/containers/registries.conf
+        path: /etc/containers/registries.d/custom-registries.conf
 EOF
 
-cat <<EOF > 99-master-zzz-container-registries.yaml
+cat <<EOF > 99-master-container-registries.yaml
 apiVersion: machineconfiguration.openshift.io/v1
 kind: MachineConfig
 metadata:
   labels:
     machineconfiguration.openshift.io/role: master
-  name: 99-master-zzz-container-registries
+  name: 99-master-container-registries
 spec:
   config:
     ignition:
@@ -145,5 +123,5 @@ spec:
           verification: {}
         filesystem: root
         mode: 420
-        path: /etc/containers/registries.conf
+        path: /etc/containers/registries.d/custom-registries.conf
 EOF
