@@ -175,7 +175,7 @@ echo "select * from related_image ;" \
   | sed 's/operatorbundle_name =//g' \
   | sort | uniq > redhat-marketplace-image.list
 
-bash image.registries.conf.sh registry.redhat.ren:5443
+bash image.registries.conf.sh registry.ocp4.redhat.ren:5443
 
 /bin/rm -f index.html*
 /bin/rm -rf operator-catalog-manifests

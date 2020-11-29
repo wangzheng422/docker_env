@@ -24,8 +24,6 @@ cat pull.image.ok.list ${parm_file} mapping-*.txt | sed 's/\/.*$//g' | egrep "^.
 # cat pull.image.ok.list ${parm_file} mapping-*.txt | sed 's/\/.*$//g' | sort | uniq > mirror.domain.list
 
 cat << EOF > ./image.registries.conf
-unqualified-search-registries = ["registry.access.redhat.com", "docker.io"]
-
 EOF
 
 yaml_docker_image(){
@@ -102,7 +100,7 @@ spec:
           verification: {}
         filesystem: root
         mode: 420
-        path: /etc/containers/registries.d/custom-registries.conf
+        path: /etc/containers/registries.conf.d/custom-registries.conf
 EOF
 
 cat <<EOF > 99-master-container-registries.yaml
@@ -123,5 +121,5 @@ spec:
           verification: {}
         filesystem: root
         mode: 420
-        path: /etc/containers/registries.d/custom-registries.conf
+        path: /etc/containers/registries.conf.d/custom-registries.conf
 EOF
