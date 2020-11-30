@@ -182,6 +182,7 @@ bash image.registries.conf.sh registry.ocp4.redhat.ren:5443
 /bin/rm -f sha256sum.txt*
 /bin/rm -f clients/sha256sum.txt*
 /bin/rm -rf /data/ocp4/tmp
+/bin/rm -rf operator-catalog-manifests
 find /tmp -type d -regex '^/tmp/[0-9]+$' -exec rm -rf {} + 
 
 cd /data
