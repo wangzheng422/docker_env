@@ -51,7 +51,7 @@ export VULTR_HOST=zero.pvg.redhat.ren
 
 export VULTR_HOST=vcdn.redhat.ren
 
-export VULTR_HOST=bastion.5311.example.opentlc.com
+export VULTR_HOST=bastion.103a.example.opentlc.com
 
 cat << EOF > /root/.ssh/config
 StrictHostKeyChecking no
@@ -72,9 +72,15 @@ rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/ocp4 /data/
 
 rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/registry /data/
 
-rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/mirror_dir /data/is.samples/
+rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/install.image/ /data/install.image/
 
-rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/mirror_dir/ /data/mirror_dir/
+rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/redhat-operator/ /data/redhat-operator/
+
+rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/certified-operator/ /data/certified-operator/
+
+rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/community-operator/ /data/community-operator/
+
+rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/is.samples/ /data/is.samples/
 
 ## sync from aws to pvg
 cd /data/remote/4.4.7
@@ -86,13 +92,19 @@ rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/registry /dat
 # copy to local disk
 # localvm.md
 
+var_version='4.6.5'
+
 cd /root
 tar -cvf - data/ | pigz -c > /mnt/hgfs/ocp/rhel-data-7.8.tgz
 
 cd /data
-tar -cvf - ocp4/ | pigz -c > /mnt/hgfs/ocp/ocp.4.3.21.tgz
-tar -cvf - registry/ | pigz -c > /mnt/hgfs/ocp/registry.4.3.21.tgz
-tar -cvf - is.samples/ | pigz -c > /mnt/hgfs/ocp/is.samples.4.3.5.tgz
+tar -cvf - ocp4/ | pigz -c > /mnt/hgfs/ocp.archive/ocp.tgz.$var_version/ocp4.tgz
+tar -cvf - registry/ | pigz -c > /mnt/hgfs/ocp.archive/ocp.tgz.$var_version/registry.tgz
+tar -cvf - install.image/ | pigz -c > /mnt/hgfs/ocp.archive/ocp.tgz.$var_version/install.image.tgz
+tar -cvf - redhat-operator/ | pigz -c > /mnt/hgfs/ocp.archive/ocp.tgz.$var_version/redhat-operator.tgz
+tar -cvf - certified-operator/ | pigz -c > /mnt/hgfs/ocp.archive/ocp.tgz.$var_version/certified-operator.tgz
+tar -cvf - community-operator/ | pigz -c > /mnt/hgfs/ocp.archive/ocp.tgz.$var_version/community-operatorn.tgz
+tar -cvf - is.samples/ | pigz -c > /mnt/hgfs/ocp.archive/ocp.tgz.$var_version/is.samples.tgz
 
 # sync to base-pvg
 rsync -e ssh --info=progress2 -P --delete -arz  /root/data ${VULTR_HOST}:/var/ftp/
@@ -124,7 +136,18 @@ rsync -e ssh --info=progress2 -P --delete -arz /data/ocp4 ${VULTR_HOST}:/data/
 rsync -e ssh --info=progress2 -P --delete -arz /data/is.samples ${VULTR_HOST}:/data/
 
 
+#######################################
+# baidu pan on rhel8
+mkdir -p tmp
+mv rhel8.dnf.tgz.* tmp/
 
+# https://github.com/houtianze/bypy
+yum -y install python3-pip
+pip3 install --user bypy 
+/root/.local/bin/bypy list
+/root/.local/bin/bypy upload
+
+/root/.local/bin/bypy download
 
 ####################
 ## local mac

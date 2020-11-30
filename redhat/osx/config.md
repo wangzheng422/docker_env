@@ -61,4 +61,23 @@ ssh-add
 
 ssh-add -L 
 
+# Kap
+# https://stackoverflow.com/questions/52591553/how-to-use-ffmpeg-with-gpu-support-on-macos
+ffmpeg -h encoder=h264_videotoolbox
+ffmpeg -h encoder=hevc_videotoolbox
+# https://github.com/wulkano/Kap/blob/master/contributing.md
+# cat << EOF > .npmrc
+# sass_binary_site=https://npm.taobao.org/mirrors/node-sass/
+# registry=https://registry.npm.taobao.org
+# EOF
+cd /Users/wzh/Desktop/dev/Kap
+yarn config set proxy http://127.0.0.1:5084
+yarn config set https-proxy http://127.0.0.1:5084
+
+yarn
+yarn run pack
+
+ffmpeg -i test.mp4 -c:v h264_videotoolbox -profile:v high -level 4.2 -crf 18 test1.mp4
+
+ffmpeg -i test.mp4 -c:v hevc_videotoolbox -profile:v main10  -crf 18 test1.mp4
 ```

@@ -84,4 +84,40 @@ spec:
   unsupportedConfigOverrides:
     servicesNodePortRange: <range-low>-<range-high>
     
+# The original worker.ign has a certificate that expires after 24 hours.  To get the current data to use for worker.ign use this command:
+oc extract -n openshift-machine-api secret/worker-user-data --keys=userData --to=-
+
+
+oc get pod -n openshift-controller-manager
+oc get pod -n openshift-controller-manager-operator
+oc get pod -n openshift-kube-controller-manager
+oc get pod -n openshift-kube-controller-manager-operator
+
+oc delete pod --all -n openshift-controller-manager
+oc delete pod --all -n openshift-controller-manager-operator
+oc delete pod --all -n openshift-kube-controller-manager
+oc delete pod --all -n openshift-kube-controller-manager-operator
+
+oc get pod -n openshift-kube-scheduler
+oc get pod -n openshift-kube-scheduler-operator
+
+POD_NAME=$(oc get pod -n openshift-kube-scheduler-operator -o json | jq -r .items[0].metadata.name)
+oc logs $POD_NAME -n openshift-kube-scheduler-operator
+
+oc delete pod --all -n openshift-kube-scheduler-operator
+oc delete pod --all -n openshift-kube-scheduler
+
+oc get pod -n openshift-apiserver
+oc get pod -n openshift-apiserver-operator
+
+oc logs openshift-apiserver-operator-f79557665-8gvnm -n openshift-apiserver-operator
+
+IMG=registry.redhat.io/openshift-serverless-1/client-kn-rhel8@sha256:47bd682ee37236edbbf45ba584cf25a69be13fbf3116d0a139b48ab916eb984d
+echo ${IMG##*/}
+# client-kn-rhel8@sha256:47bd682ee37236edbbf45ba584cf25a69be13fbf3116d0a139b48ab916eb984d
+SIMG=${IMG##*/}
+echo ${SIMG%@*}
+# client-kn-rhel8
+sed 's/=.*//g' mapping.txt > test
+
 ```

@@ -10,7 +10,7 @@ yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarc
 
 yum install -y byobu
 
-ansible localhost -m lineinfile -a 'path=$HOME/.bashrc regexp="^export OCP_RELEASE" line="export OCP_RELEASE=4.5.9"'
+ansible localhost -m lineinfile -a 'path=$HOME/.bashrc regexp="^export OCP_RELEASE" line="export OCP_RELEASE=4.6.5"'
 
 source $HOME/.bashrc
 
@@ -30,7 +30,50 @@ oc completion bash | sudo tee /etc/bash_completion.d/openshift > /dev/null
 mkdir ~/install
 cd install
 
-openshift-install create install-config --dir $HOME/install
+# openshift-install create install-config --dir $HOME/install
+
+SEC_FILE=~/install/pull-secret.json
+# cat << 'EOF' > $SEC_FILE
+BASE_DOMAIN='sandbox726.opentlc.com'
+
+ssh-keygen -t rsa -N '' -f ~/.ssh/id_rsa
+
+cat << EOF > ~/install/install-config.yaml 
+apiVersion: v1
+baseDomain: ${BASE_DOMAIN}
+compute:
+- architecture: amd64
+  hyperthreading: Enabled
+  name: worker
+  platform: {}
+  replicas: 3
+controlPlane:
+  architecture: amd64
+  hyperthreading: Enabled
+  name: master
+  platform: {}
+  replicas: 3
+metadata:
+  creationTimestamp: null
+  name: ocpwzh
+networking:
+  clusterNetwork:
+  - cidr: 10.128.0.0/14
+    hostPrefix: 23
+  machineNetwork:
+  - cidr: 10.0.0.0/16
+  networkType: OpenShiftSDN
+  serviceNetwork:
+  - 172.30.0.0/16
+platform:
+  aws:
+    region: us-west-2
+publish: External
+pullSecret: '$(cat $SEC_FILE)'
+sshKey: |
+  $(cat ~/.ssh/id_rsa.pub)
+EOF
+
 ```
 edit install-config.yaml
 vi install-config.yaml

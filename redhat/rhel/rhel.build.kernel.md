@@ -23,7 +23,7 @@
 # 由于需要rhel8.3，而当前8.3还是beta状态，我们需要注册特殊的订阅。
 subscription-manager --proxy=192.168.253.1:5084 register --username **** --password ********
 
-# subscription-manager config --rhsm.baseurl=https://cdn.redhat.com
+# subscription-manager config --rhsm.baseurl=https://china.cdn.redhat.com
 # subscription-manager config --rhsm.baseurl=https://cdn.redhat.com
 subscription-manager --proxy=192.168.253.1:5084 refresh
 

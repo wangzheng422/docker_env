@@ -18,12 +18,14 @@ subscription-manager repos \
     --enable="rhel-7-server-extras-rpms" \
     --enable="rhel-7-server-supplementary-rpms" \
     --enable="rhel-7-server-ansible-2.9-rpms" \
-    --enable="rhel-7-server-ose-4.5-rpms" \
+    --enable="rhel-7-server-ose-4.6-rpms" \
     --enable="rhel-7-server-optional-rpms" \
-    --enable="rhel-7-server-cnv-2.4-rpms" \
+    --enable="rhel-7-server-cnv-2.5-rpms" \
     --enable="rhel-7-server-rhv-4-mgmt-agent-rpms" \
+    --enable="rhel-7-fast-datapath-rpms" \
     # this is the end
 
+    # --enable="rhel-7-server-ose-4.5-rpms" \
     # --enable="rhel-7-server-ose-3.11-rpms" \
     # --enable="rhel-7-server-ansible-2.8-rpms" \
     # --enable="rhel-7-server-ose-4.2-rpms" \
@@ -120,9 +122,16 @@ yum-config-manager --disable epel
 这个要在centos上面做，rhel上面会报证书的错误，以前是不会的，新的rhel版本会报错。
 
 ```bash
-yum install -y https://developer.download.nvidia.com/compute/cuda/repos/rhel7/x86_64/cuda-repo-rhel7-10.2.89-1.x86_64.rpm
+# yum install -y https://developer.download.nvidia.com/compute/cuda/repos/rhel7/x86_64/cuda-repo-rhel7-10.2.89-1.x86_64.rpm
 
 # curl -so /etc/yum.repos.d/nvidia-container-runtime.repo https://nvidia.github.io/nvidia-container-runtime/centos7/nvidia-container-runtime.repo
+
+curl --proxy http://192.168.253.1:5084 -s -L https://developer.download.nvidia.com/compute/cuda/repos/rhel7/x86_64/cuda-rhel7.repo | \
+  sudo tee /etc/yum.repos.d/cuda-rhel7.repo
+
+sudo rpm --httpproxy http://192.168.253.1:5084 --import https://developer.download.nvidia.com/compute/cuda/repos/rhel7/x86_64/7fa2af80.pub
+
+rpm -q gpg-pubkey --qf '%{name}-%{version}-%{release} --> %{summary}\n'
 
 # 以下好像在rhel上不会报错。
 
@@ -147,8 +156,10 @@ curl -s -L https://nvidia.github.io/nvidia-container-runtime/rhel7.6/nvidia-cont
 
 # this is for rhel 7.7
 DIST="7Server"
+sudo rpm -e gpg-pubkey-f796ecb0
 sudo gpg --homedir /var/lib/yum/repos/x86_64/$DIST/libnvidia-container/gpgdir --delete-key f796ecb0
-sudo gpg --homedir /var/lib/yum/repos/x86_64/$DIST/nvidia-container-runtime/gpgdir --delete-key F796ECB0
+sudo gpg --homedir /var/lib/yum/repos/x86_64/$DIST/nvidia-container-runtime/gpgdir --delete-key f796ecb0
+sudo gpg --homedir /var/lib/yum/repos/x86_64/$DIST/cuda/gpgdir --delete-key f796ecb0
 # sudo gpg --homedir /var/lib/yum/repos/x86_64/$DIST/nvidia-docker/gpgdir --delete-key F796ECB0
 sudo yum makecache
 

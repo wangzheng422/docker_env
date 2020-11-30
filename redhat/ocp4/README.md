@@ -199,4 +199,7 @@ curl localhost:8001/openapi/v2 | jq
 kubectl get nodes -o jsonpath='{.items[*].status.addresses[?(@.type=="ExternalIP")].address}'
 
 oc patch etcd cluster -p='{"spec": {"unsupportedConfigOverrides": {"useUnsupportedUnsafeNonHANonProductionUnstableEtcd": true}}}' --type=merge
+
+echo | openssl s_client -connect api.openshift.corp.local:6443 | openssl x509 -noout -text
+
 ```

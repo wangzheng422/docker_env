@@ -51,6 +51,9 @@ sudo dnf install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noa
 cat << EOF >> /etc/dnf/dnf.conf
 proxy=http://192.168.253.1:5084
 EOF
+cat << EOF >> /etc/dnf/dnf.conf
+fastestmirror=1
+EOF
 
 dnf install htop byobu
 

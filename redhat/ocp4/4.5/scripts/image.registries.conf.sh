@@ -3,10 +3,11 @@
 set -e
 set -x
 
-parm_file=$1
+parm_local_reg=$1
+parm_file=$2
 
-export LOCAL_REG='registry.redhat.ren:5443'
-export MID_REG="registry.redhat.ren"
+#export LOCAL_REG='registry.redhat.ren:5443'
+# export MID_REG="registry.redhat.ren"
 
 # export OCP_RELEASE=${BUILDNUMBER}
 # export LOCAL_REG='registry.redhat.ren'
@@ -44,11 +45,11 @@ cat << EOF >> ./image.registries.conf
   prefix = "${docker_image}"
 
   [[registry.mirror]]
-    location = "${LOCAL_REG}/${docker_image}"
+    location = "${parm_local_reg}/${docker_image}"
     insecure = true
   
   [[registry.mirror]]
-    location = "${LOCAL_REG}/ocp-operator"
+    location = "${parm_local_reg}/ocp-operator"
     insecure = true
 
 EOF
@@ -84,7 +85,7 @@ cat << EOF >> ./image.registries.conf
   prefix = ""
 
   [[registry.mirror]]
-    location = "${LOCAL_REG}/ocp4/openshift4"
+    location = "${parm_local_reg}/ocp4/openshift4"
     insecure = true
 
 [[registry]]
@@ -95,11 +96,11 @@ cat << EOF >> ./image.registries.conf
   prefix = ""
 
   [[registry.mirror]]
-    location = "${LOCAL_REG}/ocp4/openshift4"
+    location = "${parm_local_reg}/ocp4/openshift4"
     insecure = true
 
 [[registry]]
-  location = "${LOCAL_REG}"
+  location = "${parm_local_reg}"
   insecure = true
   blocked = false
   mirror-by-digest-only = false

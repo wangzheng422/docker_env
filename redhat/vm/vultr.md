@@ -42,6 +42,7 @@ systemctl enable docker-distribution
 
 firewall-cmd --get-active-zones
 firewall-cmd --zone=public --add-service=https --permanent
+firewall-cmd --zone=public --add-service=http --permanent
 firewall-cmd --reload
 
 firewall-cmd --list-all

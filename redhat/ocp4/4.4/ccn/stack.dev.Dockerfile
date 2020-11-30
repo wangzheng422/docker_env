@@ -45,13 +45,13 @@ COPY .bowerrc /home/jboss/
 
 # RUN cd /tmp && git clone https://github.com/wangzheng422/cloud-native-workshop-v2m4-labs && cd cloud-native-workshop-v2m4-labs && git checkout ocp-4.4 && for proj in *-service  ; do mvn -fn -f ./$proj dependency:resolve-plugins dependency:resolve dependency:go-offline clean compile -DskipTests ;  mvn -fn -f ./$proj  clean package  ; done && cd /tmp/cloud-native-workshop-v2m4-labs/coolstore-ui && npm install --save-dev nodeshift && cd /tmp && rm -rf /tmp/cloud-native-workshop-v2m4-labs 
 
-# RUN cd /tmp && git clone https://github.com/wangzheng422/cloud-native-workshop-v2m4-labs && cd cloud-native-workshop-v2m4-labs && git checkout ocp-4.4 && cd /tmp/cloud-native-workshop-v2m4-labs/coolstore-ui && npm install --save-dev nodeshift
+RUN cd /tmp && git clone https://github.com/wangzheng422/cloud-native-workshop-v2m4-labs && cd cloud-native-workshop-v2m4-labs && git checkout ocp-4.4 && cd /tmp/cloud-native-workshop-v2m4-labs/coolstore-ui && npm install --save-dev nodeshift
 
-# USER root
-# RUN npm install -g bower && npm install -g bower-nexus3-resolver
+USER root
+RUN npm install -g bower && npm install -g bower-nexus3-resolver
 
-# USER jboss
-# RUN cd /tmp/cloud-native-workshop-v2m4-labs/coolstore-ui && bower install && ls -ahlR bower_components/ && ls -ahl
+USER jboss
+RUN cd /tmp/cloud-native-workshop-v2m4-labs/coolstore-ui && npm install && NODE_ENV=development npm install && bower install && ls -ahlR bower_components/ && ls -ahl
 
 # RUN mkdir /tmp/hello && cd /tmp/hello && \
 # mvn io.quarkus:quarkus-maven-plugin:1.3.2.Final-redhat-00001:create \
@@ -62,7 +62,7 @@ COPY .bowerrc /home/jboss/
 #     -DclassName="org.acme.quickstart.GreetingResource" \
 #     -Dpath="/hello" && mvn -f /tmp/hello/getting-started/pom.xml clean package -Pnative -DskipTests
 
-RUN cd /tmp && git clone https://github.com/spring-projects/spring-petclinic.git && cd spring-petclinic && ./mvnw package
+# RUN cd /tmp && git clone https://github.com/spring-projects/spring-petclinic.git && cd spring-petclinic && ./mvnw package
 
 
 USER root
