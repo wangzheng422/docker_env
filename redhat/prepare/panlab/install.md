@@ -1,13 +1,24 @@
 
 ```bash
-mkdir /etc/yum.repos.d.bak
-mv /etc/yum.repos.d/* /etc/yum.repos.d.bak
-cat << EOF > /etc/yum.repos.d/remote.repo
-[remote]
-name=RHEL FTP
-baseurl=ftp://base.pan.redhat.ren/data
-enabled=1
-gpgcheck=0
 
-EOF
+pvcreate -f /dev/sdb
+vgextend rhel /dev/sdb
+lvremove -f rhel/data
+
+lvcreate -y -L 300G -n data rhel
+
+mkdir -p /mnt/data
+mkfs.xfs /dev/rhel/data
+mount /dev/rhel/data /mnt/data
+mount /dev/nvme/data /data
+
+rsync -P --delete -arz /data/  /mnt/data/
+
+umount /data
+umount /mnt/data
+rm -rf /mnt/data
+
+mount /dev/rhel/data /data
+
+
 ```

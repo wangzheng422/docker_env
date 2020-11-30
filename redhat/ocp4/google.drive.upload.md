@@ -51,7 +51,7 @@ export VULTR_HOST=zero.pvg.redhat.ren
 
 export VULTR_HOST=vcdn.redhat.ren
 
-export VULTR_HOST=bastion.0646.example.opentlc.com
+export VULTR_HOST=bastion.103a.example.opentlc.com
 
 cat << EOF > /root/.ssh/config
 StrictHostKeyChecking no
@@ -147,6 +147,7 @@ pip3 install --user bypy
 /root/.local/bin/bypy list
 /root/.local/bin/bypy upload
 
+/root/.local/bin/bypy download
 
 ####################
 ## local mac
