@@ -8,7 +8,7 @@ EOF
 # in .zshrc
 # alias ssh="ssh -F ~/.ssh/config"
 
-# vm
+# vm extend disk , 硬盘扩容
 # https://access.redhat.com/solutions/4009
 pvcreate /dev/sdb 
 vgextend rhel /dev/sdb
@@ -80,4 +80,6 @@ yarn run pack
 ffmpeg -i test.mp4 -c:v h264_videotoolbox -profile:v high -level 4.2 -crf 18 test1.mp4
 
 ffmpeg -i test.mp4 -c:v hevc_videotoolbox -profile:v main10  -crf 18 test1.mp4
+
+
 ```
