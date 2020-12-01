@@ -109,6 +109,7 @@ tar -cvf - is.samples/ | pigz -c > /mnt/hgfs/ocp.archive/ocp.tgz.$var_version/is
 # on osx split the files
 cd /Volumes/Mac2T/ocp.archive/ocp.tgz.4.6.5
 split -b 20000m rhel-data-7.9.tgz rhel-data-7.9.
+split -b 20000m redhat-operator.tgz redhat-operator.tgz.
 
 # sync to base-pvg
 rsync -e ssh --info=progress2 -P --delete -arz  /root/data ${VULTR_HOST}:/var/ftp/
