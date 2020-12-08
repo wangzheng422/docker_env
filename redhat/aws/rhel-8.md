@@ -17,22 +17,24 @@ subscription-manager --proxy=192.168.253.1:5084 register --username **** --passw
 subscription-manager --proxy=192.168.253.1:5084 list --available --all
 subscription-manager --proxy=192.168.253.1:5084 attach --pool=8a85f99a6fa01382016fc16b7c045e16
 
-subscription-manager --proxy=192.168.253.1:5084 repos --list
+subscription-manager --proxy=192.168.253.1:5084 repos --list > list
 subscription-manager --proxy=192.168.253.1:5084 repos --list-enabled
 
 subscription-manager --proxy=192.168.253.1:5084 repos --disable="*"
 
-subscription-manager --proxy=192.168.253.1:5084 refresh
+# subscription-manager --proxy=192.168.253.1:5084 refresh
 
 subscription-manager --proxy=192.168.253.1:5084 repos \
     --enable="rhel-8-for-x86_64-baseos-rpms" \
+    --enable="rhel-8-for-x86_64-baseos-source-rpms" \
     --enable="rhel-8-for-x86_64-appstream-rpms" \
     --enable="rhel-8-for-x86_64-supplementary-rpms" \
+    --enable="codeready-builder-for-rhel-8-x86_64-rpms" \
     --enable="rhel-8-for-x86_64-rt-rpms" \
     --enable="rhel-8-for-x86_64-highavailability-rpms" \
     --enable="rhel-8-for-x86_64-nfv-rpms" \
-    --enable="cnv-2.4-for-rhel-8-x86_64-rpms" \
-    --enable="rhocp-4.5-for-rhel-8-x86_64-rpms" \
+    --enable="cnv-2.5-for-rhel-8-x86_64-rpms" \
+    --enable="rhocp-4.6-for-rhel-8-x86_64-rpms" \
     --enable="fast-datapath-for-rhel-8-x86_64-rpms" \
     --enable="ansible-2.9-for-rhel-8-x86_64-rpms" \
     # ansible-2.9-for-rhel-8-x86_64-rpms
