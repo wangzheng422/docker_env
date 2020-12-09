@@ -83,7 +83,7 @@ done <<< "$build_number_list"
 
 cd /data/ocp4
 
-wget --recursive --no-directories --no-parent -e robots=off --accept="rhcos-live*,rhcos-qemu*,rhcos-metal*"  https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/${var_major_version}/latest/
+wget --recursive --no-directories --no-parent -e robots=off --accept="rhcos-live*,rhcos-qemu*,rhcos-metal*,rhcos-openstack*"  https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/${var_major_version}/latest/
 
 wget -O ocp-deps-sha256sum.txt https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/${var_major_version}/latest/sha256sum.txt
 

@@ -83,6 +83,9 @@ cd /data/dnf
 dnf reposync -m --download-metadata --delete -n
 
 cd /data
-tar -cvf - dnf/ | pigz -c > /mnt/hgfs/ocp/rhel-dnf-8.2.tgz
+tar -cvf - dnf/ | pigz -c > /mnt/hgfs/ocp/rhel-dnf-8.3.tgz
+
+cd /Volumes/Mac2T/ocp/
+split -b 20000m rhel-dnf-8.3.tgz rhel-dnf-8.3.tgz.
 
 ```
