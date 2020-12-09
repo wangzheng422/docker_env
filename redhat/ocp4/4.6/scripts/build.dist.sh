@@ -9,7 +9,7 @@ EOF
 )
 
 # params for operator hub images
-export var_date='2020.11.23.0135'
+export var_date='2020.12.09.0840'
 echo $var_date
 export var_major_version='4.6'
 echo ${var_major_version}
