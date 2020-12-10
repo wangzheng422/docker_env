@@ -4,12 +4,12 @@ set -e
 set -x
 
 build_number_list=$(cat << EOF
-4.6.5
+4.6.7
 EOF
 )
 
 # params for operator hub images
-export var_date='2020.11.23.0135'
+export var_date='2020.12.09.0840'
 echo $var_date
 export var_major_version='4.6'
 echo ${var_major_version}
@@ -75,6 +75,11 @@ install_build() {
     --to-release-image=${LOCAL_REG}/${LOCAL_REPO}:${OCP_RELEASE} \
     --to=${LOCAL_REG}/${LOCAL_REPO}
 
+    export RELEASE_IMAGE=$(curl -s https://mirror.openshift.com/pub/openshift-v4/clients/ocp/${BUILDNUMBER}/release.txt | grep 'Pull From: quay.io' | awk -F ' ' '{print $3}')
+
+    oc adm release extract --registry-config ${LOCAL_SECRET_JSON} --command='openshift-baremetal-install' ${RELEASE_IMAGE}
+
+
 }
 
 while read -r line; do
@@ -83,7 +88,9 @@ done <<< "$build_number_list"
 
 cd /data/ocp4
 
-wget --recursive --no-directories --no-parent -e robots=off --accept="rhcos-live*"  https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/${var_major_version}/latest/
+wget --recursive --no-directories --no-parent -e robots=off --accept="rhcos-live*,rhcos-qemu*,rhcos-metal*,rhcos-openstack*"  https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/${var_major_version}/latest/
+
+wget -O ocp-deps-sha256sum.txt https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/${var_major_version}/latest/sha256sum.txt
 
 wget -O ocp4-upi-helpernode.zip https://github.com/wangzheng422/ocp4-upi-helpernode/archive/master.zip
 

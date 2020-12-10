@@ -51,7 +51,7 @@ export VULTR_HOST=zero.pvg.redhat.ren
 
 export VULTR_HOST=vcdn.redhat.ren
 
-export VULTR_HOST=bastion.103a.example.opentlc.com
+export VULTR_HOST=bastion.dc74.example.opentlc.com
 
 cat << EOF > /root/.ssh/config
 StrictHostKeyChecking no
@@ -95,7 +95,7 @@ rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/registry /dat
 var_version='4.6.5'
 
 cd /root
-tar -cvf - data/ | pigz -c > /mnt/hgfs/ocp/rhel-data-7.8.tgz
+tar -cvf - data/ | pigz -c > /mnt/hgfs/ocp.archive/ocp.tgz.$var_version/rhel-data-7.9.tgz
 
 cd /data
 tar -cvf - ocp4/ | pigz -c > /mnt/hgfs/ocp.archive/ocp.tgz.$var_version/ocp4.tgz
@@ -105,6 +105,12 @@ tar -cvf - redhat-operator/ | pigz -c > /mnt/hgfs/ocp.archive/ocp.tgz.$var_versi
 tar -cvf - certified-operator/ | pigz -c > /mnt/hgfs/ocp.archive/ocp.tgz.$var_version/certified-operator.tgz
 tar -cvf - community-operator/ | pigz -c > /mnt/hgfs/ocp.archive/ocp.tgz.$var_version/community-operatorn.tgz
 tar -cvf - is.samples/ | pigz -c > /mnt/hgfs/ocp.archive/ocp.tgz.$var_version/is.samples.tgz
+
+# on osx split the files
+cd /Volumes/Mac2T/ocp.archive/ocp.tgz.4.6.5
+split -b 20000m rhel-data-7.9.tgz rhel-data-7.9.
+split -b 20000m redhat-operator.tgz redhat-operator.tgz.
+split -b 20000m is.samples.tgz is.samples.tgz.
 
 # sync to base-pvg
 rsync -e ssh --info=progress2 -P --delete -arz  /root/data ${VULTR_HOST}:/var/ftp/
