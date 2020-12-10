@@ -7,7 +7,7 @@
 - [应用上云系列教程 containerized cloud native (CCN)](redhat/ocp4/4.4/4.4.ccn.devops.deploy.md)
 - [容器云承载虚拟化业务(CNV)](redhat/ocp4/4.5/4.5.ocp.ocs.cnv.ceph.md)
 - [RHEL8编译定制化内核](redhat/rhel/rhel.build.kernel.md)
-- [openshift 4.6 baremetal IPI 全自动安装](redhat/ocp4/4.6/4.6.disconnect.bm.ipi.on.rhel8.md)
+- [openshift 4.6 离线 baremetal IPI 全自动安装](redhat/ocp4/4.6/4.6.disconnect.bm.ipi.on.rhel8.md)
 
 作者还有很多视频演示，欢迎前往作者的频道订阅
 - [bilibili](https://space.bilibili.com/19536819)
