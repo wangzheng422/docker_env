@@ -82,4 +82,15 @@ ffmpeg -i test.mp4 -c:v h264_videotoolbox -profile:v high -level 4.2 -crf 18 tes
 ffmpeg -i test.mp4 -c:v hevc_videotoolbox -profile:v main10  -crf 18 test1.mp4
 
 
+###############################
+## ESHOW driver clean
+# https://apple.stackexchange.com/questions/351529/identifying-and-removing-unknown-sound-device
+sudo -i
+cd /Library/Audio/Plug-Ins/HAL
+rm -rf ESHOW.driver
+rm -rf DongleAudio.driver
+rm -rf EshowAudio.driver
+# then reboot
+
+
 ```
