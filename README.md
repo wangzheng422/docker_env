@@ -46,7 +46,7 @@
 - 优秀的workshop
   - [openshift4 & openshift storage workshop](redhat/ocp4/4.5/4.5.ocp.ocs.workshop.md)
 - POC
-  - [2020.04 某次POC openshift LVM](redhat/ocp4/4.3/poc.sc/install.poc.sc.md)
+  - [2020.04 某次POC openshift LVM调优](redhat/ocp4/4.3/poc.sc/install.poc.sc.md)
 
 作者还有很多视频演示，欢迎前往作者的频道订阅
 - [bilibili](https://space.bilibili.com/19536819)
