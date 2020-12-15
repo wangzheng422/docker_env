@@ -1,6 +1,7 @@
 # checklist
 
-- ocp update api server cert, https://docs.openshift.com/container-platform/4.6/security/certificates/api-server.html
+- ocp training
+- cmcc edge spec excel fine tune
 - book
 - ebpf learning and self tool
 - ocp 4.6, bm ipi disconnect
@@ -32,6 +33,7 @@ abanden:
 
 
 done:
+- ocp update api server cert, https://docs.openshift.com/container-platform/4.6/security/certificates/api-server.html
 - ovn 4.2 tp, ipv6
   - begin in ocp 4.4
 - operator sample 不正常，很多镜像没有，需要查一下  https://github.com/openshift/cluster-samples-operator
