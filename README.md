@@ -12,6 +12,7 @@
   - [openshift4 初始安装后 补充镜像](redhat/ocp4/4.6/4.6.add.image.md)
   - [openshift4 补充samples operator 需要的 image stream](redhat/ocp4/4.5/4.5.is.sample.md)
   - [openshift4 calico 离线部署](redhat/ocp4/4.3/4.3/../4.3.calico.md)
+  - [openshift4 集群升级](redhat/ocp4/4.2.upgrade.md)
 - openshift4 使用系列
   - [openshift headless service讲解](redhat/ocp4/4.4/4.4.headless.service.md)
   - [openshift volumn 存储的各种测试](redhat/ocp4/4.3/4.3.volumn.md)
@@ -44,6 +45,8 @@
   - [两个主机用ovs组网](redhat/ocp4/4.4/4.4.ovs.md)
 - 优秀的workshop
   - [openshift4 & openshift storage workshop](redhat/ocp4/4.5/4.5.ocp.ocs.workshop.md)
+- POC
+  - [2020.04 某次POC openshift LVM调优](redhat/ocp4/4.3/poc.sc/install.poc.sc.md)
 
 作者还有很多视频演示，欢迎前往作者的频道订阅
 - [bilibili](https://space.bilibili.com/19536819)
