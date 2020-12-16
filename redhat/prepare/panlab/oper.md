@@ -12,7 +12,6 @@ ps -ef | grep vbmcd | awk '{print $2}' | xargs kill
 /bin/rm -f /root/.vbmc/master.pid
 /root/.local/bin/vbmcd
 
-
 virsh start ocp4-aHelper
 virsh start ocp4-master0 
 virsh start ocp4-master1 

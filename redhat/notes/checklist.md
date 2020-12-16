@@ -1,10 +1,8 @@
 # checklist
 
-- ocp training
 - cmcc edge spec excel fine tune
 - book
 - ebpf learning and self tool
-- ocp 4.6, bm ipi disconnect
 - rhcsa, rhce
 - coreos install package, mco, ostree
 - do280?
@@ -13,8 +11,6 @@
 - pam / techito
 - promethus rules
 - rhel8 learning: https://role.rhu.redhat.com/rol-rhu/rhz/rhls/course/rh354-8.0/pr01
-- lms, fuse: https://learning.redhat.com/totara/program/view.php?id=90
-- lms, amq, https://learning.redhat.com/totara/program/view.php?id=97
 - lms, fuse: https://learning.redhat.com/totara/program/view.php?id=90
 - lms, amq, https://learning.redhat.com/totara/program/view.php?id=97
 - https://zh.d2l.ai/
@@ -80,7 +76,7 @@ done:
 - ccn bug fix and test again. shandong training.
 - lms, What's New from the BUs 2020: https://learning.redhat.com/totara/program/view.php?id=172
 - sichuan testing plan.
-
+- ocp 4.6, bm ipi disconnect
 
 
 
