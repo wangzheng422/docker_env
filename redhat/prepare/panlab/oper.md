@@ -12,6 +12,7 @@ ps -ef | grep vbmcd | awk '{print $2}' | xargs kill
 /bin/rm -f /root/.vbmc/master.pid
 /root/.local/bin/vbmcd
 
+/root/.local/bin/sushy-emulator -i 0.0.0.0 --ssl-certificate /etc/crts/redhat.ren.crt --ssl-key /etc/crts/redhat.ren.key
 
 virsh start ocp4-aHelper
 virsh start ocp4-master0 
