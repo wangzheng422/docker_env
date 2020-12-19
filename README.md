@@ -55,10 +55,8 @@
 
 作者正在写一本在线书[《OpenShift4 一步一脚印》](https://wangzheng422.github.io/openshift4-steps-book/introduction.html)。
 
-最后，欢迎支持作者
+最后，欢迎支持关注作者公众号
 
-|              Alipay              |               WeChat Pay               |
-| :------------------------------: | :------------------------------------: |
-| ![alipay](imgs/2020-06-27-18-53-41.png) | ![wechatpay](imgs/2020-06-27-20-14-53.png) |
+![](imgs/2020-12-19-22-35-22.png)
 
 
