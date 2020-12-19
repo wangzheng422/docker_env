@@ -1,5 +1,6 @@
 # checklist
 
+- ocs course: https://learning.redhat.com/totara/program/view.php?id=324
 - cmcc edge spec excel fine tune
 - book
 - ebpf learning and self tool
