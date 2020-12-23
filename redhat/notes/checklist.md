@@ -16,6 +16,9 @@
 - lms, amq, https://learning.redhat.com/totara/program/view.php?id=97
 - https://zh.d2l.ai/
 - chrome bing wall pic new tab, https://codingcat.cn/ataraxia/
+- demo ansible: https://github.com/ansible/workshops
+- demo ccn upgrade to 4.6
+- demo data grid
 
 soft:
 - ppt
