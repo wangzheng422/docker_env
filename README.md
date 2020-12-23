@@ -48,6 +48,8 @@
 - POC
   - [2020.04 某次POC openshift LVM调优](redhat/ocp4/4.3/poc.sc/install.poc.sc.md)
 
+作者还做了一个[chrome extension](https://chrome.google.com/webstore/detail/bing-image-new-tab/hahpccmdkmgmaoebhfnkpcnndnklfbpj/)，用来在new tab上展示bing.com的美图，简单美观，欢迎使用。
+
 作者还有很多视频演示，欢迎前往作者的频道订阅
 - [bilibili](https://space.bilibili.com/19536819)
 - [西瓜视频](https://www.ixigua.com/home/1134309560818120)
