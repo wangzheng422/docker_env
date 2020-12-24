@@ -1,5 +1,8 @@
 # checklist
 
+- rh342: https://role.rhu.redhat.com/rol-rhu/app/courses/rh342-7.2
+- rh415: https://role.rhu.redhat.com/rol-rhu/app/courses/rh415-7.5
+- rh442: https://role.rhu.redhat.com/rol-rhu/app/courses/rh442-8.0
 - ocs course: https://learning.redhat.com/totara/program/view.php?id=324
 - cmcc edge spec excel fine tune
 - book
