@@ -141,6 +141,12 @@ rsync -e ssh --info=progress2 -P --delete -arz /data/ocp4 ${VULTR_HOST}:/data/
 
 rsync -e ssh --info=progress2 -P --delete -arz /data/is.samples ${VULTR_HOST}:/data/
 
+# upload to pan lab
+rsync -e ssh --info=progress2 -P --delete -arz /data/ocp4/ ocp.pan.redhat.ren:/data/ocp4/
+
+rsync -e ssh --info=progress2 -P --delete -arz /data/registry/ ocp.pan.redhat.ren:/data/registry/
+
+
 
 #######################################
 # baidu pan on rhel8
