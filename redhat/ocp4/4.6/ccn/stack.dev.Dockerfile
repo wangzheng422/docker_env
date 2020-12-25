@@ -1,4 +1,4 @@
-FROM quay.io/openshiftlabs/cloudnative-workspaces-quarkus:2.1
+FROM quay.io/openshiftlabs/cloudnative-workspaces-quarkus:2.4.1
 
 RUN rm -rf /root/.m2
 RUN rm -rf /home/jboss/.m2
@@ -45,13 +45,13 @@ COPY .bowerrc /home/jboss/
 
 # RUN cd /tmp && git clone https://github.com/wangzheng422/cloud-native-workshop-v2m4-labs && cd cloud-native-workshop-v2m4-labs && git checkout ocp-4.4 && for proj in *-service  ; do mvn -fn -f ./$proj dependency:resolve-plugins dependency:resolve dependency:go-offline clean compile -DskipTests ;  mvn -fn -f ./$proj  clean package  ; done && cd /tmp/cloud-native-workshop-v2m4-labs/coolstore-ui && npm install --save-dev nodeshift && cd /tmp && rm -rf /tmp/cloud-native-workshop-v2m4-labs 
 
-RUN cd /tmp && git clone https://github.com/wangzheng422/cloud-native-workshop-v2m4-labs && cd cloud-native-workshop-v2m4-labs && git checkout ocp-4.4 && cd /tmp/cloud-native-workshop-v2m4-labs/coolstore-ui && npm install --save-dev nodeshift
+# RUN cd /tmp && git clone https://github.com/wangzheng422/cloud-native-workshop-v2m4-labs && cd cloud-native-workshop-v2m4-labs && git checkout ocp-4.4 && cd /tmp/cloud-native-workshop-v2m4-labs/coolstore-ui && npm install --save-dev nodeshift
 
-USER root
-RUN npm install -g bower && npm install -g bower-nexus3-resolver
+# USER root
+# RUN npm install -g bower && npm install -g bower-nexus3-resolver
 
-USER jboss
-RUN cd /tmp/cloud-native-workshop-v2m4-labs/coolstore-ui && npm install && NODE_ENV=development npm install && bower install && ls -ahlR bower_components/ && ls -ahl
+# USER jboss
+# RUN cd /tmp/cloud-native-workshop-v2m4-labs/coolstore-ui && npm install && NODE_ENV=development npm install && bower install && ls -ahlR bower_components/ && ls -ahl
 
 # RUN mkdir /tmp/hello && cd /tmp/hello && \
 # mvn io.quarkus:quarkus-maven-plugin:1.3.2.Final-redhat-00001:create \
@@ -66,9 +66,9 @@ RUN cd /tmp/cloud-native-workshop-v2m4-labs/coolstore-ui && npm install && NODE_
 
 
 USER root
-RUN rm -rf /root/.m2
-RUN rm -rf /home/jboss/.m2/repository
-RUN rm -rf /home/jboss/.npm
+# RUN rm -rf /root/.m2
+# RUN rm -rf /home/jboss/.m2/repository
+# RUN rm -rf /home/jboss/.npm
 RUN chown -R jboss /home/jboss/.m2
 RUN chown -R jboss /home/jboss/.config
 # RUN chown -R jboss /home/jboss/.npm
@@ -79,4 +79,6 @@ RUN chmod -R a+rwx /home/jboss/.siege
 
 RUN rm -rf /tmp/*
 RUN cd && ls -ahl
+
+USER jboss
 
