@@ -70,10 +70,10 @@ USER root
 # RUN rm -rf /home/jboss/.m2/repository
 # RUN rm -rf /home/jboss/.npm
 RUN chown -R jboss /home/jboss/.m2
-RUN chown -R jboss /home/jboss/.config
+# RUN chown -R jboss /home/jboss/.config
 # RUN chown -R jboss /home/jboss/.npm
 RUN chmod -R a+rwx /home/jboss/.m2
-RUN chmod -R a+rwx /home/jboss/.config
+# RUN chmod -R a+rwx /home/jboss/.config
 RUN chmod -R a+rwx /home/jboss/.siege
 # RUN chmod -R a+rwx /home/jboss/.npm
 
