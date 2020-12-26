@@ -2,6 +2,10 @@
 
 podman start local-registry
 
+podman start nexus
+
+podman start nexus-image
+
 systemctl start vncserver@:1
 
 # setup ftp data root
