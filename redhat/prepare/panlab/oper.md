@@ -6,6 +6,8 @@ podman start nexus
 
 podman start nexus-image
 
+podman start gitea
+
 systemctl start vncserver@:1
 
 # setup ftp data root
@@ -175,7 +177,7 @@ create_lv nvme master0lv
 create_lv nvme master1lv
 create_lv nvme master2lv
 
-virt-install --name=ocp4-master0 --vcpus=12 --ram=20480 \
+virt-install --name=ocp4-master0 --vcpus=12 --ram=18432 \
 --cpu=host-model \
 --disk path=/dev/nvme/master0lv,device=disk,bus=virtio,format=raw \
 --os-variant rhel8.0 --network bridge=baremetal,model=virtio \
@@ -183,7 +185,7 @@ virt-install --name=ocp4-master0 --vcpus=12 --ram=20480 \
 --print-xml > ${KVM_DIRECTORY}/ocp4-master0.xml
 virsh define --file ${KVM_DIRECTORY}/ocp4-master0.xml
 
-virt-install --name=ocp4-master1 --vcpus=12 --ram=20480 \
+virt-install --name=ocp4-master1 --vcpus=12 --ram=18432 \
 --cpu=host-model \
 --disk path=/dev/nvme/master1lv,device=disk,bus=virtio,format=raw \
 --os-variant rhel8.0 --network bridge=baremetal,model=virtio \
@@ -191,7 +193,7 @@ virt-install --name=ocp4-master1 --vcpus=12 --ram=20480 \
 --print-xml > ${KVM_DIRECTORY}/ocp4-master1.xml
 virsh define --file ${KVM_DIRECTORY}/ocp4-master1.xml
 
-virt-install --name=ocp4-master2 --vcpus=12 --ram=20480 \
+virt-install --name=ocp4-master2 --vcpus=12 --ram=18432 \
 --cpu=host-model \
 --disk path=/dev/nvme/master2lv,device=disk,bus=virtio,format=raw \
 --os-variant rhel8.0 --network bridge=baremetal,model=virtio \
@@ -490,6 +492,12 @@ do
 done
 /bin/rm -rf .openshift_install.log .openshift_install_state.json terraform* auth tls 
 /data/ocp4/4.6.9/openshift-baremetal-install --dir /data/install/ --log-level debug create cluster
+
+# INFO Install complete!
+# INFO To access the cluster as the system:admin user when using 'oc', run 'export KUBECONFIG=/data/install/auth/kubeconfig'
+# INFO Access the OpenShift web-console here: https://console-openshift-console.apps.ocp4.redhat.ren
+# INFO Login to the console with user: "kubeadmin", and password: "xUYQ5-e9WFL-haZPi-QdiP3"
+
 
 
 ```
