@@ -496,7 +496,7 @@ done
 # INFO Install complete!
 # INFO To access the cluster as the system:admin user when using 'oc', run 'export KUBECONFIG=/data/install/auth/kubeconfig'
 # INFO Access the OpenShift web-console here: https://console-openshift-console.apps.ocp4.redhat.ren
-# INFO Login to the console with user: "kubeadmin", and password: "xUYQ5-e9WFL-haZPi-QdiP3"
+# INFO Login to the console with user: "kubeadmin", and password: "R3eL2-bLJQ8-A2U3b-2Twm6"
 
 
 
