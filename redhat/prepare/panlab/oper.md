@@ -30,14 +30,19 @@ virsh start ocp4-aHelper
 # virsh start ocp4-master2 
 virsh start ocp4-worker0 
 virsh start ocp4-worker1 
-virsh start ocp4-worker2
+# virsh start ocp4-worker2
 
 # on 102
+systemctl start vncserver@:1
+
 /root/.local/bin/sushy-emulator -i 0.0.0.0 --ssl-certificate /data/install/redhat.ren.crt --ssl-key /data/install/redhat.ren.key
 
 virsh start ocp4-master0 
 virsh start ocp4-master1 
 virsh start ocp4-master2 
+
+# on helper, 192.168.7.11
+systemctl start vncserver@:1
 
 ```
 
