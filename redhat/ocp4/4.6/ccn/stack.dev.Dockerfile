@@ -1,4 +1,4 @@
-FROM quay.io/openshiftlabs/cloudnative-workspaces-quarkus:2.4.1
+FROM quay.io/openshiftlabs/cloudnative-workspaces-quarkus:2.4
 
 RUN rm -rf /root/.m2
 RUN rm -rf /home/jboss/.m2
