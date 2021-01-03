@@ -21,7 +21,12 @@
 - chrome bing wall pic new tab, https://codingcat.cn/ataraxia/
 - demo ansible: https://github.com/ansible/workshops
 - demo ccn upgrade to 4.6
+  - spec:
+  lookupPolicy:
+    local: false
+  dockerImageRepository: registry.access.redhat.com/ubi8/openjdk-11
 - demo data grid
+
 
 soft:
 - ppt
