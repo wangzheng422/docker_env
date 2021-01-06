@@ -9,7 +9,7 @@ EOF
 )
 
 # params for operator hub images
-export var_date='2020.12.24.1106'
+export var_date='2021.01.06.0722'
 echo $var_date
 export var_major_version='4.6'
 echo ${var_major_version}
@@ -96,7 +96,7 @@ wget -O ocp4-upi-helpernode.zip https://github.com/wangzheng422/ocp4-upi-helpern
 
 wget -O docker_env.zip https://github.com/wangzheng422/docker_env/archive/dev.zip
 
-wget -O agnosticd.zip https://github.com/wangzheng422/agnosticd/archive/wzh-ccn-ocp-4.4.zip
+wget -O agnosticd.zip https://github.com/wangzheng422/agnosticd/archive/wzh-ccn-ocp-4.6.zip
 
 podman pull quay.io/wangzheng422/filetranspiler
 podman save quay.io/wangzheng422/filetranspiler | pigz -c > filetranspiler.tgz
@@ -182,7 +182,7 @@ echo "select * from related_image ;" \
   | sed 's/operatorbundle_name =//g' \
   | sort | uniq > redhat-marketplace-image.list
 
-bash image.registries.conf.sh registry.ocp4.redhat.ren:5443
+bash image.registries.conf.sh nexus.ocp4.redhat.ren:8083
 
 /bin/rm -f index.html*
 /bin/rm -rf operator-catalog-manifests
