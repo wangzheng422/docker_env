@@ -103,6 +103,7 @@ tar -cvf - data/ | pigz -c > /mnt/hgfs/ocp.archive/ocp.tgz.$var_version/rhel-dat
 cd /data
 tar -cvf - ocp4/ | pigz -c > /mnt/hgfs/ocp.archive/ocp.tgz.$var_version/ocp4.tgz
 tar -cvf - registry/ | pigz -c > /mnt/hgfs/ocp.archive/ocp.tgz.$var_version/registry.tgz
+tar -cvf - poc.image/ | pigz -c > /mnt/hgfs/ocp.archive/ocp.tgz.$var_version/poc.image.tgz
 
 cd /data/ccn
 tar -cvf - nexus-image/ | pigz -c > /mnt/hgfs/ocp.archive/ocp.tgz.$var_version/nexus-image.tgz
