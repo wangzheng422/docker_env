@@ -1,5 +1,8 @@
 # checklist
 
+- rh342: https://role.rhu.redhat.com/rol-rhu/app/courses/rh342-7.2
+- rh415: https://role.rhu.redhat.com/rol-rhu/app/courses/rh415-7.5
+- rh442: https://role.rhu.redhat.com/rol-rhu/app/courses/rh442-8.0
 - ocs course: https://learning.redhat.com/totara/program/view.php?id=324
 - cmcc edge spec excel fine tune
 - book
@@ -16,6 +19,14 @@
 - lms, amq, https://learning.redhat.com/totara/program/view.php?id=97
 - https://zh.d2l.ai/
 - chrome bing wall pic new tab, https://codingcat.cn/ataraxia/
+- demo ansible: https://github.com/ansible/workshops
+- demo ccn upgrade to 4.6
+  - spec:
+  lookupPolicy:
+    local: false
+  dockerImageRepository: registry.access.redhat.com/ubi8/openjdk-11
+- demo data grid
+
 
 soft:
 - ppt

@@ -51,7 +51,7 @@ export VULTR_HOST=zero.pvg.redhat.ren
 
 export VULTR_HOST=vcdn.redhat.ren
 
-export VULTR_HOST=bastion.dc74.example.opentlc.com
+export VULTR_HOST=bastion.db66.example.opentlc.com
 
 cat << EOF > /root/.ssh/config
 StrictHostKeyChecking no
@@ -68,9 +68,11 @@ EOF
 # sync from aws to localvm
 cd /data
 
-rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/ocp4 /data/
+rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/ocp4/ /data/ocp4/
 
-rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/registry /data/
+rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/registry/ /data/registry/
+
+rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/poc.image/ /data/poc.image/
 
 rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/install.image/ /data/install.image/
 
@@ -92,7 +94,8 @@ rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/registry /dat
 # copy to local disk
 # localvm.md
 
-var_version='4.6.5'
+var_version='4.6.9-ccn'
+mkdir -p /mnt/hgfs/ocp.archive/ocp.tgz.$var_version/
 
 cd /root
 tar -cvf - data/ | pigz -c > /mnt/hgfs/ocp.archive/ocp.tgz.$var_version/rhel-data-7.9.tgz
@@ -100,6 +103,12 @@ tar -cvf - data/ | pigz -c > /mnt/hgfs/ocp.archive/ocp.tgz.$var_version/rhel-dat
 cd /data
 tar -cvf - ocp4/ | pigz -c > /mnt/hgfs/ocp.archive/ocp.tgz.$var_version/ocp4.tgz
 tar -cvf - registry/ | pigz -c > /mnt/hgfs/ocp.archive/ocp.tgz.$var_version/registry.tgz
+tar -cvf - poc.image/ | pigz -c > /mnt/hgfs/ocp.archive/ocp.tgz.$var_version/poc.image.tgz
+
+cd /data/ccn
+tar -cvf - nexus-image/ | pigz -c > /mnt/hgfs/ocp.archive/ocp.tgz.$var_version/nexus-image.tgz
+
+
 tar -cvf - install.image/ | pigz -c > /mnt/hgfs/ocp.archive/ocp.tgz.$var_version/install.image.tgz
 tar -cvf - redhat-operator/ | pigz -c > /mnt/hgfs/ocp.archive/ocp.tgz.$var_version/redhat-operator.tgz
 tar -cvf - certified-operator/ | pigz -c > /mnt/hgfs/ocp.archive/ocp.tgz.$var_version/certified-operator.tgz
@@ -107,7 +116,9 @@ tar -cvf - community-operator/ | pigz -c > /mnt/hgfs/ocp.archive/ocp.tgz.$var_ve
 tar -cvf - is.samples/ | pigz -c > /mnt/hgfs/ocp.archive/ocp.tgz.$var_version/is.samples.tgz
 
 # on osx split the files
-cd /Volumes/Mac2T/ocp.archive/ocp.tgz.4.6.5
+cd /Volumes/Mac2T/ocp.archive/ocp.tgz.4.6.9-ccn
+split -b 20000m nexus-image.tgz nexus-image.tgz.
+
 split -b 20000m rhel-data-7.9.tgz rhel-data-7.9.
 split -b 20000m redhat-operator.tgz redhat-operator.tgz.
 split -b 20000m is.samples.tgz is.samples.tgz.
@@ -140,6 +151,16 @@ rsync -e ssh --info=progress2 -P --delete -arz /data/registry ${VULTR_HOST}:/dat
 rsync -e ssh --info=progress2 -P --delete -arz /data/ocp4 ${VULTR_HOST}:/data/
 
 rsync -e ssh --info=progress2 -P --delete -arz /data/is.samples ${VULTR_HOST}:/data/
+
+# upload to pan lab
+rsync -e ssh --info=progress2 -P --delete -arz /data/ocp4/ ocp.pan.redhat.ren:/data/ocp4/
+
+rsync -e ssh --info=progress2 -P --delete -arz /data/registry/ ocp.pan.redhat.ren:/data/registry/
+
+# download from pan lab
+mkdir -p /data/ccn/nexus-image
+rsync -e ssh --info=progress2 -P --delete -arz ocp.pan.redhat.ren:/data/ccn/nexus-image/  /data/ccn/nexus-image/
+
 
 
 #######################################
