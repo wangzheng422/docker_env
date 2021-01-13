@@ -6,7 +6,8 @@
 - openshift4 安装系列
   - [如何获得 openshift4 免费下载密钥](redhat/ocp4/4.5/4.5.ocp.pull.secret.md)
   - [openshift4 离线安装介质的制作](redhat/ocp4/4.6/4.6.build.dist.md)
-  - [openshift4 物理机 baremetal UPI模式 离线安装](redhat/ocp4/4.6/4.6.disconnect.operator.md)
+  - [openshift4 rhel7物理机 baremetal UPI模式 离线安装](redhat/ocp4/4.6/4.6.disconnect.bm.upi.static.ip.on.rhel7.md)
+  - [openshift4 rhel8物理机 baremetal UPI模式 离线安装](redhat/ocp4/4.6/4.6.disconnect.bm.upi.static.ip.on.rhel8.md)
   - [openshift4 物理机 baremetal IPI模式 离线安装 单网络模式](redhat/ocp4/4.6/4.6.disconnect.bm.ipi.on.rhel8.md)
   - [openshift4 物理机 baremetal IPI模式 离线安装 双网络模式](redhat/ocp4/4.6/4.6.disconnect.bm.ipi.on.rhel8.provisionning.network.md)
   - [openshift4 初始安装后 补充镜像](redhat/ocp4/4.6/4.6.add.image.md)
