@@ -46,6 +46,7 @@
   - [RHEL8编译定制化内核](redhat/rhel/rhel.build.kernel.md)
   - [检查主机是否是运行在虚拟机上](redhat/ocp4/4.5/4.5.check.whether.vm.md)
   - [两个主机用ovs组网](redhat/ocp4/4.4/4.4.ovs.md)
+  - [CentOS Stream是什么](https://www.bilibili.com/video/BV1Go4y1o7hn/)
 - 优秀的workshop
   - [openshift4 & openshift storage workshop](redhat/ocp4/4.5/4.5.ocp.ocs.workshop.md)
 - POC
