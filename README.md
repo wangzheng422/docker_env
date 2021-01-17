@@ -46,12 +46,15 @@
   - [RHEL8编译定制化内核](redhat/rhel/rhel.build.kernel.md)
   - [检查主机是否是运行在虚拟机上](redhat/ocp4/4.5/4.5.check.whether.vm.md)
   - [两个主机用ovs组网](redhat/ocp4/4.4/4.4.ovs.md)
+  - [CentOS Stream是什么](https://www.bilibili.com/video/BV1Go4y1o7hn/)
 - 优秀的workshop
   - [openshift4 & openshift storage workshop](redhat/ocp4/4.5/4.5.ocp.ocs.workshop.md)
 - POC
   - [2020.04 某次POC openshift LVM调优](redhat/ocp4/4.3/poc.sc/install.poc.sc.md)
 
 作者还做了一个[chrome extension](https://chrome.google.com/webstore/detail/bing-image-new-tab/hahpccmdkmgmaoebhfnkpcnndnklfbpj/)，用来在new tab上展示bing.com的美图，简单美观，欢迎使用。
+
+[<kbd><img src="imgs/2021-01-17-17-29-10.png" width="600"></kbd>](https://chrome.google.com/webstore/detail/bing-image-new-tab/hahpccmdkmgmaoebhfnkpcnndnklfbpj/)
 
 作者还有很多视频演示，欢迎前往作者的频道订阅
 - [bilibili](https://space.bilibili.com/19536819)
