@@ -6,7 +6,8 @@
 - openshift4 安装系列
   - [如何获得 openshift4 免费下载密钥](redhat/ocp4/4.5/4.5.ocp.pull.secret.md)
   - [openshift4 离线安装介质的制作](redhat/ocp4/4.6/4.6.build.dist.md)
-  - [openshift4 物理机 baremetal UPI模式 离线安装](redhat/ocp4/4.6/4.6.disconnect.operator.md)
+  - [openshift4 rhel7物理机 baremetal UPI模式 离线安装](redhat/ocp4/4.6/4.6.disconnect.bm.upi.static.ip.on.rhel7.md)
+  - [openshift4 rhel8物理机 baremetal UPI模式 离线安装](redhat/ocp4/4.6/4.6.disconnect.bm.upi.static.ip.on.rhel8.md)
   - [openshift4 物理机 baremetal IPI模式 离线安装 单网络模式](redhat/ocp4/4.6/4.6.disconnect.bm.ipi.on.rhel8.md)
   - [openshift4 物理机 baremetal IPI模式 离线安装 双网络模式](redhat/ocp4/4.6/4.6.disconnect.bm.ipi.on.rhel8.provisionning.network.md)
   - [openshift4 初始安装后 补充镜像](redhat/ocp4/4.6/4.6.add.image.md)
@@ -36,8 +37,10 @@
   - [openshift4 CPU 绑核 测试](redhat/ocp4/4.3/4.3/../4.3.cpu.manager.md)
   - [openshift4 build config & hpa 自动化编译和自动扩缩容](redhat/ocp4/4.3/4.3.build.config.md)
 - 应用上云系列教程 CCN
-  - [应用上云系列教程 containerized cloud native (CCN)](redhat/ocp4/4.4/4.4.ccn.devops.deploy.md)
-  - [CCN 安装介质制作](redhat/ocp4/4.4/4.4.ccn.devops.build.md)
+  - [应用上云系列教程 containerized cloud native (CCN) for openshift 4.4](redhat/ocp4/4.4/4.4.ccn.devops.deploy.md)
+  - [CCN 安装介质制作 for openshift 4.4](redhat/ocp4/4.4/4.4.ccn.devops.build.md)
+  - [应用上云系列教程 containerized cloud native (CCN) for openshift 4.6](redhat/ocp4/4.6/4.6.ccn.devops.deploy.md)
+  - [CCN 安装介质制作 for openshift 4.6](redhat/ocp4/4.6/4.6.ccn.devops.build.md)
 - [容器云承载虚拟化业务(CNV)](redhat/ocp4/4.5/4.5.ocp.ocs.cnv.ceph.md)
 - 操作系统相关
   - [RHEL8编译定制化内核](redhat/rhel/rhel.build.kernel.md)

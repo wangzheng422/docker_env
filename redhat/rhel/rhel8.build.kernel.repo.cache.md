@@ -29,9 +29,9 @@ subscription-manager --proxy=$PROXY register --auto-attach --username **** --pas
 
 subscription-manager config --rhsm.baseurl=https://china.cdn.redhat.com
 # subscription-manager config --rhsm.baseurl=https://cdn.redhat.com
-# subscription-manager --proxy=192.168.253.1:5084 refresh
+# subscription-manager --proxy=$PROXY refresh
 
-# subscription-manager --proxy=192.168.253.1:5084 repos --help
+# subscription-manager --proxy=$PROXY repos --help
 
 # subscription-manager --proxy=$PROXY repos --list > list
 
