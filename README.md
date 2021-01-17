@@ -37,8 +37,10 @@
   - [openshift4 CPU 绑核 测试](redhat/ocp4/4.3/4.3/../4.3.cpu.manager.md)
   - [openshift4 build config & hpa 自动化编译和自动扩缩容](redhat/ocp4/4.3/4.3.build.config.md)
 - 应用上云系列教程 CCN
-  - [应用上云系列教程 containerized cloud native (CCN)](redhat/ocp4/4.4/4.4.ccn.devops.deploy.md)
-  - [CCN 安装介质制作](redhat/ocp4/4.4/4.4.ccn.devops.build.md)
+  - [应用上云系列教程 containerized cloud native (CCN) for openshift 4.4](redhat/ocp4/4.4/4.4.ccn.devops.deploy.md)
+  - [CCN 安装介质制作 for openshift 4.4](redhat/ocp4/4.4/4.4.ccn.devops.build.md)
+  - [应用上云系列教程 containerized cloud native (CCN) for openshift 4.6](redhat/ocp4/4.6/4.6.ccn.devops.deploy.md)
+  - [CCN 安装介质制作 for openshift 4.6](redhat/ocp4/4.6/4.6.ccn.devops.build.md)
 - [容器云承载虚拟化业务(CNV)](redhat/ocp4/4.5/4.5.ocp.ocs.cnv.ceph.md)
 - 操作系统相关
   - [RHEL8编译定制化内核](redhat/rhel/rhel.build.kernel.md)
