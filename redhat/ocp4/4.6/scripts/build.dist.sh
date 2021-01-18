@@ -4,12 +4,12 @@ set -e
 set -x
 
 build_number_list=$(cat << EOF
-4.6.9
+4.6.12
 EOF
 )
 
 # params for operator hub images
-export var_date='2021.01.06.0722'
+export var_date='2021.01.18.1338'
 echo $var_date
 export var_major_version='4.6'
 echo ${var_major_version}
