@@ -41,10 +41,10 @@
   - [CCN 安装介质制作 for openshift 4.4](redhat/ocp4/4.4/4.4.ccn.devops.build.md)
   - [应用上云系列教程 containerized cloud native (CCN) for openshift 4.6](redhat/ocp4/4.6/4.6.ccn.devops.deploy.md)
   - [CCN 安装介质制作 for openshift 4.6](redhat/ocp4/4.6/4.6.ccn.devops.build.md)
-- [容器云承载虚拟化业务(CNV)](redhat/ocp4/4.5/4.5.ocp.ocs.cnv.ceph.md)
+- [openshift承载虚拟化业务(CNV)](redhat/ocp4/4.5/4.5.ocp.ocs.cnv.ceph.md)
 - 操作系统相关
   - [RHEL8编译定制化内核](redhat/rhel/rhel.build.kernel.md)
-  - [检查主机是否是运行在虚拟机上](redhat/ocp4/4.5/4.5.check.whether.vm.md)
+  - [检查OS是否是运行在虚拟机上](redhat/ocp4/4.5/4.5.check.whether.vm.md)
   - [两个主机用ovs组网](redhat/ocp4/4.4/4.4.ovs.md)
   - [CentOS Stream是什么](https://www.bilibili.com/video/BV1Go4y1o7hn/)
 - 优秀的workshop
