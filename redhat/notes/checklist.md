@@ -1,6 +1,10 @@
 # checklist
 
 - demo for mec: 3 node cluster with gpu
+  - 3 node
+  - gpu offline
+  - nic bond
+  - macvlan + ipam
 - Promtail + Loki + Grafana
   - https://grafana.com/oss/loki/
 - rh342: https://role.rhu.redhat.com/rol-rhu/app/courses/rh342-7.2

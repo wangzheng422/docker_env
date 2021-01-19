@@ -94,7 +94,7 @@ rsync -e ssh --info=progress2 -P --delete -arz ${VULTR_HOST}:/data/registry /dat
 # copy to local disk
 # localvm.md
 
-var_version='4.6.9-ccn'
+var_version='4.6.12-gpu'
 mkdir -p /mnt/hgfs/ocp.archive/ocp.tgz.$var_version/
 
 cd /root
@@ -156,6 +156,8 @@ rsync -e ssh --info=progress2 -P --delete -arz /data/is.samples ${VULTR_HOST}:/d
 rsync -e ssh --info=progress2 -P --delete -arz /data/ocp4/ ocp.pan.redhat.ren:/data/ocp4/
 
 rsync -e ssh --info=progress2 -P --delete -arz /data/registry/ ocp.pan.redhat.ren:/data/registry/
+
+rsync -e ssh --info=progress2 -P --delete -arz /data/install.image/ ocp.pan.redhat.ren:/data/install.image/
 
 # download from pan lab
 mkdir -p /data/ccn/nexus-image
