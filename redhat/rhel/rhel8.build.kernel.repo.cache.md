@@ -22,7 +22,8 @@
 
 # https://blog.packagecloud.io/eng/2015/04/20/working-with-source-rpms/
 
-export PROXY="127.0.0.1:6666"
+export PROXY="127.0.0.1:18801"
+export PROXY="192.168.253.1:5084"
 
 # 由于需要rhel8.3，我们需要注册特殊的订阅。
 subscription-manager --proxy=$PROXY register --auto-attach --username **** --password ********
@@ -60,6 +61,29 @@ cat << EOF >> /etc/dnf/dnf.conf
 fastestmirror=1
 EOF
 
+# add ubi support
+cat << EOF > /etc/yum.repos.d/ubi.repo
+[ubi-8-baseos]
+name=ubi-8-baseos
+baseurl=https://cdn-ubi.redhat.com/content/public/ubi/dist/ubi8/8/x86_64/baseos/os
+enabled=1
+gpgcheck=1
+
+[ubi-8-appstream]
+name=ubi-8-appstream
+baseurl=https://cdn-ubi.redhat.com/content/public/ubi/dist/ubi8/8/x86_64/appstream/os
+enabled=1
+gpgcheck=1
+
+[ubi-8-codeready-builder]
+name=ubi-8-codeready-builder
+baseurl=https://cdn-ubi.redhat.com/content/public/ubi/dist/ubi8/8/x86_64/codeready-builder/os/
+enabled=1
+gpgcheck=1
+
+EOF
+
+
 # 编译内核，需要rhel8里面的epel的包
 # yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
 dnf -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
@@ -92,6 +116,9 @@ mkdir -p /data/dnf
 cd /data/dnf
 
 dnf reposync -m --download-metadata --delete -n
+# dnf reposync -m --download-metadata -n
+
+# dnf reposync --repoid=rhel-8-for-x86_64-baseos-rpms -m --download-metadata
 # createrepo ./
 
 cd /data
