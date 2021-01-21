@@ -23,6 +23,7 @@
 # https://blog.packagecloud.io/eng/2015/04/20/working-with-source-rpms/
 
 export PROXY="127.0.0.1:18801"
+export PROXY="192.168.253.1:5084"
 
 # 由于需要rhel8.3，我们需要注册特殊的订阅。
 subscription-manager --proxy=$PROXY register --auto-attach --username **** --password ********
@@ -115,6 +116,9 @@ mkdir -p /data/dnf
 cd /data/dnf
 
 dnf reposync -m --download-metadata --delete -n
+# dnf reposync -m --download-metadata -n
+
+# dnf reposync --repoid=rhel-8-for-x86_64-baseos-rpms -m --download-metadata
 # createrepo ./
 
 cd /data
