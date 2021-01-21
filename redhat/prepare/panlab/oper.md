@@ -28,7 +28,7 @@ virsh start ocp4-aHelper
 virsh start ocp4-master0 
 virsh start ocp4-master1 
 virsh start ocp4-master2 
-# virsh start ocp4-worker0 
+virsh start ocp4-worker0 
 # virsh start ocp4-worker1 
 # virsh start ocp4-worker2
 
