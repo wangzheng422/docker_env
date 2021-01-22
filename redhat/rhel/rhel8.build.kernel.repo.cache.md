@@ -368,8 +368,7 @@ lsmod | grep act_ife
 ## 下载和使用离线更新源
 本次实验 rhel8 的离线更新源，在这里下载：
 
-链接: https://pan.baidu.com/s/1TZ1FaeMvqr2V9vALQXElYw  密码: 4fa6
---来自百度网盘超级会员V3的分享
+链接: https://pan.baidu.com/s/1B4bRcnpyAv8L-GzPB32Orw  密码: r9ck
 
 ```bash
 # 下载以后，这样使用
