@@ -52,6 +52,8 @@
   - [openshift4 & openshift storage workshop](redhat/ocp4/4.5/4.5.ocp.ocs.workshop.md)
 - POC
   - [2020.04 某次POC openshift LVM调优](redhat/ocp4/4.3/poc.sc/install.poc.sc.md)
+- OSX使用技巧
+  - [如何录制系统声音](redhat/osx/osx.record.system.audio.md)
 
 作者还做了一个[chrome extension](https://chrome.google.com/webstore/detail/bing-image-new-tab/hahpccmdkmgmaoebhfnkpcnndnklfbpj/)，用来在new tab上展示bing.com的美图，简单美观，欢迎使用。
 
