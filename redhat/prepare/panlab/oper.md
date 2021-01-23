@@ -25,9 +25,13 @@ ps -ef | grep vbmcd | awk '{print $2}' | xargs kill
 /root/.local/bin/sushy-emulator -i 0.0.0.0 --ssl-certificate /etc/crts/redhat.ren.crt --ssl-key /etc/crts/redhat.ren.key
 
 virsh start ocp4-aHelper
+sleep 20
 virsh start ocp4-master0 
+sleep 10
 virsh start ocp4-master1 
+sleep 10
 virsh start ocp4-master2 
+sleep 10
 virsh start ocp4-worker0 
 # virsh start ocp4-worker1 
 # virsh start ocp4-worker2
