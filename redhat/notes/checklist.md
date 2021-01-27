@@ -33,7 +33,7 @@
     local: false
   dockerImageRepository: registry.access.redhat.com/ubi8/openjdk-11
 - demo data grid
-
+- https://grafana.com/grafana/plugins/jdbranham-diagram-panel
 
 soft:
 - ppt

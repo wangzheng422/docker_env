@@ -10,7 +10,7 @@ yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarc
 
 yum install -y byobu
 
-ansible localhost -m lineinfile -a 'path=$HOME/.bashrc regexp="^export OCP_RELEASE" line="export OCP_RELEASE=4.6.5"'
+ansible localhost -m lineinfile -a 'path=$HOME/.bashrc regexp="^export OCP_RELEASE" line="export OCP_RELEASE=4.6.13"'
 
 source $HOME/.bashrc
 
@@ -34,7 +34,7 @@ cd install
 
 SEC_FILE=~/install/pull-secret.json
 # cat << 'EOF' > $SEC_FILE
-BASE_DOMAIN='sandbox726.opentlc.com'
+BASE_DOMAIN='sandbox67.opentlc.com'
 
 ssh-keygen -t rsa -N '' -f ~/.ssh/id_rsa
 
