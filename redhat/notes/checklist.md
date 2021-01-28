@@ -5,6 +5,7 @@
   - gpu offline
   - nic bond
   - macvlan + ipam
+  - vGPU, https://docs.nvidia.com/datacenter/cloud-native/kubernetes/anthos-guide.html#install-the-gpu-operator
 - Promtail + Loki + Grafana
   - https://grafana.com/oss/loki/
 - rh342: https://role.rhu.redhat.com/rol-rhu/app/courses/rh342-7.2
@@ -33,7 +34,7 @@
     local: false
   dockerImageRepository: registry.access.redhat.com/ubi8/openjdk-11
 - demo data grid
-
+- https://grafana.com/grafana/plugins/jdbranham-diagram-panel
 
 soft:
 - ppt
