@@ -6,6 +6,9 @@
   - nic bond
   - macvlan + ipam
   - vGPU, https://docs.nvidia.com/datacenter/cloud-native/kubernetes/anthos-guide.html#install-the-gpu-operator
+  - cnv ha test.
+- nexus image list.
+  - https://community.sonatype.com/t/how-can-i-get-a-list-of-tags-for-a-docker-image-akin-to-the-docker-hub-list/3210
 - Promtail + Loki + Grafana
   - https://grafana.com/oss/loki/
 - rh342: https://role.rhu.redhat.com/rol-rhu/app/courses/rh342-7.2
