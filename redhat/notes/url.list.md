@@ -6,3 +6,6 @@
 
 - draw.io
   - https://gitlab.com/redhatdemocentral/portfolio-architecture-examples
+
+centos stream build system
+- https://koji.mbox.centos.org/koji/ for Stream
