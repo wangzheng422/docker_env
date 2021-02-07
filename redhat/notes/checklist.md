@@ -9,6 +9,9 @@
     - https://github.com/AliyunContainerService/gpushare-scheduler-extender
     - https://github.com/Deepomatic/shared-gpu-nvidia-k8s-device-plugin
     - https://github.com/NTHU-LSALAB/KubeShare
+    - https://github.com/NVIDIA/k8s-device-plugin/issues/169
+    - https://github.com/awslabs/aws-virtual-gpu-device-plugin
+    - https://github.com/tkestack/gpu-manager
   - cnv ha test.
 - nexus image list.
   - https://community.sonatype.com/t/how-can-i-get-a-list-of-tags-for-a-docker-image-akin-to-the-docker-hub-list/3210
