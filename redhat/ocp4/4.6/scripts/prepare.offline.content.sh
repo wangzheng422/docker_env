@@ -166,6 +166,7 @@ oc adm catalog mirror --filter-by-os='linux/amd64' \
     --manifests-only 
 /bin/cp -f manifests-operator-catalog-*/mapping.txt mapping-redhat.txt
 sed -i 's/=.*//g' mapping-redhat.txt
+/bin/rm -rf manifests-operator-catalog-*
 
 VAR_DIR=`find /tmp -type d -regex '^/tmp/[0-9]+$' `
 echo "select * from related_image ;" \
@@ -182,6 +183,7 @@ oc adm catalog mirror --filter-by-os='linux/amd64' \
     --manifests-only 
 /bin/cp -f manifests-operator-catalog-*/mapping.txt mapping-certified.txt
 sed -i 's/=.*//g' mapping-certified.txt
+/bin/rm -rf manifests-operator-catalog-*
 
 VAR_DIR=`find /tmp -type d -regex '^/tmp/[0-9]+$' `
 echo "select * from related_image ;" \
@@ -198,6 +200,7 @@ oc adm catalog mirror --filter-by-os='linux/amd64' \
     --manifests-only 
 /bin/cp -f manifests-operator-catalog-*/mapping.txt mapping-community.txt
 sed -i 's/=.*//g' mapping-community.txt
+/bin/rm -rf manifests-operator-catalog-*
 
 VAR_DIR=`find /tmp -type d -regex '^/tmp/[0-9]+$' `
 echo "select * from related_image ;" \
@@ -214,6 +217,7 @@ oc adm catalog mirror --filter-by-os='linux/amd64' \
     --manifests-only
 /bin/cp -f manifests-operator-catalog-*/mapping.txt mapping-redhat-marketplace.txt
 sed -i 's/=.*//g' mapping-redhat-marketplace.txt
+/bin/rm -rf manifests-operator-catalog-*
 
 VAR_DIR=`find /tmp -type d -regex '^/tmp/[0-9]+$' `
 echo "select * from related_image ;" \
