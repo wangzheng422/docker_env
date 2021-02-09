@@ -164,7 +164,7 @@ oc adm catalog mirror --filter-by-os='linux/amd64' \
     docker.io/wangzheng422/operator-catalog:redhat-${var_major_version}-$var_date \
     registry.redhat.ren:5443/ocp4 \
     --manifests-only 
-/bin/cp -f operator-catalog-manifests/mapping.txt mapping-redhat.txt
+/bin/cp -f operator-catalog-manifests-*/mapping.txt mapping-redhat.txt
 sed -i 's/=.*//g' mapping-redhat.txt
 
 VAR_DIR=`find /tmp -type d -regex '^/tmp/[0-9]+$' `
@@ -180,7 +180,7 @@ oc adm catalog mirror --filter-by-os='linux/amd64' \
     docker.io/wangzheng422/operator-catalog:certified-${var_major_version}-$var_date \
     registry.redhat.ren:5443/ocp4 \
     --manifests-only 
-/bin/cp -f operator-catalog-manifests/mapping.txt mapping-certified.txt
+/bin/cp -f operator-catalog-manifests-*/mapping.txt mapping-certified.txt
 sed -i 's/=.*//g' mapping-certified.txt
 
 VAR_DIR=`find /tmp -type d -regex '^/tmp/[0-9]+$' `
@@ -196,7 +196,7 @@ oc adm catalog mirror --filter-by-os='linux/amd64' \
     docker.io/wangzheng422/operator-catalog:community-${var_major_version}-$var_date \
     registry.redhat.ren:5443/ocp4 \
     --manifests-only 
-/bin/cp -f operator-catalog-manifests/mapping.txt mapping-community.txt
+/bin/cp -f operator-catalog-manifests-*/mapping.txt mapping-community.txt
 sed -i 's/=.*//g' mapping-community.txt
 
 VAR_DIR=`find /tmp -type d -regex '^/tmp/[0-9]+$' `
@@ -212,7 +212,7 @@ oc adm catalog mirror --filter-by-os='linux/amd64' \
     docker.io/wangzheng422/operator-catalog:redhat-marketplace-${var_major_version}-$var_date \
     registry.redhat.ren:5443/ocp4 \
     --manifests-only
-/bin/cp -f operator-catalog-manifests/mapping.txt mapping-redhat-marketplace.txt
+/bin/cp -f operator-catalog-manifests-*/mapping.txt mapping-redhat-marketplace.txt
 sed -i 's/=.*//g' mapping-redhat-marketplace.txt
 
 VAR_DIR=`find /tmp -type d -regex '^/tmp/[0-9]+$' `
