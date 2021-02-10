@@ -9,3 +9,7 @@
 
 centos stream build system
 - https://koji.mbox.centos.org/koji/ for Stream
+
+empty storage limit
+- https://chat.google.com/room/AAAA2bt6nL0/ZBZjt0y0FkI
+- https://access.redhat.com/solutions/5101321
