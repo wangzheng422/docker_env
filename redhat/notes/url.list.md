@@ -13,3 +13,9 @@ centos stream build system
 empty storage limit
 - https://chat.google.com/room/AAAA2bt6nL0/ZBZjt0y0FkI
 - https://access.redhat.com/solutions/5101321
+
+argoCD
+- self cert: https://github.com/ypenn21/kustomize/blob/main/argo/application/4-argocd-server.yaml
+
+log
+- https://github.com/worsco/ocp4-fluentd-kinesis-streams
