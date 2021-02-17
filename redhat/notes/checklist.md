@@ -6,9 +6,23 @@
   - nic bond
   - macvlan + ipam
   - vGPU, https://docs.nvidia.com/datacenter/cloud-native/kubernetes/anthos-guide.html#install-the-gpu-operator
+    - https://github.com/AliyunContainerService/gpushare-scheduler-extender
+    - https://github.com/Deepomatic/shared-gpu-nvidia-k8s-device-plugin
+    - https://github.com/NTHU-LSALAB/KubeShare
+    - https://github.com/NVIDIA/k8s-device-plugin/issues/169
+    - https://github.com/awslabs/aws-virtual-gpu-device-plugin
+    - https://github.com/tkestack/gpu-manager
+  - openshift custom release
+    - for cert rotate
+      - https://github.com/openshift/cluster-kube-apiserver-operator/
+    - for scheduler extender
+      - https://github.com/openshift/cluster-kube-scheduler-operator
+      - we need user to access registry.ci.openshift.org/ocp/4.6:base first
   - cnv ha test.
 - nexus image list.
   - https://community.sonatype.com/t/how-can-i-get-a-list-of-tags-for-a-docker-image-akin-to-the-docker-hub-list/3210
+  - good nexus ansible project
+    - https://gitlab.consulting.redhat.com/fsi-automation/osp-ocp-disconnected
 - Promtail + Loki + Grafana
   - https://grafana.com/oss/loki/
 - rh342: https://role.rhu.redhat.com/rol-rhu/app/courses/rh342-7.2
