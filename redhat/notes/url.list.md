@@ -19,3 +19,7 @@ argoCD
 
 log
 - https://github.com/worsco/ocp4-fluentd-kinesis-streams
+
+pnt
+- https://pnt.redhat.com/pnt/b-73685/OpenShift#/108796/whitepapers
+- 
