@@ -22,4 +22,9 @@ log
 
 pnt
 - https://pnt.redhat.com/pnt/b-73685/OpenShift#/108796/whitepapers
+
+
+gpu
+- gpu, repo config, entitlement, i helped
+  - https://github.com/worsco/ocp-mirror-repo
 - 
