@@ -27,4 +27,8 @@ pnt
 gpu
 - gpu, repo config, entitlement, i helped
   - https://github.com/worsco/ocp-mirror-repo
-- 
+
+openshift chat list
+- https://github.com/openshift/managed-upgrade-operator
+- https://github.com/worsco/ocp-mirror-repo
+- https://github.com/redhat-cop/keepalived-operator
