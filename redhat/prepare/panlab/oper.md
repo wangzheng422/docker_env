@@ -48,6 +48,33 @@ virsh start ocp4-master2
 # on helper, 192.168.7.11
 systemctl start vncserver@:1
 
+# proxy
+cat << EOF > /data/ocp4/proxy.yaml
+apiVersion: config.openshift.io/v1
+kind: Proxy
+metadata:
+  name: cluster
+spec:
+  httpProxy: 'http://172.21.6.105:18801'
+  httpsProxy: 'http://172.21.6.105:18801' 
+  noProxy: '.redhat.ren,192.168.'
+  readinessEndpoints:
+  - http://www.google.com 
+  - https://www.google.com
+EOF
+oc apply -f /data/ocp4/proxy.yaml
+
+oc edit proxy/cluster
+
+# shutdown
+nodes=$(oc get nodes -o jsonpath='{.items[*].metadata.name}')
+for node in ${nodes[@]}
+do
+    echo "==== Shut down $node ===="
+    ssh -i ~/.ssh/helper_rsa core@$node sudo shutdown -h 1
+done
+
+
 ```
 
 ## on 105
