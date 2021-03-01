@@ -16,6 +16,7 @@
   - [openshift4 calico 离线部署](redhat/ocp4/4.3/4.3/../4.3.calico.md)
   - [openshift4 集群升级](redhat/ocp4/4.2.upgrade.md)
 - openshift4 使用系列
+  - [GPU/vGPU 共享](redhat/ocp4/4.6/4.6/../4.6.vgpu.sharing.deploy.md)
   - [openshift headless service讲解](redhat/ocp4/4.4/4.4.headless.service.md)
   - [openshift volumn 存储的各种测试](redhat/ocp4/4.3/4.3.volumn.md)
   - [openshift 设置 SupportPodPidsLimit 解除 pids 限制](redhat/ocp4/4.3/4.3.SupportPodPidsLimit.md)
