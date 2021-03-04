@@ -34,6 +34,7 @@
 - ebpf learning and self tool
 - rhcsa, rhce
 - coreos install package, mco, ostree
+  - or build self version ocp release
 - do280?
 - rhel, https://lab.redhat.com/
 - multus + sriov
@@ -43,13 +44,6 @@
 - lms, fuse: https://learning.redhat.com/totara/program/view.php?id=90
 - lms, amq, https://learning.redhat.com/totara/program/view.php?id=97
 - https://zh.d2l.ai/
-- chrome bing wall pic new tab, https://codingcat.cn/ataraxia/
-- demo ansible: https://github.com/ansible/workshops
-- demo ccn upgrade to 4.6
-  - spec:
-  lookupPolicy:
-    local: false
-  dockerImageRepository: registry.access.redhat.com/ubi8/openjdk-11
 - demo data grid
 - https://grafana.com/grafana/plugins/jdbranham-diagram-panel
 
@@ -114,7 +108,12 @@ done:
 - lms, What's New from the BUs 2020: https://learning.redhat.com/totara/program/view.php?id=172
 - sichuan testing plan.
 - ocp 4.6, bm ipi disconnect
-
-
+- demo ansible: https://github.com/ansible/workshops
+- demo ccn upgrade to 4.6
+  - spec:
+  lookupPolicy:
+    local: false
+  dockerImageRepository: registry.access.redhat.com/ubi8/openjdk-11
+- chrome bing wall pic new tab, https://codingcat.cn/ataraxia/
 
 
