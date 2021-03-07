@@ -18,6 +18,7 @@
     - for scheduler extender
       - https://github.com/openshift/cluster-kube-scheduler-operator
       - we need user to access registry.ci.openshift.org/ocp/4.6:base first
+    - cilium  
   - cnv ha test.
 - nexus image list.
   - https://community.sonatype.com/t/how-can-i-get-a-list-of-tags-for-a-docker-image-akin-to-the-docker-hub-list/3210

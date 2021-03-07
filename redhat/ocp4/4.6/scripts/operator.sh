@@ -32,7 +32,7 @@ cd /data/ocp4
 
 skopeo copy \
     docker://registry.redhat.io/redhat/redhat-operator-index:v4.6 \
-    docker://docker.io/wangzheng422/operator-catalog:redhat-${var_major_version}-$var_date
+    docker://quay.io/wangzheng422/operator-catalog:redhat-${var_major_version}-$var_date
 
 # VAR_DIR=`find /tmp -type d -regex '^/tmp/[0-9]+$' `
 # echo "select * from related_image ;" \
@@ -48,7 +48,7 @@ skopeo copy \
 
 skopeo copy \
     docker://registry.redhat.io/redhat/certified-operator-index:v4.6 \
-    docker://docker.io/wangzheng422/operator-catalog:certified-${var_major_version}-$var_date
+    docker://quay.io/wangzheng422/operator-catalog:certified-${var_major_version}-$var_date
 
 # oc adm catalog build --filter-by-os='linux/amd64' \
 #     --appregistry-org community-operators \
@@ -57,7 +57,7 @@ skopeo copy \
 
 skopeo copy \
     docker://registry.redhat.io/redhat/community-operator-index:latest \
-    docker://docker.io/wangzheng422/operator-catalog:community-${var_major_version}-$var_date
+    docker://quay.io/wangzheng422/operator-catalog:community-${var_major_version}-$var_date
 
 # oc adm catalog build --filter-by-os='linux/amd64' \
 #     --appregistry-org redhat-marketplace \
@@ -66,9 +66,9 @@ skopeo copy \
 
 skopeo copy \
     docker://registry.redhat.io/redhat/redhat-marketplace-index:v4.6 \
-    docker://docker.io/wangzheng422/operator-catalog:redhat-marketplace-${var_major_version}-$var_date
+    docker://quay.io/wangzheng422/operator-catalog:redhat-marketplace-${var_major_version}-$var_date
 
-echo "docker.io/wangzheng422/operator-catalog:redhat-${var_major_version}-$var_date "
+echo "quay.io/wangzheng422/operator-catalog:redhat-${var_major_version}-$var_date "
 echo $var_date
 echo ${var_major_version}
 
