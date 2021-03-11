@@ -35,3 +35,6 @@ openshift chat list
 
 stackrox
 - https://help-internal.stackrox.com/
+
+demo
+- https://github.com/rdoxenham/openshift-virt-labs
