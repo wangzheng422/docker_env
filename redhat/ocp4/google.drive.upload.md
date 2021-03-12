@@ -163,7 +163,8 @@ rsync -e ssh --info=progress2 -P --delete -arz /data/install.image/ ocp.pan.redh
 mkdir -p /data/ccn/nexus-image
 rsync -e ssh --info=progress2 -P --delete -arz ocp.pan.redhat.ren:/data/ccn/nexus-image/  /data/ccn/nexus-image/
 
-
+# upload to cmcc lab
+rsync -e ssh --info=progress2 -P --delete -arz /data/ocp4/ 172.29.159.3:/home/wzh/4.6.16/ocp4/
 
 #######################################
 # baidu pan on rhel8
