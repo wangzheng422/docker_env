@@ -61,6 +61,8 @@ Host *.redhat.ren
     ProxyCommand connect-proxy -S 192.168.253.1:5085 %h %p
 Host *.opentlc.com 
     ProxyCommand connect-proxy -S 192.168.253.1:5085 %h %p
+Host 172.29.159.3 
+    ProxyCommand connect-proxy -S 192.168.253.1:8806 %h %p
 EOF
 # ProxyJump user@bastion-host-nickname
 # -J user@bastion-host-nickname
@@ -165,6 +167,8 @@ rsync -e ssh --info=progress2 -P --delete -arz ocp.pan.redhat.ren:/data/ccn/nexu
 
 # upload to cmcc lab
 rsync -e ssh --info=progress2 -P --delete -arz /data/ocp4/ 172.29.159.3:/home/wzh/4.6.16/ocp4/
+
+rsync -e ssh --info=progress2 -P --delete -arz /data/registry/ 172.29.159.3:/home/wzh/4.6.16/registry/
 
 #######################################
 # baidu pan on rhel8
