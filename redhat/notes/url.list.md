@@ -38,3 +38,4 @@ stackrox
 
 demo
 - https://github.com/rdoxenham/openshift-virt-labs
+- https://github.com/redhat-edge-computing
