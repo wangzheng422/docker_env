@@ -47,6 +47,7 @@
 - https://zh.d2l.ai/
 - demo data grid
 - https://grafana.com/grafana/plugins/jdbranham-diagram-panel
+- eCPRI 介绍
 
 soft:
 - ppt
