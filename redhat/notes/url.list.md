@@ -32,3 +32,13 @@ openshift chat list
 - https://github.com/openshift/managed-upgrade-operator
 - https://github.com/worsco/ocp-mirror-repo
 - https://github.com/redhat-cop/keepalived-operator
+
+stackrox
+- https://help-internal.stackrox.com/
+
+demo
+- https://github.com/rdoxenham/openshift-virt-labs
+- https://github.com/redhat-edge-computing
+
+ocp backup
+- https://github.com/brian-jarvis/ocp4-etcd-backup

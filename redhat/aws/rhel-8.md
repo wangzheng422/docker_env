@@ -10,21 +10,23 @@ insights-client --register
 
 subscription-manager config --rhsm.baseurl=https://china.cdn.redhat.com
 
-subscription-manager --proxy=192.168.253.1:5084 register --username **** --password ********
+export PROXY="192.168.253.1:5085"
+
+subscription-manager --proxy=$PROXY register --username **** --password ********
 
 # go to https://access.redhat.com/management/system to add subscription,
 # or add here using cli
-subscription-manager --proxy=192.168.253.1:5084 list --available --all
-subscription-manager --proxy=192.168.253.1:5084 attach --pool=8a85f99a6fa01382016fc16b7c045e16
+subscription-manager --proxy=$PROXY list --available --all
+subscription-manager --proxy=$PROXY attach --pool=8a85f99a6fa01382016fc16b7c045e16
 
-subscription-manager --proxy=192.168.253.1:5084 repos --list > list
-subscription-manager --proxy=192.168.253.1:5084 repos --list-enabled
+subscription-manager --proxy=$PROXY repos --list > list
+subscription-manager --proxy=1$PROXY repos --list-enabled
 
-subscription-manager --proxy=192.168.253.1:5084 repos --disable="*"
+subscription-manager --proxy=$PROXY repos --disable="*"
 
 # subscription-manager --proxy=192.168.253.1:5084 refresh
 
-subscription-manager --proxy=192.168.253.1:5084 repos \
+subscription-manager --proxy=$PROXY repos \
     --enable="rhel-8-for-x86_64-baseos-rpms" \
     --enable="rhel-8-for-x86_64-baseos-source-rpms" \
     --enable="rhel-8-for-x86_64-appstream-rpms" \
@@ -51,7 +53,7 @@ dnf -y install dnf-plugins-core
 sudo dnf install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
 
 cat << EOF >> /etc/dnf/dnf.conf
-proxy=http://192.168.253.1:5084
+proxy=http://192.168.253.1:5085
 EOF
 cat << EOF >> /etc/dnf/dnf.conf
 fastestmirror=1
