@@ -42,3 +42,6 @@ demo
 
 ocp backup
 - https://github.com/brian-jarvis/ocp4-etcd-backup
+
+load balancer
+- https://www.openshift.com/blog/self-hosted-load-balancer-for-openshift-an-operator-based-approach

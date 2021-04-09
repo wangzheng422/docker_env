@@ -48,6 +48,7 @@
 - demo data grid
 - https://grafana.com/grafana/plugins/jdbranham-diagram-panel
 - eCPRI 介绍
+- https://www.openshift.com/blog/self-hosted-load-balancer-for-openshift-an-operator-based-approach
 
 soft:
 - ppt
