@@ -45,3 +45,6 @@ ocp backup
 
 load balancer
 - https://www.openshift.com/blog/self-hosted-load-balancer-for-openshift-an-operator-based-approach
+
+ocs training
+- https://red-hat-storage.github.io/ocs-training/training/ocs4/ocs4-multisite-replication.html
