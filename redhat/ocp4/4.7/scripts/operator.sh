@@ -5,7 +5,7 @@ set -x
 
 var_date=$(date '+%Y.%m.%d.%H%M')
 echo $var_date
-export var_major_version='4.6'
+export var_major_version='4.7'
 echo ${var_major_version}
 
 # https://docs.openshift.com/container-platform/4.6/operators/admin/olm-restricted-networks.html
@@ -31,7 +31,7 @@ cd /data/ocp4
 #     --manifests-only
 
 skopeo copy \
-    docker://registry.redhat.io/redhat/redhat-operator-index:v4.6 \
+    docker://registry.redhat.io/redhat/redhat-operator-index:v4.7 \
     docker://quay.io/wangzheng422/operator-catalog:redhat-${var_major_version}-$var_date
 
 # VAR_DIR=`find /tmp -type d -regex '^/tmp/[0-9]+$' `
@@ -47,7 +47,7 @@ skopeo copy \
 #     --to=docker.io/wangzheng422/operator-catalog:certified-${var_major_version}-$var_date  
 
 skopeo copy \
-    docker://registry.redhat.io/redhat/certified-operator-index:v4.6 \
+    docker://registry.redhat.io/redhat/certified-operator-index:v4.7 \
     docker://quay.io/wangzheng422/operator-catalog:certified-${var_major_version}-$var_date
 
 # oc adm catalog build --filter-by-os='linux/amd64' \
@@ -65,7 +65,7 @@ skopeo copy \
 #     --to=docker.io/wangzheng422/operator-catalog:redhat-marketplace-${var_major_version}-$var_date  
 
 skopeo copy \
-    docker://registry.redhat.io/redhat/redhat-marketplace-index:v4.6 \
+    docker://registry.redhat.io/redhat/redhat-marketplace-index:v4.7 \
     docker://quay.io/wangzheng422/operator-catalog:redhat-marketplace-${var_major_version}-$var_date
 
 echo "quay.io/wangzheng422/operator-catalog:redhat-${var_major_version}-$var_date "
