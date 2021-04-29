@@ -6,7 +6,7 @@ set -x
 usage() { 
   echo "
 Usage: $0 [-v <list of ocp version, seperated by ','>] [-m <ocp major version for operator hub, like '4.6'>] [-h <operator hub version, like '2021.01.18.1338'> ] 
-Example: $0 -v 4.6.15, -m 4.6 -h 2021.01.18.1338  
+Example: $0 -v 4.6.15,4.6.16, -m 4.6 -h 2021.01.18.1338  
   " 1>&2
   exit 1 
 }
@@ -58,7 +58,7 @@ git clone https://github.com/wangzheng422/docker_env
 cd /data/ocp4/tmp/docker_env
 git checkout dev
 git pull origin dev
-/bin/cp -f /data/ocp4/tmp/docker_env/redhat/ocp4/4.6/scripts/* /data/ocp4/
+/bin/cp -f /data/ocp4/tmp/docker_env/redhat/ocp4/${var_major_version}/scripts/* /data/ocp4/
 
 cd /data/ocp4/
 
