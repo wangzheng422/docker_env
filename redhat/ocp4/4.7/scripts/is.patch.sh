@@ -47,7 +47,7 @@ for var_is_name in $( jq -r '.[].metadata.name' <<< $var_json ); do
     done
 
     sleep 10
-    oc import-image --all $var_is_name -n openshift
+    oc import-image --all $var_is_name -n openshift --insecure=true
 
     var_i=$((var_i+1))
 done

@@ -78,6 +78,13 @@ wget  -nd -np -e robots=off --reject="index.html*" -P /data/ocp4/clients --recur
 # coreos-installer
 wget  -nd -np -e robots=off --reject="index.html*" -P /data/ocp4/clients --recursive https://mirror.openshift.com/pub/openshift-v4/clients/coreos-installer/latest/
 
+# rhacs
+wget -O /data/ocp4/clients/roxctl https://mirror.openshift.com/pub/rhacs/assets/latest/bin/Linux/roxctl
+
+mkdir -p /data/ocp4/rhacs-chart/
+wget  -nd -np -e robots=off --reject="index.html*" -P /data/ocp4/rhacs-chart --recursive https://mirror.openshift.com/pub/rhacs/charts/
+
+
 mkdir -p /data/ocp4
 /bin/rm -f /data/finished
 cd /data/ocp4
@@ -114,7 +121,6 @@ install_build() {
     export RELEASE_IMAGE=$(curl -s https://mirror.openshift.com/pub/openshift-v4/clients/ocp/${BUILDNUMBER}/release.txt | grep 'Pull From: quay.io' | awk -F ' ' '{print $3}')
 
     oc adm release extract --registry-config ${LOCAL_SECRET_JSON} --command='openshift-baremetal-install' ${RELEASE_IMAGE}
-
 
 }
 
