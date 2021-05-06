@@ -1,5 +1,16 @@
 # daily operation
 
+## 101
+
+```bash
+# on helper
+podman start local-registry
+podman start nexus-image
+vncserver :1 -geometry 1280x800
+
+
+```
+
 ## normal boot up
 
 ```bash

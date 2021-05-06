@@ -1,29 +1,6 @@
 # checklist
 
-- demo for mec: 3 node cluster with gpu
-  - 3 node
-  - gpu offline
-  - nic bond
-  - macvlan + ipam
-  - vGPU, https://docs.nvidia.com/datacenter/cloud-native/kubernetes/anthos-guide.html#install-the-gpu-operator
-    - https://github.com/AliyunContainerService/gpushare-scheduler-extender
-    - https://github.com/Deepomatic/shared-gpu-nvidia-k8s-device-plugin
-    - https://github.com/NTHU-LSALAB/KubeShare
-    - https://github.com/NVIDIA/k8s-device-plugin/issues/169
-    - https://github.com/awslabs/aws-virtual-gpu-device-plugin
-    - https://github.com/tkestack/gpu-manager
-  - openshift custom release
-    - for cert rotate
-      - https://github.com/openshift/cluster-kube-apiserver-operator/
-    - for scheduler extender
-      - https://github.com/openshift/cluster-kube-scheduler-operator
-      - we need user to access registry.ci.openshift.org/ocp/4.6:base first
-    - cilium  
-  - cnv ha test.
-- nexus image list.
-  - https://community.sonatype.com/t/how-can-i-get-a-list-of-tags-for-a-docker-image-akin-to-the-docker-hub-list/3210
-  - good nexus ansible project
-    - https://gitlab.consulting.redhat.com/fsi-automation/osp-ocp-disconnected
+
 - Promtail + Loki + Grafana
   - https://grafana.com/oss/loki/
 - rh342: https://role.rhu.redhat.com/rol-rhu/app/courses/rh342-7.2
@@ -33,7 +10,6 @@
 - cmcc edge spec excel fine tune
 - book
 - ebpf learning and self tool
-- rhcsa, rhce
 - coreos install package, mco, ostree
   - or build self version ocp release
 - do280?
@@ -48,7 +24,10 @@
 - demo data grid
 - https://grafana.com/grafana/plugins/jdbranham-diagram-panel
 - eCPRI 介绍
-- https://www.openshift.com/blog/self-hosted-load-balancer-for-openshift-an-operator-based-approach
+- ocp load balancer
+  - https://www.openshift.com/blog/self-hosted-load-balancer-for-openshift-an-operator-based-approach
+- linux kernel dev
+  - https://training.linuxfoundation.org/training/a-beginners-guide-to-linux-kernel-development-lfd103/
 
 soft:
 - ppt
@@ -118,5 +97,29 @@ done:
     local: false
   dockerImageRepository: registry.access.redhat.com/ubi8/openjdk-11
 - chrome bing wall pic new tab, https://codingcat.cn/ataraxia/
-
+- rhcsa, rhce
+- demo for mec: 3 node cluster with gpu
+  - 3 node
+  - gpu offline
+  - nic bond
+  - macvlan + ipam
+  - vGPU, https://docs.nvidia.com/datacenter/cloud-native/kubernetes/anthos-guide.html#install-the-gpu-operator
+    - https://github.com/AliyunContainerService/gpushare-scheduler-extender
+    - https://github.com/Deepomatic/shared-gpu-nvidia-k8s-device-plugin
+    - https://github.com/NTHU-LSALAB/KubeShare
+    - https://github.com/NVIDIA/k8s-device-plugin/issues/169
+    - https://github.com/awslabs/aws-virtual-gpu-device-plugin
+    - https://github.com/tkestack/gpu-manager
+  - openshift custom release
+    - for cert rotate
+      - https://github.com/openshift/cluster-kube-apiserver-operator/
+    - for scheduler extender
+      - https://github.com/openshift/cluster-kube-scheduler-operator
+      - we need user to access registry.ci.openshift.org/ocp/4.6:base first
+    - cilium  
+  - cnv ha test.
+- nexus image list.
+  - https://community.sonatype.com/t/how-can-i-get-a-list-of-tags-for-a-docker-image-akin-to-the-docker-hub-list/3210
+  - good nexus ansible project
+    - https://gitlab.consulting.redhat.com/fsi-automation/osp-ocp-disconnected
 
