@@ -3,11 +3,19 @@
 ## 101
 
 ```bash
+virsh start ocp4-aHelper
+sleep 60
+virsh start ocp4-master0 
+# sleep 10
+virsh start ocp4-master1 
+# sleep 10
+virsh start ocp4-master2 
+
 # on helper
 podman start local-registry
 podman start nexus-image
-vncserver :1 -geometry 1280x800
 
+vncserver :1 -geometry 1280x800
 
 # shutdown
 nodes=$(oc get nodes -o jsonpath='{.items[*].metadata.name}')
