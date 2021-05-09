@@ -68,7 +68,6 @@
 
 作者正在写一本在线书[《OpenShift4 一步一脚印》](https://wangzheng422.github.io/openshift4-steps-book/introduction.html)。
 
-最后，欢迎支持关注作者公众号
+最后，欢迎支持关注作者B站
 
-<img src="imgs/2020-12-19-22-35-22.png" width="600">
-
+[<kbd><img src="imgs/2021-05-09-21-47-36.png" width="600"></kbd>](https://space.bilibili.com/19536819)
