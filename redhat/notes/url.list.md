@@ -48,3 +48,6 @@ load balancer
 
 ocs training
 - https://red-hat-storage.github.io/ocs-training/training/ocs4/ocs4-multisite-replication.html
+
+openshift blog
+- https://www.openshift.com/blog/linux-capabilities-in-openshift
