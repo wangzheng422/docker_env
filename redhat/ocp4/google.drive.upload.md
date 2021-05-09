@@ -49,7 +49,7 @@ export VULTR_HOST=nexus.redhat.ren
 
 export VULTR_HOST=zero.pvg.redhat.ren
 
-export VULTR_HOST=vcdn.redhat.ren
+export VULTR_HOST=v.redhat.ren
 
 export VULTR_HOST=bastion.ef34.example.opentlc.com
 
