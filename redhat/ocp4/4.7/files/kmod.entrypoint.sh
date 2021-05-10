@@ -11,7 +11,10 @@ gpgcheck=0
 
 EOF
 
-dnf install -y make gcc wget perl createrepo kernel-core-$(uname -r) kernel-devel-$(uname -r) pciutils python36-devel ethtool lsof elfutils-libelf-devel rpm-build kernel-rpm-macros python36 tk numactl-libs libmnl tcl binutils kmod procps git autoconf automake libtool hostname
+dnf clean all -y
+dnf makecache
+
+dnf install -y --skip-broken make gcc wget perl createrepo kernel-core-$(uname -r) kernel-devel-$(uname -r) pciutils python36-devel ethtool lsof elfutils-libelf-devel rpm-build kernel-rpm-macros python36 tk numactl-libs libmnl tcl binutils kmod procps git autoconf automake libtool hostname
 
 mkdir -p ~/src/lkm_example
 cd ~/src/lkm_example
