@@ -16,6 +16,7 @@
   - [openshift4 calico 离线部署](redhat/ocp4/4.3/4.3/../4.3.calico.md)
   - [openshift4 集群升级](redhat/ocp4/4.2.upgrade.md)
 - openshift4 使用系列
+  - [从容器向宿主机注入内核模块 kmod / driver](redhat/ocp4/4.7/4.7.install.kmod.driver.md)
   - [GPU/vGPU 共享](redhat/ocp4/4.6/4.6/../4.6.vgpu.sharing.deploy.md)
   - [openshift headless service讲解](redhat/ocp4/4.4/4.4.headless.service.md)
   - [openshift volumn 存储的各种测试](redhat/ocp4/4.3/4.3.volumn.md)
@@ -43,7 +44,9 @@
   - [CCN 安装介质制作 for openshift 4.4](redhat/ocp4/4.4/4.4.ccn.devops.build.md)
   - [应用上云系列教程 containerized cloud native (CCN) for openshift 4.6](redhat/ocp4/4.6/4.6.ccn.devops.deploy.md)
   - [CCN 安装介质制作 for openshift 4.6](redhat/ocp4/4.6/4.6.ccn.devops.build.md)
-- [openshift承载虚拟化业务(CNV)](redhat/ocp4/4.5/4.5.ocp.ocs.cnv.ceph.md)
+- 红帽容器云产品系列
+  - [openshift承载虚拟化业务(CNV)](redhat/ocp4/4.5/4.5.ocp.ocs.cnv.ceph.md)
+  - [RHACS / stackrox](redhat/ocp4/4.7/4.7.rhacs.md)
 - 操作系统相关
   - [RHEL8编译定制化内核](redhat/rhel/rhel.build.kernel.md)
   - [检查OS是否是运行在虚拟机上](redhat/ocp4/4.5/4.5.check.whether.vm.md)
