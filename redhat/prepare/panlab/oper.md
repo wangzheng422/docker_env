@@ -4,12 +4,12 @@
 
 ```bash
 virsh start ocp4-aHelper
-sleep 60
+
 virsh start ocp4-master0 
-# sleep 10
 virsh start ocp4-master1 
-# sleep 10
+
 virsh start ocp4-master2 
+virsh start ocp4-worker0
 
 # on helper
 podman start local-registry
