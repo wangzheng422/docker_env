@@ -59,3 +59,7 @@ openshift blog
   - https://www.openshift.com/blog/monitoring-infrastructure-openshift-4.x-using-zabbix-operator
 - elastic search
   - https://www.openshift.com/blog/run-elastic-cloud-on-kubernetes-on-red-hat-openshift
+
+online learning platform
+- https://github.com/openshift-homeroom
+- https://redhatgov.io/workshops/openshift_service_mesh/
