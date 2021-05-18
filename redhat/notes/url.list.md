@@ -45,9 +45,21 @@ ocp backup
 
 load balancer
 - https://www.openshift.com/blog/self-hosted-load-balancer-for-openshift-an-operator-based-approach
+- https://metallb.universe.tf/
+- https://github.com/redhat-cop/keepalived-operator
 
 ocs training
 - https://red-hat-storage.github.io/ocs-training/training/ocs4/ocs4-multisite-replication.html
 
 openshift blog
 - https://www.openshift.com/blog/linux-capabilities-in-openshift
+- traffic control
+  - https://www.openshift.com/blog/creating-pod-latency-with-linux-traffic-control-on-openshift
+- zabbix
+  - https://www.openshift.com/blog/monitoring-infrastructure-openshift-4.x-using-zabbix-operator
+- elastic search
+  - https://www.openshift.com/blog/run-elastic-cloud-on-kubernetes-on-red-hat-openshift
+
+online learning platform
+- https://github.com/openshift-homeroom
+- https://redhatgov.io/workshops/openshift_service_mesh/
