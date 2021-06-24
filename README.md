@@ -16,6 +16,7 @@
   - [openshift4 calico 离线部署](redhat/ocp4/4.3/4.3/../4.3.calico.md)
   - [openshift4 集群升级](redhat/ocp4/4.2.upgrade.md)
 - openshift4 使用系列
+  - [使用 keepalived 激活 LoadBalancer 服务类型](redhat/ocp4/4.7/4.7.keepalived.operator.md)
   - [在节点上启用实时操作系统 real-time kernel](redhat/ocp4/4.7/4.7.real-time.kernel.md)
   - [从容器向宿主机注入内核模块 kmod / driver](redhat/ocp4/4.7/4.7.install.kmod.driver.md)
   - [GPU/vGPU 共享](redhat/ocp4/4.6/4.6/../4.6.vgpu.sharing.deploy.md)
