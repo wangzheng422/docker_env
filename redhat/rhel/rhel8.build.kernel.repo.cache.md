@@ -23,10 +23,12 @@
 # https://blog.packagecloud.io/eng/2015/04/20/working-with-source-rpms/
 
 export PROXY="127.0.0.1:18801"
-export PROXY="192.168.253.1:5084"
+export PROXY="192.168.253.1:5085"
 
 # 由于需要rhel8.3，我们需要注册特殊的订阅。
 subscription-manager --proxy=$PROXY register --auto-attach --username **** --password ********
+
+subscription-manager --proxy=$PROXY register --username **** --password ********
 
 subscription-manager config --rhsm.baseurl=https://china.cdn.redhat.com
 # subscription-manager config --rhsm.baseurl=https://cdn.redhat.com
