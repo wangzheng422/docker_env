@@ -9,7 +9,7 @@ virsh start ocp4-master0
 virsh start ocp4-master1 
 
 virsh start ocp4-master2 
-# virsh start ocp4-worker0
+virsh start ocp4-worker0
 
 # on helper
 podman start local-registry
