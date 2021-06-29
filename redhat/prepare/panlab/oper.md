@@ -20,7 +20,6 @@ virsh start ocp4-worker0
 # on 103
 virsh start ocp4-worker1
 
-
 vncserver :1 -geometry 1280x800
 
 # shutdown
