@@ -108,6 +108,7 @@ install_build() {
     export OCP_RELEASE=${BUILDNUMBER}
     export LOCAL_REG='registry.redhat.ren:5443'
     export LOCAL_REPO='ocp4/openshift4'
+    export LOCAL_RELEASE='ocp4/release'
     export UPSTREAM_REPO='openshift-release-dev'
     export LOCAL_SECRET_JSON="/data/pull-secret.json"
     export OPENSHIFT_INSTALL_RELEASE_IMAGE_OVERRIDE=${LOCAL_REG}/${LOCAL_REPO}:${OCP_RELEASE}
@@ -115,8 +116,8 @@ install_build() {
 
     oc adm release mirror -a ${LOCAL_SECRET_JSON} \
     --from=quay.io/${UPSTREAM_REPO}/${RELEASE_NAME}:${OCP_RELEASE}-x86_64 \
-    --to-release-image=${LOCAL_REG}/${LOCAL_REPO}:${OCP_RELEASE} \
-    --to=${LOCAL_REG}/${LOCAL_REPO}
+    --to-release-image=${LOCAL_REG}/${LOCAL_RELEASE}:${OCP_RELEASE}-x86_64 \
+    --to=${LOCAL_REG}/${LOCAL_REPO}-x86_64
 
     export RELEASE_IMAGE=$(curl -s https://mirror.openshift.com/pub/openshift-v4/clients/ocp/${BUILDNUMBER}/release.txt | grep 'Pull From: quay.io' | awk -F ' ' '{print $3}')
 
