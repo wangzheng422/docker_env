@@ -13,12 +13,12 @@ podman start nexus-image
 virsh start ocp4-master0 
 virsh start ocp4-master1 
 
+# on 103
+virsh start ocp4-worker1
+
 # on 104
 virsh start ocp4-master2 
 virsh start ocp4-worker0
-
-# on 103
-virsh start ocp4-worker1
 
 vncserver :1 -geometry 1280x800
 
@@ -30,7 +30,7 @@ do
     ssh core@$node sudo shutdown -h 1
 done
 
-nodes="172.21.6.101 172.21.6.104 172.21.6.103"
+nodes="172.21.6.101 172.21.6.104"
 for node in $nodes
 do
     echo "==== show $node ===="
