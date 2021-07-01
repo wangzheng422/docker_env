@@ -14,7 +14,7 @@ virsh start ocp4-master0
 virsh start ocp4-master1 
 
 # on 103
-virsh start ocp4-worker1
+# virsh start ocp4-worker1
 
 # on 104
 virsh start ocp4-master2 
