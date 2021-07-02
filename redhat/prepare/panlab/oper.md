@@ -27,7 +27,7 @@ nodes=$(oc get nodes -o jsonpath='{.items[*].metadata.name}')
 for node in ${nodes[@]}
 do
     echo "==== Shut down $node ===="
-    ssh core@$node sudo shutdown -h 1
+    ssh core@$node sudo poweroff
 done
 
 nodes="172.21.6.101 172.21.6.104"
