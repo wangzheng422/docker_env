@@ -10,15 +10,15 @@ podman start local-registry
 podman start nexus-image
 
 # on 101
-virsh start ocp4-master0 
+virsh start ocp4-master-0 
 # virsh start ocp4-master1 
 
 # on 103
-virsh start ocp4-master1 
+virsh start ocp4-master-1 
 # virsh start ocp4-worker1
 
 # on 104
-virsh start ocp4-master2 
+virsh start ocp4-master-2 
 # virsh start ocp4-worker0
 
 # vncserver :1 -geometry 1280x800
@@ -38,6 +38,7 @@ do
     ssh root@$node virsh list
 done
 
+systemctl start vncserver@:1
 
 ```
 
