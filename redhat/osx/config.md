@@ -35,8 +35,8 @@ nmcli connection modify ens33 ipv4.dns 192.168.253.2
 nmcli connection reload
 nmcli connection up ens33
 
-conda config --set proxy_servers.http http://127.0.0.1:5084
-conda config --set proxy_servers.https http://127.0.0.1:5084
+conda config --set proxy_servers.http http://127.0.0.1:5085
+conda config --set proxy_servers.https http://127.0.0.1:5085
 
 # from ggplot import *
 # https://www.codenong.com/42859781/

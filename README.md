@@ -1,7 +1,5 @@
 # 仓库说明
 
-<meta name="google-site-verification" content="nakDz4uRxcKvrIeVEYriQpgXLhHOQ_kqy8y3NnX8fCY" />
-
 本仓库是作者在日常系统操作中的技术笔记。作者平日有些机会进行很多系统操作，包括很多PoC，新系统验证，方案探索工作，所以会有很多系统实际操作的机会，涉及到操作系统安装，iaas, paas平台搭建，中间件系统验证，应用系统的开发和验证。很多操作步骤比较复杂，所以需要一个地方进行集中的笔记记录，方便自己整理，并第一时间在线分享。
 
 目前仓库中，有很多经验分享，其中的一些文章，比较有用：
@@ -18,6 +16,7 @@
   - [openshift4 calico 离线部署](redhat/ocp4/4.3/4.3/../4.3.calico.md)
   - [openshift4 集群升级](redhat/ocp4/4.2.upgrade.md)
 - openshift4 使用系列
+  - [在非官方支持的网卡上，测试SRIOV/DPDK](redhat/ocp4/4.7/4.7.sriov.md)
   - [使用 keepalived 激活 LoadBalancer 服务类型](redhat/ocp4/4.7/4.7.keepalived.operator.md)
   - [在节点上启用实时操作系统 real-time kernel](redhat/ocp4/4.7/4.7.real-time.kernel.md)
   - [从容器向宿主机注入内核模块 kmod / driver](redhat/ocp4/4.7/4.7.install.kmod.driver.md)
