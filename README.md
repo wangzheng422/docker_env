@@ -50,6 +50,7 @@
 - 红帽容器云产品系列
   - [openshift承载虚拟化业务(CNV)](redhat/ocp4/4.5/4.5.ocp.ocs.cnv.ceph.md)
   - [RHACS / stackrox](redhat/ocp4/4.7/4.7.rhacs.md)
+  - [为 RHACS 找个应用场景： 安全合规测试云 ](redhat/ocp4/4.7/4.7.rhacs.deep.md)
 - 操作系统相关
   - [RHEL8编译定制化内核](redhat/rhel/rhel.build.kernel.md)
   - [检查OS是否是运行在虚拟机上](redhat/ocp4/4.5/4.5.check.whether.vm.md)
