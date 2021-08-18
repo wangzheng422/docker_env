@@ -64,19 +64,28 @@ cd /data/ocp4/
 
 mkdir -p /data/ocp4/clients
 # client for camle-k
-wget  -nd -np -e robots=off --reject="index.html*" -P /data/ocp4/clients --recursive https://mirror.openshift.com/pub/openshift-v4/clients/camel-k/latest/
+wget  -nd -np -e robots=off --reject="index.html*" -P /data/ocp4/clients -r -A "*linux*tar.gz" https://mirror.openshift.com/pub/openshift-v4/clients/camel-k/latest/
 
 # client for helm
-wget  -nd -np -e robots=off --reject="index.html*" -P /data/ocp4/clients --recursive https://mirror.openshift.com/pub/openshift-v4/clients/helm/latest/
+wget  -nd -np -e robots=off --reject="index.html*" -P /data/ocp4/clients --recursive -A "*linux-amd64" https://mirror.openshift.com/pub/openshift-v4/clients/helm/latest/
 
 # client for pipeline
-wget  -nd -np -e robots=off --reject="index.html*" -P /data/ocp4/clients --recursive https://mirror.openshift.com/pub/openshift-v4/clients/pipeline/latest/
+wget  -nd -np -e robots=off --reject="index.html*" -P /data/ocp4/clients --recursive -A "*linux-amd64-*.tar.gz" https://mirror.openshift.com/pub/openshift-v4/clients/pipeline/latest/
+
+# client for butane
+wget  -nd -np -e robots=off --reject="index.html*" -P /data/ocp4/clients --recursive -A "butane-amd64" https://mirror.openshift.com/pub/openshift-v4/clients/butane/latest/
 
 # client for serverless
-wget  -nd -np -e robots=off --reject="index.html*" -P /data/ocp4/clients --recursive https://mirror.openshift.com/pub/openshift-v4/clients/serverless/latest/
+wget  -nd -np -e robots=off --reject="index.html*" -P /data/ocp4/clients --recursive -A "kn-linux-amd64.tar.gz" https://mirror.openshift.com/pub/openshift-v4/clients/serverless/latest/
 
 # coreos-installer
-wget  -nd -np -e robots=off --reject="index.html*" -P /data/ocp4/clients --recursive https://mirror.openshift.com/pub/openshift-v4/clients/coreos-installer/latest/
+wget  -nd -np -e robots=off --reject="index.html*" -P /data/ocp4/clients --recursive -A "coreos-installer_amd64" https://mirror.openshift.com/pub/openshift-v4/clients/coreos-installer/latest/
+
+# kam
+wget  -nd -np -e robots=off --reject="index.html*" -P /data/ocp4/clients --recursive -A "kam-linux-amd64" https://mirror.openshift.com/pub/openshift-v4/clients/kam/latest/
+
+# operator-sdk
+wget  -nd -np -e robots=off --reject="index.html*" -P /data/ocp4/clients --recursive -A "operator-sdk-*-ocp-linux-x86_64.tar.gz" https://mirror.openshift.com/pub/openshift-v4/clients/operator-sdk/latest/
 
 # rhacs
 wget -O /data/ocp4/clients/roxctl https://mirror.openshift.com/pub/rhacs/assets/latest/bin/Linux/roxctl
@@ -114,15 +123,15 @@ install_build() {
     export OPENSHIFT_INSTALL_RELEASE_IMAGE_OVERRIDE=${LOCAL_REG}/${LOCAL_REPO}:${OCP_RELEASE}
     export RELEASE_NAME="ocp-release"
 
-    oc adm release mirror -a ${LOCAL_SECRET_JSON} \
-    --from=quay.io/${UPSTREAM_REPO}/${RELEASE_NAME}:${OCP_RELEASE}-x86_64 \
-    --to-release-image=${LOCAL_REG}/${LOCAL_REPO}:${OCP_RELEASE} \
-    --to=${LOCAL_REG}/${LOCAL_REPO}
-
     # oc adm release mirror -a ${LOCAL_SECRET_JSON} \
     # --from=quay.io/${UPSTREAM_REPO}/${RELEASE_NAME}:${OCP_RELEASE}-x86_64 \
-    # --to-release-image=${LOCAL_REG}/${LOCAL_RELEASE}:${OCP_RELEASE}-x86_64 \
-    # --to=${LOCAL_REG}/${LOCAL_REPO}-x86_64
+    # --to-release-image=${LOCAL_REG}/${LOCAL_REPO}:${OCP_RELEASE} \
+    # --to=${LOCAL_REG}/${LOCAL_REPO}
+
+    oc adm release mirror -a ${LOCAL_SECRET_JSON} \
+    --from=quay.io/${UPSTREAM_REPO}/${RELEASE_NAME}:${OCP_RELEASE}-x86_64 \
+    --to-release-image=${LOCAL_REG}/${LOCAL_RELEASE}:${OCP_RELEASE}-x86_64 \
+    --to=${LOCAL_REG}/${LOCAL_REPO}-x86_64
 
     export RELEASE_IMAGE=$(curl -s https://mirror.openshift.com/pub/openshift-v4/clients/ocp/${BUILDNUMBER}/release.txt | grep 'Pull From: quay.io' | awk -F ' ' '{print $3}')
 
@@ -140,7 +149,7 @@ done
 
 cd /data/ocp4
 
-wget --recursive --no-directories --no-parent -e robots=off --accept="rhcos-live*,rhcos-qemu*,rhcos-metal*,rhcos-openstack*"  https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/${var_major_version}/latest/
+wget --recursive --no-directories --no-parent -e robots=off --accept="rhcos-live.x86_64.iso,rhcos-live-kernel-x86_64.*"  https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/${var_major_version}/latest/
 
 wget -O ocp-deps-sha256sum.txt https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/${var_major_version}/latest/sha256sum.txt
 
@@ -157,7 +166,10 @@ podman pull docker.io/library/registry:2
 podman save docker.io/library/registry:2 | pigz -c > registry.tgz
 
 podman pull docker.io/sonatype/nexus3:3.30.1
-podman save docker.io/sonatype/nexus3:3.30.1 | pigz -c > nexus.tgz
+podman save docker.io/sonatype/nexus3:3.30.1 | pigz -c > nexus.3.30.1.tgz
+
+podman pull docker.io/sonatype/nexus3:3.33.1
+podman save docker.io/sonatype/nexus3:3.33.1 | pigz -c > nexus.3.33.1.tgz
 
 oc image mirror --filter-by-os='linux/amd64' quay.io/wangzheng422/operator-catalog:redhat-${var_major_version}-${var_date} ${LOCAL_REG}/ocp4/operator-catalog:redhat-${var_major_version}-${var_date}
 oc image mirror --filter-by-os='linux/amd64' quay.io/wangzheng422/operator-catalog:certified-${var_major_version}-${var_date} ${LOCAL_REG}/ocp4/operator-catalog:certified-${var_major_version}-${var_date}
