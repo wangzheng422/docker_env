@@ -24,7 +24,7 @@ while getopts ":m:" o; do
 done
 shift "$((OPTIND-1))"
 
-if [  [ -z "${var_major_version}" ] ; then
+if [ -z "${var_major_version}" ] ; then
     usage
 fi
 
