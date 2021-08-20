@@ -10,8 +10,8 @@ virsh start ocp4-aHelper
 ssh -tt -D 8801 root@172.21.6.11 'bash -l -c byobu'
 
 # on helper
-podman start local-registry
-podman start nexus-image
+# podman start local-registry
+# podman start nexus-image
 
 # on 101
 virsh start ocp4-master-0 
