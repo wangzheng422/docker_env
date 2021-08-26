@@ -44,6 +44,10 @@ done
 
 systemctl start vncserver@:1
 
+
+
+rsync -e ssh -P --delete -arz root@172.21.6.11:/data/install/rhcos_install-worker-0.iso /root/down/
+
 ```
 
 ## normal boot up
