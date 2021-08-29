@@ -16,6 +16,7 @@
   - [openshift4 calico 离线部署](redhat/ocp4/4.3/4.3/../4.3.calico.md)
   - [openshift4 集群升级](redhat/ocp4/4.2.upgrade.md)
 - openshift4 使用系列
+  - [kata / 沙盒容器](redhat/ocp4/4.8/4.8.kata.md)
   - [在非官方支持的网卡上，测试SRIOV/DPDK](redhat/ocp4/4.7/4.7.sriov.md)
   - [使用 keepalived 激活 LoadBalancer 服务类型](redhat/ocp4/4.7/4.7.keepalived.operator.md)
   - [在节点上启用实时操作系统 real-time kernel](redhat/ocp4/4.7/4.7.real-time.kernel.md)
@@ -70,8 +71,8 @@
 
 作者还有很多视频演示，欢迎前往作者的频道订阅
 - [bilibili](https://space.bilibili.com/19536819)
-- [西瓜视频](https://www.ixigua.com/home/1134309560818120)
 - [youtube](https://www.youtube.com/user/wangzheng422)
+<!-- - [西瓜视频](https://www.ixigua.com/home/1134309560818120) -->
 
 作者正在写一本在线书[《OpenShift4 一步一脚印》](https://wangzheng422.github.io/openshift4-steps-book/introduction.html)。
 
