@@ -165,8 +165,8 @@ podman save quay.io/wangzheng422/filetranspiler | pigz -c > filetranspiler.tgz
 podman pull docker.io/library/registry:2
 podman save docker.io/library/registry:2 | pigz -c > registry.tgz
 
-podman pull docker.io/sonatype/nexus3:3.30.1
-podman save docker.io/sonatype/nexus3:3.30.1 | pigz -c > nexus.3.30.1.tgz
+# podman pull docker.io/sonatype/nexus3:3.30.1
+# podman save docker.io/sonatype/nexus3:3.30.1 | pigz -c > nexus.3.30.1.tgz
 
 podman pull docker.io/sonatype/nexus3:3.33.1
 podman save docker.io/sonatype/nexus3:3.33.1 | pigz -c > nexus.3.33.1.tgz
