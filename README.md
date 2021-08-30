@@ -16,6 +16,7 @@
   - [openshift4 calico 离线部署](redhat/ocp4/4.3/4.3/../4.3.calico.md)
   - [openshift4 集群升级](redhat/ocp4/4.2.upgrade.md)
 - openshift4 使用系列
+  - [使用 MetalLB 用 BGP 发布 LoadBalancer](redhat/ocp4/4.8/4.8.metalb.md)
   - [kata / 沙盒容器](redhat/ocp4/4.8/4.8.kata.md)
   - [在非官方支持的网卡上，测试SRIOV/DPDK](redhat/ocp4/4.7/4.7.sriov.md)
   - [使用 keepalived 激活 LoadBalancer 服务类型](redhat/ocp4/4.7/4.7.keepalived.operator.md)
