@@ -15,6 +15,7 @@
   - [openshift4 补充samples operator 需要的 image stream](redhat/ocp4/4.5/4.5.is.sample.md)
   - [openshift4 calico 离线部署](redhat/ocp4/4.3/4.3/../4.3.calico.md)
   - [openshift4 集群升级](redhat/ocp4/4.2.upgrade.md)
+  - [缩小根分区 / sysroot 的大小](redhat/ocp4/4.8/4.8.shrink.sysroot.md)
 - openshift4 使用系列
   - [使用 MetalLB 用 Layer2 发布 LoadBalancer](redhat/ocp4/4.8/4.8.metalb.l2.md)
   - [使用 MetalLB 用 BGP 发布 LoadBalancer](redhat/ocp4/4.8/4.8.metalb.md)
