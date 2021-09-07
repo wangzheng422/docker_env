@@ -131,7 +131,7 @@ install_build() {
     oc adm release mirror -a ${LOCAL_SECRET_JSON} \
     --from=quay.io/${UPSTREAM_REPO}/${RELEASE_NAME}:${OCP_RELEASE}-x86_64 \
     --to-release-image=${LOCAL_REG}/${LOCAL_RELEASE}:${OCP_RELEASE}-x86_64 \
-    --to=${LOCAL_REG}/${LOCAL_REPO}-x86_64
+    --to=${LOCAL_REG}/${LOCAL_REPO}
 
     export RELEASE_IMAGE=$(curl -s https://mirror.openshift.com/pub/openshift-v4/clients/ocp/${BUILDNUMBER}/release.txt | grep 'Pull From: quay.io' | awk -F ' ' '{print $3}')
 
