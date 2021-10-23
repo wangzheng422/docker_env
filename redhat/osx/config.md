@@ -92,5 +92,18 @@ rm -rf DongleAudio.driver
 rm -rf EshowAudio.driver
 # then reboot
 
+bindkey -l
+# .safe
+# command
+# emacs
+# isearch
+# listscroll
+# main
+# menuselect
+# vicmd
+# viins
+# viopp
+# visual
 
+bindkey -M main
 ```
