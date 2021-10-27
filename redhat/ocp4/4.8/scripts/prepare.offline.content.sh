@@ -67,7 +67,7 @@ mkdir -p /data/ocp4/clients
 wget  -nd -np -e robots=off --reject="index.html*" -P /data/ocp4/clients -r -A "*linux*tar.gz" https://mirror.openshift.com/pub/openshift-v4/clients/camel-k/latest/
 
 # client for helm
-wget  -nd -np -e robots=off --reject="index.html*" -P /data/ocp4/clients --recursive -A "*linux-amd64" https://mirror.openshift.com/pub/openshift-v4/clients/helm/latest/
+wget  -nd -np -e robots=off --reject="index.html*" -P /data/ocp4/clients --recursive -A "helm-linux-arm64" https://mirror.openshift.com/pub/openshift-v4/clients/helm/latest/
 
 # client for pipeline
 wget  -nd -np -e robots=off --reject="index.html*" -P /data/ocp4/clients --recursive -A "*linux-amd64-*.tar.gz" https://mirror.openshift.com/pub/openshift-v4/clients/pipeline/latest/
@@ -85,7 +85,7 @@ wget  -nd -np -e robots=off --reject="index.html*" -P /data/ocp4/clients --recur
 wget  -nd -np -e robots=off --reject="index.html*" -P /data/ocp4/clients --recursive -A "kam-linux-amd64" https://mirror.openshift.com/pub/openshift-v4/clients/kam/latest/
 
 # operator-sdk
-wget  -nd -np -e robots=off --reject="index.html*" -P /data/ocp4/clients --recursive -A "operator-sdk-*-ocp-linux-x86_64.tar.gz" https://mirror.openshift.com/pub/openshift-v4/clients/operator-sdk/latest/
+wget  -nd -np -e robots=off --reject="index.html*" -P /data/ocp4/clients --recursive -A "operator-sdk-linux-x86_64.tar.gz" https://mirror.openshift.com/pub/openshift-v4/clients/operator-sdk/latest/
 
 # rhacs
 wget -O /data/ocp4/clients/roxctl https://mirror.openshift.com/pub/rhacs/assets/latest/bin/Linux/roxctl
