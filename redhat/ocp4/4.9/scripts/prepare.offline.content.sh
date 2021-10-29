@@ -67,7 +67,7 @@ mkdir -p /data/ocp4/clients
 wget  -nd -np -e robots=off --reject="index.html*" -P /data/ocp4/clients -r -A "*linux*tar.gz" https://mirror.openshift.com/pub/openshift-v4/clients/camel-k/latest/
 
 # client for helm
-wget  -nd -np -e robots=off --reject="index.html*" -P /data/ocp4/clients --recursive -A "helm-linux-arm64" https://mirror.openshift.com/pub/openshift-v4/clients/helm/latest/
+wget  -nd -np -e robots=off --reject="index.html*" -P /data/ocp4/clients --recursive -A "helm-linux-amd64" https://mirror.openshift.com/pub/openshift-v4/clients/helm/latest/
 
 # client for pipeline
 wget  -nd -np -e robots=off --reject="index.html*" -P /data/ocp4/clients --recursive -A "*linux-amd64-*.tar.gz" https://mirror.openshift.com/pub/openshift-v4/clients/pipeline/latest/
