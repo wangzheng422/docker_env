@@ -63,6 +63,10 @@ git pull origin dev
 cd /data/ocp4/
 
 mkdir -p /data/ocp4/clients
+
+# coreos-installer
+wget  -nd -np -e robots=off --reject="index.html*" -P /data/ocp4/clients -r -A "coreos-installer_amd64" https://mirror.openshift.com/pub/openshift-v4/amd64/clients/coreos-installer/latest/
+
 # client for camle-k
 wget  -nd -np -e robots=off --reject="index.html*" -P /data/ocp4/clients -r -A "*linux*tar.gz" https://mirror.openshift.com/pub/openshift-v4/clients/camel-k/latest/
 
