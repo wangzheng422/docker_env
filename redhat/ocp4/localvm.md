@@ -103,5 +103,13 @@ oc adm upgrade --to-image=registry.redhat.ren/ocp4/openshift4
 
 osx
 ```bash
+# https://git-scm.com/book/zh/v2/Git-%E5%B7%A5%E5%85%B7-%E5%87%AD%E8%AF%81%E5%AD%98%E5%82%A8
+
 git config --global credential.helper store
+
+git config --global credential.helper osxkeychain
+
+# https://docs.github.com/en/get-started/getting-started-with-git/caching-your-github-credentials-in-git
+brew tap microsoft/git
+brew install --cask git-credential-manager-core
 ```
