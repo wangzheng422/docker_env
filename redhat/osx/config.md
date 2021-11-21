@@ -71,8 +71,8 @@ ffmpeg -h encoder=hevc_videotoolbox
 # registry=https://registry.npm.taobao.org
 # EOF
 cd /Users/wzh/Desktop/dev/Kap
-yarn config set proxy http://127.0.0.1:5084
-yarn config set https-proxy http://127.0.0.1:5084
+yarn config set proxy http://127.0.0.1:5085
+yarn config set https-proxy http://127.0.0.1:5085
 
 yarn
 yarn run pack
