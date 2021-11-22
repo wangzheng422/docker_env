@@ -48,6 +48,14 @@ systemctl start vncserver@:1
 
 rsync -e ssh -P --delete -arz root@172.21.6.11:/data/install/rhcos_install-worker-0.iso /root/down/
 
+export http_proxy="http://192.168.195.54:5085"
+export https_proxy=${http_proxy}
+
+
+# for cx6 on 105 test
+# power on 102
+
+
 ```
 
 ## normal boot up

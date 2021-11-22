@@ -71,8 +71,8 @@ ffmpeg -h encoder=hevc_videotoolbox
 # registry=https://registry.npm.taobao.org
 # EOF
 cd /Users/wzh/Desktop/dev/Kap
-yarn config set proxy http://127.0.0.1:5084
-yarn config set https-proxy http://127.0.0.1:5084
+yarn config set proxy http://127.0.0.1:5085
+yarn config set https-proxy http://127.0.0.1:5085
 
 yarn
 yarn run pack
@@ -92,5 +92,41 @@ rm -rf DongleAudio.driver
 rm -rf EshowAudio.driver
 # then reboot
 
+bindkey -l
+# .safe
+# command
+# emacs
+# isearch
+# listscroll
+# main
+# menuselect
+# vicmd
+# viins
+# viopp
+# visual
+
+bindkey -M main
+```
+
+# bing wallpaper
+
+I used to use the following github site to download the wallpaper: https://github.com/thejandroman/bing-wallpaper
+
+Now I use the following site: http://bimg.top/down-help
+
+```bash
+# on vultr
+mkdir -p /data/bing/img
+cd /data/bing
+
+wget https://github.com/ameizi/bing-wallpaper
+grep 'download 4k' bing-wallpaper | sed 's/^.*href="//' | sed 's/" rel=.*$//' > list
+
+cd /data/bing/img
+while IFS= read -r url;do
+    fileName=`echo $url | sed 's/^.*id=OHR\.//'`
+    test -f "$fileName" ||  wget -O "$fileName" "$url" || rm -f "$fileName"
+    echo $fileName
+done < /data/bing/list
 
 ```
