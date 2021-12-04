@@ -19,6 +19,7 @@
   - [部署升级服务 完善离线升级功能](redhat/ocp4/4.8/4.8.update.service.md)
   - [添加 win10 worker 节点](redhat/ocp4/4.8/4.8.windows.node.md)
 - openshift4 使用系列
+  - [2021.12 helm chart/helm operator](https://github.com/wangzheng422/baicell-helm-operator)
   - [使用 MetalLB 用 Layer2 发布 LoadBalancer](redhat/ocp4/4.8/4.8.metalb.l2.md)
   - [使用 MetalLB 用 BGP 发布 LoadBalancer](redhat/ocp4/4.8/4.8.metalb.md)
   - [kata / 沙盒容器](redhat/ocp4/4.8/4.8.kata.md)
