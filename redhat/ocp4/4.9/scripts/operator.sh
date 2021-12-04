@@ -101,6 +101,8 @@ echo "quay.io/wangzheng422/operator-catalog:redhat-${var_major_version}-$var_dat
 echo $var_date
 echo ${var_major_version}
 
+export OCP_OPERATOR_VERSION=${var_date}
+
 # + echo 'docker.io/wangzheng422/operator-catalog:redhat-4.6-2020.11.23.0135 '
 # docker.io/wangzheng422/operator-catalog:redhat-4.6-2020.11.23.0135
 # + echo 2020.11.23.0135
