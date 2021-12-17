@@ -182,6 +182,11 @@ oc image mirror --filter-by-os='linux/amd64' quay.io/wangzheng422/operator-catal
 
 cd /data/ocp4
 
+echo "quay.io/wangzheng422/operator-catalog:redhat-${var_major_version}-${var_date}" >> operator-catalog.list
+echo "quay.io/wangzheng422/operator-catalog:certified-${var_major_version}-${var_date}" >> operator-catalog.list
+echo "quay.io/wangzheng422/operator-catalog:community-${var_major_version}-${var_date}" >> operator-catalog.list
+echo "quay.io/wangzheng422/operator-catalog:redhat-marketplace-${var_major_version}-${var_date}" >> operator-catalog.list
+
 # 以下命令要运行 2-3个小时，耐心等待。。。
 # bash image.mirror.install.sh
 
