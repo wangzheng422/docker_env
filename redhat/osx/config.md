@@ -130,3 +130,28 @@ while IFS= read -r url;do
 done < /data/bing/list
 
 ```
+
+# color
+
+## nord
+
+https://www.nordtheme.com/ports
+
+## theme
+
+https://dev.to/loctran016/setting-hyper-with-wsl-2-44f2
+
+```bash
+
+
+```
+
+# win10
+
+## auto start
+https://www.how2shout.com/linux/how-to-start-wsl-services-automatically-on-ubuntu-with-windows-10-startup/
+
+## share folder
+
+https://devblogs.microsoft.com/commandline/access-linux-filesystems-in-windows-and-wsl-2/
+
