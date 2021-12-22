@@ -159,5 +159,13 @@ https://devblogs.microsoft.com/commandline/access-linux-filesystems-in-windows-a
 
 https://epic-pen.com/
 
+## remap caps
 
+https://github.com/microsoft/PowerToys
+
+## access host ip
+
+https://stackoverflow.com/questions/65625762/wsl2-use-localhost-to-access-windows-service
+
+https://devdojo.com/mvnarendrareddy/access-windows-localhost-from-wsl2
 
