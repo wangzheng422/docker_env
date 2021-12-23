@@ -169,3 +169,9 @@ https://stackoverflow.com/questions/65625762/wsl2-use-localhost-to-access-window
 
 https://devdojo.com/mvnarendrareddy/access-windows-localhost-from-wsl2
 
+## screen shot
+
+https://github.com/flameshot-org/flameshot#windows
+
+
+
