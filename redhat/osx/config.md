@@ -159,6 +159,8 @@ https://devblogs.microsoft.com/commandline/access-linux-filesystems-in-windows-a
 
 https://epic-pen.com/
 
+https://github.com/antfu/live-draw
+
 ## remap caps
 
 https://github.com/microsoft/PowerToys
@@ -172,6 +174,12 @@ https://devdojo.com/mvnarendrareddy/access-windows-localhost-from-wsl2
 ## screen shot
 
 https://github.com/flameshot-org/flameshot#windows
+
+## system monitor
+
+https://github.com/zhongyang219/TrafficMonitor
+
+
 
 
 
