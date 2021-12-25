@@ -1,3 +1,5 @@
+# OSX / Win configuration
+
 ```bash
 cat << EOF > ~/.ssh/config
 StrictHostKeyChecking no
@@ -148,6 +150,21 @@ https://dev.to/loctran016/setting-hyper-with-wsl-2-44f2
 
 # win10
 
+## wsl2 rocky
+
+install:
+- https://docs.rockylinux.org/guides/interoperability/rocky_to_wsl_howto/
+
+release:
+- https://loesspie.com/2021/01/27/wsl2-compact-disk-win10/
+
+hyper:
+- https://dev.to/loctran016/setting-hyper-with-wsl-2-44f2
+- https://gist.github.com/leodutra/a6cebe11db5414cdaedc6e75ad194a00
+- https://github.com/Powerlevel9k/powerlevel9k/wiki/Stylizing-Your-Prompt
+
+
+
 ## auto start
 https://www.how2shout.com/linux/how-to-start-wsl-services-automatically-on-ubuntu-with-windows-10-startup/
 
@@ -160,6 +177,8 @@ https://devblogs.microsoft.com/commandline/access-linux-filesystems-in-windows-a
 https://epic-pen.com/
 
 https://github.com/antfu/live-draw
+
+https://github.com/geovens/gInk
 
 ## remap caps
 
@@ -175,9 +194,50 @@ https://devdojo.com/mvnarendrareddy/access-windows-localhost-from-wsl2
 
 https://github.com/flameshot-org/flameshot#windows
 
+windows buildin ( pic, movie )
+
+print键 截全屏并复制到剪贴板(dos时代就有的功能)
+
+alt+print键 截窗口并复制到剪贴板
+
+win+print键 截全屏并保存到我的图片(win10新功能)
+
+win+g 录屏(win10新功能)
+
+win+v 打开剪贴板
+
+区域→剪切板：`win+shift+s`
+
+全屏或者窗口→剪切板或者截屏文件夹 都用一系列 “功能键+prtsc” 组合 就可以实现
+
+
 ## system monitor
 
 https://github.com/zhongyang219/TrafficMonitor
+
+https://openhardwaremonitor.org/
+
+https://www.wisecleaner.com.cn/wise-system-monitor.html
+
+## backup
+
+https://www.ubackup.com/free-backup-software.html
+
+## pkg
+
+scoop:
+- https://zhuanlan.zhihu.com/p/128955118
+- https://scoop-docs.vercel.app/docs/misc/Using-Scoop-behind-a-proxy.html#do-you-need-this
+
+## sftp
+
+https://cyberduck.io/
+
+filezilla
+
+## media player
+
+https://www.stellarplayer.com/?chan=zj_11
 
 
 
