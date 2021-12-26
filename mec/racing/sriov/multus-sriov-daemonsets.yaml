@@ -1,0 +1,378 @@
+# This yaml file contains necessary configuration to setup
+# a demo environment for Multus + SR-IOV, the config includes
+# the following pieces:
+# 1. Multus ConfigMap
+# 2. Network Plumbing Working Group Spec Version 1 CustomerResourceDefinition
+# 3. Multus ClusterRole & ClusterRoleBinding
+# 4. Multus & SR-IOV Device Plugin ServiceAccounts
+# 5. Multus & SR-IOV Device Plugin & SR-IOV CNI DaemonSets
+
+# Note: This yaml file will not create customer SR-IOV CRD
+# which will be specified in Pod spec annotation. Below is
+# an example of SR-IOV CRD:
+#
+# apiVersion: "k8s.cni.cncf.io/v1"
+# kind: NetworkAttachmentDefinition
+# metadata:
+#   name: sriov-net1
+#   annotations:
+#     k8s.v1.cni.cncf.io/resourceName: intel.com/sriov
+# spec:
+#   config: '{
+#	 "type": "sriov",
+#        "name": "sriov-network",
+#	 "ipam": {
+#		 "type": "host-local",
+#		 "subnet": "10.56.217.0/24",
+#		 "routes": [{
+#			 "dst": "0.0.0.0/0"
+#		 }],
+#		 "gateway": "10.56.217.1"
+#	 }
+#   }'
+
+# An example of Pod spec using above SR-IOV CRD:
+#
+# apiVersion: v1
+# kind: Pod
+# metadata:
+#   name: testpod1
+#   labels:
+#     env: test
+#   annotations:
+#     k8s.v1.cni.cncf.io/networks: sriov-net1
+# spec:
+#   containers:
+#   - name: appcntr1
+#     image: centos/tools
+#     imagePullPolicy: IfNotPresent
+#     command: [ "/bin/bash", "-c", "--" ]
+#     args: [ "while true; do sleep 300000; done;" ]
+#     resources:
+#       requests:
+#         intel.com/sriov: '1'
+#       limits:
+#        intel.com/sriov: '1'
+
+
+# --------------------------------------------------------------------
+
+# 1. Multus ConfigMap
+#
+# This configMap assumes that:
+# - Kubeconfig file is located at "/etc/kubernetes/admin.conf" on host
+# - Default master plugin for Multus is set to flannel
+#
+# Note: If either of above is not True in your environment
+# make sure they are properly set to the corrent values.
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: multus-cni-config
+  namespace: kube-system
+  labels:
+    tier: node
+    app: multus
+data:
+  cni-conf.json: |
+    {
+      "name": "multus-cni-network",
+      "type": "multus",
+      "delegates": [
+        {
+          "type": "openshift-sdn",
+          "name": "openshift-sdn",
+          "delegate": {
+            "isDefaultGateway": true
+          }
+        }
+      ],
+      "kubeconfig": "/etc/kubernetes/node-kubeconfig.yaml"
+    }
+
+# 2. NPWG spec v1 Network Attachment Definition
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: network-attachment-definitions.k8s.cni.cncf.io
+spec:
+  group: k8s.cni.cncf.io
+  version: v1
+  scope: Namespaced
+  names:
+    plural: network-attachment-definitions
+    singular: network-attachment-definition
+    kind: NetworkAttachmentDefinition
+    shortNames:
+    - net-attach-def
+  validation:
+    openAPIV3Schema:
+      properties:
+        spec:
+          properties:
+            config:
+                 type: string
+
+# 3.1 Multus Cluster Role
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: multus
+rules:
+  - apiGroups: ["k8s.cni.cncf.io"]
+    resources:
+      - '*'
+    verbs:
+      - '*'
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+      - pods/status
+    verbs:
+      - get
+      - update
+
+# 3.2 Multus Cluster Role Binding
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: multus
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: multus
+subjects:
+- kind: ServiceAccount
+  name: multus
+  namespace: kube-system
+
+# 4.1 SR-IOV Device Plugin ServiceAccount
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: sriov-device-plugin
+  namespace: kube-system
+
+# 4.2 Multus ServiceAccount
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: multus
+  namespace: kube-system
+
+# 5.1 SR-IOV Device Plugin DaemonSet
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sriovdp-config
+  namespace: kube-system
+data:
+  config.json: |
+    {
+        "resourceList": [{
+                "resourceName": "intel_sriov_netdevice",
+                "selectors": {
+                    "vendors": ["8086"],
+                    "devices": ["154c", "10ed"],
+                    "drivers": ["i40evf", "ixgbevf"]
+                }
+            },
+            {
+                "resourceName": "intel_sriov_dpdk",
+                "selectors": {
+                    "vendors": ["8086"],
+                    "devices": ["154c", "10ed"],
+                    "drivers": ["vfio-pci"],
+                    "pfNames": ["enp0s0f0","enp2s2f1"]
+                }
+            },
+            {
+                "resourceName": "mlnx_sriov_rdma",
+                "isRdma": true,
+                "selectors": {
+                    "vendors": ["15b3"],
+                    "devices": ["1018"],
+                    "drivers": ["mlx5_ib"]
+                }
+            }
+        ]
+    }
+---
+apiVersion: extensions/v1beta1
+kind: DaemonSet
+metadata:
+  name: kube-sriov-device-plugin-amd64
+  namespace: kube-system
+  labels:
+    tier: node
+    app: sriovdp
+spec:
+  template:
+    metadata:
+      labels:
+        tier: node
+        app: sriovdp
+    spec:
+      hostNetwork: true
+      hostPID: true
+      nodeSelector:
+        beta.kubernetes.io/arch: amd64
+      tolerations:
+      - key: node-role.kubernetes.io/master
+        operator: Exists
+        effect: NoSchedule
+      serviceAccountName: sriov-device-plugin
+      containers:
+      - name: kube-sriovdp
+        image: registry.crmi.cn:5021/nfvpe/sriov-device-plugin:latest
+        # image: registry.crmi.cn:5021/cnv-tech-preview/sriov-network-device-plugin
+        imagePullPolicy: Always
+        args:
+        - --log-dir=sriovdp
+        - --log-level=10
+        securityContext:
+          privileged: true
+        volumeMounts:
+        - name: devicesock
+          mountPath: /var/lib/kubelet/
+          readOnly: false
+        - mountPath: /sys
+          name: net
+          readOnly: true
+        # - mountPath: /etc/pcidp/
+        #   name: config
+        #   readOnly: true
+        - name: log
+          mountPath: /var/log
+        - name: config-volume
+          mountPath: /etc/pcidp/config.json
+          subPath: config.json
+      volumes:
+        - name: devicesock
+          hostPath:
+            path: /var/lib/kubelet/
+        # - name: config
+        #   hostPath:
+        #     path: /etc/pcidp/
+        - name: net
+          hostPath:
+            path: /sys
+        - name: log
+          hostPath:
+            path: /var/log
+        - name: config-volume
+          configMap:
+            name: sriovdp-config
+
+# 5.2 SR-IOV CNI DaemonSet
+---
+apiVersion: extensions/v1beta1
+kind: DaemonSet
+metadata:
+  name: kube-sriov-cni-ds-amd64
+  namespace: kube-system
+  labels:
+    tier: node
+    app: sriov-cni
+spec:
+  template:
+    metadata:
+      labels:
+        tier: node
+        app: sriov-cni
+    spec:
+      hostNetwork: true
+      nodeSelector:
+        beta.kubernetes.io/arch: amd64
+      tolerations:
+      - key: node-role.kubernetes.io/master
+        operator: Exists
+        effect: NoSchedule
+      containers:
+      - name: kube-sriov-cni
+        image: registry.crmi.cn:5021/nfvpe/sriov-cni:latest
+        # image: registry.crmi.cn:5021/cnv-tech-preview/sriov-cni
+        securityContext:
+          privileged: true
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "50Mi"
+          limits:
+            cpu: "100m"
+            memory: "50Mi"
+        volumeMounts:
+        - name: cnibin
+          mountPath: /host/opt/cni/bin
+      volumes:
+        - name: cnibin
+          hostPath:
+            path: /opt/cni/bin
+
+# 5.3 Multus DaemonSet
+---
+apiVersion: extensions/v1beta1
+kind: DaemonSet
+metadata:
+  name: kube-multus-ds-amd64
+  namespace: kube-system
+  labels:
+    tier: node
+    app: multus
+spec:
+  template:
+    metadata:
+      labels:
+        tier: node
+        app: multus
+    spec:
+      hostNetwork: true
+      nodeSelector:
+        beta.kubernetes.io/arch: amd64
+      tolerations:
+      - operator: Exists
+        effect: NoSchedule
+      serviceAccountName: multus
+      containers:
+      - name: kube-multus
+        image: registry.crmi.cn:5021/nfvpe/multus:latest
+        # image: registry.crmi.cn:5021/cnv-tech-preview/multus-cni
+        args:
+        - --multus-conf-file=auto
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "50Mi"
+          limits:
+            cpu: "100m"
+            memory: "50Mi"
+        securityContext:
+          privileged: true
+        volumeMounts:
+        - name: cni
+          mountPath: /host/etc/cni/net.d
+        - name: cnibin
+          mountPath: /host/opt/cni/bin
+        - name: multus-cfg
+          mountPath: /tmp/multus-conf
+      volumes:
+        - name: cni
+          hostPath:
+            path: /etc/cni/net.d
+        - name: cnibin
+          hostPath:
+            path: /opt/cni/bin
+        - name: multus-cfg
+          configMap:
+            name: multus-cni-config
+            items:
+            - key: cni-conf.json
+              path: 70-multus.conf

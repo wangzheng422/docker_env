@@ -1,0 +1,91 @@
+apiVersion: kubevirt.io/v1alpha3
+kind: VirtualMachine
+metadata:
+  annotations:
+    name.os.template.cnv.io/win2k8: Microsoft Windows Server 2008
+  name: win7
+  namespace: default
+  labels:
+    app: win7
+    flavor.template.cnv.io/Custom: 'true'
+    os.template.cnv.io/win10: 'true'
+    template.cnv.ui: openshift_win2k12r2-generic-medium
+    vm.cnv.io/template: win2k12r2-generic-medium
+    workload.template.cnv.io/generic: 'true'
+spec:
+  dataVolumeTemplates:
+    - metadata:
+        name: win7-kni-win7
+      spec:
+        pvc:
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 20Gi
+          storageClassName: glusterfs-storage
+        source:
+          blank: {}
+  running: false
+  template:
+    metadata:
+      labels:
+        vm.cnv.io/name: win7
+    spec:
+      domain:
+        clock:
+          timer:
+            hpet:
+              present: false
+            hyperv: {}
+            pit:
+              tickPolicy: delay
+            rtc:
+              tickPolicy: catchup
+          utc: {}
+        cpu:
+          cores: 2
+          sockets: 1
+          threads: 1
+        devices:
+          disks:
+            - name: installcd
+              bootOrder: 2
+              cdrom:
+                bus: sata
+            - name: win7-kni
+              bootOrder: 1
+              disk:
+                bus: sata
+            - name: virtiocontainerdisk
+              cdrom:
+                bus: sata
+          interfaces:
+            - bridge: {}
+              model: e1000e
+              name: nic0
+        features:
+          acpi: {}
+          apic: {}
+          hyperv:
+            relaxed: {}
+            spinlocks:
+              spinlocks: 8191
+            vapic: {}
+        resources:
+          requests:
+            memory: 4G
+      networks:
+        - name: nic0
+          pod: {}
+      terminationGracePeriodSeconds: 0
+      volumes:
+        - containerDisk:
+            image: 'kni-registry.redhat.ren:5021/win7_install'
+          name: installcd
+        - dataVolume:
+            name: win7-kni-win7
+          name: win7-kni
+        - containerDisk:
+            image: kni-registry.redhat.ren:5021/cnv-tech-preview/virtio-win
+          name: virtiocontainerdisk

@@ -1,0 +1,1 @@
+{"id":"6a06a6db-f201-4674-b7b3-a0c51e34b374","name":"HOATask-taskform.frm","model":{"taskName":"HOATask","processId":"pam.OrderPermit","properties":[],"formModelType":"org.kie.workbench.common.forms.jbpm.model.authoring.task.TaskFormModel"},"fields":[],"layoutTemplate":{"version":2,"style":"FLUID","layoutProperties":{},"rows":[]}}

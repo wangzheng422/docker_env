@@ -1,0 +1,112 @@
+kind: Pod
+apiVersion: v1
+metadata:
+  name: slbl7-001
+  namespace: zxcdn
+  labels:
+    pod: slbl7-001
+  annotations:
+    k8s.v1.cni.cncf.io/networks: '
+    [{
+      "name": "slbl7-001-macvlan",
+      "default-route": ["39.137.101.126"] 
+    }]'
+spec:
+  nodeSelector:
+    kubernetes.io/hostname: "worker-0.ocpsc.redhat.ren"
+  restartPolicy: Always
+  containers:
+    - name: slbl7-001-main
+      image: registry.redhat.ren:4443/zteadm/slbl7-img:6.01.05.01T03
+      imagePullPolicy: IfNotPresent
+      command: ["/usr/sbin/init"]
+      volumeMounts:
+        - name: init-config-volumes
+          mountPath: /home/zte_node/log_exporter/ztetool.ini
+          subPath: ztetool.ini
+        - name: host-time
+          mountPath: /etc/localtime
+        - name: host-resolv
+          mountPath: /etc/resolv.conf
+        #- name: host-zoneinfo
+        #  mountPath: /usr/share/zoneinfo
+        - name: slbl7-config-volumes
+          mountPath: /home/persistence
+        - name: slbl7-nginx-log-volumes
+          mountPath: /home/zxcdn/slbl7/nginx/logs
+        - name: ires-log-volumes
+          mountPath: /home/zxagent/log
+        - name: logexporter-log-volumes
+          mountPath: /home/zte_node/logs/
+      #livenessProbe:
+      #   httpGet:
+      #     path: /GetCDNLoadInfoAll
+      #     port: 6610
+      #   initialDelaySeconds: 60
+      #   periodSeconds: 30
+      resources:
+        requests:
+          cpu: 2.0
+          memory: 16Gi
+        limits:
+          cpu: 2.0
+          memory: 16Gi
+      securityContext:
+        privileged: true
+    - name: slbl7-001-pg
+      image: registry.redhat.ren:4443/zteadm/pg-img:v1.01.01.01
+      imagePullPolicy: IfNotPresent
+      env:
+        - name: ROOTPATH
+          value: "/mnt"
+      command: ["/home/start.sh"]
+      volumeMounts:
+        - name: pg-root
+          mountPath: /mnt
+        - name: host-time
+          mountPath: /etc/localtime
+        - name: host-resolv
+          mountPath: /etc/resolv.conf
+        #- name: host-zoneinfo
+        #  mountPath: /usr/share/zoneinfo
+      resources:
+        requests:
+          cpu: 1.0
+          memory: 8Gi
+        limits:
+          cpu: 1.0
+          memory: 8Gi
+      securityContext:
+        privileged: true
+  serviceAccount: zxcdn-app
+  volumes:
+    - name: init-config-volumes
+      configMap:
+        name: slbl7-001-config
+    - name: dshm
+      emptyDir:
+        medium: Memory
+    - name: host-time
+      hostPath:
+        path: /etc/localtime
+    - name: host-resolv
+      hostPath:
+        path: /etc/resolv.conf
+    #- name: host-zoneinfo
+    #  hostPath:
+    #    path: /usr/share/zoneinfo
+    - name: slbl7-config-volumes
+      hostPath:
+        path: /data/ztecdn/slbl7-001/config
+    - name: slbl7-nginx-log-volumes
+      hostPath:
+        path: /data/ztecdn/slbl7-001/nginx/logs
+    - name: ires-log-volumes
+      hostPath:
+        path: /data/ztecdn/slbl7-001/ires/logs
+    - name: logexporter-log-volumes
+      hostPath:
+        path: /data/ztecdn/slbl7-001/logexporter/logs
+    - name: pg-root
+      hostPath:
+        path: /data/ztecdn/slbl7-001/pg/data

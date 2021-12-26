@@ -1,0 +1,1 @@
+{"id":"1dc87cbc-c9f7-4c5b-a77e-f168d3c14c77","name":"StructTask-taskform.frm","model":{"taskName":"StructTask","processId":"pam.OrderPermit","properties":[],"formModelType":"org.kie.workbench.common.forms.jbpm.model.authoring.task.TaskFormModel"},"fields":[],"layoutTemplate":{"version":2,"style":"FLUID","layoutProperties":{},"rows":[]}}
