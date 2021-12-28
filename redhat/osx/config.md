@@ -163,7 +163,12 @@ hyper:
 - https://gist.github.com/leodutra/a6cebe11db5414cdaedc6e75ad194a00
 - https://github.com/Powerlevel9k/powerlevel9k/wiki/Stylizing-Your-Prompt
 
-
+network 
+- https://stackoverflow.com/questions/64112003/how-to-access-service-running-in-wsl2-from-windows-host-using-127-0-0-1
+- https://stackoverflow.com/questions/65625762/wsl2-use-localhost-to-access-windows-service
+- https://medium.com/@mdavis332/hyper-v-nat-w-linux-vm-1d245be6ded1
+- https://stackoverflow.com/questions/65716797/cant-ping-ubuntu-vm-from-wsl2-ubuntu
+- https://www.cnblogs.com/sewain/p/15042389.html
 
 ## auto start
 https://www.how2shout.com/linux/how-to-start-wsl-services-automatically-on-ubuntu-with-windows-10-startup/
