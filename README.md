@@ -19,6 +19,7 @@
   - [部署升级服务 完善离线升级功能](redhat/ocp4/4.8/4.8.update.service.md)
   - [添加 win10 worker 节点](redhat/ocp4/4.8/4.8.windows.node.md)
 - openshift4 使用系列
+  - [2021.12 nf_conntrack 在 openshift4.9上的处理](redhat/ocp4/4.9/4.9.nf.conntrac.md)
   - [2021.12 加载第三方设备驱动](redhat/ocp4/4.9/4.9.load.3rd.part.driver.md)
   - [2021.12 helm chart/helm operator](https://github.com/wangzheng422/baicell-helm-operator)
   - [使用 MetalLB 用 Layer2 发布 LoadBalancer](redhat/ocp4/4.8/4.8.metalb.l2.md)
@@ -61,6 +62,7 @@
   - [RHACS / stackrox](redhat/ocp4/4.7/4.7.rhacs.md)
   - [为 RHACS 找个应用场景： 安全合规测试云 ](redhat/ocp4/4.7/4.7.rhacs.deep.md)
 - 操作系统相关
+  - [2021.12 Mellanox BF2 刷固件并测试DPI URL-filter场景](redhat/notes/2021/2021.12.ocp.bf2.dpi.url.filter.md)
   - [2021.11 Mellanox CX6 vdpa 硬件卸载 ovs-kernel 方式](redhat/notes/2021/2021.10.cx6dx.vdpa.offload.md)
   - [RHEL8编译定制化内核](redhat/rhel/rhel.build.kernel.md)
   - [检查OS是否是运行在虚拟机上](redhat/ocp4/4.5/4.5.check.whether.vm.md)
