@@ -19,7 +19,8 @@
   - [部署升级服务 完善离线升级功能](redhat/ocp4/4.8/4.8.update.service.md)
   - [添加 win10 worker 节点](redhat/ocp4/4.8/4.8.windows.node.md)
 - openshift4 使用系列
-  - [2021.12 nf_conntrack 在 openshift4.9上的处理](redhat/ocp4/4.9/4.9.nf.conntrac.md)
+  - [2021.12 oc exec 原理分析](redhat/ocp4/4.9/4.9.oc.exec.md)
+  - [2021.12 nf_conntrack 在 openshift4.9上的处理](redhat/ocp4/4.9/4.9.nf.conntrack.md)
   - [2021.12 加载第三方设备驱动](redhat/ocp4/4.9/4.9.load.3rd.part.driver.md)
   - [2021.12 helm chart/helm operator](https://github.com/wangzheng422/baicell-helm-operator)
   - [使用 MetalLB 用 Layer2 发布 LoadBalancer](redhat/ocp4/4.8/4.8.metalb.l2.md)
