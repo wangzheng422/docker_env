@@ -213,7 +213,7 @@ win+v 打开剪贴板
 
 区域→剪切板：`win+shift+s`
 
-全屏或者窗口→剪切板或者截屏文件夹 都用一系列 “功能键+prtsc” 组合 就可以实现
+全屏或者窗口→剪切板或者截屏文件夹 都用一系列 '功能键+prtsc' 组合 就可以实现
 
 
 ## system monitor
@@ -223,6 +223,8 @@ https://github.com/zhongyang219/TrafficMonitor
 https://openhardwaremonitor.org/
 
 https://www.wisecleaner.com.cn/wise-system-monitor.html
+
+https://www.hwinfo.com/download/
 
 ## backup
 
@@ -248,7 +250,12 @@ https://www.stellarplayer.com/?chan=zj_11
 
 wow + everything
 
+## sec network
 
+- https://www.tinc-vpn.org/
+- https://omniedge.io/download/windows
+
+- https://landrop.app/#downloads
 
 
 
