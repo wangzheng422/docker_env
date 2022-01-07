@@ -257,5 +257,19 @@ wow + everything
 
 - https://landrop.app/#downloads
 
+## font & theme
 
+- [nerd fonts](https://www.nerdfonts.com/)
+- [starship](https://starship.rs/)
+- [mactype import mac font into windows](https://github.com/snowie2000/mactype)
+- https://zhuanlan.zhihu.com/p/354603010
+- https://zhuanlan.zhihu.com/p/308481493
+- [oh my posh](https://ohmyposh.dev/)
 
+## 动画
+
+- https://www.fable.app/
+
+## phone camera share
+
+- https://obs.ninja/
