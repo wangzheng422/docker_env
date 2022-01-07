@@ -57,7 +57,8 @@
   - [CCN 安装介质制作 for openshift 4.4](redhat/ocp4/4.4/4.4.ccn.devops.build.md)
   - [应用上云系列教程 containerized cloud native (CCN) for openshift 4.6](redhat/ocp4/4.6/4.6.ccn.devops.deploy.md)
   - [CCN 安装介质制作 for openshift 4.6](redhat/ocp4/4.6/4.6.ccn.devops.build.md)
-- 红帽容器云产品系列
+- 红帽其他产品系列
+  - [2022.01 离线安装 ansible platform](redhat/notes/2022/2022.01.ansible.install.md)
   - [2021.12 RHACS 应对log4j 原理和实践](redhat/notes/2021/2021.08.virus.md)
   - [openshift承载虚拟化业务(CNV)](redhat/ocp4/4.5/4.5.ocp.ocs.cnv.ceph.md)
   - [RHACS / stackrox](redhat/ocp4/4.7/4.7.rhacs.md)
