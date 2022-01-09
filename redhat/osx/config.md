@@ -110,6 +110,101 @@ bindkey -l
 bindkey -M main
 ```
 
+## nerd font & hypter
+
+```bash
+# on osx
+brew tap homebrew/cask-fonts
+brew install --cask font-hack-nerd-font
+
+brew tap-info homebrew/cask-fonts --json | jq -r '.[]|(.formula_names[],.cask_tokens[])'
+
+brew info font-hack-nerd-font
+
+brew install --cask font-hack-nerd-font 
+
+# brew install --cask font-noto-serif-cjk-sc font-noto-sans-cjk-sc font-noto-nerd-font
+
+# Fira Code Nerd Font
+brew install --cask font-fira-code-nerd-font
+
+brew install --cask hyper
+
+# if brew remove faild with mac version error
+# https://stackoverflow.com/questions/55353778/brew-cask-update-or-uninstall-error-definition-is-invalid-invalid-depends-on
+# /usr/bin/find "$(brew --prefix)/Caskroom/"*'/.metadata' -type f -name '*.rb' -print0 | /usr/bin/xargs -0 /usr/bin/perl -i -0pe 's/depends_on macos: \[.*?\]//gsm;s/depends_on macos: .*//g'
+
+# set proxy for npm
+# npm config edit
+npm config set proxy http://127.0.0.1:5085
+npm config set https-proxy http://127.0.0.1:5085
+
+
+# hyper
+# https://medium.com/cloud-native-the-gathering/hyper-terminal-plugins-that-will-make-your-life-easier-859897df79d6
+# https://github.com/bnb/awesome-hyper
+```
+```json
+module.exports = {
+  config: {
+    // default font size for all tabs
+    fontSize: 16,
+    fontFamily: '"Hack Nerd Font", Menlo, "DejaVu Sans Mono", Consolas, "Lucida Console", monospace',
+    // ... other config options
+ 
+    // add the hypercwd configuration object like this
+    hypercwd: {
+    //   initialWorkingDirectory: '~/Documents'
+        initialWorkingDirectory: '~/'
+    }
+  },
+  plugins: [
+    'hypercwd',
+    'nord-hyper',
+    'hyperterm-dibdabs',
+    'hyper-search',
+    'hyper-reorderable-tabs',
+    'hyper-quit',
+    'hyper-savetext',
+  ],
+}
+
+```
+
+```bash
+# iterm default font "monaco"
+
+brew install starship
+
+cp .zshrc .zshrc.bak
+
+# edit .zshrc, add followin 
+ZSH_THEME=""
+eval "$(starship init zsh)"
+
+# Fira Code Nerd Font
+# up/down 110, left/right 100
+
+# https://starship.rs/presets/#pure
+cat << 'EOF' > ~/.config/starship.toml
+format = "$all"
+
+[hostname]
+ssh_only = false
+
+EOF
+
+# https://superuser.com/questions/700406/zsh-not-recognizing-ls-colors
+export CLICOLOR=1
+alias ls="ls --color=auto"
+
+omz update
+
+brew install zsh zsh-completions
+
+
+```
+
 # bing wallpaper
 
 I used to use the following github site to download the wallpaper: https://github.com/thejandroman/bing-wallpaper
