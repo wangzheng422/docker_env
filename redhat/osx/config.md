@@ -128,6 +128,8 @@ brew install --cask font-hack-nerd-font
 # Fira Code Nerd Font
 brew install --cask font-fira-code-nerd-font
 
+brew install --cask font-sauce-code-pro-nerd-font
+
 brew install --cask hyper
 
 # if brew remove faild with mac version error
@@ -182,15 +184,101 @@ cp .zshrc .zshrc.bak
 ZSH_THEME=""
 eval "$(starship init zsh)"
 
+cat << 'EOF' > ~/.zshrc
+
+EOF
+
 # Fira Code Nerd Font
 # up/down 110, left/right 100
 
 # https://starship.rs/presets/#pure
+# https://gist.github.com/ryo-ARAKI/48a11585299f9032fa4bda60c9bba593
 cat << 'EOF' > ~/.config/starship.toml
-format = "$all"
+
+[battery]
+full_symbol = "🔋"
+charging_symbol = "🔌"
+discharging_symbol = "⚡"
+
+[[battery.display]]
+threshold = 30
+style = "bold red"
+
+[character]
+error_symbol = "[✖](bold red) "
+
+[cmd_duration]
+min_time = 10_000  # Show command duration over 10,000 milliseconds (=10 sec)
+format = " took [$duration]($style)"
+
+[directory]
+truncation_length = 5
+format = "[$path]($style)[$lock_symbol]($lock_style) "
+
+[git_branch]
+format = " [$symbol$branch]($style) "
+symbol = "🍣 "
+style = "bold yellow"
+
+[git_commit]
+commit_hash_length = 8
+style = "bold white"
+
+[git_state]
+format = '[\($state( $progress_current of $progress_total)\)]($style) '
+
+[git_status]
+conflicted = "⚔️ "
+ahead = "🏎️ 💨 ×${count}"
+behind = "🐢 ×${count}"
+diverged = "🔱 🏎️ 💨 ×${ahead_count} 🐢 ×${behind_count}"
+untracked = "🛤️  ×${count}"
+stashed = "📦 "
+modified = "📝 ×${count}"
+staged = "🗃️  ×${count}"
+renamed = "📛 ×${count}"
+deleted = "🗑️  ×${count}"
+style = "bright-white"
+format = "$all_status$ahead_behind"
 
 [hostname]
 ssh_only = false
+format = "<[$hostname]($style)>"
+# trim_at = "-"
+style = "bold dimmed white"
+disabled = false
+
+[julia]
+format = "[$symbol$version]($style) "
+symbol = "ஃ "
+style = "bold green"
+
+[memory_usage]
+format = "$symbol[${ram}( | ${swap})]($style) "
+threshold = 70
+style = "bold dimmed white"
+disabled = false
+
+[package]
+disabled = true
+
+[python]
+format = "[$symbol$version]($style) "
+style = "bold green"
+
+[rust]
+format = "[$symbol$version]($style) "
+style = "bold green"
+
+[time]
+time_format = "%T"
+format = "🕙 $time($style) "
+style = "bright-white"
+disabled = false
+
+[username]
+style_user = "bold dimmed blue"
+show_always = false
 
 EOF
 
@@ -198,9 +286,22 @@ EOF
 export CLICOLOR=1
 alias ls="ls --color=auto"
 
+# on my zsh
 omz update
 
 brew install zsh zsh-completions
+
+# https://github.com/zsh-users/zsh-syntax-highlighting/blob/master/INSTALL.md
+# https://github.com/zsh-users/zsh-autosuggestions/blob/master/INSTALL.md
+cd ~/.oh-my-zsh/custom/plugins/zsh-autosuggestions
+git fetch --prune origin
+git reset --hard origin/master
+git clean -f -d
+
+cd ~/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting
+git fetch --prune origin
+git reset --hard origin/master
+git clean -f -d
 
 
 ```
