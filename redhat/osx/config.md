@@ -195,15 +195,6 @@ EOF
 # https://gist.github.com/ryo-ARAKI/48a11585299f9032fa4bda60c9bba593
 cat << 'EOF' > ~/.config/starship.toml
 
-[battery]
-full_symbol = "🔋"
-charging_symbol = "🔌"
-discharging_symbol = "⚡"
-
-[[battery.display]]
-threshold = 30
-style = "bold red"
-
 [character]
 error_symbol = "[✖](bold red) "
 
