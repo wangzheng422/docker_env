@@ -1,5 +1,7 @@
 # OSX / Win configuration
 
+# osx
+
 ```bash
 cat << EOF > ~/.ssh/config
 StrictHostKeyChecking no
@@ -172,7 +174,7 @@ module.exports = {
 }
 
 ```
-
+## starship & related
 ```bash
 # iterm default font "monaco"
 
@@ -294,6 +296,15 @@ git fetch --prune origin
 git reset --hard origin/master
 git clean -f -d
 
+
+```
+
+## window manage
+
+https://github.com/rxhanson/Rectangle
+
+```bash
+brew install --cask rectangle
 
 ```
 
