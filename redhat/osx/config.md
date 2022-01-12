@@ -471,3 +471,9 @@ wow + everything
 ## phone camera share
 
 - https://obs.ninja/
+
+## desktop customize & widgets
+
+- https://win10widgets.com/
+- https://docs.rainmeter.net/manual/plugins/speedfan/
+- https://github.com/files-community/Files
