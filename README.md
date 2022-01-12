@@ -64,6 +64,7 @@
   - [RHACS / stackrox](redhat/ocp4/4.7/4.7.rhacs.md)
   - [为 RHACS 找个应用场景： 安全合规测试云 ](redhat/ocp4/4.7/4.7.rhacs.deep.md)
 - 操作系统相关
+  - [2022.01 离线环境下 原地升级 rhel7->rhel8](redhat/notes/2022/2022.01.rhel7.upgrade.to.rhel8.md)
   - [2022.01 系统启动自动加载sysctl配置](redhat/notes/2022/2022.01.sysctl.md)
   - [2021.12 Mellanox BF2 刷固件并测试DPI URL-filter场景](redhat/notes/2021/2021.12.ocp.bf2.dpi.url.filter.md)
   - [2021.11 Mellanox CX6 vdpa 硬件卸载 ovs-kernel 方式](redhat/notes/2021/2021.10.cx6dx.vdpa.offload.md)
@@ -93,3 +94,9 @@
 最后，欢迎支持关注作者B站
 
 [<kbd><img src="imgs/2021-05-09-21-47-36.png" width="600"></kbd>](https://space.bilibili.com/19536819)
+
+# 许可证
+书中涉及代码采用GNU V3许可。
+
+# 版权声明
+本书遵循 **[CC-BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/)** 协议。**商业转载必须征求作者 wangzheng422 授权同意，转载请务必注明[出处](https://github.com/wangzheng422/docker_env)。** 作者保留最终解释权及法律追究权力。

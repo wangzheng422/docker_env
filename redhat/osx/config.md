@@ -1,5 +1,7 @@
 # OSX / Win configuration
 
+# osx
+
 ```bash
 cat << EOF > ~/.ssh/config
 StrictHostKeyChecking no
@@ -108,6 +110,202 @@ bindkey -l
 # visual
 
 bindkey -M main
+```
+
+## nerd font & hypter
+
+```bash
+# on osx
+brew tap homebrew/cask-fonts
+brew install --cask font-hack-nerd-font
+
+brew tap-info homebrew/cask-fonts --json | jq -r '.[]|(.formula_names[],.cask_tokens[])'
+
+brew info font-hack-nerd-font
+
+brew install --cask font-hack-nerd-font 
+
+# brew install --cask font-noto-serif-cjk-sc font-noto-sans-cjk-sc font-noto-nerd-font
+
+# Fira Code Nerd Font
+brew install --cask font-fira-code-nerd-font
+
+brew install --cask font-sauce-code-pro-nerd-font
+
+brew install --cask hyper
+
+# if brew remove faild with mac version error
+# https://stackoverflow.com/questions/55353778/brew-cask-update-or-uninstall-error-definition-is-invalid-invalid-depends-on
+# /usr/bin/find "$(brew --prefix)/Caskroom/"*'/.metadata' -type f -name '*.rb' -print0 | /usr/bin/xargs -0 /usr/bin/perl -i -0pe 's/depends_on macos: \[.*?\]//gsm;s/depends_on macos: .*//g'
+
+# set proxy for npm
+# npm config edit
+npm config set proxy http://127.0.0.1:5085
+npm config set https-proxy http://127.0.0.1:5085
+
+
+# hyper
+# https://medium.com/cloud-native-the-gathering/hyper-terminal-plugins-that-will-make-your-life-easier-859897df79d6
+# https://github.com/bnb/awesome-hyper
+```
+```json
+module.exports = {
+  config: {
+    // default font size for all tabs
+    fontSize: 16,
+    fontFamily: '"Hack Nerd Font", Menlo, "DejaVu Sans Mono", Consolas, "Lucida Console", monospace',
+    // ... other config options
+ 
+    // add the hypercwd configuration object like this
+    hypercwd: {
+    //   initialWorkingDirectory: '~/Documents'
+        initialWorkingDirectory: '~/'
+    }
+  },
+  plugins: [
+    'hypercwd',
+    'nord-hyper',
+    'hyperterm-dibdabs',
+    'hyper-search',
+    'hyper-reorderable-tabs',
+    'hyper-quit',
+    'hyper-savetext',
+  ],
+}
+
+```
+## starship & related
+```bash
+# iterm default font "monaco"
+
+brew install starship
+
+cp .zshrc .zshrc.bak
+
+# edit .zshrc, add followin 
+ZSH_THEME=""
+eval "$(starship init zsh)"
+
+cat << 'EOF' > ~/.zshrc
+
+EOF
+
+# Fira Code Nerd Font
+# up/down 110, left/right 100
+
+# https://starship.rs/presets/#pure
+# https://gist.github.com/ryo-ARAKI/48a11585299f9032fa4bda60c9bba593
+cat << 'EOF' > ~/.config/starship.toml
+
+[character]
+error_symbol = "[✖](bold red) "
+
+[cmd_duration]
+min_time = 10_000  # Show command duration over 10,000 milliseconds (=10 sec)
+format = " took [$duration]($style)"
+
+[directory]
+truncation_length = 5
+format = "[$path]($style)[$lock_symbol]($lock_style) "
+
+[git_branch]
+format = " [$symbol$branch]($style) "
+symbol = "🍣 "
+style = "bold yellow"
+
+[git_commit]
+commit_hash_length = 8
+style = "bold white"
+
+[git_state]
+format = '[\($state( $progress_current of $progress_total)\)]($style) '
+
+[git_status]
+conflicted = "⚔️ "
+ahead = "🏎️ 💨 ×${count}"
+behind = "🐢 ×${count}"
+diverged = "🔱 🏎️ 💨 ×${ahead_count} 🐢 ×${behind_count}"
+untracked = "🛤️  ×${count}"
+stashed = "📦 "
+modified = "📝 ×${count}"
+staged = "🗃️  ×${count}"
+renamed = "📛 ×${count}"
+deleted = "🗑️  ×${count}"
+style = "bright-white"
+format = "$all_status$ahead_behind"
+
+[hostname]
+ssh_only = false
+format = "<[$hostname]($style)>"
+# trim_at = "-"
+style = "bold dimmed white"
+disabled = false
+
+[julia]
+format = "[$symbol$version]($style) "
+symbol = "ஃ "
+style = "bold green"
+
+[memory_usage]
+format = "$symbol[${ram}( | ${swap})]($style) "
+threshold = 70
+style = "bold dimmed white"
+disabled = false
+
+[package]
+disabled = true
+
+[python]
+format = "[$symbol$version]($style) "
+style = "bold green"
+
+[rust]
+format = "[$symbol$version]($style) "
+style = "bold green"
+
+[time]
+time_format = "%T"
+format = "🕙 $time($style) "
+style = "bright-white"
+disabled = false
+
+[username]
+style_user = "bold dimmed blue"
+show_always = false
+
+EOF
+
+# https://superuser.com/questions/700406/zsh-not-recognizing-ls-colors
+export CLICOLOR=1
+alias ls="ls --color=auto"
+
+# on my zsh
+omz update
+
+brew install zsh zsh-completions
+
+# https://github.com/zsh-users/zsh-syntax-highlighting/blob/master/INSTALL.md
+# https://github.com/zsh-users/zsh-autosuggestions/blob/master/INSTALL.md
+cd ~/.oh-my-zsh/custom/plugins/zsh-autosuggestions
+git fetch --prune origin
+git reset --hard origin/master
+git clean -f -d
+
+cd ~/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting
+git fetch --prune origin
+git reset --hard origin/master
+git clean -f -d
+
+
+```
+
+## window manage
+
+https://github.com/rxhanson/Rectangle
+
+```bash
+brew install --cask rectangle
+
 ```
 
 # bing wallpaper
