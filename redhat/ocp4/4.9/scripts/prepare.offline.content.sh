@@ -157,18 +157,18 @@ done
 
 cd /data/ocp4
 
-wget --recursive --no-directories --no-parent -e robots=off --accept="rhcos-live*,rhcos-metal.x86_64.raw.gz,rhcos-installer-kernel-*"  https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/${var_major_version}/latest/
+wget --recursive --no-directories --no-parent -e robots=off --accept="rhcos-live*,rhcos-metal.x86_64.raw.gz,rhcos-installer-kernel-*"  https://mirror.openshift.com/pub/openshift-v4/x86_64/dependencies/rhcos/${var_major_version}/latest/
 
-wget -O ocp-deps-sha256sum.txt https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/${var_major_version}/latest/sha256sum.txt
+wget -O ocp-deps-sha256sum.txt https://mirror.openshift.com/pub/openshift-v4/x86_64/dependencies/rhcos/${var_major_version}/latest/sha256sum.txt
 
 wget -O ocp4-upi-helpernode.zip https://github.com/wangzheng422/ocp4-upi-helpernode/archive/master.zip
 
-wget -O docker_env.zip https://github.com/wangzheng422/docker_env/archive/dev.zip
+# wget -O docker_env.zip https://github.com/wangzheng422/docker_env/archive/dev.zip
 
-wget -O agnosticd.zip https://github.com/wangzheng422/agnosticd/archive/wzh-ccn-ocp-4.6.zip
+# wget -O agnosticd.zip https://github.com/wangzheng422/agnosticd/archive/wzh-ccn-ocp-4.6.zip
 
-podman pull quay.io/wangzheng422/filetranspiler
-podman save quay.io/wangzheng422/filetranspiler | pigz -c > filetranspiler.tgz
+# podman pull quay.io/wangzheng422/filetranspiler
+# podman save quay.io/wangzheng422/filetranspiler | pigz -c > filetranspiler.tgz
 
 podman pull docker.io/library/registry:2
 podman save docker.io/library/registry:2 | pigz -c > registry.tgz
@@ -178,6 +178,9 @@ podman save docker.io/library/registry:2 | pigz -c > registry.tgz
 
 podman pull docker.io/sonatype/nexus3:3.33.1
 podman save docker.io/sonatype/nexus3:3.33.1 | pigz -c > nexus.3.33.1.tgz
+
+podman pull quay.io/wangzheng422/qimgs:nexus-fs-image-2021-09-05-1553
+podman save quay.io/wangzheng422/qimgs:nexus-fs-image-2021-09-05-1553 | pigz -c > nexus-fs-image.tgz
 
 oc image mirror --filter-by-os='linux/amd64' quay.io/wangzheng422/operator-catalog:redhat-${var_major_version}-${var_date} ${LOCAL_REG}/ocp4/operator-catalog:redhat-${var_major_version}-${var_date}
 oc image mirror --filter-by-os='linux/amd64' quay.io/wangzheng422/operator-catalog:certified-${var_major_version}-${var_date} ${LOCAL_REG}/ocp4/operator-catalog:certified-${var_major_version}-${var_date}
@@ -200,7 +203,7 @@ bash demos.sh
 # build operator catalog
 find /tmp -type d -regex '^/tmp/[0-9]+$' -exec rm -rf {} + 
 
-oc adm catalog mirror --filter-by-os='linux/amd64' \
+oc adm catalog mirror  --index-filter-by-os='linux/amd64' \
     quay.io/wangzheng422/operator-catalog:redhat-${var_major_version}-$var_date \
     registry.redhat.ren:5443/ocp4 \
     --manifests-only 
@@ -217,7 +220,7 @@ echo "select * from related_image ;" \
 
 find /tmp -type d -regex '^/tmp/[0-9]+$' -exec rm -rf {} + 
 
-oc adm catalog mirror --filter-by-os='linux/amd64' \
+oc adm catalog mirror  --index-filter-by-os='linux/amd64' \
     quay.io/wangzheng422/operator-catalog:certified-${var_major_version}-$var_date \
     registry.redhat.ren:5443/ocp4 \
     --manifests-only 
@@ -234,7 +237,7 @@ echo "select * from related_image ;" \
 
 find /tmp -type d -regex '^/tmp/[0-9]+$' -exec rm -rf {} + 
 
-oc adm catalog mirror --filter-by-os='linux/amd64' \
+oc adm catalog mirror  --index-filter-by-os='linux/amd64' \
     quay.io/wangzheng422/operator-catalog:community-${var_major_version}-$var_date \
     registry.redhat.ren:5443/ocp4 \
     --manifests-only 
@@ -251,7 +254,7 @@ echo "select * from related_image ;" \
 
 find /tmp -type d -regex '^/tmp/[0-9]+$' -exec rm -rf {} + 
 
-oc adm catalog mirror --filter-by-os='linux/amd64' \
+oc adm catalog mirror  --index-filter-by-os='linux/amd64' \
     quay.io/wangzheng422/operator-catalog:redhat-marketplace-${var_major_version}-$var_date \
     registry.redhat.ren:5443/ocp4 \
     --manifests-only
