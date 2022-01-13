@@ -50,8 +50,8 @@ build_number_list=($(echo $build_number | tr "," "\n"))
 # export var_major_version='4.6'
 # echo ${var_major_version}
 
-/bin/rm -rf /data/file.registry
 mkdir -p /data/file.registry/
+/bin/rm -rf /data/file.registry/*
 
 /bin/rm -rf /data/ocp4/tmp/
 mkdir -p /data/ocp4/tmp/
