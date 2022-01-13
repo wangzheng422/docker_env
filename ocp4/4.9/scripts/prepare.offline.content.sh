@@ -50,6 +50,9 @@ build_number_list=($(echo $build_number | tr "," "\n"))
 # export var_major_version='4.6'
 # echo ${var_major_version}
 
+/bin/rm -rf /data/file.registry
+mkdir -p /data/file.registry/
+
 /bin/rm -rf /data/ocp4/tmp/
 mkdir -p /data/ocp4/tmp/
 cd /data/ocp4/tmp/
@@ -68,28 +71,28 @@ mkdir -p /data/ocp4/clients
 wget  -nd -np -e robots=off --reject="index.html*" -P /data/ocp4/clients -r -A "coreos-installer_amd64" https://mirror.openshift.com/pub/openshift-v4/amd64/clients/coreos-installer/latest/
 
 # client for camle-k
-wget  -nd -np -e robots=off --reject="index.html*" -P /data/ocp4/clients -r -A "*linux*tar.gz" https://mirror.openshift.com/pub/openshift-v4/clients/camel-k/latest/
+wget  -nd -np -e robots=off --reject="index.html*" -P /data/ocp4/clients -r -A "*linux*tar.gz" https://mirror.openshift.com/pub/openshift-v4/amd64/clients/camel-k/latest/
 
 # client for helm
-wget  -nd -np -e robots=off --reject="index.html*" -P /data/ocp4/clients --recursive -A "helm-linux-amd64" https://mirror.openshift.com/pub/openshift-v4/clients/helm/latest/
+wget  -nd -np -e robots=off --reject="index.html*" -P /data/ocp4/clients --recursive -A "helm-linux-amd64.tar.gz" https://mirror.openshift.com/pub/openshift-v4/amd64/clients/helm/latest/
 
 # client for pipeline
-wget  -nd -np -e robots=off --reject="index.html*" -P /data/ocp4/clients --recursive -A "*linux-amd64-*.tar.gz" https://mirror.openshift.com/pub/openshift-v4/clients/pipeline/latest/
+wget  -nd -np -e robots=off --reject="index.html*" -P /data/ocp4/clients --recursive -A "*linux-amd64-*.tar.gz" https://mirror.openshift.com/pub/openshift-v4/amd64/clients/pipeline/latest/
 
 # client for butane
-wget  -nd -np -e robots=off --reject="index.html*" -P /data/ocp4/clients --recursive -A "butane-amd64" https://mirror.openshift.com/pub/openshift-v4/clients/butane/latest/
+wget  -nd -np -e robots=off --reject="index.html*" -P /data/ocp4/clients --recursive -A "butane-amd64" https://mirror.openshift.com/pub/openshift-v4/amd64/clients/butane/latest/
 
 # client for serverless
-wget  -nd -np -e robots=off --reject="index.html*" -P /data/ocp4/clients --recursive -A "kn-linux-amd64.tar.gz" https://mirror.openshift.com/pub/openshift-v4/clients/serverless/latest/
-
-# coreos-installer
-wget  -nd -np -e robots=off --reject="index.html*" -P /data/ocp4/clients --recursive -A "coreos-installer_amd64" https://mirror.openshift.com/pub/openshift-v4/clients/coreos-installer/latest/
+wget  -nd -np -e robots=off --reject="index.html*" -P /data/ocp4/clients --recursive -A "kn-linux-amd64.tar.gz" https://mirror.openshift.com/pub/openshift-v4/amd64/clients/serverless/latest/
 
 # kam
-wget  -nd -np -e robots=off --reject="index.html*" -P /data/ocp4/clients --recursive -A "kam-linux-amd64" https://mirror.openshift.com/pub/openshift-v4/clients/kam/latest/
+wget  -nd -np -e robots=off --reject="index.html*" -P /data/ocp4/clients --recursive -A "kam-linux-amd64.tar.gz" https://mirror.openshift.com/pub/openshift-v4/amd64/clients/kam/latest/
 
 # operator-sdk
-wget  -nd -np -e robots=off --reject="index.html*" -P /data/ocp4/clients --recursive -A "operator-sdk-linux-x86_64.tar.gz" https://mirror.openshift.com/pub/openshift-v4/clients/operator-sdk/latest/
+wget  -nd -np -e robots=off --reject="index.html*" -P /data/ocp4/clients --recursive -A "operator-sdk-linux-x86_64.tar.gz" https://mirror.openshift.com/pub/openshift-v4/amd64/clients/operator-sdk/latest/
+
+# opm
+wget  -nd -np -e robots=off --reject="index.html*" -P /data/ocp4/clients --recursive -A "opm-linux-*.tar.gz" https://mirror.openshift.com/pub/openshift-v4/amd64/clients/opm/4.6.1/
 
 # rhacs
 wget -O /data/ocp4/clients/roxctl https://mirror.openshift.com/pub/rhacs/assets/latest/bin/Linux/roxctl
@@ -128,14 +131,17 @@ install_build() {
     export RELEASE_NAME="ocp-release"
 
     # oc adm release mirror -a ${LOCAL_SECRET_JSON} \
-    # --from=quay.io/${UPSTREAM_REPO}/${RELEASE_NAME}:${OCP_RELEASE}-x86_64 \
-    # --to-release-image=${LOCAL_REG}/${LOCAL_REPO}:${OCP_RELEASE} \
-    # --to=${LOCAL_REG}/${LOCAL_REPO}
+    #   --from=quay.io/${UPSTREAM_REPO}/${RELEASE_NAME}:${OCP_RELEASE}-x86_64 \
+    #   --to-release-image=${LOCAL_REG}/${LOCAL_RELEASE}:${OCP_RELEASE}-x86_64 \
+    #   --to=${LOCAL_REG}/${LOCAL_REPO}
 
     oc adm release mirror -a ${LOCAL_SECRET_JSON} \
-    --from=quay.io/${UPSTREAM_REPO}/${RELEASE_NAME}:${OCP_RELEASE}-x86_64 \
-    --to-release-image=${LOCAL_REG}/${LOCAL_RELEASE}:${OCP_RELEASE}-x86_64 \
-    --to=${LOCAL_REG}/${LOCAL_REPO}
+      --from=quay.io/${UPSTREAM_REPO}/${RELEASE_NAME}:${OCP_RELEASE}-x86_64 \
+      --to=${LOCAL_REG}/${LOCAL_REPO}
+
+    oc adm release mirror -a ${LOCAL_SECRET_JSON} \
+      --from=quay.io/${UPSTREAM_REPO}/${RELEASE_NAME}:${OCP_RELEASE}-x86_64 \
+      --to=/data/file.registry/
 
     export RELEASE_IMAGE=$(curl -s https://mirror.openshift.com/pub/openshift-v4/clients/ocp/${BUILDNUMBER}/release.txt | grep 'Pull From: quay.io' | awk -F ' ' '{print $3}')
 
