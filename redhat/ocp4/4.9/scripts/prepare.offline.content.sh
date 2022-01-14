@@ -179,8 +179,8 @@ podman save docker.io/library/registry:2 | pigz -c > registry.tgz
 podman pull docker.io/sonatype/nexus3:3.33.1
 podman save docker.io/sonatype/nexus3:3.33.1 | pigz -c > nexus.3.33.1.tgz
 
-podman pull quay.io/wangzheng422/qimgs:nexus-fs-image-2021-09-05-1553
-podman save quay.io/wangzheng422/qimgs:nexus-fs-image-2021-09-05-1553 | pigz -c > nexus-fs-image.tgz
+podman pull quay.io/wangzheng422/qimgs:nexus-fs-image-2022-01-14-2155
+podman save quay.io/wangzheng422/qimgs:nexus-fs-image-2022-01-14-2155 | pigz -c > nexus-fs-image.tgz
 
 podman pull registry.redhat.io/rhel8/postgresql-10:1
 podman save registry.redhat.io/rhel8/postgresql-10:1 | pigz -c > postgresql-10.tgz
