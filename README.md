@@ -67,6 +67,7 @@
   - [2022.01 离线环境下 原地升级 rhel7->rhel8](redhat/notes/2022/2022.01.rhel7.upgrade.to.rhel8.md)
   - [2022.01 系统启动自动加载sysctl配置](redhat/notes/2022/2022.01.sysctl.md)
   - [2021.12 Mellanox BF2 刷固件并测试DPI URL-filter场景](redhat/notes/2021/2021.12.ocp.bf2.dpi.url.filter.md)
+  - [2021.11 mellanox BF2 网卡激活snap功能， 配置nvme over fabrics 支持](redhat/notes/2021/2021.11.bf2.snap.try.md)
   - [2021.11 Mellanox CX6 vdpa 硬件卸载 ovs-kernel 方式](redhat/notes/2021/2021.10.cx6dx.vdpa.offload.md)
   - [RHEL8编译定制化内核](redhat/rhel/rhel.build.kernel.md)
   - [检查OS是否是运行在虚拟机上](redhat/ocp4/4.5/4.5.check.whether.vm.md)
