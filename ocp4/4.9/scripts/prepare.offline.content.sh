@@ -133,9 +133,9 @@ install_build() {
     #   --to-release-image=${LOCAL_REG}/${LOCAL_RELEASE}:${OCP_RELEASE}-x86_64 \
     #   --to=${LOCAL_REG}/${LOCAL_REPO}
 
-    oc adm release mirror -a ${LOCAL_SECRET_JSON} \
-      --from=quay.io/${UPSTREAM_REPO}/${RELEASE_NAME}:${OCP_RELEASE}-x86_64 \
-      --to=${LOCAL_REG}/${LOCAL_REPO}
+    # oc adm release mirror -a ${LOCAL_SECRET_JSON} \
+    #   --from=quay.io/${UPSTREAM_REPO}/${RELEASE_NAME}:${OCP_RELEASE}-x86_64 \
+    #   --to=${LOCAL_REG}/${LOCAL_REPO}
 
     oc adm release mirror -a ${LOCAL_SECRET_JSON} \
       --from=quay.io/${UPSTREAM_REPO}/${RELEASE_NAME}:${OCP_RELEASE}-x86_64 \
@@ -182,10 +182,19 @@ podman save docker.io/sonatype/nexus3:3.33.1 | pigz -c > nexus.3.33.1.tgz
 podman pull quay.io/wangzheng422/qimgs:nexus-fs-image-2021-09-05-1553
 podman save quay.io/wangzheng422/qimgs:nexus-fs-image-2021-09-05-1553 | pigz -c > nexus-fs-image.tgz
 
-oc image mirror --filter-by-os='linux/amd64' quay.io/wangzheng422/operator-catalog:redhat-${var_major_version}-${var_date} ${LOCAL_REG}/ocp4/operator-catalog:redhat-${var_major_version}-${var_date}
-oc image mirror --filter-by-os='linux/amd64' quay.io/wangzheng422/operator-catalog:certified-${var_major_version}-${var_date} ${LOCAL_REG}/ocp4/operator-catalog:certified-${var_major_version}-${var_date}
-oc image mirror --filter-by-os='linux/amd64' quay.io/wangzheng422/operator-catalog:community-${var_major_version}-${var_date} ${LOCAL_REG}/ocp4/operator-catalog:community-${var_major_version}-${var_date}
-oc image mirror --filter-by-os='linux/amd64' quay.io/wangzheng422/operator-catalog:redhat-marketplace-${var_major_version}-${var_date} ${LOCAL_REG}/ocp4/operator-catalog:redhat-marketplace-${var_major_version}-${var_date}
+podman pull registry.redhat.io/rhel8/postgresql-10:1
+podman save registry.redhat.io/rhel8/postgresql-10:1 | pigz -c > postgresql-10.tgz
+
+podman pull registry.redhat.io/rhel8/redis-5:1
+podman save registry.redhat.io/rhel8/redis-5:1 | pigz -c > redis-5.tgz
+
+podman pull registry.redhat.io/quay/quay-rhel8:v3.6.2
+podman save registry.redhat.io/quay/quay-rhel8:v3.6.2 | pigz -c > quay-rhel8.tgz
+
+# oc image mirror --filter-by-os='linux/amd64' quay.io/wangzheng422/operator-catalog:redhat-${var_major_version}-${var_date} ${LOCAL_REG}/ocp4/operator-catalog:redhat-${var_major_version}-${var_date}
+# oc image mirror --filter-by-os='linux/amd64' quay.io/wangzheng422/operator-catalog:certified-${var_major_version}-${var_date} ${LOCAL_REG}/ocp4/operator-catalog:certified-${var_major_version}-${var_date}
+# oc image mirror --filter-by-os='linux/amd64' quay.io/wangzheng422/operator-catalog:community-${var_major_version}-${var_date} ${LOCAL_REG}/ocp4/operator-catalog:community-${var_major_version}-${var_date}
+# oc image mirror --filter-by-os='linux/amd64' quay.io/wangzheng422/operator-catalog:redhat-marketplace-${var_major_version}-${var_date} ${LOCAL_REG}/ocp4/operator-catalog:redhat-marketplace-${var_major_version}-${var_date}
 
 cd /data/ocp4
 
