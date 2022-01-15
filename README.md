@@ -1,3 +1,4 @@
+[![github pages](https://github.com/wangzheng422/docker_env/actions/workflows/gh-pages.yml/badge.svg)](https://github.com/wangzheng422/docker_env/actions/workflows/gh-pages.yml)
 # 仓库说明
 
 本仓库是作者在日常系统操作中的技术笔记。作者平日有些机会进行很多系统操作，包括很多PoC，新系统验证，方案探索工作，所以会有很多系统实际操作的机会，涉及到操作系统安装，iaas, paas平台搭建，中间件系统验证，应用系统的开发和验证。很多操作步骤比较复杂，所以需要一个地方进行集中的笔记记录，方便自己整理，并第一时间在线分享。
@@ -67,6 +68,7 @@
   - [2022.01 离线环境下 原地升级 rhel7->rhel8](redhat/notes/2022/2022.01.rhel7.upgrade.to.rhel8.md)
   - [2022.01 系统启动自动加载sysctl配置](redhat/notes/2022/2022.01.sysctl.md)
   - [2021.12 Mellanox BF2 刷固件并测试DPI URL-filter场景](redhat/notes/2021/2021.12.ocp.bf2.dpi.url.filter.md)
+  - [2021.11 mellanox BF2 网卡激活snap功能， 配置nvme over fabrics 支持](redhat/notes/2021/2021.11.bf2.snap.try.md)
   - [2021.11 Mellanox CX6 vdpa 硬件卸载 ovs-kernel 方式](redhat/notes/2021/2021.10.cx6dx.vdpa.offload.md)
   - [RHEL8编译定制化内核](redhat/rhel/rhel.build.kernel.md)
   - [检查OS是否是运行在虚拟机上](redhat/ocp4/4.5/4.5.check.whether.vm.md)
@@ -96,7 +98,7 @@
 [<kbd><img src="imgs/2021-05-09-21-47-36.png" width="600"></kbd>](https://space.bilibili.com/19536819)
 
 # 许可证
-书中涉及代码采用GNU V3许可。
+项目中涉及代码采用GNU V3许可。
 
 # 版权声明
-本书遵循 **[CC-BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/)** 协议。**商业转载必须征求作者 wangzheng422 授权同意，转载请务必注明[出处](https://github.com/wangzheng422/docker_env)。** 作者保留最终解释权及法律追究权力。
+本项目遵循 **[CC-BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/)** 协议。**商业转载必须征求作者 wangzheng422 授权同意，转载请务必注明[出处](https://github.com/wangzheng422/docker_env)。** 作者保留最终解释权及法律追究权力。
