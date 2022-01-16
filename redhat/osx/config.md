@@ -493,7 +493,7 @@ everything
 2. install from store
    1. install wsl2 
    2. install powershell 
-3. https://github.com/microsoft/PowerToys
+<!-- 3. https://github.com/microsoft/PowerToys -->
 
 # scoop
 
@@ -513,15 +513,57 @@ git config --global credential.helper manager-core
 scoop bucket add extras
 scoop bucket add nerd-fonts
 
-scoop install powertoys googlechrome tightvnc notepadplusplus vscode wox everything python
+# scoop install powertoys googlechrome tightvnc notepadplusplus vscode wox everything python
+scoop install powertoys googlechrome tightvnc notepadplusplus vscode
 
 scoop install noto-nf firacode-nf sourcecodepro-nf
 
 reg import "C:\Users\wzh\scoop\apps\notepadplusplus\current\install-context.reg"
 reg import "C:\Users\wzh\scoop\apps\vscode\current\install-context.reg"
 reg import "C:\Users\wzh\scoop\apps\vscode\current\install-associations.reg"
-reg import  "C:\Users\wzh\scoop\apps\python\current\install-pep-514.reg"
+# reg import  "C:\Users\wzh\scoop\apps\python\current\install-pep-514.reg"
 
 # scoop bucket add nonportable
 # scoop install mactype-np
+
+scoop install https://github.com/JanDeDobbeleer/oh-my-posh/releases/latest/download/oh-my-posh.json
+cp .\powerlevel10k_rainbow.omp.json ~/
+
+# https://devblogs.microsoft.com/powershell/announcing-psreadline-2-1-with-predictive-intellisense/
+# Install-Module PSReadLine 
+# Set-PSReadLineOption -PredictionSource History
+
+mkdir C:\Users\wzh\Documents\PowerShell\
+New-Item $PROFILE
+
+notepad++ $PROFILE
+# content
+oh-my-posh --init --shell pwsh --config ~/powerlevel10k_rainbow.omp.json | Invoke-Expression
+Set-PSReadLineOption -PredictionSource History
+
+# https://superuser.com/questions/1486054/windows-terminal-predefined-tabs-on-startup
+"startupActions": "new-tab -p \"PowerShell\" -d C:\\Users\\wzh ; new-tab -p \"PowerShell\" -d C:\\Users\\wzh ; new-tab -p \"PowerShell\" -d C:\\Users\\wzh ; ",
+
+$file = "~/.ssh/config"
+New-Item $file -ItemType File
+notepad++ .ssh/config
+# content
+StrictHostKeyChecking no
+UserKnownHostsFile=\\.\NUL
+
+scoop install starship vcredist2019
+scoop uninstall vcredist2019
+
+notepad++ $PROFILE
+# content
+Invoke-Expression (&starship init powershell)
+Set-PSReadLineOption -PredictionSource History
+
+$file = "~/.config/starship.toml"
+New-Item $file -ItemType File
+notepad++ .config/starship.toml
+
+# https://github.com/thismat/nord-windows-terminal
+
+scoop install filezilla
 ```
