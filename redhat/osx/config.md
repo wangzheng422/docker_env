@@ -308,6 +308,13 @@ brew install --cask rectangle
 
 ```
 
+## clear clipboard
+
+```bash
+pbcopy < /dev/null
+
+```
+
 # bing wallpaper
 
 I used to use the following github site to download the wallpaper: https://github.com/thejandroman/bing-wallpaper
@@ -446,7 +453,8 @@ https://www.stellarplayer.com/?chan=zj_11
 
 ## launcher
 
-wow + everything
+wox
+everything
 
 ## sec network
 
@@ -477,3 +485,43 @@ wow + everything
 - https://win10widgets.com/
 - https://docs.rainmeter.net/manual/plugins/speedfan/
 - https://github.com/files-community/Files
+
+# win 10 real steps
+
+1. login using @outlook.com
+   1. enable hello pin
+2. install from store
+   1. install wsl2 
+   2. install powershell 
+3. https://github.com/microsoft/PowerToys
+
+# scoop
+
+https://scoop-docs.vercel.app/docs/misc/Using-Scoop-behind-a-proxy.html#do-you-need-this
+
+```shell
+[net.webrequest]::defaultwebproxy = new-object net.webproxy "http://192.168.253.1:5085"
+
+iex (new-object net.webclient).downloadstring('https://get.scoop.sh')
+
+scoop config proxy 192.168.253.1:5085
+scoop bucket known
+
+scoop install git
+git config --global credential.helper manager-core
+
+scoop bucket add extras
+scoop bucket add nerd-fonts
+
+scoop install powertoys googlechrome tightvnc notepadplusplus vscode wox everything python
+
+scoop install noto-nf firacode-nf sourcecodepro-nf
+
+reg import "C:\Users\wzh\scoop\apps\notepadplusplus\current\install-context.reg"
+reg import "C:\Users\wzh\scoop\apps\vscode\current\install-context.reg"
+reg import "C:\Users\wzh\scoop\apps\vscode\current\install-associations.reg"
+reg import  "C:\Users\wzh\scoop\apps\python\current\install-pep-514.reg"
+
+# scoop bucket add nonportable
+# scoop install mactype-np
+```
