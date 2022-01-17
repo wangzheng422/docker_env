@@ -11,6 +11,9 @@ Example: $0 -v 4.6.15,4.6.16, -m 4.6 -h 2021.01.18.1338
   exit 1 
 }
 
+var_download_file='0'
+var_download_registry='0'
+
 while getopts ":v:m:h:" o; do
     case "${o}" in
         v)
@@ -21,6 +24,12 @@ while getopts ":v:m:h:" o; do
             ;;
         h)
             var_date=${OPTARG}
+            ;;
+        f)
+            var_download_file='1'
+            ;;
+        r)
+            var_download_registry='1'
             ;;
         *)
             usage
@@ -133,13 +142,17 @@ install_build() {
     #   --to-release-image=${LOCAL_REG}/${LOCAL_RELEASE}:${OCP_RELEASE}-x86_64 \
     #   --to=${LOCAL_REG}/${LOCAL_REPO}
 
-    # oc adm release mirror -a ${LOCAL_SECRET_JSON} \
-    #   --from=quay.io/${UPSTREAM_REPO}/${RELEASE_NAME}:${OCP_RELEASE}-x86_64 \
-    #   --to=${LOCAL_REG}/${LOCAL_REPO}
+    if [[ $var_download_registry == '1']] then
+      oc adm release mirror -a ${LOCAL_SECRET_JSON} \
+        --from=quay.io/${UPSTREAM_REPO}/${RELEASE_NAME}:${OCP_RELEASE}-x86_64 \
+        --to=${LOCAL_REG}/${LOCAL_REPO}
+    fi
 
-    oc adm release mirror -a ${LOCAL_SECRET_JSON} \
-      --from=quay.io/${UPSTREAM_REPO}/${RELEASE_NAME}:${OCP_RELEASE}-x86_64 \
-      --to-dir=/data/file.registry/
+    if [[ $var_download_file == '1']] then
+      oc adm release mirror -a ${LOCAL_SECRET_JSON} \
+        --from=quay.io/${UPSTREAM_REPO}/${RELEASE_NAME}:${OCP_RELEASE}-x86_64 \
+        --to-dir=/data/file.registry/
+    fi
 
     export RELEASE_IMAGE=$(curl -s https://mirror.openshift.com/pub/openshift-v4/clients/ocp/${BUILDNUMBER}/release.txt | grep 'Pull From: quay.io' | awk -F ' ' '{print $3}')
 
