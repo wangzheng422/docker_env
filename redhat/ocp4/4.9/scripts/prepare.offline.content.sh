@@ -138,13 +138,13 @@ install_build() {
     #   --to-release-image=${LOCAL_REG}/${LOCAL_RELEASE}:${OCP_RELEASE}-x86_64 \
     #   --to=${LOCAL_REG}/${LOCAL_REPO}
 
-    if [[ $var_download_registry == 'registry']]; then
+    if [[ $var_download_registry == 'registry' ]]; then
       oc adm release mirror -a ${LOCAL_SECRET_JSON} \
         --from=quay.io/${UPSTREAM_REPO}/${RELEASE_NAME}:${OCP_RELEASE}-x86_64 \
         --to=${LOCAL_REG}/${LOCAL_REPO}
     fi
 
-    if [[ $var_download_file == 'file']]; then
+    if [[ $var_download_file == 'file' ]]; then
       oc adm release mirror -a ${LOCAL_SECRET_JSON} \
         --from=quay.io/${UPSTREAM_REPO}/${RELEASE_NAME}:${OCP_RELEASE}-x86_64 \
         --to-dir=/data/file.registry/
