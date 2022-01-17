@@ -5,8 +5,8 @@ set -x
 
 usage() { 
   echo "
-Usage: $0 [-v <list of ocp version, seperated by ','>] [-m <ocp major version for operator hub, like '4.6'>] [-h <operator hub version, like '2021.01.18.1338'> ] 
-Example: $0 -v 4.6.15,4.6.16, -m 4.6 -h 2021.01.18.1338  
+Usage: $0 [-v <list of ocp version, seperated by ','>] [-m <ocp major version for operator hub, like '4.6'>] [-h <operator hub version, like '2021.01.18.1338'> ] [-f file <use this if want to use file director instead of docker resitry>]
+Example: $0 -v 4.6.15,4.6.16, -m 4.6 -h 2021.01.18.1338 -f file
   " 1>&2
   exit 1 
 }
@@ -138,13 +138,13 @@ install_build() {
     #   --to-release-image=${LOCAL_REG}/${LOCAL_RELEASE}:${OCP_RELEASE}-x86_64 \
     #   --to=${LOCAL_REG}/${LOCAL_REPO}
 
-    if [[ $var_download_registry == 'registry']] then
+    if [[ $var_download_registry == 'registry']]; then
       oc adm release mirror -a ${LOCAL_SECRET_JSON} \
         --from=quay.io/${UPSTREAM_REPO}/${RELEASE_NAME}:${OCP_RELEASE}-x86_64 \
         --to=${LOCAL_REG}/${LOCAL_REPO}
     fi
 
-    if [[ $var_download_file == 'file']] then
+    if [[ $var_download_file == 'file']]; then
       oc adm release mirror -a ${LOCAL_SECRET_JSON} \
         --from=quay.io/${UPSTREAM_REPO}/${RELEASE_NAME}:${OCP_RELEASE}-x86_64 \
         --to-dir=/data/file.registry/
