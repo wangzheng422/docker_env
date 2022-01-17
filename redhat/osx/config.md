@@ -485,6 +485,7 @@ everything
 - https://win10widgets.com/
 - https://docs.rainmeter.net/manual/plugins/speedfan/
 - https://github.com/files-community/Files
+- https://github.com/ahmetb/RectangleWin
 
 # win 10 real steps
 
@@ -542,9 +543,10 @@ oh-my-posh --init --shell pwsh --config ~/powerlevel10k_rainbow.omp.json | Invok
 Set-PSReadLineOption -PredictionSource History
 
 # https://superuser.com/questions/1486054/windows-terminal-predefined-tabs-on-startup
-"startupActions": "new-tab -p \"PowerShell\" -d C:\\Users\\wzh ; new-tab -p \"PowerShell\" -d C:\\Users\\wzh ; new-tab -p \"PowerShell\" -d C:\\Users\\wzh ; ",
+"startupActions": "new-tab -p \"PowerShell\" -d C:\\Users\\wzh ; new-tab -p \"PowerShell\" -d C:\\Users\\wzh ; new-tab -p \"PowerShell\" -d C:\\Users\\wzh ; new-tab -p \"PowerShell\" -d C:\\Users\\wzh ; new-tab -p \"PowerShell\" -d C:\\Users\\wzh ; new-tab -p \"PowerShell\" -d C:\\Users\\wzh ; ",
 
 $file = "~/.ssh/config"
+$file = Resolve-Path -Path "~/.ssh/config"
 New-Item $file -ItemType File
 notepad++ .ssh/config
 # content
@@ -565,5 +567,11 @@ notepad++ .config/starship.toml
 
 # https://github.com/thismat/nord-windows-terminal
 
-scoop install filezilla
+scoop install filezilla ntop
+
+scoop bucket add nirsoft
+scoop install whatinstartup nircmd
+
+# run terminal with admin
+wsl --install
 ```
