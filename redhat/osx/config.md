@@ -572,6 +572,7 @@ scoop install filezilla ntop
 scoop bucket add nirsoft
 scoop install whatinstartup nircmd
 
-# run terminal with admin
-wsl --install
+# enable linux subsystem and vm platform
+wsl --import Rocky C:\Users\wzh\self\wsl\rocky\ .\rocky-container.tar
+
 ```
