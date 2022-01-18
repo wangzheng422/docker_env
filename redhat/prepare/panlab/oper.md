@@ -5,7 +5,7 @@
 ```bash
 ssh -tt root@172.21.6.101 'bash -l -c byobu'
 
-virsh start ocp4-aHelper
+virsh start ocp4-Helper
 
 ssh -tt -D 8801 root@172.21.6.11 'bash -l -c byobu'
 

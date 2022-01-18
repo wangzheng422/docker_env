@@ -314,6 +314,31 @@ brew install --cask rectangle
 pbcopy < /dev/null
 
 ```
+## git-lfs
+
+因为基础镜像包含了intel fpga的基础开发包，所以我们要把一个很大的文件，加入到git项目里面，这里，我们就要用到[Git Large File Storage (LFS)](https://git-lfs.github.com/)
+
+```bash
+# on osx
+brew install git-lfs
+# Update your git config to finish installation:
+
+#   # Update global git config
+#   $ git lfs install
+
+#   # Update system git config
+#   $ git lfs install --system
+
+/Users/wzh/Desktop/dev/container.build.demo
+git lfs install
+# Updated git hooks.
+# Git LFS initialized.
+
+git lfs track "*.bz2.*"
+
+# split intel sdk into 1GB chunks
+split -b 1000m nr5g_19.10.03.bz2 nr5g_19.10.03.bz2.
+```
 
 # bing wallpaper
 
@@ -573,6 +598,28 @@ scoop bucket add nirsoft
 scoop install whatinstartup nircmd
 
 # enable linux subsystem and vm platform
+# https://docs.microsoft.com/en-us/windows/wsl/wsl-config
+# https://segmentfault.com/a/1190000016677670
+# https://docs.rockylinux.org/guides/interoperability/import_rocky_to_wsl_howto/
+# on vultr
+podman run --name rocky-container rockylinux/rockylinux:8.5
+podman export rocky-container -o rocky-container.tar
+
 wsl --import Rocky C:\Users\wzh\self\wsl\rocky\ .\rocky-container.tar
+wsl -l -v
+wsl -d Rocky
+wsl --shutdown
+
+sed -e 's|^mirrorlist=|#mirrorlist=|g' \
+    -e 's|^#baseurl=http://dl.rockylinux.org/$contentdir|baseurl=https://mirrors.sjtug.sjtu.edu.cn/rocky|g' \
+    -i.bak \
+    /etc/yum.repos.d/Rocky-*.repo
+yum -y update
+yum install glibc-langpack-en passwd sudo cracklib-dicts -y
+yum reinstall passwd sudo cracklib-dicts -y
+newUsername=wzh
+adduser -G wheel $newUsername
+echo -e "[user]\ndefault=$newUsername" >> /etc/wsl.conf
+passwd $newUsername
 
 ```
