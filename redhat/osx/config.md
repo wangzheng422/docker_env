@@ -511,6 +511,12 @@ everything
 - https://docs.rainmeter.net/manual/plugins/speedfan/
 - https://github.com/files-community/Files
 - https://github.com/ahmetb/RectangleWin
+- [DevToys](https://github.com/veler/DevToys)
+
+## winget
+
+- [winget proxy](https://github.com/microsoft/winget-cli/issues/190)
+- [enalbe cache in vpn](https://docs.microsoft.com/en-us/windows/deployment/update/waas-delivery-optimization-reference#enable-peer-caching-while-the-device-connects-via-vpn)
 
 # win 10 real steps
 

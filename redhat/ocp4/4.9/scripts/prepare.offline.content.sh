@@ -172,6 +172,8 @@ wget -O ocp-deps-sha256sum.txt https://mirror.openshift.com/pub/openshift-v4/x86
 
 wget -O ocp4-upi-helpernode.zip https://github.com/wangzheng422/ocp4-upi-helpernode/archive/master.zip
 
+wget -O hostpath-operator.yaml https://raw.githubusercontent.com/kubevirt/hostpath-provisioner-operator/main/deploy/operator.yaml
+
 # wget -O docker_env.zip https://github.com/wangzheng422/docker_env/archive/dev.zip
 
 # wget -O agnosticd.zip https://github.com/wangzheng422/agnosticd/archive/wzh-ccn-ocp-4.6.zip
