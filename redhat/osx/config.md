@@ -518,6 +518,12 @@ everything
 - [winget proxy](https://github.com/microsoft/winget-cli/issues/190)
 - [enalbe cache in vpn](https://docs.microsoft.com/en-us/windows/deployment/update/waas-delivery-optimization-reference#enable-peer-caching-while-the-device-connects-via-vpn)
 
+winget support system proxy, just set the proxy in system configuration
+
+```ps1
+winget search filezilla
+```
+
 # win 10 real steps
 
 1. login using @outlook.com
