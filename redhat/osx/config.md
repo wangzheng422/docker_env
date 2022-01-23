@@ -308,6 +308,61 @@ brew install --cask rectangle
 
 ```
 
+## clear clipboard
+
+```bash
+pbcopy < /dev/null
+
+```
+## git-lfs
+
+因为基础镜像包含了intel fpga的基础开发包，所以我们要把一个很大的文件，加入到git项目里面，这里，我们就要用到[Git Large File Storage (LFS)](https://git-lfs.github.com/)
+
+```bash
+# on osx
+brew install git-lfs
+# Update your git config to finish installation:
+
+#   # Update global git config
+#   $ git lfs install
+
+#   # Update system git config
+#   $ git lfs install --system
+
+/Users/wzh/Desktop/dev/container.build.demo
+git lfs install
+# Updated git hooks.
+# Git LFS initialized.
+
+git lfs track "*.bz2.*"
+
+# split intel sdk into 1GB chunks
+split -b 1000m nr5g_19.10.03.bz2 nr5g_19.10.03.bz2.
+```
+
+# git proxy
+
+```bash
+# https://gist.github.com/laispace/666dd7b27e9116faece6#gistcomment-2836692
+git config --global http.https://github.com.proxy socks5://127.0.0.1:1086
+
+git config --global http.proxy 'socks5://127.0.0.1:5085'
+git config --global https.proxy 'socks5://127.0.0.1:5085'
+
+git config --global --unset http.proxy
+git config --global --unset https.proxy
+
+# for ssh
+# osx
+Host github.com
+    User git
+    ProxyCommand nc -v -x 127.0.0.1:1086 %h %p
+# win10
+Host github.com
+    User git
+    ProxyCommand connect -S 127.0.0.1:1086 %h %p
+```
+
 # bing wallpaper
 
 I used to use the following github site to download the wallpaper: https://github.com/thejandroman/bing-wallpaper
@@ -446,7 +501,8 @@ https://www.stellarplayer.com/?chan=zj_11
 
 ## launcher
 
-wow + everything
+wox
+everything
 
 ## sec network
 
@@ -477,3 +533,172 @@ wow + everything
 - https://win10widgets.com/
 - https://docs.rainmeter.net/manual/plugins/speedfan/
 - https://github.com/files-community/Files
+- https://github.com/ahmetb/RectangleWin
+- [DevToys](https://github.com/veler/DevToys)
+
+## winget
+
+- [winget proxy](https://github.com/microsoft/winget-cli/issues/190)
+- [enalbe cache in vpn](https://docs.microsoft.com/en-us/windows/deployment/update/waas-delivery-optimization-reference#enable-peer-caching-while-the-device-connects-via-vpn)
+
+winget support system proxy, just set the proxy in system configuration
+
+```ps1
+winget search filezilla
+```
+
+# win 10 real steps
+
+1. login using @outlook.com
+   1. enable hello pin
+2. install from store
+   1. install wsl2 
+   2. install powershell 
+<!-- 3. https://github.com/microsoft/PowerToys -->
+
+# scoop
+
+https://scoop-docs.vercel.app/docs/misc/Using-Scoop-behind-a-proxy.html#do-you-need-this
+
+```shell
+[net.webrequest]::defaultwebproxy = new-object net.webproxy "http://192.168.253.1:5085"
+
+iex (new-object net.webclient).downloadstring('https://get.scoop.sh')
+
+scoop config proxy 192.168.253.1:5085
+scoop bucket known
+
+scoop install git
+git config --global credential.helper manager-core
+
+scoop bucket add extras
+scoop bucket add nerd-fonts
+
+# scoop install powertoys googlechrome tightvnc notepadplusplus vscode wox everything python
+# scoop install powertoys googlechrome tightvnc notepadplusplus vscode
+
+scoop install noto-nf firacode-nf sourcecodepro-nf
+
+reg import "C:\Users\wzh\scoop\apps\notepadplusplus\current\install-context.reg"
+reg import "C:\Users\wzh\scoop\apps\vscode\current\install-context.reg"
+reg import "C:\Users\wzh\scoop\apps\vscode\current\install-associations.reg"
+# reg import  "C:\Users\wzh\scoop\apps\python\current\install-pep-514.reg"
+
+# scoop bucket add nonportable
+# scoop install mactype-np
+
+scoop install https://github.com/JanDeDobbeleer/oh-my-posh/releases/latest/download/oh-my-posh.json
+cp .\powerlevel10k_rainbow.omp.json ~/
+
+# https://devblogs.microsoft.com/powershell/announcing-psreadline-2-1-with-predictive-intellisense/
+# Install-Module PSReadLine 
+# Set-PSReadLineOption -PredictionSource History
+
+mkdir C:\Users\wzh\Documents\PowerShell\
+New-Item $PROFILE
+
+notepad++ $PROFILE
+# content
+oh-my-posh --init --shell pwsh --config ~/powerlevel10k_rainbow.omp.json | Invoke-Expression
+Set-PSReadLineOption -PredictionSource History
+
+# https://superuser.com/questions/1486054/windows-terminal-predefined-tabs-on-startup
+"startupActions": "new-tab -p \"PowerShell\" -d C:\\Users\\wzh ; new-tab -p \"PowerShell\" -d C:\\Users\\wzh ; new-tab -p \"PowerShell\" -d C:\\Users\\wzh ; new-tab -p \"PowerShell\" -d C:\\Users\\wzh ; new-tab -p \"PowerShell\" -d C:\\Users\\wzh ; new-tab -p \"PowerShell\" -d C:\\Users\\wzh ; ",
+
+$file = "~/.ssh/config"
+$file = Resolve-Path -Path "~/.ssh/config"
+New-Item $file -ItemType File
+notepad++ $file
+# content
+StrictHostKeyChecking no
+UserKnownHostsFile=\\.\NUL
+
+scoop install starship vcredist2019
+scoop uninstall vcredist2019
+
+notepad++ $PROFILE
+# content
+Invoke-Expression (&starship init powershell)
+Set-PSReadLineOption -PredictionSource History
+Set-PSReadLineKeyHandler -Chord "Ctrl+f" -Function ForwardChar
+Set-PSReadLineOption -Colors @{ InlinePrediction = '#9E9E9E'}
+
+$file = "~/.config/starship.toml"
+$file = Resolve-Path -Path "~/.config/starship.toml"
+New-Item $file -ItemType File
+notepad++ $file
+
+# https://github.com/thismat/nord-windows-terminal
+
+scoop install filezilla ntop
+
+scoop bucket add nirsoft
+scoop install whatinstartup nircmd
+
+# enable linux subsystem and vm platform
+# https://docs.microsoft.com/en-us/windows/wsl/wsl-config
+# https://segmentfault.com/a/1190000016677670
+# https://docs.rockylinux.org/guides/interoperability/import_rocky_to_wsl_howto/
+# on vultr
+podman run --name rocky-container rockylinux/rockylinux:8.5
+podman export rocky-container -o rocky-container.tar
+
+wsl --import Rocky C:\Users\wzh\self\wsl\rocky\ .\rocky-container.tar
+wsl -l -v
+wsl -d Rocky
+wsl --shutdown
+
+sed -e 's|^mirrorlist=|#mirrorlist=|g' \
+    -e 's|^#baseurl=http://dl.rockylinux.org/$contentdir|baseurl=https://mirrors.sjtug.sjtu.edu.cn/rocky|g' \
+    -i.bak \
+    /etc/yum.repos.d/Rocky-*.repo
+yum -y update
+yum install glibc-langpack-en passwd sudo cracklib-dicts -y
+yum reinstall passwd sudo cracklib-dicts -y
+# newUsername=wzh
+adduser -G wheel wzh
+passwd wzh
+cat << 'EOF' >> /etc/wsl.conf
+# Automatically mount Windows drive when the distribution is launched
+[automount]
+
+# Set to true will automount fixed drives (C:/ or D:/) with DrvFs under the root directory set above. Set to false means drives won't be mounted automatically, but need to be mounted manually or with fstab.
+enabled = true
+
+# Sets the directory where fixed drives will be automatically mounted. This example changes the mount location, so your C-drive would be /c, rather than the default /mnt/c. 
+# root = /
+
+# DrvFs-specific options can be specified.  
+options = "metadata,uid=1000,gid=1000,umask=077,fmask=11,case=off"
+
+# Sets the `/etc/fstab` file to be processed when a WSL distribution is launched.
+mountFsTab = true
+
+# Network host settings that enable the DNS server used by WSL 2. This example changes the hostname, sets generateHosts to false, preventing WSL from the default behavior of auto-generating /etc/hosts, and sets generateResolvConf to false, preventing WSL from auto-generating /etc/resolv.conf, so that you can create your own (ie. nameserver 1.1.1.1).
+[network]
+hostname = RockyWSL
+generateHosts = true
+generateResolvConf = true
+
+# Set whether WSL supports interop process like launching Windows apps and adding path variables. Setting these to false will block the launch of Windows processes and block adding $PATH environment variables.
+[interop]
+enabled = false
+appendWindowsPath = false
+
+# Set the user when launching a distribution with WSL.
+[user]
+default = wzh
+EOF
+
+dnf group list
+dnf install coreutils --allowerasing -y
+dnf group install 'Server with GUI' -y
+
+
+winget search --moniker chrome
+winget install Google.Chrome
+winget search --moniker powertoys
+winget install Microsoft.PowerToys
+# winget install rainmeter
+
+```

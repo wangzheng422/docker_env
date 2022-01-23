@@ -5,13 +5,15 @@ set -x
 
 usage() { 
   echo "
-Usage: $0 [-v <list of ocp version, seperated by ','>] [-m <ocp major version for operator hub, like '4.6'>] [-h <operator hub version, like '2021.01.18.1338'> ] 
-Example: $0 -v 4.6.15,4.6.16, -m 4.6 -h 2021.01.18.1338  
+Usage: $0 [-v <list of ocp version, seperated by ','>] [-m <ocp major version for operator hub, like '4.6'>] [-h <operator hub version, like '2021.01.18.1338'> ] [-f file <use this if want to use file director instead of docker resitry>]
+Example: $0 -v 4.6.15,4.6.16, -m 4.6 -h 2021.01.18.1338 -f file
   " 1>&2
   exit 1 
 }
 
-while getopts ":v:m:h:" o; do
+var_download_registry='registry'
+
+while getopts ":v:m:h:f:" o; do
     case "${o}" in
         v)
             build_number=${OPTARG}
@@ -21,6 +23,9 @@ while getopts ":v:m:h:" o; do
             ;;
         h)
             var_date=${OPTARG}
+            ;;
+        f)
+            var_download_registry='file'
             ;;
         *)
             usage
@@ -133,13 +138,17 @@ install_build() {
     #   --to-release-image=${LOCAL_REG}/${LOCAL_RELEASE}:${OCP_RELEASE}-x86_64 \
     #   --to=${LOCAL_REG}/${LOCAL_REPO}
 
-    # oc adm release mirror -a ${LOCAL_SECRET_JSON} \
-    #   --from=quay.io/${UPSTREAM_REPO}/${RELEASE_NAME}:${OCP_RELEASE}-x86_64 \
-    #   --to=${LOCAL_REG}/${LOCAL_REPO}
+    if [[ $var_download_registry == 'registry' ]]; then
+      oc adm release mirror -a ${LOCAL_SECRET_JSON} \
+        --from=quay.io/${UPSTREAM_REPO}/${RELEASE_NAME}:${OCP_RELEASE}-x86_64 \
+        --to=${LOCAL_REG}/${LOCAL_REPO}
+    fi
 
-    oc adm release mirror -a ${LOCAL_SECRET_JSON} \
-      --from=quay.io/${UPSTREAM_REPO}/${RELEASE_NAME}:${OCP_RELEASE}-x86_64 \
-      --to-dir=/data/file.registry/
+    if [[ $var_download_file == 'file' ]]; then
+      oc adm release mirror -a ${LOCAL_SECRET_JSON} \
+        --from=quay.io/${UPSTREAM_REPO}/${RELEASE_NAME}:${OCP_RELEASE}-x86_64 \
+        --to-dir=/data/file.registry/
+    fi
 
     export RELEASE_IMAGE=$(curl -s https://mirror.openshift.com/pub/openshift-v4/clients/ocp/${BUILDNUMBER}/release.txt | grep 'Pull From: quay.io' | awk -F ' ' '{print $3}')
 
@@ -162,6 +171,9 @@ wget --recursive --no-directories --no-parent -e robots=off --accept="rhcos-live
 wget -O ocp-deps-sha256sum.txt https://mirror.openshift.com/pub/openshift-v4/x86_64/dependencies/rhcos/${var_major_version}/latest/sha256sum.txt
 
 wget -O ocp4-upi-helpernode.zip https://github.com/wangzheng422/ocp4-upi-helpernode/archive/master.zip
+
+# wget -O hostpath-operator.yaml https://raw.githubusercontent.com/kubevirt/hostpath-provisioner-operator/main/deploy/operator.yaml
+# wget -O hostpath-webhook.yaml https://raw.githubusercontent.com/kubevirt/hostpath-provisioner-operator/main/deploy/webhook.yaml
 
 # wget -O docker_env.zip https://github.com/wangzheng422/docker_env/archive/dev.zip
 
