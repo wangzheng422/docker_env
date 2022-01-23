@@ -17,6 +17,7 @@
   - [部署升级服务 完善离线升级功能](ocp4/4.8/4.8.update.service.md)
   - [添加 win10 worker 节点](ocp4/4.8/4.8.windows.node.md)
 - [openshift4 使用系列](./usage.md)
+  - [ci/cd pipeline gitops演示](ocp4/4.9/4.9.ci.cd.demo.md)
   - [oc/kubectl exec 原理分析](ocp4/4.9/4.9.oc.exec.md)
   - [nf_conntrack 在 openshift4.9上的处理](ocp4/4.9/4.9.nf.conntrack.md)
   - [加载第三方设备驱动](ocp4/4.9/4.9.load.3rd.part.driver.md)
