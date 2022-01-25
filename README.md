@@ -93,7 +93,7 @@
 - [youtube](https://www.youtube.com/user/wangzheng422)
 <!-- - [西瓜视频](https://www.ixigua.com/home/1134309560818120) -->
 
-作者正在写一本在线书[《OpenShift4 一步一脚印》](https://wangzheng422.github.io/openshift4-steps-book/introduction.html)。
+<!-- 作者正在写一本在线书[《OpenShift4 一步一脚印》](https://wangzheng422.github.io/openshift4-steps-book/introduction.html)。 -->
 
 最后，欢迎支持关注作者B站
 
