@@ -66,6 +66,7 @@
   - [RHACS / stackrox](redhat/ocp4/4.7/4.7.rhacs.md)
   - [为 RHACS 找个应用场景： 安全合规测试云 ](redhat/ocp4/4.7/4.7.rhacs.deep.md)
 - 操作系统相关
+  - [2022.01 在红帽官网查询rpm属于哪个repo](redhat/notes/2022/2022.01.rpm.belongs.md)
   - [2022.01 离线环境下 原地升级 rhel7->rhel8](redhat/notes/2022/2022.01.rhel7.upgrade.to.rhel8.md)
   - [2022.01 系统启动自动加载sysctl配置](redhat/notes/2022/2022.01.sysctl.md)
   - [2021.12 Mellanox BF2 刷固件并测试DPI URL-filter场景](redhat/notes/2021/2021.12.ocp.bf2.dpi.url.filter.md)
@@ -92,7 +93,7 @@
 - [youtube](https://www.youtube.com/user/wangzheng422)
 <!-- - [西瓜视频](https://www.ixigua.com/home/1134309560818120) -->
 
-作者正在写一本在线书[《OpenShift4 一步一脚印》](https://wangzheng422.github.io/openshift4-steps-book/introduction.html)。
+<!-- 作者正在写一本在线书[《OpenShift4 一步一脚印》](https://wangzheng422.github.io/openshift4-steps-book/introduction.html)。 -->
 
 最后，欢迎支持关注作者B站
 
