@@ -318,6 +318,11 @@ pbcopy < /dev/null
 
 因为基础镜像包含了intel fpga的基础开发包，所以我们要把一个很大的文件，加入到git项目里面，这里，我们就要用到[Git Large File Storage (LFS)](https://git-lfs.github.com/)
 
+# monitorcontroller
+
+https://github.com/MonitorControl/MonitorControl
+
+
 ```bash
 # on osx
 brew install git-lfs
