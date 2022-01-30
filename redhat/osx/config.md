@@ -322,6 +322,10 @@ pbcopy < /dev/null
 
 https://github.com/MonitorControl/MonitorControl
 
+## geoip database
+
+https://github.com/Dreamacro/maxmind-geoip/releases/latest/download/Country.mmdb
+
 
 ```bash
 # on osx
@@ -551,6 +555,10 @@ winget support system proxy, just set the proxy in system configuration
 ```ps1
 winget search filezilla
 ```
+
+## monitor brightness
+
+[Twinkle Tray: Brightness Slider](https://www.microsoft.com/zh-cn/p/twinkle-tray-brightness-slider/9pljwwsv01lk#activetab=pivot:overviewtab)
 
 # win 10 real steps
 
