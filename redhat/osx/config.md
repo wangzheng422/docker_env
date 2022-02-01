@@ -560,6 +560,45 @@ winget search filezilla
 
 [Twinkle Tray: Brightness Slider](https://www.microsoft.com/zh-cn/p/twinkle-tray-brightness-slider/9pljwwsv01lk#activetab=pivot:overviewtab)
 
+## make bootable usb
+
+- [Create a bootable Windows 10 installation USB on macOS](https://jensd.be/1349/windows/create-a-bootable-windows-10-installation-usb-on-macos)
+- [How to Make a Windows 10 USB Using Your Mac - Build a Bootable ISO From Your Mac's Terminal](https://www.freecodecamp.org/news/how-make-a-windows-10-usb-using-your-mac-build-a-bootable-iso-from-your-macs-terminal/)
+
+```bash
+# format the usb using ms-fat
+
+# mount win11 iso
+
+cd /Volumes/USB/
+
+rsync -vha --exclude=sources/install.wim /Volumes/CCCOMA_X64FRE_ZH-CN_DV9/* ./
+
+brew install wimlib
+
+wimlib-imagex split /Volumes/CCCOMA_X64FRE_ZH-CN_DV9/sources/install.wim ./sources/install.swm 3800
+
+```
+
+## install win10
+
+- [微软谜之操作，竟然官方帮助用户跳过Win11的CPU/TPM安装限制](https://min.news/zh-cn/tech/283264316ab734c33aca41065b8ea649.html)
+  - [Ways to install Windows 11](https://support.microsoft.com/en-us/windows/ways-to-install-windows-11-e0edbbfb-cfc5-4011-868b-2ce77ac7c70e)
+
+```bash
+diskutil eraseDisk MS-DOS 'USB' MBR /dev/disk3
+
+cd /Volumes/USB/
+
+rsync -vha --exclude=sources/install.wim /Volumes/CCCOMA_X64FRE_ZH-CN_DV9/* /Volumes/USB/
+
+cd ~/Downloads/tmp/win
+wimlib-imagex split /Volumes/CCCOMA_X64FRE_ZH-CN_DV9/sources/install.wim ./install.swm 2000
+
+rsync -vha ./*.swm /Volumes/USB/sources/
+
+```
+
 # win 10 real steps
 
 1. login using @outlook.com
