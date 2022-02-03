@@ -584,6 +584,13 @@ wimlib-imagex split /Volumes/CCCOMA_X64FRE_ZH-CN_DV9/sources/install.wim ./sourc
 
 - [微软谜之操作，竟然官方帮助用户跳过Win11的CPU/TPM安装限制](https://min.news/zh-cn/tech/283264316ab734c33aca41065b8ea649.html)
   - [Ways to install Windows 11](https://support.microsoft.com/en-us/windows/ways-to-install-windows-11-e0edbbfb-cfc5-4011-868b-2ce77ac7c70e)
+  - [How to Create a Windows 10 Bootable USB on Mac](https://www.switchingtomac.com/tutorials/how-to-create-a-windows-10-bootable-usb-on-mac/)
+  - [Support splitting of install.wim via "wimlib-imagex split" to avoid hitting 4GB file size limit of fat32](https://github.com/jsamr/bootiso/issues/32#issuecomment-756010571)
+- [Creating a Windows 10 Install USB when FAT32 has 4GB max file size](https://apple.stackexchange.com/questions/348561/creating-a-windows-10-install-usb-when-fat32-has-4gb-max-file-size)
+
+经过实践，发现只能手动在finder里面进行操作，不能直接在terminal里面进行操作，以下命令在terminal里面支持以后，U盘就不能启动了，原因不知道。
+
+[最后发现](https://apple.stackexchange.com/questions/348561/creating-a-windows-10-install-usb-when-fat32-has-4gb-max-file-size)，只能用微软官方的[MediaCreationTool1809.exe](https://go.microsoft.com/fwlink/?LinkId=691209)才可以，他运行在win10上，现下载现制作。
 
 ```bash
 diskutil eraseDisk MS-DOS 'USB' MBR /dev/disk3
@@ -593,7 +600,7 @@ cd /Volumes/USB/
 rsync -vha --exclude=sources/install.wim /Volumes/CCCOMA_X64FRE_ZH-CN_DV9/* /Volumes/USB/
 
 cd ~/Downloads/tmp/win
-wimlib-imagex split /Volumes/CCCOMA_X64FRE_ZH-CN_DV9/sources/install.wim ./install.swm 2000
+wimlib-imagex split /Volumes/CCCOMA_X64FRE_ZH-CN_DV9/sources/install.wim ./install.swm 4000
 
 rsync -vha ./*.swm /Volumes/USB/sources/
 
