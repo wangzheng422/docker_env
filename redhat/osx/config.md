@@ -318,15 +318,6 @@ pbcopy < /dev/null
 
 因为基础镜像包含了intel fpga的基础开发包，所以我们要把一个很大的文件，加入到git项目里面，这里，我们就要用到[Git Large File Storage (LFS)](https://git-lfs.github.com/)
 
-# monitorcontroller
-
-https://github.com/MonitorControl/MonitorControl
-
-## geoip database
-
-https://github.com/Dreamacro/maxmind-geoip/releases/latest/download/Country.mmdb
-
-
 ```bash
 # on osx
 brew install git-lfs
@@ -348,6 +339,19 @@ git lfs track "*.bz2.*"
 # split intel sdk into 1GB chunks
 split -b 1000m nr5g_19.10.03.bz2 nr5g_19.10.03.bz2.
 ```
+
+## monitorcontroller
+
+https://github.com/MonitorControl/MonitorControl
+
+## geoip database
+
+https://github.com/Dreamacro/maxmind-geoip/releases/latest/download/Country.mmdb
+
+## keepassxc
+
+- https://keepassxc.org/
+- https://source.redhat.com/temporary_mojo/temp_personal_wiki/using_the_keepassxc_browser_extension_to_fill_in_the_usernamepintotp
 
 # git proxy
 
@@ -605,6 +609,10 @@ wimlib-imagex split /Volumes/CCCOMA_X64FRE_ZH-CN_DV9/sources/install.wim ./insta
 rsync -vha ./*.swm /Volumes/USB/sources/
 
 ```
+
+## conemu
+
+https://conemu.github.io/
 
 # win 10 real steps
 
