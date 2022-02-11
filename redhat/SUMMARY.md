@@ -2,6 +2,7 @@
 
 [介绍](./README.md)
 - [openshift4 安装系列](./install.md)
+  - [2022.02 assist install 模式下 无需dhcp 静态ip部署](ocp4/4.9/4.9.sno.static.ip.local.assisted.connected.md)
   - [如何获得 openshift4 免费下载密钥](ocp4/4.5/4.5.ocp.pull.secret.md)
   - [openshift4 离线安装介质的制作](ocp4/4.6/4.6.build.dist.md)
   - [openshift4 rhel7物理机 baremetal UPI模式 离线安装](ocp4/4.6/4.6.disconnect.bm.upi.static.ip.on.rhel7.md)
