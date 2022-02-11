@@ -9,6 +9,7 @@
   - [openshift4 rhel8物理机 baremetal UPI模式 离线安装](ocp4/4.6/4.6.disconnect.bm.upi.static.ip.on.rhel8.md)
   - [openshift4 物理机 baremetal IPI模式 离线安装 单网络模式](ocp4/4.6/4.6.disconnect.bm.ipi.on.rhel8.md)
   - [openshift4 物理机 baremetal IPI模式 离线安装 双网络模式](ocp4/4.6/4.6.disconnect.bm.ipi.on.rhel8.provisionning.network.md)
+  - [openshift4 尝鲜 cilium CNI](redhat/ocp4/4.6/4.6.cilium.md)
   - [nvidia gpu for openshift 4.6 disconnected 英伟达GPU离线安装](ocp4/4.6/4.6.nvidia.gpu.disconnected.md)
   - [openshift4 初始安装后 补充镜像](ocp4/4.6/4.6.add.image.md)
   - [openshift4 补充samples operator 需要的 image stream](ocp4/4.5/4.5.is.sample.md)
