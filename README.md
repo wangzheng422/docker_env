@@ -5,7 +5,6 @@
 
 目前仓库中，有很多经验分享，其中的一些文章，比较有用：
 - openshift4 安装系列
-  - [2022.02 assist install 模式下 无需dhcp 静态ip部署](redhat/ocp4/4.9/4.9.sno.static.ip.local.assisted.connected.md)
   - [如何获得 openshift4 免费下载密钥](redhat/ocp4/4.5/4.5.ocp.pull.secret.md)
   - [openshift4 离线安装介质的制作](redhat/ocp4/4.6/4.6.build.dist.md)
   - [openshift4 rhel7物理机 baremetal UPI模式 离线安装](redhat/ocp4/4.6/4.6.disconnect.bm.upi.static.ip.on.rhel7.md)
@@ -21,6 +20,8 @@
   - [缩小根分区 / sysroot 的大小](redhat/ocp4/4.8/4.8.shrink.sysroot.md)
   - [部署升级服务 完善离线升级功能](redhat/ocp4/4.8/4.8.update.service.md)
   - [添加 win10 worker 节点](redhat/ocp4/4.8/4.8.windows.node.md)
+  - [2022.02 assist install 模式下 单节点ocp 无需dhcp 静态ip部署](redhat/ocp4/4.9/4.9.sno.static.ip.local.assisted.connected.md)
+  - [单节点ocp 安装 无需dhcp 静态ip部署](redhat/ocp4/4.9/4.9.4.9.sno.using.bootstrap.disconnected.md)
 - openshift4 使用系列
   - [2022.01 ci/cd pipeline gitops演示](redhat/ocp4/4.9/4.9.ci.cd.demo.md)
   - [2021.12 oc exec 原理分析](redhat/ocp4/4.9/4.9.oc.exec.md)
