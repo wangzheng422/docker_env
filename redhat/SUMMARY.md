@@ -18,7 +18,7 @@
   - [缩小根分区 / sysroot 的大小](ocp4/4.8/4.8.shrink.sysroot.md)
   - [部署升级服务 完善离线升级功能](ocp4/4.8/4.8.update.service.md)
   - [添加 win10 worker 节点](ocp4/4.8/4.8.windows.node.md)
-  - [单节点ocp 安装 无需dhcp 静态ip部署](ocp4/4.9/4.9.4.9.sno.using.bootstrap.disconnected.md)
+  - [单节点ocp 安装 无需dhcp 静态ip部署](ocp4/4.9/4.9.sno.using.bootstrap.disconnected.md)
 - [openshift4 使用系列](./usage.md)
   - [ci/cd pipeline gitops演示](ocp4/4.9/4.9.ci.cd.demo.md)
   - [oc/kubectl exec 原理分析](ocp4/4.9/4.9.oc.exec.md)
