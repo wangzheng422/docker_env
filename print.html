@@ -176,7 +176,6 @@
 <li>启动本地assisted service服务</li>
 <li>在assisted service上进行配置</li>
 <li>从assisted service上下载iso</li>
-<li>对iso进行定制化</li>
 <li>通过iso启动kvm/baremetal</li>
 <li>在assisted service上进行配置，开始安装</li>
 <li>观察和等待安装结束</li>
@@ -247,7 +246,7 @@ podman play kube --down pod.yml
 <p>记录下来download command，因为我们需要里面的env infra id
 <img src="ocp4/4.9/imgs/2022-02-11-11-56-40.png" alt="" /></p>
 <p>我们这里的command是</p>
-<pre><code class="language-bash">wget -O discovery_image_ocp4s.iso 'http://127.0.0.1:8888/images/89cc84a1-2dfd-4d7e-9ca3-903342c40d60?arch=x86_64&amp;type=full-iso&amp;version=4.9'
+<pre><code class="language-bash">wget -O discovery_image_ocp4s.iso 'http://127.0.0.1:8888/images/78506b3c-46e4-47f7-8a18-ec1ca4baa3b9?arch=x86_64&amp;type=full-iso&amp;version=4.9'
 </code></pre>
 <h1 id="定制-assisted-install-service的配置"><a class="header" href="#定制-assisted-install-service的配置">定制 assisted install service的配置</a></h1>
 <p>assisted install service创建的iso，要去实验网络必须有dhcp服务，我们要做的是static ip，那么我们就要定制一下 assisted install service, 激活他现在还是隐藏的功能（暂时没有官方支持）。</p>
@@ -269,11 +268,11 @@ echo ${SNO_IF_MAC} &gt; /data/sno/sno.mac
 
 ASSISTED_SERVICE_URL=http://172.21.6.103:8080
 # infra id is part of download url on UI
-INFRA_ENV_ID=89cc84a1-2dfd-4d7e-9ca3-903342c40d60
+INFRA_ENV_ID=78506b3c-46e4-47f7-8a18-ec1ca4baa3b9
 NODE_SSH_KEY=&quot;$(cat ~/.ssh/id_rsa.pub)&quot;
 request_body=$(mktemp)
 
-cat &lt;&lt; EOF &gt; server-a.yaml
+cat &lt;&lt; EOF &gt; /data/sno/server-a.yaml
 dns-resolver:
   config:
     server:
@@ -296,20 +295,79 @@ routes:
     table-id: 254
 EOF
 
+cat &lt;&lt; EOF &gt; /data/sno/static.ip.bu
+variant: openshift
+version: 4.9.0
+metadata:
+  labels:
+    machineconfiguration.openshift.io/role: master
+  name: 99-zzz-master-static-ip
+storage:
+  files:
+    - path: /etc/NetworkManager/system-connections/${SNO_IF}.nmconnection
+      overwrite: true
+      contents:
+        inline: |
+          [connection]
+          id=${SNO_IF}
+          type=ethernet
+          autoconnect-retries=1
+          interface-name=${SNO_IF}
+          multi-connect=1
+          permissions=
+          wait-device-timeout=60000
+
+          [ethernet]
+          mac-address-blacklist=
+
+          [ipv4]
+          address1=${SNO_IP}/${SNO_NETMAST_S=24},${SNO_GW}
+          dhcp-hostname=${SNO_HOSTNAME}
+          dhcp-timeout=90
+          dns=${SNO_DNS};
+          dns-search=
+          may-fail=false
+          method=manual
+
+          [ipv6]
+          addr-gen-mode=eui64
+          dhcp-hostname=${SNO_HOSTNAME}
+          dhcp-timeout=90
+          dns-search=
+          method=disabled
+
+          [proxy]
+
+EOF
+
+# https://access.redhat.com/solutions/6194821
+# butane /data/sno/static.ip.bu | python3 -c 'import json, yaml, sys; print(json.dumps(yaml.load(sys.stdin)))'
+
+
 # https://stackoverflow.com/questions/2854655/command-to-escape-a-string-in-bash
 # VAR_PULL_SEC=`printf &quot;%q&quot; $(cat  /data/pull-secret.json)`
-jq -n --arg SSH_KEY &quot;$NODE_SSH_KEY&quot; --arg NMSTATE_YAML1 &quot;$(cat server-a.yaml)&quot; --arg MAC_ADDR &quot;$(cat /data/sno/sno.mac)&quot; --arg PULL_SEC &quot;$(cat  /data/pull-secret.json)&quot; \
+tmppath=$(mktemp)
+butane /data/sno/static.ip.bu | python3 -c 'import json, yaml, sys; print(json.dumps(yaml.load(sys.stdin)))' | jq -c '.spec.config | .ignition.version = &quot;3.1.0&quot; ' &gt; ${tmppath}
+VAR_NMSTATIC=$(cat ${tmppath})
+# rm -f ${tmppath}
+
+jq -n --arg SSH_KEY &quot;$NODE_SSH_KEY&quot; \
+  --arg NMSTATE_YAML1 &quot;$(cat server-a.yaml)&quot; \
+  --arg MAC_ADDR &quot;$(cat /data/sno/sno.mac)&quot; \
+  --arg PULL_SEC &quot;$(cat  /data/pull-secret.json)&quot; \
+  --arg NMSTATIC &quot;${VAR_NMSTATIC}&quot; \
 '{
     &quot;proxy&quot;:{&quot;http_proxy&quot;:&quot;&quot;,&quot;https_proxy&quot;:&quot;&quot;,&quot;no_proxy&quot;:&quot;&quot;},
     &quot;ssh_authorized_key&quot;:$SSH_KEY,
     &quot;pull_secret&quot;:$PULL_SEC,
     &quot;image_type&quot;:&quot;full-iso&quot;,
-  &quot;static_network_config&quot;: [
-    {
-      &quot;network_yaml&quot;: $NMSTATE_YAML1,
-      &quot;mac_interface_map&quot;: [{&quot;mac_address&quot;: $MAC_ADDR, &quot;logical_nic_name&quot;: &quot;enp1s0&quot;}]
-    }
-  ]
+    &quot;ignition_config_override&quot;:$NMSTATIC,
+    &quot;static_network_config&quot;: [
+      {
+        &quot;network_yaml&quot;: $NMSTATE_YAML1,
+        &quot;mac_interface_map&quot;: [{&quot;mac_address&quot;: $MAC_ADDR, &quot;logical_nic_name&quot;: &quot;enp1s0&quot;}]
+      }
+    ]
 }' &gt; $request_body
 
 # 我们来看看创建的request body
@@ -321,13 +379,14 @@ curl -H &quot;Content-Type: application/json&quot; -X PATCH -d @$request_body ${
 
 # on helper
 cd /data/sno/
-wget -O discovery_image_ocp4s.iso 'http://172.21.6.103:8888/images/89cc84a1-2dfd-4d7e-9ca3-903342c40d60?arch=x86_64&amp;type=full-iso&amp;version=4.9'
+wget -O discovery_image_ocp4s.iso &quot;http://172.21.6.103:8888/images/${INFRA_ENV_ID}?arch=x86_64&amp;type=full-iso&amp;version=4.9&quot;
 
-coreos-installer iso kargs modify -a \
-  &quot; ip=${SNO_IP}::${SNO_GW}:${SNO_NETMAST}:${SNO_HOSTNAME}:${SNO_IF}:none nameserver=${SNO_DNS}&quot; \
-  /data/sno/discovery_image_ocp4s.iso
+# coreos-installer iso kargs modify -a \
+#   &quot; ip=${SNO_IP}::${SNO_GW}:${SNO_NETMAST}:${SNO_HOSTNAME}:${SNO_IF}:none nameserver=${SNO_DNS}&quot; \
+#   /data/sno/discovery_image_ocp4s.iso
 
 /bin/mv -f /data/sno/discovery_image_ocp4s.iso /data/sno/sno.iso
+
 </code></pre>
 <h1 id="启动kvm"><a class="header" href="#启动kvm">启动kvm</a></h1>
 <p>我们回到kvm宿主机，启动kvm，开始安装single node openshift</p>
@@ -352,7 +411,7 @@ scp root@192.168.7.11:/data/sno/sno.* ${KVM_DIRECTORY}/
 
 # on kvm host
 # export KVM_DIRECTORY=/data/kvm
-virt-install --name=ocp4-sno --vcpus=16 --ram=30720 \
+virt-install --name=ocp4-sno --vcpus=16 --ram=65536 \
 --cpu=host-model \
 --disk path=/dev/vgdata/lvsno,device=disk,bus=virtio,format=raw \
 --os-variant rhel8.3 --network bridge=baremetal,model=virtio,mac=$(&lt;sno.mac) \
