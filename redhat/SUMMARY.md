@@ -4,7 +4,7 @@
 - [openshift4 安装系列](./install.md)
   - [如何获得 openshift4 免费下载密钥](ocp4/4.5/4.5.ocp.pull.secret.md)
   - [openshift4 离线安装介质的制作](ocp4/4.6/4.6.build.dist.md)
-  - [assisted install 联线模式下 无需dhcp 静态ip部署](ocp4/4.9/4.9.sno.static.ip.local.assisted.connected.md)
+  - [assisted install 联线模式下 单节点ocp 无需dhcp 静态ip部署](ocp4/4.9/4.9.sno.static.ip.local.assisted.connected.md)
   - [assisted install 离线模式下 单节点ocp 无需dhcp 静态ip部署](ocp4/4.9/4.9.sno.static.ip.local.assisted.disconnected.md)
   - [openshift4 rhel7物理机 baremetal UPI模式 离线安装](ocp4/4.6/4.6.disconnect.bm.upi.static.ip.on.rhel7.md)
   - [openshift4 rhel8物理机 baremetal UPI模式 离线安装](ocp4/4.6/4.6.disconnect.bm.upi.static.ip.on.rhel8.md)
