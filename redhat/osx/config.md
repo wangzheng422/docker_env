@@ -733,7 +733,7 @@ cat << 'EOF' >> /etc/wsl.conf
 enabled = true
 
 # Sets the directory where fixed drives will be automatically mounted. This example changes the mount location, so your C-drive would be /c, rather than the default /mnt/c. 
-# root = /
+root = /
 
 # DrvFs-specific options can be specified.  
 options = "metadata,uid=1000,gid=1000,umask=077,fmask=11,case=off"
@@ -757,9 +757,14 @@ appendWindowsPath = false
 default = wzh
 EOF
 
+wsl --shutdown
+wsl -l -v
+wsl -d Rocky
+
+dnf install -y epel-release
 dnf group list
 dnf install coreutils --allowerasing -y
-dnf group install 'Server with GUI' -y
+dnf group install 'Server with GUI' 'Development Tools' -y
 
 
 winget search --moniker chrome
