@@ -285,7 +285,7 @@ otherdomains:
       ipaddr: &quot;192.168.7.1&quot;
     - name: &quot;git&quot;
       ipaddr: &quot;192.168.7.1&quot;
-  - domain: &quot;ocp4s.redhat.ren&quot;
+  - domain: &quot;ocp4s-ais.redhat.ren&quot;
     hosts:
     - name: &quot;api&quot;
       ipaddr: &quot;192.168.7.13&quot;
@@ -395,7 +395,7 @@ podman exec assisted-installer-image-service du -h /data
 <p>运行成功以后，访问以下url</p>
 <p>http://172.21.6.103:8080</p>
 <h1 id="创建cluster"><a class="header" href="#创建cluster">创建cluster</a></h1>
-<p>访问本地的assist install service, 创建一个cluster
+<p>访问本地的assist install service, 创建一个cluster, ocp4s-ais.redhat.ren
 <img src="imgs/2022-02-11-11-52-31.png" alt="" /></p>
 <p>配置集群的基本信息
 <img src="imgs/2022-02-11-11-53-11.png" alt="" /></p>
@@ -408,7 +408,7 @@ podman exec assisted-installer-image-service du -h /data
 <p>记录下来download command，因为我们需要里面的env infra id
 <img src="imgs/2022-02-11-11-56-40.png" alt="" /></p>
 <p>我们这里的command是</p>
-<pre><code class="language-bash">wget -O discovery_image_ocp4s.iso 'http://127.0.0.1:8888/images/1245bbaa-c5e2-4a57-890b-838180f245af?arch=x86_64&amp;type=full-iso&amp;version=4.9'
+<pre><code class="language-bash">wget -O discovery_image_ocp4s-ais.iso 'http://127.0.0.1:8888/images/b6b173ab-f080-4378-a9e0-bb6ff02f78bb?arch=x86_64&amp;type=full-iso&amp;version=4.9'
 </code></pre>
 <h1 id="定制-assisted-install-service的配置"><a class="header" href="#定制-assisted-install-service的配置">定制 assisted install service的配置</a></h1>
 <p>assisted install service创建的iso，要去实验网络必须有dhcp服务，我们要做的是static ip，那么我们就要定制一下 assisted install service, 激活他现在还是隐藏的功能（暂时没有官方支持）。</p>
@@ -417,7 +417,7 @@ cd /data/sno
 
 ASSISTED_SERVICE_URL=http://172.21.6.103:8080
 # infra id is part of download url on UI
-INFRA_ENV_ID=1245bbaa-c5e2-4a57-890b-838180f245af
+INFRA_ENV_ID=b6b173ab-f080-4378-a9e0-bb6ff02f78bb
 NODE_SSH_KEY=&quot;$(cat ~/.ssh/id_rsa.pub)&quot;
 
 SNO_IP=192.168.7.13
@@ -463,41 +463,6 @@ metadata:
   labels:
     machineconfiguration.openshift.io/role: master
   name: 99-zzz-master-static-ip
-storage:
-  files:
-    - path: /etc/NetworkManager/system-connections/${SNO_IF}.nmconnection
-      overwrite: true
-      contents:
-        inline: |
-          [connection]
-          id=${SNO_IF}
-          type=ethernet
-          autoconnect-retries=1
-          interface-name=${SNO_IF}
-          multi-connect=1
-          permissions=
-          wait-device-timeout=60000
-
-          [ethernet]
-          mac-address-blacklist=
-
-          [ipv4]
-          address1=${SNO_IP}/${SNO_NETMAST_S=24},${SNO_GW}
-          dhcp-hostname=${SNO_HOSTNAME}
-          dhcp-timeout=90
-          dns=${SNO_DNS};
-          dns-search=
-          may-fail=false
-          method=manual
-
-          [ipv6]
-          addr-gen-mode=eui64
-          dhcp-hostname=${SNO_HOSTNAME}
-          dhcp-timeout=90
-          dns-search=
-          method=disabled
-
-          [proxy]
 
 EOF
 
@@ -572,6 +537,10 @@ bash image.registries.conf.sh nexus.infra.redhat.ren:8083
 
 cd /data/sno/
 
+# scripts to get ignition from yaml file
+# run under bash
+# 1st paramter: is the filename which will write to coreos for first boot
+# 2nd parameter: is the file content to read from
 get_file_content_for_ignition() {
   VAR_FILE_NAME=$1
   VAR_FILE_CONTENT_IN_FILE=$2
@@ -645,6 +614,11 @@ VAR_99_master_install_crts_2=$RET_VAL_2
 
 # https://stackoverflow.com/questions/2854655/command-to-escape-a-string-in-bash
 # VAR_PULL_SEC=`printf &quot;%q&quot; $(cat  /data/pull-secret.json)`
+
+# https://access.redhat.com/solutions/221403
+# VAR_PWD_HASH=&quot;$(openssl passwd -1 -salt 'openshift' 'redhat')&quot;
+# VAR_PWD_HASH=&quot;$(python3 -c 'import crypt,getpass; print(crypt.crypt(&quot;redhat&quot;))')&quot;
+
 tmppath=$(mktemp)
 butane /data/sno/static.ip.bu \
   | python3 -c 'import json, yaml, sys; print(json.dumps(yaml.load(sys.stdin)))' \
@@ -880,7 +854,83 @@ cat configmap.yml | python3 -c 'import json, yaml, sys; print(json.dumps(yaml.lo
 #   }
 # ]
 
+
+cat &lt;&lt; EOF &gt; /data/sno/static.ip.bu
+variant: openshift
+version: 4.9.0
+metadata:
+  labels:
+    machineconfiguration.openshift.io/role: master
+  name: 99-zzz-master-static-ip
+# passwd:
+#   users:
+#     name: wzh
+#     password_hash: &quot;$(openssl passwd -1 wzh)&quot;
+# storage:
+#   files:
+#     - path: /etc/NetworkManager/system-connections/${SNO_IF}.nmconnection
+#       overwrite: true
+#       contents:
+#         inline: |
+#           [connection]
+#           id=${SNO_IF}
+#           type=ethernet
+#           autoconnect-retries=1
+#           interface-name=${SNO_IF}
+#           multi-connect=1
+#           permissions=
+#           wait-device-timeout=60000
+
+#           [ethernet]
+#           mac-address-blacklist=
+
+#           [ipv4]
+#           address1=${SNO_IP}/${SNO_NETMAST_S=24},${SNO_GW}
+#           dhcp-hostname=${SNO_HOSTNAME}
+#           dhcp-timeout=90
+#           dns=${SNO_DNS};
+#           dns-search=
+#           may-fail=false
+#           method=manual
+
+#           [ipv6]
+#           addr-gen-mode=eui64
+#           dhcp-hostname=${SNO_HOSTNAME}
+#           dhcp-timeout=90
+#           dns-search=
+#           method=disabled
+
+#           [proxy]
+
+EOF
+
+
+# https://access.redhat.com/solutions/221403
+# VAR_PWD_HASH=&quot;$(openssl passwd -1 -salt 'openshift' 'redhat')&quot;
+VAR_PWD_HASH=&quot;$(python3 -c 'import crypt,getpass; print(crypt.crypt(&quot;redhat&quot;))')&quot;
+
+tmppath=$(mktemp)
+butane /data/sno/static.ip.bu \
+  | python3 -c 'import json, yaml, sys; print(json.dumps(yaml.load(sys.stdin)))' \
+  | jq '.spec.config | .ignition.version = &quot;3.1.0&quot; ' \
+  | jq --arg VAR &quot;$VAR_PWD_HASH&quot; --arg VAR_SSH &quot;$NODE_SSH_KEY&quot; '.passwd.users += [{ &quot;name&quot;: &quot;wzh&quot;, &quot;system&quot;: true, &quot;password_hash&quot;: $VAR , &quot;ssh_authorized_keys&quot;: [ $VAR_SSH ], &quot;groups&quot;: [ &quot;adm&quot;, &quot;wheel&quot;, &quot;sudo&quot;, &quot;systemd-journal&quot;  ] }]' \
+  | jq --argjson VAR &quot;$VAR_99_master_chrony&quot; '.storage.files += [$VAR] ' \
+  | jq --argjson VAR &quot;$VAR_99_worker_chrony&quot; '.storage.files += [$VAR] ' \
+  | jq --argjson VAR &quot;$VAR_99_master_container_registries&quot; '.storage.files += [$VAR] ' \
+  | jq --argjson VAR &quot;$VAR_99_worker_container_registries&quot; '.storage.files += [$VAR] ' \
+  | jq --argjson VAR &quot;$VAR_99_master_install_images&quot; '.storage.files += [$VAR] ' \
+  | jq --argjson VAR &quot;$VAR_99_master_install_crts&quot; '.storage.files += [$VAR] ' \
+  | jq --argjson VAR &quot;$VAR_99_master_chrony_2&quot; '.storage.files += [$VAR] ' \
+  | jq --argjson VAR &quot;$VAR_99_master_container_registries_2&quot; '.storage.files += [$VAR] ' \
+  | jq --argjson VAR &quot;$VAR_99_master_install_images_2&quot; '.storage.files += [$VAR] ' \
+  | jq --argjson VAR &quot;$VAR_99_master_install_crts_2&quot; '.storage.files += [$VAR] ' \
+  | jq -c . \
+  &gt; ${tmppath}
+VAR_IGNITION=$(cat ${tmppath})
+rm -f ${tmppath}
+
 </code></pre>
+<h1 id="bottom"><a class="header" href="#bottom">bottom</a></h1>
 
                     </main>
 
