@@ -55,6 +55,15 @@ export https_proxy=${http_proxy}
 # for cx6 on 105 test
 # power on 102
 
+# new proxy method
+sed -i 's/#GatewayPorts no/GatewayPorts yes/g' /etc/ssh/sshd_config 
+systemctl restart sshd
+
+ssh -tt -D 8801 -R 18801:10.147.17.89:5085 root@172.21.6.103 'bash -l -c byobu'
+
+export http_proxy="http://192.168.7.1:18801"
+export https_proxy=${http_proxy}
+
 
 ```
 
