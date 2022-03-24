@@ -414,6 +414,8 @@ https://dev.to/loctran016/setting-hyper-with-wsl-2-44f2
 
 ```
 
+https://coteditor.com/
+
 # win10
 
 ## wsl2 rocky
