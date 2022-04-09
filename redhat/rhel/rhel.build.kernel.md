@@ -20,22 +20,25 @@
 
 # https://blog.packagecloud.io/eng/2015/04/20/working-with-source-rpms/
 
+export PROXY="192.168.253.1:5085"
+export PROXY="192.168.203.1:5085"
+
 # 由于需要rhel8.3，而当前8.3还是beta状态，我们需要注册特殊的订阅。
-subscription-manager --proxy=192.168.253.1:5084 register --username **** --password ********
+subscription-manager --proxy=$PROXY register --username **** --password ********
 
 # subscription-manager config --rhsm.baseurl=https://china.cdn.redhat.com
 # subscription-manager config --rhsm.baseurl=https://cdn.redhat.com
-subscription-manager --proxy=192.168.253.1:5084 refresh
+subscription-manager --proxy=$PROXY refresh
 
-subscription-manager --proxy=192.168.253.1:5084 repos --help
+subscription-manager --proxy=$PROXY repos --help
 
-subscription-manager --proxy=192.168.253.1:5084 repos --list > list
+subscription-manager --proxy=$PROXY repos --list > list
 
 cat list | grep 'Repo ID' | grep -v source | grep -v debug
 
-subscription-manager --proxy=192.168.253.1:5084 repos --disable="*"
+subscription-manager --proxy=$PROXY repos --disable="*"
 
-subscription-manager --proxy=192.168.253.1:5084 repos \
+subscription-manager --proxy=$PROXY repos \
     --enable="rhel-8-for-x86_64-baseos-beta-rpms" \
     --enable="rhel-8-for-x86_64-appstream-beta-rpms" \
     --enable="rhel-8-for-x86_64-supplementary-beta-rpms" \
@@ -48,7 +51,7 @@ subscription-manager --proxy=192.168.253.1:5084 repos \
     # ansible-2.9-for-rhel-8-x86_64-rpms
 
 cat << EOF >> /etc/dnf/dnf.conf
-proxy=http://192.168.253.1:5084
+proxy=http://$PROXY
 EOF
 
 # 编译内核，需要rhel7, rhel8里面的epel的包
