@@ -5,7 +5,6 @@
 
 目前仓库中，有很多经验分享，其中的一些文章，比较有用：
 - openshift4 安装系列
-  - [2022.02 assist install 模式下 无需dhcp 静态ip部署](redhat/ocp4/4.9/4.9.sno.static.ip.local.assisted.connected.md)
   - [如何获得 openshift4 免费下载密钥](redhat/ocp4/4.5/4.5.ocp.pull.secret.md)
   - [openshift4 离线安装介质的制作](redhat/ocp4/4.6/4.6.build.dist.md)
   - [openshift4 rhel7物理机 baremetal UPI模式 离线安装](redhat/ocp4/4.6/4.6.disconnect.bm.upi.static.ip.on.rhel7.md)
@@ -16,10 +15,17 @@
   - [openshift4 初始安装后 补充镜像](redhat/ocp4/4.6/4.6.add.image.md)
   - [openshift4 补充samples operator 需要的 image stream](redhat/ocp4/4.5/4.5.is.sample.md)
   - [openshift4 calico 离线部署](redhat/ocp4/4.3/4.3.calico.md)
+  - [openshift4 尝鲜 cilium CNI](redhat/ocp4/4.6/4.6.cilium.md)
   - [openshift4 集群升级](redhat/ocp4/4.2/4.2.upgrade.md)
   - [缩小根分区 / sysroot 的大小](redhat/ocp4/4.8/4.8.shrink.sysroot.md)
   - [部署升级服务 完善离线升级功能](redhat/ocp4/4.8/4.8.update.service.md)
   - [添加 win10 worker 节点](redhat/ocp4/4.8/4.8.windows.node.md)
+  - [2022.02 assist install 联线模式下 单节点ocp 无需dhcp 静态ip部署](redhat/ocp4/4.9/4.9.sno.static.ip.local.assisted.connected.md)
+  - [2022.02 assist install 离线模式下 单节点ocp 无需dhcp 静态ip部署](redhat/ocp4/4.9/4.9.sno.static.ip.local.assisted.disconnected.md)
+  - [单节点ocp 安装 无需dhcp 静态ip部署](redhat/ocp4/4.9/4.9.4.9.sno.using.bootstrap.disconnected.md)
+  - [2022.04 IPI模式 单节点 离线 单网络模式 安装](redhat/ocp4/4.10/4.10.disconnect.bm.ipi.sno.static.ip.md)
+  - [2022.04 ACM zero touch provision 远程单节点集群 全自动安装](redhat/ocp4/4.10/4.10.acm.ztp.disconnected.auto.md)
+  - [2022.04 coreos 启动和分区挂载分析](redhat/ocp4/4.10/4.10.coreos.boot.md)
 - openshift4 使用系列
   - [2022.01 ci/cd pipeline gitops演示](redhat/ocp4/4.9/4.9.ci.cd.demo.md)
   - [2021.12 oc exec 原理分析](redhat/ocp4/4.9/4.9.oc.exec.md)
