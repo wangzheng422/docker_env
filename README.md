@@ -73,6 +73,7 @@
   - [RHACS / stackrox](redhat/ocp4/4.7/4.7.rhacs.md)
   - [为 RHACS 找个应用场景： 安全合规测试云 ](redhat/ocp4/4.7/4.7.rhacs.deep.md)
 - 操作系统相关
+  - [2022.04 红帽免费的开发者订阅申请和使用](redhat/notes/2022/2022.04.no-cost.rhel.sub.md)
   - [2022.01 在红帽官网查询rpm属于哪个repo](redhat/notes/2022/2022.01.rpm.belongs.md)
   - [2022.01 离线环境下 原地升级 rhel7->rhel8](redhat/notes/2022/2022.01.rhel7.upgrade.to.rhel8.md)
   - [2022.01 系统启动自动加载sysctl配置](redhat/notes/2022/2022.01.sysctl.md)
