@@ -65,6 +65,10 @@ export http_proxy="http://192.168.7.1:18801"
 export https_proxy=${http_proxy}
 
 
+export http_proxy="http://127.0.0.1:18801"
+export https_proxy=${http_proxy}
+export PROXY=${http_proxy}
+
 ```
 
 ## normal boot up

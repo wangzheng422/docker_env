@@ -161,14 +161,14 @@ chmod +x ~/.vnc/xstartup
 cat << EOF > ~/.vnc/config
 session=gnome
 securitytypes=vncauth,tlsvnc
-desktop=sandbox
+# desktop=sandbox
 geometry=1280x800
 alwaysshared
 EOF
 
 cat /usr/share/doc/tigervnc/HOWTO.md
 
-cat << EOF >> /etc/tigervnc/vncserver.users
+cat << EOF > /etc/tigervnc/vncserver.users
 :1=root
 EOF
 
@@ -177,6 +177,10 @@ systemctl start vncserver@:1
 systemctl stop vncserver@:1
 
 journalctl -u vncserver@:1
+
+# https://bugzilla.redhat.com/show_bug.cgi?id=1960207
+ausearch -c 'vncsession' --raw | audit2allow -M my-vncsession
+semodule -X 300 -i my-vncsession.pp
 
 # 给kvm准备一个逻辑卷做启动盘。
 lvremove -f nvme/data01
