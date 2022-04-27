@@ -12,7 +12,13 @@ FROM registry.access.redhat.com/ubi8/ubi:8.4
 
 # COPY --from=build /opt/dist /
 
-RUN 
+RUN echo -e "\
+[localrepo]\n\
+name=LocalRepo\n\
+baseurl=ftp://45.76.69.130/dnf/\n\
+enabled=1\n\
+gpgcheck=0" \
+> /etc/yum.repos.d/local.repo
 
 # install OS tools
 RUN dnf update -y
