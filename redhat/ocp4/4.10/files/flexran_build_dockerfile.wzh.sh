@@ -49,21 +49,34 @@ rm -rf $tmp_path/flexran/framework
 
 #touch dockerfile
 #cd $local_path
+
+cat << EOF > $tmp_path/local.repo
+[localrepo]
+name=LocalRepo
+baseurl=ftp://10.88.0.1/dnf/
+enabled=1
+gpgcheck=0
+EOF
+
 if [ -z $http_proxy ];then
-    cat > flexran_build/Dockerfile << EOF
-FROM centos:7.9.2009
-RUN yum update -y && yum install -y libhugetlbfs-utils libhugetlbfs-devel libhugetlbfs numactl-devel pciutils libaio libaio-devel net-tools libpcap
+    cat > $tmp_path/Dockerfile << EOF
+FROM registry.access.redhat.com/ubi8/ubi:8.4
+COPY local.repo /etc/yum.repos.d/local.repo
+RUN yum update -y && yum install -y libhugetlbfs-utils libhugetlbfs-devel libhugetlbfs numactl-devel pciutils libaio libaio-devel net-tools libpcap kernel-rt-core kernel-rt-devel kernel-rt-modules kernel-rt-modules-extra kernel-headers libhugetlbfs-devel zlib-devel numactl-devel cmake gcc gcc-c++
 WORKDIR /root/
 COPY flexran ./flexran
+RUN rm -rf /var/yum/cache/*
 EOF
 else
     cat > $tmp_path/Dockerfile << EOF
-FROM centos:7.9.2009
+FROM registry.access.redhat.com/ubi8/ubi:8.4
 ENV http_proxy $http_proxy
 ENV https_proxy $https_proxy
-RUN yum update -y && yum install -y libhugetlbfs-utils libhugetlbfs-devel libhugetlbfs numactl-devel pciutils libaio libaio-devel net-tools libpcap
+COPY local.repo /etc/yum.repos.d/local.repo
+RUN yum update -y && yum install -y libhugetlbfs-utils libhugetlbfs-devel libhugetlbfs numactl-devel pciutils libaio libaio-devel net-tools libpcap kernel-rt-core kernel-rt-devel kernel-rt-modules kernel-rt-modules-extra kernel-headers libhugetlbfs-devel zlib-devel numactl-devel cmake gcc gcc-c++
 WORKDIR /root/
 COPY flexran ./flexran
+RUN rm -rf /var/yum/cache/*
 EOF
 fi
 
