@@ -59,21 +59,41 @@ gpgcheck=0
 EOF
 
 if [ -z $http_proxy ];then
-    cat > $tmp_path/Dockerfile << EOF
+    cat > $tmp_path/Dockerfile << 'EOF'
 FROM registry.access.redhat.com/ubi8/ubi:8.4
+
+RUN dnf repolist
+RUN sed -i 's|enabled=1|enabled=0|g' /etc/yum/pluginconf.d/subscription-manager.conf
+RUN sed -i 's|$releasever|8.4|g' /etc/yum.repos.d/redhat.repo
+RUN sed -i '/codeready-builder-for-rhel-8-x86_64-rpms/,/\[/ s/enabled = 0/enabled = 1/' /etc/yum.repos.d/redhat.repo
+RUN mv -f /etc/yum.repos.d/ubi.repo /etc/yum.repos.d/ubi.repo.bak
+
 COPY local.repo /etc/yum.repos.d/local.repo
-RUN yum update -y && yum install -y libhugetlbfs-utils libhugetlbfs-devel libhugetlbfs numactl-devel pciutils libaio libaio-devel net-tools libpcap kernel-rt-core kernel-rt-devel kernel-rt-modules kernel-rt-modules-extra kernel-headers libhugetlbfs-devel zlib-devel numactl-devel cmake gcc gcc-c++
+
+RUN yum update -y
+RUN yum install -y libhugetlbfs-utils libhugetlbfs-devel libhugetlbfs numactl-devel pciutils libaio libaio-devel net-tools libpcap kernel-rt-core kernel-rt-devel kernel-rt-modules kernel-rt-modules-extra kernel-headers libhugetlbfs-devel zlib-devel numactl-devel cmake gcc gcc-c++
+
 WORKDIR /root/
 COPY flexran ./flexran
 RUN rm -rf /var/yum/cache/*
 EOF
 else
-    cat > $tmp_path/Dockerfile << EOF
+    cat > $tmp_path/Dockerfile << 'EOF'
 FROM registry.access.redhat.com/ubi8/ubi:8.4
 ENV http_proxy $http_proxy
 ENV https_proxy $https_proxy
+
+RUN dnf repolist
+RUN sed -i 's|enabled=1|enabled=0|g' /etc/yum/pluginconf.d/subscription-manager.conf
+RUN sed -i 's|$releasever|8.4|g' /etc/yum.repos.d/redhat.repo
+RUN sed -i '/codeready-builder-for-rhel-8-x86_64-rpms/,/\[/ s/enabled = 0/enabled = 1/' /etc/yum.repos.d/redhat.repo
+RUN mv -f /etc/yum.repos.d/ubi.repo /etc/yum.repos.d/ubi.repo.bak
+
 COPY local.repo /etc/yum.repos.d/local.repo
-RUN yum update -y && yum install -y libhugetlbfs-utils libhugetlbfs-devel libhugetlbfs numactl-devel pciutils libaio libaio-devel net-tools libpcap kernel-rt-core kernel-rt-devel kernel-rt-modules kernel-rt-modules-extra kernel-headers libhugetlbfs-devel zlib-devel numactl-devel cmake gcc gcc-c++
+
+RUN yum update -y
+RUN yum install -y libhugetlbfs-utils libhugetlbfs-devel libhugetlbfs numactl-devel pciutils libaio libaio-devel net-tools libpcap kernel-rt-core kernel-rt-devel kernel-rt-modules kernel-rt-modules-extra kernel-headers libhugetlbfs-devel zlib-devel numactl-devel cmake gcc gcc-c++
+
 WORKDIR /root/
 COPY flexran ./flexran
 RUN rm -rf /var/yum/cache/*
@@ -84,7 +104,7 @@ fi
 
 #build flexran docker image
 cd $tmp_path
-docker build -t $dockerimagename .
+docker build --squash -t $dockerimagename .
 #delete tmp path flexran_build
 cd $local_path
 rm -rf $tmp_path
