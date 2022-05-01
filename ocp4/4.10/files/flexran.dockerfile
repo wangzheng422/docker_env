@@ -22,7 +22,7 @@ RUN mv -f /etc/yum.repos.d/ubi.repo /etc/yum.repos.d/ubi.repo.bak
 RUN echo -e "\
 [localrepo]\n\
 name=LocalRepo\n\
-baseurl=ftp://10.88.0.1/dnf/\n\
+baseurl=ftp://10.88.0.1/dnf/extensions\n\
 enabled=1\n\
 gpgcheck=0" \
 > /etc/yum.repos.d/local.repo

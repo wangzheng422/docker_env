@@ -53,7 +53,7 @@ rm -rf $tmp_path/flexran/framework
 cat << EOF > $tmp_path/local.repo
 [localrepo]
 name=LocalRepo
-baseurl=ftp://10.88.0.1/dnf/
+baseurl=ftp://10.88.0.1/dnf/extensions
 enabled=1
 gpgcheck=0
 EOF
