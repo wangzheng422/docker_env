@@ -65,13 +65,17 @@ FROM registry.access.redhat.com/ubi8/ubi:8.4
 RUN dnf repolist
 RUN sed -i 's|enabled=1|enabled=0|g' /etc/yum/pluginconf.d/subscription-manager.conf
 RUN sed -i 's|$releasever|8.4|g' /etc/yum.repos.d/redhat.repo
+RUN sed -i 's|cdn.redhat.com|china.cdn.redhat.com|g' /etc/yum.repos.d/redhat.repo
 RUN sed -i '/codeready-builder-for-rhel-8-x86_64-rpms/,/\[/ s/enabled = 0/enabled = 1/' /etc/yum.repos.d/redhat.repo
 RUN mv -f /etc/yum.repos.d/ubi.repo /etc/yum.repos.d/ubi.repo.bak
 
 COPY local.repo /etc/yum.repos.d/local.repo
 
 RUN yum update -y
-RUN yum install -y libhugetlbfs-utils libhugetlbfs-devel libhugetlbfs numactl-devel pciutils libaio libaio-devel net-tools libpcap kernel-rt-core kernel-rt-devel kernel-rt-modules kernel-rt-modules-extra kernel-headers libhugetlbfs-devel zlib-devel numactl-devel cmake gcc gcc-c++
+RUN yum install -y libhugetlbfs-utils libhugetlbfs-devel libhugetlbfs numactl-devel pciutils libaio libaio-devel net-tools libpcap kernel-rt-core kernel-rt-devel kernel-rt-modules kernel-rt-modules-extra kernel-headers libhugetlbfs-devel zlib-devel numactl-devel
+
+# RUN dnf install -y --allowerasing coreutils
+# RUN dnf groupinstall -y server
 
 WORKDIR /root/
 COPY flexran ./flexran
@@ -86,6 +90,7 @@ ENV https_proxy $https_proxy
 RUN dnf repolist
 RUN sed -i 's|enabled=1|enabled=0|g' /etc/yum/pluginconf.d/subscription-manager.conf
 RUN sed -i 's|$releasever|8.4|g' /etc/yum.repos.d/redhat.repo
+RUN sed -i 's|cdn.redhat.com|china.cdn.redhat.com|g' /etc/yum.repos.d/redhat.repo
 RUN sed -i '/codeready-builder-for-rhel-8-x86_64-rpms/,/\[/ s/enabled = 0/enabled = 1/' /etc/yum.repos.d/redhat.repo
 RUN mv -f /etc/yum.repos.d/ubi.repo /etc/yum.repos.d/ubi.repo.bak
 
@@ -93,6 +98,9 @@ COPY local.repo /etc/yum.repos.d/local.repo
 
 RUN yum update -y
 RUN yum install -y libhugetlbfs-utils libhugetlbfs-devel libhugetlbfs numactl-devel pciutils libaio libaio-devel net-tools libpcap kernel-rt-core kernel-rt-devel kernel-rt-modules kernel-rt-modules-extra kernel-headers libhugetlbfs-devel zlib-devel numactl-devel cmake gcc gcc-c++
+
+# RUN dnf install -y --allowerasing coreutils
+# RUN dnf groupinstall -y server
 
 WORKDIR /root/
 COPY flexran ./flexran
