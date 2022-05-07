@@ -70,6 +70,7 @@
   - [RHACS / stackrox](ocp4/4.7/4.7.rhacs.md)
   - [为 RHACS 找个应用场景: 安全合规测试云 ](ocp4/4.7/4.7.rhacs.deep.md)
 - [操作系统相关](./os.md)
+  - [Relax and Recover(ReaR) 系统备份和灾难恢复](notes/2022/2022.04.os.backup.ReaR.md)
   - [红帽免费的开发者订阅申请和使用](notes/2022/2022.04.no-cost.rhel.sub.md)
   - [在红帽官网查询rpm属于哪个repo](notes/2022/2022.01.rpm.belongs.md)
   - [离线环境下 原地升级 rhel7->rhel8](notes/2022/2022.01.rhel7.upgrade.to.rhel8.md)

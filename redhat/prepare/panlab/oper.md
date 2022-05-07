@@ -65,6 +65,12 @@ export http_proxy="http://192.168.7.1:18801"
 export https_proxy=${http_proxy}
 
 
+export http_proxy="http://127.0.0.1:18801"
+export https_proxy=${http_proxy}
+export PROXY=${http_proxy}
+
+ssh -tt -D 8801 -R 18801:10.147.17.89:5085 root@172.21.6.11 'bash -l -c byobu'
+
 ```
 
 ## normal boot up
