@@ -1161,6 +1161,8 @@ metadata:
   name: vran-acceleration-operators
   annotations:
     workload.openshift.io/allowed: management
+  labels:
+     openshift.io/cluster-monitoring: &quot;true&quot;
 ---
 apiVersion: operators.coreos.com/v1
 kind: OperatorGroup
@@ -1198,12 +1200,13 @@ apiVersion: sriovfec.intel.com/v2
 kind: SriovFecClusterConfig
 metadata:
   name: config
+  namespace: vran-acceleration-operators 
 spec:
   priority: 1
   nodeSelector:
     kubernetes.io/hostname: worker-2.ocp4.redhat.ren
   acceleratorSelector:
-    pciAddress: 0000:af:00.0
+    pciAddress: 0000:17:00.0
   physicalFunction:  
     pfDriver: &quot;pci-pf-stub&quot;
     vfDriver: &quot;vfio-pci&quot;
@@ -1211,7 +1214,7 @@ spec:
     bbDevConfig:
       acc100:
         # Programming mode: 0 = VF Programming, 1 = PF Programming
-        pfMode: false
+        pfMode: true
         numVfBundles: 16
         maxQueueSize: 1024
         uplink4G:
@@ -1232,6 +1235,8 @@ spec:
           aqDepthLog2: 4
 EOF
 oc create -f /data/install/sriov.fec.config.yaml
+
+# oc delete -f /data/install/sriov.fec.config.yaml
 
 </code></pre>
 <h2 id="setup-ptp"><a class="header" href="#setup-ptp">setup ptp</a></h2>
@@ -1456,11 +1461,11 @@ spec:
     resources:
       requests:
         memory: &quot;24Gi&quot; 
-        # intel.com/intel_fec_acc100: '1'
+        intel.com/intel_fec_acc100: '1'
         hugepages-1Gi: 16Gi  
       limits:
         memory: &quot;24Gi&quot;
-        # intel.com/intel_fec_acc100: '1'
+        intel.com/intel_fec_acc100: '1'
         hugepages-1Gi: 16Gi
     volumeMounts:
     - name: hugepage
@@ -1547,13 +1552,27 @@ spec:
       path: &quot;/sys/&quot;
 
 EOF
-oc create -f /data/install/vran.intel.flexran.yaml
+oc create -n vbbu-demo -f /data/install/vran.intel.flexran.yaml
 
-# oc delete -f /data/install/vran.intel.flexran.yaml
+# oc delete -n vbbu-demo -f /data/install/vran.intel.flexran.yaml
 
 oc rsh -c flexran-dev-env flexran-binary-release
 # switch to bash, will run .bashrc, which wil bring you intel icc/icx sdk env.
 # bash
+
+POD_ID=$(oc get pod -n vran-acceleration-operators -o json | jq -r ' .items[].metadata.name | select( contains( &quot;device-plugin&quot; ) ) ')
+oc logs -n vran-acceleration-operators $POD_ID
+# ......
+# I0509 12:53:38.288275       1 server.go:119] Allocate() called with &amp;AllocateRequest{ContainerRequests:[]*ContainerAllocateRequest{&amp;ContainerAllocateRequest{DevicesIDs:[0000:18:01.2],},},}
+# I0509 12:53:38.288326       1 accelResourcePool.go:46] GetDeviceSpecs(): for devices: [0000:18:01.2]
+# I0509 12:53:38.288435       1 pool_stub.go:97] GetEnvs(): for devices: [0000:18:01.2]
+# I0509 12:53:38.288443       1 pool_stub.go:113] GetMounts(): for devices: [0000:18:01.2]
+# I0509 12:53:38.288447       1 server.go:128] AllocateResponse send: &amp;AllocateResponse{ContainerResponses:[]*ContainerAllocateResponse{&amp;ContainerAllocateResponse{Envs:map[string]string{PCIDEVICE_INTEL_COM_INTEL_FEC_ACC100: 0000:18:01.2,},Mounts:[]*Mount{},Devices:[]*DeviceSpec{&amp;DeviceSpec{ContainerPath:/dev/vfio/vfio,HostPath:/dev/vfio/vfio,Permissions:mrw,},&amp;DeviceSpec{ContainerPath:/dev/vfio/110,HostPath:/dev/vfio/110,Permissions:mrw,},},Annotations:map[string]string{},},},}
+
+oc exec flexran-binary-release -- ls /dev/vfio
+# Defaulted container &quot;flexran-release-running&quot; out of: flexran-release-running, flexran-dev-env
+# 110
+# vfio
 
 </code></pre>
 <p>以上是一个开发环境的部署，要注意，在 /data/flexran 的开发成功，要复制到 /root/flexran 里面，然后用 release 容器来运行测试。</p>
