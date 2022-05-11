@@ -13470,6 +13470,7 @@ spec:
     #   - &quot;ens2f0&quot;
   # linkType: eth
   # isRdma: false
+  deviceType: vfio-pci 
 ---
 apiVersion: sriovnetwork.openshift.io/v1
 kind: SriovNetworkNodePolicy
@@ -13490,6 +13491,7 @@ spec:
     #   - &quot;ens2f1&quot;
   # linkType: eth
   # isRdma: false
+  deviceType: vfio-pci 
 EOF
 oc create -f /data/install/sriov.policy.yaml
 
@@ -13498,82 +13500,6 @@ oc create -f /data/install/sriov.policy.yaml
 oc get sriovnetworknodestates/worker-2.ocp4.redhat.ren -n openshift-sriov-network-operator  -o jsonpath='{.status.syncStatus}' &amp;&amp; echo
 # Succeeded
 
-# oc label node worker-2.ocp4.redhat.ren feature.node.kubernetes.io/network-sriov.capable=&quot;true&quot;
-
-# https://docs.openshift.com/container-platform/4.9/networking/hardware_networks/configuring-sriov-ib-attach.html
-# Dynamic IP address (DHCP) assignment configuration
-# require a dhcp server in cluster
-apiVersion: operator.openshift.io/v1
-kind: Network
-metadata:
-  name: cluster
-spec:
-  additionalNetworks:
-  - name: dhcp-shim
-    namespace: default
-    type: Raw
-    rawCNIConfig: |-
-      {
-        &quot;name&quot;: &quot;dhcp-shim&quot;,
-        &quot;cniVersion&quot;: &quot;0.3.1&quot;,
-        &quot;type&quot;: &quot;bridge&quot;,
-        &quot;ipam&quot;: {
-          &quot;type&quot;: &quot;dhcp&quot;
-        }
-      }
-  # ...
-
-oc get Network.operator.openshift.io/cluster -o yaml
-# apiVersion: operator.openshift.io/v1
-# kind: Network
-# metadata:
-#   creationTimestamp: &quot;2021-10-30T04:16:56Z&quot;
-#   generation: 2645
-#   name: cluster
-#   resourceVersion: &quot;71444760&quot;
-#   uid: 0f2aede8-0600-40bd-a7d7-c90fee7eb842
-# spec:
-#   clusterNetwork:
-#   - cidr: 10.254.0.0/16
-#     hostPrefix: 24
-#   defaultNetwork:
-#     type: OpenShiftSDN
-#   disableNetworkDiagnostics: false
-#   logLevel: Normal
-#   managementState: Managed
-#   observedConfig: null
-#   operatorLogLevel: Normal
-#   serviceNetwork:
-#   - 172.30.0.0/16
-#   unsupportedConfigOverrides: null
-# status:
-#   conditions:
-#   - lastTransitionTime: &quot;2021-10-30T04:16:56Z&quot;
-#     status: &quot;False&quot;
-#     type: ManagementStateDegraded
-#   - lastTransitionTime: &quot;2022-05-06T08:06:33Z&quot;
-#     status: &quot;False&quot;
-#     type: Degraded
-#   - lastTransitionTime: &quot;2021-10-30T04:16:56Z&quot;
-#     status: &quot;True&quot;
-#     type: Upgradeable
-#   - lastTransitionTime: &quot;2022-05-07T11:22:52Z&quot;
-#     status: &quot;False&quot;
-#     type: Progressing
-#   - lastTransitionTime: &quot;2021-10-30T04:18:10Z&quot;
-#     status: &quot;True&quot;
-#     type: Available
-#   readyReplicas: 0
-#   version: 4.9.5
-
-# if you use ipam dhcp, then you do this, otherwise skip
-oc edit Network.operator.openshift.io/cluster
-
-oc get pod -n openshift-multus  | grep dhcp
-# dhcp-daemon-4s2c4                     1/1     Running   0          3h11m
-# dhcp-daemon-9lvch                     1/1     Running   0          3h11m
-# dhcp-daemon-lhss5                     1/1     Running   0          3h11m
-# dhcp-daemon-q8qmh                     1/1     Running   0          3h11m
 
 cat &lt;&lt; EOF &gt; /data/install/sriov.attach.yaml
 ---
@@ -13625,6 +13551,7 @@ oc get net-attach-def -n vbbu-demo
 # NAME                  AGE
 # intel-710-nic01-rt2   34s
 # intel-710-nic02-rt2   34s
+
 
 </code></pre>
 <h2 id="setup-fec-sriov-operator"><a class="header" href="#setup-fec-sriov-operator">setup fec sriov operator</a></h2>
@@ -14160,11 +14087,14 @@ spec:
               #- SYS_ADMIN
               - IPC_LOCK
               - SYS_NICE
+              - SYS_RESOURCE
+              - NET_RAW
         command: [ &quot;/bin/sh&quot;,&quot;-c&quot;,&quot;--&quot; ]
-        args: [&quot; sleep infinity ; &quot;]
+        args: [&quot; ln -s /opt/dpdk-stable-20.11.3 /opt/dpdk-20.11 ; sleep infinity ; &quot;]
         # tty: true
         # stdin: true
         image: ${REG_TMP}/nepdemo/flexran_vdu:flexran-20.11-dpdk-20.11.3-ocp4.9.5-ubi-8.4
+        # image: ${REG_TMP}/nepdemo/flexran_basekit:dpdk-20.11-ocp-4.9.5-ubi-8.4 
         name: flexran-release-running
         resources:
           requests:
@@ -14193,9 +14123,9 @@ spec:
         # - name: packagemanager
         #   mountPath: /opt/intel/packagemanager
         #   readOnly: false 
-        # - name: dpdk-stable-20-11-3
-        #   mountPath: /opt/dpdk-stable-20.11.3
-        #   readOnly: false
+        - name: dpdk-stable-20-11-3
+          mountPath: /opt/dpdk-stable-20.11.3
+          readOnly: false
         - name: flexran
           mountPath: /data/flexran
           readOnly: false   
@@ -14279,12 +14209,101 @@ oc logs -n vran-acceleration-operators $POD_ID
 # I0509 12:53:38.288443       1 pool_stub.go:113] GetMounts(): for devices: [0000:18:01.2]
 # I0509 12:53:38.288447       1 server.go:128] AllocateResponse send: &amp;AllocateResponse{ContainerResponses:[]*ContainerAllocateResponse{&amp;ContainerAllocateResponse{Envs:map[string]string{PCIDEVICE_INTEL_COM_INTEL_FEC_ACC100: 0000:18:01.2,},Mounts:[]*Mount{},Devices:[]*DeviceSpec{&amp;DeviceSpec{ContainerPath:/dev/vfio/vfio,HostPath:/dev/vfio/vfio,Permissions:mrw,},&amp;DeviceSpec{ContainerPath:/dev/vfio/110,HostPath:/dev/vfio/110,Permissions:mrw,},},Annotations:map[string]string{},},},}
 
+POD_ID=$(oc get pod -n openshift-sriov-network-operator -o json | jq -r ' .items[].metadata.name | select( contains( &quot;device-plugin&quot; ) ) ')
+oc logs -n openshift-sriov-network-operator $POD_ID
+# ......
+# I0511 13:03:13.167902       1 server.go:115] Allocate() called with &amp;AllocateRequest{ContainerRequests:[]*ContainerAllocateRequest{&amp;ContainerAllocateRequest{DevicesIDs:[0000:65:02.0],},},}
+# I0511 13:03:13.167961       1 netResourcePool.go:50] GetDeviceSpecs(): for devices: [0000:65:02.0]
+# I0511 13:03:13.168068       1 pool_stub.go:97] GetEnvs(): for devices: [0000:65:02.0]
+# I0511 13:03:13.168077       1 pool_stub.go:113] GetMounts(): for devices: [0000:65:02.0]
+# I0511 13:03:13.168082       1 server.go:124] AllocateResponse send: &amp;AllocateResponse{ContainerResponses:[]*ContainerAllocateResponse{&amp;ContainerAllocateResponse{Envs:map[string]string{PCIDEVICE_OPENSHIFT_IO_INTEL_710_NIC01_RT2: 0000:65:02.0,},Mounts:[]*Mount{},Devices:[]*DeviceSpec{&amp;DeviceSpec{ContainerPath:/dev/vfio/vfio,HostPath:/dev/vfio/vfio,Permissions:mrw,},&amp;DeviceSpec{ContainerPath:/dev/vfio/108,HostPath:/dev/vfio/108,Permissions:mrw,},},Annotations:map[string]string{},},},}
+# I0511 13:03:13.168369       1 server.go:115] Allocate() called with &amp;AllocateRequest{ContainerRequests:[]*ContainerAllocateRequest{&amp;ContainerAllocateRequest{DevicesIDs:[0000:65:0a.0],},},}
+# I0511 13:03:13.168393       1 netResourcePool.go:50] GetDeviceSpecs(): for devices: [0000:65:0a.0]
+# I0511 13:03:13.168470       1 pool_stub.go:97] GetEnvs(): for devices: [0000:65:0a.0]
+# I0511 13:03:13.168477       1 pool_stub.go:113] GetMounts(): for devices: [0000:65:0a.0]
+# I0511 13:03:13.168481       1 server.go:124] AllocateResponse send: &amp;AllocateResponse{ContainerResponses:[]*ContainerAllocateResponse{&amp;ContainerAllocateResponse{Envs:map[string]string{PCIDEVICE_OPENSHIFT_IO_INTEL_710_NIC02_RT2: 0000:65:0a.0,},Mounts:[]*Mount{},Devices:[]*DeviceSpec{&amp;DeviceSpec{ContainerPath:/dev/vfio/vfio,HostPath:/dev/vfio/vfio,Permissions:mrw,},&amp;DeviceSpec{ContainerPath:/dev/vfio/112,HostPath:/dev/vfio/112,Permissions:mrw,},},Annotations:map[string]string{},},},}
+
 # 到vbbu pod里面验证一下，也能看到设备出现了。
 POD_ID=$(oc get pod -n vbbu-demo -o json | jq -r '.items[].metadata.name | select(. | contains(&quot;flexran-binary-release&quot;))' )
-oc exec ${POD_ID} -- ls /dev/vfio
+oc exec -c flexran-release-running  ${POD_ID} -- ls /dev/vfio
 # Defaulted container &quot;flexran-release-running&quot; out of: flexran-release-running, flexran-dev-env
 # 110
+# 112
+# 97
 # vfio
+
+POD_ID=$(oc get pod -n vbbu-demo -o json | jq -r '.items[].metadata.name | select(. | contains(&quot;flexran-binary-release&quot;))' )
+oc rsh -c flexran-release-running ${POD_ID}
+
+POD_ID=$(oc get pod -n vbbu-demo -o json | jq -r '.items[].metadata.name | select(. | contains(&quot;flexran-binary-release&quot;))' )
+oc exec -c flexran-release-running  ${POD_ID} -- /opt/dpdk-stable-20.11.3/usertools//dpdk-devbind.py -s
+# Network devices using DPDK-compatible driver
+# ============================================
+# 0000:65:02.0 'Ethernet Virtual Function 700 Series 154c' drv=vfio-pci unused=iavf,igb_uio
+# 0000:65:02.1 'Ethernet Virtual Function 700 Series 154c' drv=vfio-pci unused=iavf,igb_uio
+# 0000:65:02.2 'Ethernet Virtual Function 700 Series 154c' drv=vfio-pci unused=iavf,igb_uio
+# 0000:65:02.3 'Ethernet Virtual Function 700 Series 154c' drv=vfio-pci unused=iavf,igb_uio
+# 0000:65:0a.0 'Ethernet Virtual Function 700 Series 154c' drv=vfio-pci unused=iavf,igb_uio
+# 0000:65:0a.1 'Ethernet Virtual Function 700 Series 154c' drv=vfio-pci unused=iavf,igb_uio
+# 0000:65:0a.2 'Ethernet Virtual Function 700 Series 154c' drv=vfio-pci unused=iavf,igb_uio
+# 0000:65:0a.3 'Ethernet Virtual Function 700 Series 154c' drv=vfio-pci unused=iavf,igb_uio
+
+# Network devices using kernel driver
+# ===================================
+# 0000:65:00.0 'Ethernet Controller X710 for 10GbE SFP+ 1572' if=ens2f0 drv=i40e unused=igb_uio,vfio-pci
+# 0000:65:00.1 'Ethernet Controller X710 for 10GbE SFP+ 1572' if=ens2f1 drv=i40e unused=igb_uio,vfio-pci
+# 0000:b5:00.0 'Ethernet Connection X722 for 1GbE 37d1' if=eno1 drv=i40e unused=igb_uio,vfio-pci
+# 0000:b5:00.1 'Ethernet Connection X722 for 1GbE 37d1' if=eno2 drv=i40e unused=igb_uio,vfio-pci
+
+# Baseband devices using DPDK-compatible driver
+# =============================================
+# 0000:18:00.0 'Device 0d5d' drv=vfio-pci unused=igb_uio
+# 0000:18:00.1 'Device 0d5d' drv=vfio-pci unused=igb_uio
+# 0000:18:00.2 'Device 0d5d' drv=vfio-pci unused=igb_uio
+# 0000:18:00.3 'Device 0d5d' drv=vfio-pci unused=igb_uio
+# 0000:18:00.4 'Device 0d5d' drv=vfio-pci unused=igb_uio
+# 0000:18:00.5 'Device 0d5d' drv=vfio-pci unused=igb_uio
+# 0000:18:00.6 'Device 0d5d' drv=vfio-pci unused=igb_uio
+# 0000:18:00.7 'Device 0d5d' drv=vfio-pci unused=igb_uio
+# 0000:18:01.0 'Device 0d5d' drv=vfio-pci unused=igb_uio
+# 0000:18:01.1 'Device 0d5d' drv=vfio-pci unused=igb_uio
+# 0000:18:01.2 'Device 0d5d' drv=vfio-pci unused=igb_uio
+# 0000:18:01.3 'Device 0d5d' drv=vfio-pci unused=igb_uio
+# 0000:18:01.4 'Device 0d5d' drv=vfio-pci unused=igb_uio
+# 0000:18:01.5 'Device 0d5d' drv=vfio-pci unused=igb_uio
+# 0000:18:01.6 'Device 0d5d' drv=vfio-pci unused=igb_uio
+# 0000:18:01.7 'Device 0d5d' drv=vfio-pci unused=igb_uio
+
+# Baseband devices using kernel driver
+# ====================================
+# 0000:17:00.0 'Device 0d5c' drv=pci-pf-stub unused=igb_uio,vfio-pci
+
+# No 'Crypto' devices detected
+# ============================
+
+# No 'Eventdev' devices detected
+# ==============================
+
+# No 'Mempool' devices detected
+# =============================
+
+# No 'Compress' devices detected
+# ==============================
+
+# Misc (rawdev) devices using kernel driver
+# =========================================
+# 0000:00:04.0 'Sky Lake-E CBDMA Registers 2021' drv=ioatdma unused=igb_uio,vfio-pci
+# 0000:00:04.1 'Sky Lake-E CBDMA Registers 2021' drv=ioatdma unused=igb_uio,vfio-pci
+# 0000:00:04.2 'Sky Lake-E CBDMA Registers 2021' drv=ioatdma unused=igb_uio,vfio-pci
+# 0000:00:04.3 'Sky Lake-E CBDMA Registers 2021' drv=ioatdma unused=igb_uio,vfio-pci
+# 0000:00:04.4 'Sky Lake-E CBDMA Registers 2021' drv=ioatdma unused=igb_uio,vfio-pci
+# 0000:00:04.5 'Sky Lake-E CBDMA Registers 2021' drv=ioatdma unused=igb_uio,vfio-pci
+# 0000:00:04.6 'Sky Lake-E CBDMA Registers 2021' drv=ioatdma unused=igb_uio,vfio-pci
+# 0000:00:04.7 'Sky Lake-E CBDMA Registers 2021' drv=ioatdma unused=igb_uio,vfio-pci
+
+# No 'Regex' devices detected
+# ===========================
+
 
 </code></pre>
 <p>以上是一个开发环境的部署，要注意，在 /data/flexran 的开发成功，要复制到 /root/flexran 里面，然后用 release 容器来运行测试。</p>
@@ -14348,6 +14367,61 @@ repo2module . \
     --module-version 123 \
     --module-context f32
 createrepo_mod .
+</code></pre>
+<h1 id="sriov-setting-for-non-dpdk"><a class="header" href="#sriov-setting-for-non-dpdk">sriov setting for non-dpdk</a></h1>
+<pre><code class="language-bash">
+# oc label node worker-2.ocp4.redhat.ren feature.node.kubernetes.io/network-sriov.capable=&quot;true&quot;
+
+# https://docs.openshift.com/container-platform/4.9/networking/hardware_networks/configuring-sriov-ib-attach.html
+# Dynamic IP address (DHCP) assignment configuration
+# require a dhcp server in cluster
+apiVersion: operator.openshift.io/v1
+kind: Network
+metadata:
+  name: cluster
+spec:
+  additionalNetworks:
+  - name: dhcp-shim
+    namespace: default
+    type: Raw
+    rawCNIConfig: |-
+      {
+        &quot;name&quot;: &quot;dhcp-shim&quot;,
+        &quot;cniVersion&quot;: &quot;0.3.1&quot;,
+        &quot;type&quot;: &quot;bridge&quot;,
+        &quot;ipam&quot;: {
+          &quot;type&quot;: &quot;dhcp&quot;
+        }
+      }
+  # ...
+
+oc get Network.operator.openshift.io/cluster -o yaml
+# ......
+# spec:
+#   clusterNetwork:
+#   - cidr: 10.254.0.0/16
+#     hostPrefix: 24
+#   defaultNetwork:
+#     type: OpenShiftSDN
+#   disableNetworkDiagnostics: false
+#   logLevel: Normal
+#   managementState: Managed
+#   observedConfig: null
+#   operatorLogLevel: Normal
+#   serviceNetwork:
+#   - 172.30.0.0/16
+#   unsupportedConfigOverrides: null
+# ......
+
+# if you use ipam dhcp, then you do this, otherwise skip
+oc edit Network.operator.openshift.io/cluster
+
+oc get pod -n openshift-multus  | grep dhcp
+# dhcp-daemon-4s2c4                     1/1     Running   0          3h11m
+# dhcp-daemon-9lvch                     1/1     Running   0          3h11m
+# dhcp-daemon-lhss5                     1/1     Running   0          3h11m
+# dhcp-daemon-q8qmh                     1/1     Running   0          3h11m
+
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="一个简单的端到端的cicd演示-a-simple-working-cicd-process-demo"><a class="header" href="#一个简单的端到端的cicd演示-a-simple-working-cicd-process-demo">一个简单的端到端的CI/CD演示 a simple, working ci/cd process demo</a></h1>
 <p>客户需求:</p>
