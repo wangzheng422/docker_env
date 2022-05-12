@@ -8,6 +8,7 @@ rm -rf $tmp_path
 rm -rf bin/nr5g/gnb/l1/l1app
 echo "Note please first build dpdk!!!"
 source ./set_env_var.sh
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/data/flexran/wls_mod/lib
 ./flexran_build.sh $*
 if [ ! -f "bin/nr5g/gnb/l1/l1app" ]; then
    echo "flexran build failed , docker image not build!!"
@@ -16,7 +17,7 @@ else
    echo "flexran build success"
 fi
 echo "build xran"
-cd framework/enhanced_bbupool/build/
+cd framework/bbupool/
 make clean
 make all
 cd $local_path
@@ -50,6 +51,9 @@ rm -rf $tmp_path/flexran/framework
 #touch dockerfile
 #cd $local_path
 
+rsync --delete -arz /opt/dpdk-19.11/build $tmp_path/dpdk-19.11/
+rsync --delete -arz /opt/dpdk-19.11/usertools $tmp_path/dpdk-19.11/
+
 cat << EOF > $tmp_path/local.repo
 [localrepo]
 name=LocalRepo
@@ -80,6 +84,7 @@ RUN dnf groupinstall -y server
 
 WORKDIR /root/
 COPY flexran ./flexran
+COPY dpdk-19.11 ./dpdk-19.11
 # COPY wzh/dpdk-kmods /opt/
 # RUN rm -rf /var/yum/cache/*
 EOF
@@ -107,6 +112,7 @@ RUN dnf groupinstall -y server
 
 WORKDIR /root/
 COPY flexran ./flexran
+COPY dpdk-19.11 ./dpdk-19.11
 # COPY wzh/dpdk-kmods /opt/
 # RUN rm -rf /var/yum/cache/*
 EOF
