@@ -81,6 +81,7 @@ RUN yum install -y libhugetlbfs-utils libhugetlbfs-devel libhugetlbfs numactl-de
 
 RUN dnf install -y --allowerasing coreutils
 RUN dnf groupinstall -y server
+RUN dnf install -y python3
 
 WORKDIR /root/
 COPY flexran ./flexran
@@ -109,6 +110,7 @@ RUN yum install -y libhugetlbfs-utils libhugetlbfs-devel libhugetlbfs numactl-de
 
 RUN dnf install -y --allowerasing coreutils
 RUN dnf groupinstall -y server
+RUN dnf install -y python3
 
 WORKDIR /root/
 COPY flexran ./flexran
