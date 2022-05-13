@@ -27,7 +27,7 @@
   - [2022.04 ACM zero touch provision 远程单节点集群 全自动安装](redhat/ocp4/4.10/4.10.acm.ztp.disconnected.auto.md)
   - [2022.04 coreos 启动和分区挂载分析](redhat/ocp4/4.10/4.10.coreos.boot.md)
 - openshift4 使用系列
-  - [2022.05 intel o-ran flexran 方案在openshift4上的安装和使用](redhat/ocp4/4.10/4.10.flexran.md)
+  - [2022.05 intel o-ran flexran 方案在openshift4上的安装和使用](redhat/ocp4/4.10/4.10.flexran.20.11.md)
   - [2022.01 ci/cd pipeline gitops演示](redhat/ocp4/4.9/4.9.ci.cd.demo.md)
   - [2021.12 oc exec 原理分析](redhat/ocp4/4.9/4.9.oc.exec.md)
   - [2021.12 nf_conntrack 在 openshift4.9上的处理](redhat/ocp4/4.9/4.9.nf.conntrack.md)
