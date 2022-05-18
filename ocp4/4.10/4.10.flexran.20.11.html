@@ -1932,6 +1932,177 @@ oc debug node/worker-2.ocp4.redhat.ren -- ip link
 <p>以上是一个开发环境的部署，要注意，在 /data/flexran 的开发成功，要复制到 /root/flexran 里面，然后用 release 容器来运行测试。</p>
 <p>后期，当开发完成以后，会单独的重新制作 release 容器，dev 相关的容器在生成环境上，就都不用了，同理，那些复制文件的 job 也都不会在生产系统上运行。</p>
 <h1 id="end"><a class="header" href="#end">end</a></h1>
+<h2 id="linuxptp-311"><a class="header" href="#linuxptp-311">linuxptp 3.11</a></h2>
+<pre><code class="language-bash"># http://linuxptp.sourceforge.net/
+# download linuxptp-3.1.1
+
+# on a rhel8.4
+dnf install -y linuxptp
+
+# /etc/ptp4l.conf
+# /etc/sysconfig/phc2sys
+# /etc/sysconfig/ptp4l
+# /etc/timemaster.conf
+# /usr/lib/systemd/system/phc2sys.service
+# /usr/lib/systemd/system/ptp4l.service
+# /usr/lib/systemd/system/timemaster.service
+
+cat /etc/sysconfig/phc2sys
+# OPTIONS=&quot;-a -r&quot;
+
+cat /etc/sysconfig/ptp4l
+# OPTIONS=&quot;-f /etc/ptp4l.conf -i eth0&quot;
+
+systemctl cat phc2sys
+# # /usr/lib/systemd/system/phc2sys.service
+# [Unit]
+# Description=Synchronize system clock or PTP hardware clock (PHC)
+# After=ntpdate.service ptp4l.service
+
+# [Service]
+# Type=simple
+# EnvironmentFile=-/etc/sysconfig/phc2sys
+# ExecStart=/usr/sbin/phc2sys $OPTIONS
+
+# [Install]
+# WantedBy=multi-user.target
+
+systemctl cat ptp4l.service
+# # /usr/lib/systemd/system/ptp4l.service
+# [Unit]
+# Description=Precision Time Protocol (PTP) service
+# After=network-online.target
+# Wants=network-online.target
+
+# [Service]
+# Type=simple
+# EnvironmentFile=-/etc/sysconfig/ptp4l
+# ExecStart=/usr/sbin/ptp4l $OPTIONS
+
+# [Install]
+# WantedBy=multi-user.target
+
+mkdir -p /data/ptp
+cd /data/ptp
+wget https://nchc.dl.sourceforge.net/project/linuxptp/v3.1/linuxptp-3.1.1.tgz
+tar zvxf linuxptp-3.1.1.tgz
+cd linuxptp-3.1.1
+make
+
+cat &lt;&lt; 'EOF' &gt; ptp4l.sh
+#!/bin/bash
+
+# Import our environment variables from systemd
+for e in $(tr &quot;\000&quot; &quot;\n&quot; &lt; /proc/1/environ); do
+  # if [[ $e == DEMO_ENV* ]]; then
+    eval &quot;export $e&quot;
+  # fi
+done
+
+echo $DEMO_ENV_NIC &gt; /demo.txt
+
+# ./ptp4l -f ./configs/default_zill.cfg -2 -i enp101s0f0   -m  &gt; /home/ptp4l.log  2&gt;&amp;1 &amp;
+/usr/local/sbin/ptp4l -f /etc/ptp4l.conf -2 -m -i $DEMO_ENV_NIC
+
+EOF
+
+cat &lt;&lt; EOF &gt; ptp4l.service
+[Unit]
+Description=Precision Time Protocol (PTP) service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# EnvironmentFile=-/etc/sysconfig/ptp4l
+ExecStart=/usr/local/sbin/ptp4l.sh
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+cat &lt;&lt; 'EOF' &gt; phc2sys.sh
+#!/bin/bash
+
+# Import our environment variables from systemd
+for e in $(tr &quot;\000&quot; &quot;\n&quot; &lt; /proc/1/environ); do
+  # if [[ $e == DEMO_ENV* ]]; then
+    eval &quot;export $e&quot;
+  # fi
+done
+
+echo $DEMO_ENV_NIC &gt; /demo.1.txt
+
+# ./phc2sys -s  enp101s0f0  -O 0 -m -R 8 &gt;/home/phc2sys.log   2&gt;&amp;1 &amp;
+/usr/local/sbin/phc2sys -s $DEMO_ENV_NIC -a -r -m -u 1 -O 0 -R 8 -z /var/run/ptp4l -t [phc2sys]
+
+EOF
+
+cat &lt;&lt; EOF &gt; phc2sys.service
+[Unit]
+Description=Synchronize system clock or PTP hardware clock (PHC)
+After=ntpdate.service ptp4l.service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/sbin/phc2sys.sh
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+cat &lt;&lt; 'EOF' &gt; ts2phc.sh
+#!/bin/bash
+
+# Import our environment variables from systemd
+for e in $(tr &quot;\000&quot; &quot;\n&quot; &lt; /proc/1/environ); do
+  # if [[ $e == DEMO_ENV* ]]; then
+    eval &quot;export $e&quot;
+  # fi
+done
+
+echo $DEMO_ENV_NIC &gt; /demo.2.txt
+
+# ./ts2phc -f ./configs/ts2phc-generic_GNSS0.cfg -s generic -m -c enp23s0f0 &gt; /home/ts2phc.log 2&gt;&amp;1 &amp;
+/usr/local/sbin/ts2phc -f /etc/ts2phc-generic_GNSS0.cfg -s generic -m -c $DEMO_ENV_NIC
+
+EOF
+
+cat &lt;&lt; EOF &gt; ts2phc.service
+[Unit]
+Description=Synchronize system clock or PTP hardware clock (PHC)
+After=ntpdate.service ptp4l.service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/sbin/ts2phc.sh
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+
+cat &lt;&lt; EOF &gt; ./ptp.dockerfile
+FROM registry.access.redhat.com/ubi8/ubi-init:8.4
+
+COPY hwstamp_ctl nsm phc2sys phc_ctl pmc ptp4l timemaster ts2phc incdefs.sh version.sh ptp4l.sh phc2sys.sh /usr/local/sbin/
+RUN cd /usr/local/sbin/ &amp;&amp; chmod +x hwstamp_ctl nsm phc2sys phc_ctl pmc ptp4l timemaster ts2phc incdefs.sh version.sh ptp4l.sh phc2sys.sh
+
+USER root
+COPY ptp4l.service phc2sys.service /etc/systemd/system/
+# COPY ptp4l.conf /etc/
+
+RUN systemctl enable ptp4l.service &amp;&amp; systemctl enable phc2sys.service
+
+entrypoint [&quot;/usr/sbin/init&quot;]
+EOF
+
+podman build --squash -t quay.io/nepdemo/linuxptp:3.1.1-ubi-8.4 -f ptp.dockerfile ./
+
+podman push quay.io/nepdemo/linuxptp:3.1.1-ubi-8.4
+
+
+</code></pre>
 <h2 id="some-test-no-use-here"><a class="header" href="#some-test-no-use-here">some test, no use here</a></h2>
 <pre><code class="language-bash"># intel icc repo
 # https://www.intel.com/content/www/us/en/developer/articles/guide/installing-intel-parallel-studio-xe-runtime-2020-using-yum-repository.html
