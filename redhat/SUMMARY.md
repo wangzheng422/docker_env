@@ -24,6 +24,8 @@
   - [ACM zero touch provision 远程单节点集群 全自动安装](ocp4/4.10/4.10.acm.ztp.disconnected.auto.md)
   - [coreos 启动和分区挂载分析](ocp4/4.10/4.10.coreos.boot.md)
 - [openshift4 使用系列](./usage.md)
+  - [openshift4 可视化 ovs netflow](ocp4/4.10/4.10.netflow.table.md)
+  - [intel o-ran flexran 方案在openshift4上的安装和使用](ocp4/4.10/4.10.flexran.20.11.md)
   - [ci/cd pipeline gitops演示](ocp4/4.9/4.9.ci.cd.demo.md)
   - [oc/kubectl exec 原理分析](ocp4/4.9/4.9.oc.exec.md)
   - [nf_conntrack 在 openshift4.9上的处理](ocp4/4.9/4.9.nf.conntrack.md)
