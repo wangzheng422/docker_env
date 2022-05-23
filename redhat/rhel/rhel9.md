@@ -14,6 +14,7 @@ dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarc
 # setw -g mode-keys vi
 # EOF
 
+# https://centos.pkgs.org/8/epel-x86_64/byobu-5.133-1.el8.noarch.rpm.html
 dnf install -y https://download-ib01.fedoraproject.org/pub/epel/8/Everything/x86_64/Packages/b/byobu-5.133-1.el8.noarch.rpm
 
 dnf install -y htop
