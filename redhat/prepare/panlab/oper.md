@@ -65,6 +65,13 @@ export PROXY="https://10.147.17.89:5085"
 
 export PROXY="http://127.0.0.1:18801"
 
+export http_proxy=${PROXY}
+export https_proxy=${PROXY}
+
+export -n http_proxy
+export -n https_proxy
+export -n PROXY
+
 export http_proxy="http://192.168.7.1:18801"
 export https_proxy=${http_proxy}
 
@@ -72,12 +79,7 @@ export http_proxy="http://127.0.0.1:18801"
 export https_proxy=${http_proxy}
 export PROXY=${http_proxy}
 
-export http_proxy=${PROXY}
-export https_proxy=${PROXY}
 
-export -n http_proxy
-export -n https_proxy
-export -n PROXY
 
 ssh -tt -D 8801 -R 18801:10.147.17.89:5085 root@172.21.6.11 'bash -l -c byobu'
 
