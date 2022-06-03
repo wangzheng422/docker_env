@@ -26,6 +26,11 @@
   - [2022.04 IPI模式 单节点 离线 单网络模式 安装](redhat/ocp4/4.10/4.10.disconnect.bm.ipi.sno.static.ip.md)
   - [2022.04 ACM zero touch provision 远程单节点集群 全自动安装](redhat/ocp4/4.10/4.10.acm.ztp.disconnected.auto.md)
   - [2022.04 coreos 启动和分区挂载分析](redhat/ocp4/4.10/4.10.coreos.boot.md)
+  - [2022.05 openshift4 单节点 命令行安装](redhat/ocp4/4.10/4.10.sno.installer.md)
+  - [2022.05 openshift4 单节点 在第一块硬盘上添加更多分区](redhat/ocp4/4.10/4.10.sno.partition.quay.md)
+  - [2022.05 openshift4 单节点 使用 lvm 和 nfs 在集群内提供存储](redhat/ocp4/4.10/4.10.sno.nfs.lvm.md)
+  - [2022.05 openshift4 单节点 从centos7/8 开始安装](redhat/ocp4/4.10/4.10.sno.boot.from.linux.md)
+  - [2022.05 openshift4 单节点 安装精简版 ODF/ceph](redhat/ocp4/4.10/4.10.sno.odf.md)
 - openshift4 使用系列
   - [2022.05 openshift4 可视化 ovs netflow](redhat/ocp4/4.10/4.10.netflow.table.md)
   - [2022.05 intel o-ran flexran 方案在openshift4上的安装和使用](redhat/ocp4/4.10/4.10.flexran.20.11.md)
@@ -69,6 +74,7 @@
   - [应用上云系列教程 containerized cloud native (CCN) for openshift 4.6](redhat/ocp4/4.6/4.6.ccn.devops.deploy.md)
   - [CCN 安装介质制作 for openshift 4.6](redhat/ocp4/4.6/4.6.ccn.devops.build.md)
 - 红帽其他产品系列
+  - [2022.05 ACM observability for openshift 4.10](redhat/ocp4/4.10/4.10.acm.observ.md)
   - [2022.01 离线安装 ansible platform](redhat/notes/2022/2022.01.ansible.install.md)
   - [2021.12 RHACS 应对log4j 原理和实践](redhat/notes/2021/2021.08.virus.md)
   - [openshift承载虚拟化业务(CNV)](redhat/ocp4/4.5/4.5.ocp.ocs.cnv.ceph.md)

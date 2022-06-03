@@ -66,6 +66,7 @@
   - [应用上云系列教程 containerized cloud native (CCN) for openshift 4.6](ocp4/4.6/4.6.ccn.devops.deploy.md)
   - [CCN 安装介质制作 for openshift 4.6](ocp4/4.6/4.6.ccn.devops.build.md)
 - [红帽其他产品系列](./rh.cloud.md)
+  - [ACM observability for openshift 4.10](ocp4/4.10/4.10.acm.observ.md)
   - [离线安装 ansible platform](notes/2022/2022.01.ansible.install.md)
   - [RHACS 应对log4j 原理和实践](notes/2021/2021.08.virus.md)
   - [openshift承载虚拟化业务(CNV)](ocp4/4.5/4.5.ocp.ocs.cnv.ceph.md)
