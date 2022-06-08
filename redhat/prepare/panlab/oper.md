@@ -65,11 +65,11 @@ export PROXY="https://10.147.17.89:5085"
 
 export PROXY="http://127.0.0.1:18801"
 
-export HTTP_PROXY=${PROXY}
-export HTTPS_PROXY=${PROXY}
+export http_proxy=${PROXY}
+export https_proxy=${PROXY}
 
-export -n HTTP_PROXY
-export -n HTTPS_PROXY
+export -n http_proxy
+export -n https_proxy
 export -n PROXY
 
 export http_proxy="http://192.168.7.1:18801"
