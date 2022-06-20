@@ -90,9 +90,9 @@ RUN yum install -y libhugetlbfs-utils libhugetlbfs-devel libhugetlbfs numactl-de
 
 RUN dnf install -y --allowerasing coreutils
 # RUN dnf groupinstall -y server
-RUN dnf install -y python3
+RUN dnf install -y python3 iproute kernel-tools
 
-WORKDIR /data/
+WORKDIR /root/
 COPY flexran ./flexran
 COPY dpdk-19.11 ./dpdk-19.11
 # COPY wzh/dpdk-kmods /opt/
@@ -113,7 +113,11 @@ RUN cd /etc && mv BBU_cfg bakBBU_cfg && tar zvxf cfg.tar
 
 COPY home/XRAN_BBU /home/BaiBBU_XSS/tools/XRAN_BBU
 
+RUN ln -s /home/BaiBBU_XSS-A/BaiBBU_DXSS/libnr_centos.so.0.0.1 /usr/lib/libnr.so.0 
+
 RUN rm -rf /opt/intel/ /home/bin/ 
+
+ENV LD_LIBRARY_PATH=/usr/lib
 
 EOF
 else
