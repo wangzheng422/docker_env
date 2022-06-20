@@ -28,6 +28,7 @@ cd xran
 cd $local_path
 mkdir $tmp_path
 mkdir $tmp_path/flexran
+mkdir $tmp_path/{home,intel,phy}
 echo "copy flexran bin"
 cp -r bin $tmp_path/flexran/
 cp -r flexran_build.sh $tmp_path/flexran/
@@ -47,6 +48,14 @@ rm -rf $tmp_path/flexran/bin/lte
 rm -rf $tmp_path/flexran/libs/ferrybridge
 rm -rf $tmp_path/flexran/framework
 #rm -rf $tmp_path/flexran/xran
+
+echo "copy nepdemo files under home"
+cp -r /data/nepdemo/flexran_cfg/* $tmp_path/flexran/bin/nr5g/gnb/l1/
+cp /data/nepdemo/BaiBBU_XSS_2.0.4_oran.IMG $tmp_path/home/
+cp /data/nepdemo/cfg.tar $tmp_path/home/
+cp /data/nepdemo/XRAN_BBU $tmp_path/home/
+cp /opt/intel/system_studio_2019/compilers_and_libraries_2019.3.206/linux/ipp/lib/intel64/*.{so,a} $tmp_path/intel/
+cp /data/flexran/sdk/build-avx512-icc/source/phy/lib_srs_cestimate_5gnr/*.{bin,a} $tmp_path/phy/
 
 #touch dockerfile
 #cd $local_path
@@ -83,11 +92,29 @@ RUN dnf install -y --allowerasing coreutils
 # RUN dnf groupinstall -y server
 RUN dnf install -y python3
 
-WORKDIR /root/
+WORKDIR /data/
 COPY flexran ./flexran
 COPY dpdk-19.11 ./dpdk-19.11
 # COPY wzh/dpdk-kmods /opt/
 # RUN rm -rf /var/yum/cache/*
+
+WORKDIR /home/
+COPY home/BaiBBU_XSS_2.0.4_oran.IMG ./
+
+COPY intel/* /opt/intel/compilers_and_libraries/linux/ipp/lib/intel64/
+COPY phy/* /home/bin/nr5g_img/sdk/build-avx512-icc/source/phy/lib_srs_cestimate_5gnr/
+
+RUN tar zvxf BaiBBU_XSS_2.0.4_oran.IMG && \
+    cp ./BaiBBU_XSS/tools/ImageUpgrade /bin/ && \
+    ./BaiBBU_XSS/tools/ImageUpgrade /home/BaiBBU_XSS_2.0.4_oran.IMG --no-preserve 
+
+COPY home/cfg.tar /etc/
+RUN cd /etc && mv BBU_cfg bakBBU_cfg && tar zvxf cfg.tar 
+
+COPY home/XRAN_BBU /home/BaiBBU_XSS/tools/XRAN_BBU
+
+RUN rm -rf /opt/intel/ /home/bin/ 
+
 EOF
 else
     cat > $tmp_path/Dockerfile << 'EOF'
@@ -127,5 +154,5 @@ cd $tmp_path
 docker build --squash -t $dockerimagename .
 #delete tmp path flexran_build
 cd $local_path
-rm -rf $tmp_path
+# rm -rf $tmp_path
 
