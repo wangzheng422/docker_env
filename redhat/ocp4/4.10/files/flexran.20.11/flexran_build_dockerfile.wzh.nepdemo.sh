@@ -54,11 +54,14 @@ cp -r /data/nepdemo/flexran_cfg/* $tmp_path/flexran/bin/nr5g/gnb/l1/
 cp /data/nepdemo/BaiBBU_XSS_2.0.4_oran.IMG $tmp_path/home/
 cp /data/nepdemo/cfg.tar $tmp_path/home/
 cp /data/nepdemo/XRAN_BBU $tmp_path/home/
+cp /data/nepdemo/*.xml $tmp_path/home/
 cp /opt/intel/system_studio_2019/compilers_and_libraries_2019.3.206/linux/ipp/lib/intel64/*.{so,a} $tmp_path/intel/
 cp /opt/intel/system_studio_2019/compilers_and_libraries_2019.3.206/linux/mkl/lib/intel64_lin/*.so $tmp_path/intel.so/
 cp /opt/intel/system_studio_2019/compilers_and_libraries_2019.3.206/linux/ipp/lib/intel64_lin/*.so $tmp_path/intel.so/
 cp /opt/intel/system_studio_2019/compilers_and_libraries_2019.3.206/linux/compiler/lib/intel64_lin/*.so $tmp_path/intel.so/
 /bin/cp -f /opt/intel/oneapi/compiler/2021.4.0/linux/compiler/lib/intel64_lin/*.{so,so.*} $tmp_path/intel.so/
+cp -r /home/pf-bb-config $tmp_path/
+
 cp /data/flexran/sdk/build-avx512-icc/source/phy/lib_srs_cestimate_5gnr/*.{bin,a} $tmp_path/phy/
 
 #touch dockerfile
@@ -90,11 +93,12 @@ COPY local.repo /etc/yum.repos.d/local.repo
 
 RUN yum update -y
 # RUN yum install -y libhugetlbfs-utils libhugetlbfs-devel libhugetlbfs numactl-devel pciutils libaio libaio-devel net-tools libpcap kernel-rt-core kernel-rt-devel kernel-rt-modules kernel-rt-modules-extra kernel-headers libhugetlbfs-devel zlib-devel numactl-devel
-RUN yum install -y libhugetlbfs-utils libhugetlbfs-devel libhugetlbfs numactl-devel pciutils libaio libaio-devel net-tools libpcap kernel-rt-core kernel-rt-devel kernel-rt-modules kernel-rt-modules-extra kernel-headers
+
+RUN yum install -y libhugetlbfs-utils libhugetlbfs-devel libhugetlbfs numactl-devel pciutils libaio libaio-devel net-tools libpcap kernel-rt-core kernel-rt-devel kernel-rt-modules kernel-rt-modules-extra kernel-headers 
 
 RUN dnf install -y --allowerasing coreutils
 # RUN dnf groupinstall -y server
-RUN dnf install -y python3 iproute kernel-tools
+RUN dnf install -y python3 iproute kernel-tools strace
 
 WORKDIR /root/
 COPY flexran ./flexran
@@ -116,14 +120,16 @@ COPY home/cfg.tar /etc/
 RUN cd /etc && mv BBU_cfg bakBBU_cfg && tar zvxf cfg.tar 
 
 COPY home/XRAN_BBU /home/BaiBBU_XSS/tools/XRAN_BBU
+COPY home/*.xml /etc/BBU_cfg/phy_cfg/
 
 COPY intel.so/* /root/libs/
+COPY pf-bb-config /root/pf-bb-config
 
 RUN ln -s /home/BaiBBU_XSS-A/BaiBBU_DXSS/libnr_centos.so.0.0.1 /root/libs/libnr.so.0 
 
 RUN rm -rf /opt/intel/ /home/bin/ 
 
-ENV LD_LIBRARY_PATH=/root/libs/:/root/flexran/libs/cpa/bin/
+ENV LD_LIBRARY_PATH=/root/libs/:/root/flexran/libs/cpa/sub6/rec/lib/lib/:/root/flexran/wls_mod/lib/
 
 EOF
 else
