@@ -28,7 +28,7 @@ cd xran
 cd $local_path
 mkdir $tmp_path
 mkdir $tmp_path/flexran
-mkdir $tmp_path/{home,intel,phy}
+mkdir $tmp_path/{home,intel,phy,intel.so}
 echo "copy flexran bin"
 cp -r bin $tmp_path/flexran/
 cp -r flexran_build.sh $tmp_path/flexran/
@@ -55,6 +55,10 @@ cp /data/nepdemo/BaiBBU_XSS_2.0.4_oran.IMG $tmp_path/home/
 cp /data/nepdemo/cfg.tar $tmp_path/home/
 cp /data/nepdemo/XRAN_BBU $tmp_path/home/
 cp /opt/intel/system_studio_2019/compilers_and_libraries_2019.3.206/linux/ipp/lib/intel64/*.{so,a} $tmp_path/intel/
+cp /opt/intel/system_studio_2019/compilers_and_libraries_2019.3.206/linux/mkl/lib/intel64_lin/*.so $tmp_path/intel.so/
+cp /opt/intel/system_studio_2019/compilers_and_libraries_2019.3.206/linux/ipp/lib/intel64_lin/*.so $tmp_path/intel.so/
+cp /opt/intel/system_studio_2019/compilers_and_libraries_2019.3.206/linux/compiler/lib/intel64_lin/*.so $tmp_path/intel.so/
+/bin/cp -f /opt/intel/oneapi/compiler/2021.4.0/linux/compiler/lib/intel64_lin/*.{so,so.*} $tmp_path/intel.so/
 cp /data/flexran/sdk/build-avx512-icc/source/phy/lib_srs_cestimate_5gnr/*.{bin,a} $tmp_path/phy/
 
 #touch dockerfile
@@ -113,11 +117,13 @@ RUN cd /etc && mv BBU_cfg bakBBU_cfg && tar zvxf cfg.tar
 
 COPY home/XRAN_BBU /home/BaiBBU_XSS/tools/XRAN_BBU
 
-RUN ln -s /home/BaiBBU_XSS-A/BaiBBU_DXSS/libnr_centos.so.0.0.1 /usr/lib/libnr.so.0 
+COPY intel.so/* /root/libs/
+
+RUN ln -s /home/BaiBBU_XSS-A/BaiBBU_DXSS/libnr_centos.so.0.0.1 /root/libs/libnr.so.0 
 
 RUN rm -rf /opt/intel/ /home/bin/ 
 
-ENV LD_LIBRARY_PATH=/usr/lib
+ENV LD_LIBRARY_PATH=/root/libs/:/root/flexran/libs/cpa/bin/
 
 EOF
 else
