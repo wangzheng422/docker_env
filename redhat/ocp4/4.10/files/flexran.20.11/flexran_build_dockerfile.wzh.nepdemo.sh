@@ -64,6 +64,14 @@ cp -r /home/pf-bb-config $tmp_path/
 
 cp /data/flexran/sdk/build-avx512-icc/source/phy/lib_srs_cestimate_5gnr/*.{bin,a} $tmp_path/phy/
 
+echo 'copy for xm'
+mkdir -p $tmp_path/xm/{cu_cfg,du_cfg,lib64,root,cu_bin,du_bin}
+cp /data/nepdemo/xm/cu_cfg/*    $tmp_path/xm/cu_cfg/
+cp /data/nepdemo/xm/du_cfg/*    $tmp_path/xm/du_cfg/
+cp /data/nepdemo/xm/root/*      $tmp_path/xm/root/
+cp /data/nepdemo/xm/du_bin/*    $tmp_path/xm/du_bin/
+cp /data/nepdemo/xm/cu_bin/*    $tmp_path/xm/cu_bin/
+
 #touch dockerfile
 #cd $local_path
 
@@ -78,9 +86,47 @@ enabled=1
 gpgcheck=0
 EOF
 
+
+cat << 'EOF' > $tmp_path/set_ip.sh
+#!/bin/bash
+
+# Import our environment variables from systemd
+for e in $(tr "\000" "\n" < /proc/1/environ); do
+  # if [[ $e == DEMO_ENV* ]]; then
+    eval "export $e"
+  # fi
+done
+
+echo $DEMO_ENV_NIC > /demo.txt
+echo $DEMO_ENV_IP >> /demo.txt
+echo $DEMO_ENV_MASK >> /demo.txt
+
+ifconfig $DEMO_ENV_NIC:1 $DEMO_ENV_IP/$DEMO_ENV_MASK up
+
+
+EOF
+
+cat << EOF > $tmp_path/setip.service
+[Unit]
+Description=set ip service
+After=network.target
+
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory=/root/
+ExecStart=/root/systemd/set_ip.sh
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+
+
 if [ -z $http_proxy ];then
     cat > $tmp_path/Dockerfile << 'EOF'
 FROM registry.access.redhat.com/ubi8/ubi-init:8.4
+# FROM registry.access.redhat.com/ubi8/ubi:8.4
 
 RUN dnf repolist
 RUN sed -i 's|enabled=1|enabled=0|g' /etc/yum/pluginconf.d/subscription-manager.conf
@@ -94,11 +140,11 @@ COPY local.repo /etc/yum.repos.d/local.repo
 RUN yum update -y
 # RUN yum install -y libhugetlbfs-utils libhugetlbfs-devel libhugetlbfs numactl-devel pciutils libaio libaio-devel net-tools libpcap kernel-rt-core kernel-rt-devel kernel-rt-modules kernel-rt-modules-extra kernel-headers libhugetlbfs-devel zlib-devel numactl-devel
 
-RUN yum install -y libhugetlbfs-utils libhugetlbfs-devel libhugetlbfs numactl-devel pciutils libaio libaio-devel net-tools libpcap kernel-rt-core kernel-rt-devel kernel-rt-modules kernel-rt-modules-extra kernel-headers 
+RUN yum install -y libhugetlbfs-utils libhugetlbfs-devel libhugetlbfs numactl-devel pciutils libaio libaio-devel net-tools libpcap kernel-rt-core kernel-rt-devel kernel-rt-modules kernel-rt-modules-extra kernel-headers lksctp-tools
 
 RUN dnf install -y --allowerasing coreutils
 # RUN dnf groupinstall -y server
-RUN dnf install -y python3 iproute kernel-tools strace
+RUN dnf install -y python3 iproute kernel-tools strace openssh-clients compat-openssl10
 
 WORKDIR /root/
 COPY flexran ./flexran
@@ -120,7 +166,7 @@ COPY home/cfg.tar /etc/
 RUN cd /etc && mv BBU_cfg bakBBU_cfg && tar zvxf cfg.tar 
 
 COPY home/XRAN_BBU /home/BaiBBU_XSS/tools/XRAN_BBU
-COPY home/*.xml /etc/BBU_cfg/phy_cfg/
+# COPY home/*.xml /etc/BBU_cfg/phy_cfg/
 
 COPY intel.so/* /root/libs/
 COPY pf-bb-config /root/pf-bb-config
@@ -129,7 +175,20 @@ RUN ln -s /home/BaiBBU_XSS-A/BaiBBU_DXSS/libnr_centos.so.0.0.1 /root/libs/libnr.
 
 RUN rm -rf /opt/intel/ /home/bin/ 
 
-ENV LD_LIBRARY_PATH=/root/libs/:/root/flexran/libs/cpa/sub6/rec/lib/lib/:/root/flexran/wls_mod/lib/
+ENV LD_LIBRARY_PATH=/root/libs/:/root/flexran/libs/cpa/sub6/rec/lib/lib/:/root/flexran/wls_mod/lib/:/home/BaiBBU_XSS/BaiBBU_SXSS/DU/bin:/home/BaiBBU_XSS-A/BaiBBU_SXSS/CU/lib/
+
+COPY xm/cu_cfg/*    /etc/BBU_cfg/cu_cfg/
+COPY xm/du_cfg/*    /etc/BBU_cfg/du_cfg/
+COPY xm/root/*      /root/
+COPY xm/du_bin/*    /home/BaiBBU_XSS/BaiBBU_SXSS/DU/bin/
+COPY xm/cu_bin/*    /home/BaiBBU_XSS/BaiBBU_SXSS/CU/bin/
+
+COPY set_ip.sh      /root/systemd/
+RUN chmod +x /root/systemd/set_ip.sh   
+COPY setip.service  /etc/systemd/system/setip.service
+RUN systemctl enable setip.service
+
+# entrypoint ["/usr/sbin/init"]
 
 EOF
 else
