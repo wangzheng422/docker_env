@@ -29,6 +29,9 @@ cd $local_path
 mkdir $tmp_path
 mkdir $tmp_path/flexran
 mkdir $tmp_path/{home,intel,phy,intel.so}
+
+wget -O $tmp_path/htop-3.0.5-1.el8.x86_64.rpm https://download-ib01.fedoraproject.org/pub/epel/8/Everything/x86_64/Packages/h/htop-3.0.5-1.el8.x86_64.rpm
+
 echo "copy flexran bin"
 cp -r bin $tmp_path/flexran/
 cp -r flexran_build.sh $tmp_path/flexran/
@@ -103,6 +106,10 @@ echo $DEMO_ENV_MASK >> /demo.txt
 
 ifconfig $DEMO_ENV_NIC:1 $DEMO_ENV_IP/$DEMO_ENV_MASK up
 
+installLic /root/13FD549D912D82B3C50C58E6D233.lic
+modprobe sctp
+
+sleep infinity
 
 EOF
 
@@ -112,7 +119,7 @@ Description=set ip service
 After=network.target
 
 [Service]
-Type=oneshot
+Type=simple
 User=root
 WorkingDirectory=/root/
 ExecStart=/root/systemd/set_ip.sh
@@ -144,7 +151,10 @@ RUN yum install -y libhugetlbfs-utils libhugetlbfs-devel libhugetlbfs numactl-de
 
 RUN dnf install -y --allowerasing coreutils
 # RUN dnf groupinstall -y server
-RUN dnf install -y python3 iproute kernel-tools strace openssh-clients compat-openssl10
+RUN dnf install -y python3 iproute kernel-tools strace openssh-clients compat-openssl10 dos2unix
+
+COPY htop-3.0.5-1.el8.x86_64.rpm /root/tmp/
+RUN dnf install -y /root/tmp/htop-3.0.5-1.el8.x86_64.rpm
 
 WORKDIR /root/
 COPY flexran ./flexran
@@ -187,6 +197,10 @@ COPY set_ip.sh      /root/systemd/
 RUN chmod +x /root/systemd/set_ip.sh   
 COPY setip.service  /etc/systemd/system/setip.service
 RUN systemctl enable setip.service
+
+RUN cd /home/BaiBBU_XSS/BaiBBU_SXSS/DU/bin && ln -snf gnb_du_layer2--0422 gnb_du_layer2
+RUN cd /home/BaiBBU_XSS/BaiBBU_SXSS/CU/bin && ln -snf gnb_cu_l3_no_licence gnb_cu_l3
+RUN cd /root/flexran/bin/nr5g/gnb/l1/ && ln -snf l1app_1109 l1app
 
 # entrypoint ["/usr/sbin/init"]
 
