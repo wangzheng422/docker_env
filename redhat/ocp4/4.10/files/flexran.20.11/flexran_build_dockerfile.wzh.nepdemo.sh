@@ -106,6 +106,8 @@ echo $DEMO_ENV_MASK >> /demo.txt
 
 ifconfig $DEMO_ENV_NIC:1 $DEMO_ENV_IP/$DEMO_ENV_MASK up
 
+insmod /root/dpdk-19.11/build/kernel/linux/igb_uio/igb_uio.ko
+
 installLic /root/13FD549D912D82B3C50C58E6D233.lic
 modprobe sctp
 
