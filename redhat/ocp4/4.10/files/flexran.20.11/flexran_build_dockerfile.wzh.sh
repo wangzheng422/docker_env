@@ -80,7 +80,7 @@ RUN yum update -y
 RUN yum install -y libhugetlbfs-utils libhugetlbfs-devel libhugetlbfs numactl-devel pciutils libaio libaio-devel net-tools libpcap kernel-rt-core kernel-rt-devel kernel-rt-modules kernel-rt-modules-extra kernel-headers
 
 RUN dnf install -y --allowerasing coreutils
-RUN dnf groupinstall -y server
+# RUN dnf groupinstall -y server
 RUN dnf install -y python3
 
 WORKDIR /root/
@@ -109,7 +109,7 @@ RUN yum update -y
 RUN yum install -y libhugetlbfs-utils libhugetlbfs-devel libhugetlbfs numactl-devel pciutils libaio libaio-devel net-tools libpcap kernel-rt-core kernel-rt-devel kernel-rt-modules kernel-rt-modules-extra kernel-headers
 
 RUN dnf install -y --allowerasing coreutils
-RUN dnf groupinstall -y server
+# RUN dnf groupinstall -y server
 RUN dnf install -y python3
 
 WORKDIR /root/
