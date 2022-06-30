@@ -32,6 +32,7 @@
   - [2022.05 openshift4 单节点 从centos7/8 开始安装](redhat/ocp4/4.10/4.10.sno.boot.from.linux.md)
   - [2022.05 openshift4 单节点 安装精简版 ODF/ceph](redhat/ocp4/4.10/4.10.sno.odf.md)
 - openshift4 使用系列
+  - [2022.06 在 openshift4 上运行 OpenRAN 无线基站应用](redhat/ocp4/4.10/4.10.flexran.20.11.pf.deploy.md)
   - [2022.05 openshift4 可视化 ovs netflow](redhat/ocp4/4.10/4.10.netflow.table.md)
   - [2022.05 intel o-ran flexran 方案在openshift4上的安装和使用](redhat/ocp4/4.10/4.10.flexran.20.11.md)
   - [2022.01 ci/cd pipeline gitops演示](redhat/ocp4/4.9/4.9.ci.cd.demo.md)
