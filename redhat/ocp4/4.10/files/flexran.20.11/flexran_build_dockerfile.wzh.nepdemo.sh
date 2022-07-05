@@ -153,7 +153,7 @@ RUN yum install -y libhugetlbfs-utils libhugetlbfs-devel libhugetlbfs numactl-de
 
 RUN dnf install -y --allowerasing coreutils
 # RUN dnf groupinstall -y server
-RUN dnf install -y python3 iproute kernel-tools strace openssh-clients compat-openssl10 dos2unix
+RUN dnf install -y python3 iproute kernel-tools strace openssh-clients compat-openssl10 dos2unix bc
 
 COPY htop-3.0.5-1.el8.x86_64.rpm /root/tmp/
 RUN dnf install -y /root/tmp/htop-3.0.5-1.el8.x86_64.rpm
