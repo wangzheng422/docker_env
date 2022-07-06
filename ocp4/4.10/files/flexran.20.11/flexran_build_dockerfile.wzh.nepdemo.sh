@@ -152,8 +152,8 @@ RUN yum update -y
 RUN yum install -y libhugetlbfs-utils libhugetlbfs-devel libhugetlbfs numactl-devel pciutils libaio libaio-devel net-tools libpcap kernel-rt-core kernel-rt-devel kernel-rt-modules kernel-rt-modules-extra kernel-headers lksctp-tools
 
 RUN dnf install -y --allowerasing coreutils
-# RUN dnf groupinstall -y server
-RUN dnf install -y python3 iproute kernel-tools strace openssh-clients compat-openssl10 dos2unix
+RUN dnf groupinstall -y server
+RUN dnf install -y python3 iproute kernel-tools strace openssh-clients compat-openssl10 dos2unix bc tcpdump
 
 COPY htop-3.0.5-1.el8.x86_64.rpm /root/tmp/
 RUN dnf install -y /root/tmp/htop-3.0.5-1.el8.x86_64.rpm
