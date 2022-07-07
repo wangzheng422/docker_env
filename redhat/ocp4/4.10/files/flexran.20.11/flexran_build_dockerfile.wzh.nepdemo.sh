@@ -30,7 +30,7 @@ mkdir $tmp_path
 mkdir $tmp_path/flexran
 mkdir $tmp_path/{home,intel,phy,intel.so}
 
-wget -O $tmp_path/htop-3.0.5-1.el8.x86_64.rpm https://download-ib01.fedoraproject.org/pub/epel/8/Everything/x86_64/Packages/h/htop-3.0.5-1.el8.x86_64.rpm
+cp /data/nepdemo/htop-3.0.5-1.el8.x86_64.rpm $tmp_path/
 
 echo "copy flexran bin"
 cp -r bin $tmp_path/flexran/
@@ -153,7 +153,7 @@ RUN yum install -y libhugetlbfs-utils libhugetlbfs-devel libhugetlbfs numactl-de
 
 RUN dnf install -y --allowerasing coreutils
 RUN dnf groupinstall -y server
-RUN dnf install -y python3 iproute kernel-tools strace openssh-clients compat-openssl10 dos2unix bc tcpdump
+RUN dnf install -y python3 iproute kernel-tools strace openssh-clients compat-openssl10 dos2unix bc tcpdump nc iputils
 
 COPY htop-3.0.5-1.el8.x86_64.rpm /root/tmp/
 RUN dnf install -y /root/tmp/htop-3.0.5-1.el8.x86_64.rpm
