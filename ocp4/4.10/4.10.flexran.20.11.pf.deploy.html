@@ -174,6 +174,45 @@ podman pull quay.io/nepdemo/flexran_vdu:flexran-20.11-dpdk-19.11-ocp4.9.5-ubi-8.
 
 podman tag quay.io/nepdemo/flexran_vdu:flexran-20.11-dpdk-19.11-ocp4.9.5-ubi-8.4  flexran.docker.registry/flexran_vdu
 
+cat &lt;&lt; 'EOF' &gt; /data/nepdemo/convert_hex.sh
+to_hex() {
+  VAR_CORE_LIST=$1
+
+  var_cores=($(echo &quot;$VAR_CORE_LIST&quot; | tr ',' ' '))
+
+  var_bitmap=0
+  for var_core in &quot;${var_cores[@]}&quot;; do
+    # echo $var_core
+    core_bitmap=$((1&lt;&lt;$var_core))
+    # echo &quot;obase=2;$core_bitmap&quot; | bc
+    ((var_bitmap|=$core_bitmap))
+    # echo &quot;obase=2;$var_bitmap&quot; | bc
+  done
+
+  echo &quot;obase=16;$var_bitmap&quot; | bc
+  # echo &quot;obase=2;$var_bitmap&quot; | bc
+}
+
+to_dec() {
+  VAR_CORE_LIST=$1
+
+  var_cores=($(echo &quot;$VAR_CORE_LIST&quot; | tr ',' ' '))
+
+  var_bitmap=0
+  for var_core in &quot;${var_cores[@]}&quot;; do
+    # echo $var_core
+    core_bitmap=$((1&lt;&lt;$var_core))
+    # echo &quot;obase=2;$core_bitmap&quot; | bc
+    ((var_bitmap|=$core_bitmap))
+    # echo &quot;obase=2;$var_bitmap&quot; | bc
+  done
+
+  echo &quot;obase=10;$var_bitmap&quot; | bc
+  # echo &quot;obase=2;$var_bitmap&quot; | bc
+}
+EOF
+
+
 cat &lt;&lt; 'EOF' &gt; /data/nepdemo/set_ip.sh
 #!/bin/bash
 
@@ -188,7 +227,7 @@ echo $DEMO_ENV_NIC &gt; /demo.txt
 echo $DEMO_ENV_IP &gt;&gt; /demo.txt
 echo $DEMO_ENV_MASK &gt;&gt; /demo.txt
 
-ifconfig $DEMO_ENV_NIC:1 $DEMO_ENV_IP/$DEMO_ENV_MASK up
+# ifconfig $DEMO_ENV_NIC $DEMO_ENV_IP/$DEMO_ENV_MASK up
 
 insmod /root/dpdk-19.11/build/kernel/linux/igb_uio/igb_uio.ko
 
@@ -210,49 +249,51 @@ echo &quot;8086 0D8F&quot; | tee /sys/bus/pci/drivers/igb_uio/new_id
 
 python3 /root/dpdk-19.11/usertools/dpdk-devbind.py -s
 
-# below is the core-binding parameter for dpdk/bbu application
+source /root/convert_hex.sh
 
-sed -i 's/&lt;systemThread&gt;.*&lt;\/systemThread&gt;/&lt;systemThread&gt;2, 0, 0&lt;\/systemThread&gt;/' /root/flexran/bin/nr5g/gnb/l1/phycfg_xran.xml
-sed -i 's/&lt;timerThread&gt;.*&lt;\/timerThread&gt;/&lt;timerThread&gt;1, 96, 0&lt;\/timerThread&gt;/' /root/flexran/bin/nr5g/gnb/l1/phycfg_xran.xml
-sed -i 's/&lt;FpgaDriverCpuInfo&gt;.*&lt;\/FpgaDriverCpuInfo&gt;/&lt;FpgaDriverCpuInfo&gt;3, 96, 0&lt;\/FpgaDriverCpuInfo&gt;/' /root/flexran/bin/nr5g/gnb/l1/phycfg_xran.xml
-sed -i 's/&lt;FrontHaulCpuInfo&gt;.*&lt;\/FrontHaulCpuInfo&gt;/&lt;FrontHaulCpuInfo&gt;3, 96, 0&lt;\/FrontHaulCpuInfo&gt;/' /root/flexran/bin/nr5g/gnb/l1/phycfg_xran.xml
-sed -i 's/&lt;radioDpdkMaster&gt;.*&lt;\/radioDpdkMaster&gt;/&lt;radioDpdkMaster&gt;2, 99, 0&lt;\/radioDpdkMaster&gt;/' /root/flexran/bin/nr5g/gnb/l1/phycfg_xran.xml
-sed -i 's/&lt;BbuPoolThreadDefault_0_63&gt;.*&lt;\/BbuPoolThreadDefault_0_63&gt;/&lt;BbuPoolThreadDefault_0_63&gt;0x1F80&lt;\/BbuPoolThreadDefault_0_63&gt;/' /root/flexran/bin/nr5g/gnb/l1/phycfg_xran.xml
 
-sed -i 's/&lt;xRANThread&gt;.*&lt;\/xRANThread&gt;/&lt;xRANThread&gt;5, 96, 0&lt;\/xRANThread&gt;/' /root/flexran/bin/nr5g/gnb/l1/xrancfg_sub6.xml
-sed -i 's/&lt;xRANWorker&gt;.*&lt;\/xRANWorker&gt;/&lt;xRANWorker&gt;0x40, 96, 0&lt;\/xRANWorker&gt;/' /root/flexran/bin/nr5g/gnb/l1/xrancfg_sub6.xml
+sed -i 's/&lt;systemThread&gt;.*&lt;/&lt;systemThread&gt;2, 0, 0&lt;/'  /root/flexran/bin/nr5g/gnb/l1/phycfg_xran.xml
+sed -i 's/&lt;timerThread&gt;.*&lt;/&lt;timerThread&gt;1, 96, 0&lt;/'   /root/flexran/bin/nr5g/gnb/l1/phycfg_xran.xml
+sed -i 's/&lt;FpgaDriverCpuInfo&gt;.*&lt;/&lt;FpgaDriverCpuInfo&gt;3, 96, 0&lt;/'   /root/flexran/bin/nr5g/gnb/l1/phycfg_xran.xml
+sed -i 's/&lt;FrontHaulCpuInfo&gt;.*&lt;/&lt;FrontHaulCpuInfo&gt;3, 96, 0&lt;/'     /root/flexran/bin/nr5g/gnb/l1/phycfg_xran.xml
+sed -i 's/&lt;radioDpdkMaster&gt;.*&lt;/&lt;radioDpdkMaster&gt;2, 99, 0&lt;/'       /root/flexran/bin/nr5g/gnb/l1/phycfg_xran.xml
+sed -i &quot;s/&lt;BbuPoolThreadDefault_0_63&gt;.*&lt;/&lt;BbuPoolThreadDefault_0_63&gt;0x$(to_hex '7,8,9,10,11,12')&lt;/&quot;   /root/flexran/bin/nr5g/gnb/l1/phycfg_xran.xml
 
-sed -i 's/OAM_SHARED_CORE_BITMAP=.*/OAM_SHARED_CORE_BITMAP=24/' /etc/BBU_cfg/cu_cfg/gNodeB_CU_Configuration.cfg
-sed -i 's/L3_SHARED_CORE_BITMAP=.*/L3_SHARED_CORE_BITMAP=20/' /etc/BBU_cfg/cu_cfg/gNodeB_CU_Configuration.cfg
-sed -i 's/PDCP_SHRED_CORE_BITMAP=.*/PDCP_SHRED_CORE_BITMAP=6/' /etc/BBU_cfg/cu_cfg/gNodeB_CU_Configuration.cfg
-sed -i 's/RRM_SHARED_CORE_BITMAP=.*/RRM_SHARED_CORE_BITMAP=6/' /etc/BBU_cfg/cu_cfg/gNodeB_CU_Configuration.cfg
-sed -i 's/SON_SHARED_CORE_BITMAP=.*/SON_SHARED_CORE_BITMAP=6/' /etc/BBU_cfg/cu_cfg/gNodeB_CU_Configuration.cfg
+sed -i 's/&lt;xRANThread&gt;.*&lt;/&lt;xRANThread&gt;5, 96, 0&lt;/'     /root/flexran/bin/nr5g/gnb/l1/xrancfg_sub6.xml
+sed -i &quot;s/&lt;xRANWorker&gt;.*&lt;/&lt;xRANWorker&gt;0x$(to_hex '6'), 96, 0&lt;/&quot; /root/flexran/bin/nr5g/gnb/l1/xrancfg_sub6.xml
+
+sed -i &quot;s/OAM_SHARED_CORE_BITMAP=.*/OAM_SHARED_CORE_BITMAP=$(to_dec '3,4')/&quot;  /etc/BBU_cfg/cu_cfg/gNodeB_CU_Configuration.cfg
+sed -i &quot;s/L3_SHARED_CORE_BITMAP=.*/L3_SHARED_CORE_BITMAP=$(to_dec '2,4')/&quot;    /etc/BBU_cfg/cu_cfg/gNodeB_CU_Configuration.cfg
+sed -i &quot;s/PDCP_SHRED_CORE_BITMAP=.*/PDCP_SHRED_CORE_BITMAP=$(to_dec '1,2')/&quot;  /etc/BBU_cfg/cu_cfg/gNodeB_CU_Configuration.cfg
+sed -i &quot;s/RRM_SHARED_CORE_BITMAP=.*/RRM_SHARED_CORE_BITMAP=$(to_dec '1,2')/&quot;  /etc/BBU_cfg/cu_cfg/gNodeB_CU_Configuration.cfg
+sed -i &quot;s/SON_SHARED_CORE_BITMAP=.*/SON_SHARED_CORE_BITMAP=$(to_dec '1,2')/&quot;  /etc/BBU_cfg/cu_cfg/gNodeB_CU_Configuration.cfg
 
 # https://unix.stackexchange.com/questions/487451/sed-replace-a-pattern-between-a-pattern-and-the-end-of-file
-sed -i '/&lt;oam_shm_logger_cfg&gt;/,$s/&lt;cpu_bitmap&gt;.*&lt;/&lt;cpu_bitmap&gt;2&lt;/' /etc/BBU_cfg/cu_cfg/Proprietary_gNodeB_CU_Data_Model.xml
-sed -i '/&lt;shm_logger_cfg&gt;/,$s/&lt;cpu_bitmap&gt;.*&lt;/&lt;cpu_bitmap&gt;2&lt;/' /etc/BBU_cfg/cu_cfg/Proprietary_gNodeB_CU_Data_Model.xml
-sed -i '/&lt;L3Params&gt;/,$s/&lt;core_no&gt;.*&lt;/&lt;core_no&gt;2&lt;/' /etc/BBU_cfg/cu_cfg/Proprietary_gNodeB_CU_Data_Model.xml
+sed -i &quot;/&lt;oam_shm_logger_cfg&gt;/,\$s/&lt;cpu_bitmap&gt;.*&lt;/&lt;cpu_bitmap&gt;$(to_dec '1')&lt;/&quot; /etc/BBU_cfg/cu_cfg/Proprietary_gNodeB_CU_Data_Model.xml
+sed -i &quot;/&lt;shm_logger_cfg&gt;/,\$s/&lt;cpu_bitmap&gt;.*&lt;/&lt;cpu_bitmap&gt;$(to_dec '1')&lt;/&quot;     /etc/BBU_cfg/cu_cfg/Proprietary_gNodeB_CU_Data_Model.xml
+sed -i '/&lt;L3Params&gt;/,$s/&lt;core_no&gt;.*&lt;/&lt;core_no&gt;2&lt;/'        /etc/BBU_cfg/cu_cfg/Proprietary_gNodeB_CU_Data_Model.xml
 sed -i '/&lt;process_name&gt;gnb_cu_son&lt;/,$s/&lt;process_args&gt;.* /&lt;process_args&gt;2 /' /etc/BBU_cfg/cu_cfg/Proprietary_gNodeB_CU_Data_Model.xml
 sed -i '/&lt;process_name&gt;gnb_cu_rrm&lt;/,$s/&lt;process_args&gt;.* /&lt;process_args&gt;2 /' /etc/BBU_cfg/cu_cfg/Proprietary_gNodeB_CU_Data_Model.xml
 sed -i '/&lt;pdcp_index&gt;0&lt;/,$s/&lt;core_num_for_worker_thread&gt;.*&lt;/&lt;core_num_for_worker_thread&gt;3&lt;/' /etc/BBU_cfg/cu_cfg/Proprietary_gNodeB_CU_Data_Model.xml
 sed -i '/&lt;pdcp_index&gt;1&lt;/,$s/&lt;core_num_for_worker_thread&gt;.*&lt;/&lt;core_num_for_worker_thread&gt;3&lt;/' /etc/BBU_cfg/cu_cfg/Proprietary_gNodeB_CU_Data_Model.xml
-sed -i '/&lt;egtpu_instance&gt;0&lt;/,$s/&lt;core_num_for_worker_thread&gt;.*&lt;/&lt;core_num_for_worker_thread&gt;2&lt;/' /etc/BBU_cfg/cu_cfg/Proprietary_gNodeB_CU_Data_Model.xml
-sed -i '/&lt;egtpu_instance&gt;1&lt;/,$s/&lt;core_num_for_worker_thread&gt;.*&lt;/&lt;core_num_for_worker_thread&gt;2&lt;/' /etc/BBU_cfg/cu_cfg/Proprietary_gNodeB_CU_Data_Model.xml
-sed -i '/&lt;f1u_instance&gt;0&lt;/,$s/&lt;core_num_for_worker_thread&gt;.*&lt;/&lt;core_num_for_worker_thread&gt;2&lt;/' /etc/BBU_cfg/cu_cfg/Proprietary_gNodeB_CU_Data_Model.xml
-sed -i '/&lt;f1u_instance&gt;1&lt;/,$s/&lt;core_num_for_worker_thread&gt;.*&lt;/&lt;core_num_for_worker_thread&gt;2&lt;/' /etc/BBU_cfg/cu_cfg/Proprietary_gNodeB_CU_Data_Model.xml
-sed -i 's/&lt;core_num_mapping&gt;.*&lt;/&lt;core_num_mapping&gt;4,4&lt;/' /etc/BBU_cfg/cu_cfg/Proprietary_gNodeB_CU_Data_Model.xml
+sed -i '/&lt;egtpu_instance&gt;0&lt;/,$s/&lt;core_num_of_worker_thread&gt;.*&lt;/&lt;core_num_of_worker_thread&gt;2&lt;/'  /etc/BBU_cfg/cu_cfg/Proprietary_gNodeB_CU_Data_Model.xml
+sed -i '/&lt;egtpu_instance&gt;1&lt;/,$s/&lt;core_num_of_worker_thread&gt;.*&lt;/&lt;core_num_of_worker_thread&gt;2&lt;/'  /etc/BBU_cfg/cu_cfg/Proprietary_gNodeB_CU_Data_Model.xml
+sed -i '/&lt;f1u_instance&gt;0&lt;/,$s/&lt;core_num_of_worker_thread&gt;.*&lt;/&lt;core_num_of_worker_thread&gt;2&lt;/'    /etc/BBU_cfg/cu_cfg/Proprietary_gNodeB_CU_Data_Model.xml
+sed -i '/&lt;f1u_instance&gt;1&lt;/,$s/&lt;core_num_of_worker_thread&gt;.*&lt;/&lt;core_num_of_worker_thread&gt;2&lt;/'    /etc/BBU_cfg/cu_cfg/Proprietary_gNodeB_CU_Data_Model.xml
+sed -i 's/&lt;core_num_mapping&gt;.*&lt;/&lt;core_num_mapping&gt;4,4&lt;/'    /etc/BBU_cfg/cu_cfg/Proprietary_gNodeB_CU_Data_Model.xml
 
-sed -i 's/MAC_BINREAD_CORE_NUM=.*/MAC_BINREAD_CORE_NUM=1/' /etc/BBU_cfg/du_cfg/gNB_DU_Configuration.cfg
-sed -i 's/RLC_BINREAD_CORE_NUM=.*/RLC_BINREAD_CORE_NUM=1/' /etc/BBU_cfg/du_cfg/gNB_DU_Configuration.cfg
-sed -i 's/MAC_HP_CORE_NUM=.*/MAC_HP_CORE_NUM=3/' /etc/BBU_cfg/du_cfg/gNB_DU_Configuration.cfg
-sed -i 's/RLC_MASTER_CORE_NUM=.*/RLC_MASTER_CORE_NUM=2/' /etc/BBU_cfg/du_cfg/gNB_DU_Configuration.cfg
-sed -i 's/SHARED_CORE_BITMAP=.*/SHARED_CORE_BITMAP=6/' /etc/BBU_cfg/du_cfg/gNB_DU_Configuration.cfg
-sed -i 's/RELAY_ADAPTER_RECVR_THREAD_CORE_NUM=.*/RELAY_ADAPTER_RECVR_THREAD_CORE_NUM=4/' /etc/BBU_cfg/du_cfg/gNB_DU_Configuration.cfg
+sed -i 's/MAC_BINREAD_CORE_NUM=.*/MAC_BINREAD_CORE_NUM=1/'  /etc/BBU_cfg/du_cfg/gNB_DU_Configuration.cfg
+sed -i 's/RLC_BINREAD_CORE_NUM=.*/RLC_BINREAD_CORE_NUM=1/'  /etc/BBU_cfg/du_cfg/gNB_DU_Configuration.cfg
+sed -i 's/MAC_HP_CORE_NUM=.*/MAC_HP_CORE_NUM=3/'            /etc/BBU_cfg/du_cfg/gNB_DU_Configuration.cfg
+sed -i 's/RLC_MASTER_CORE_NUM=.*/RLC_MASTER_CORE_NUM=2/'    /etc/BBU_cfg/du_cfg/gNB_DU_Configuration.cfg
+sed -i &quot;s/SHARED_CORE_BITMAP=.*/SHARED_CORE_BITMAP=$(to_dec '1,2')/&quot;      /etc/BBU_cfg/du_cfg/gNB_DU_Configuration.cfg
+sed -i 's/RELAY_ADAPTER_RECVR_THREAD_CORE_NUM=.*/RELAY_ADAPTER_RECVR_THREAD_CORE_NUM=4/'  /etc/BBU_cfg/du_cfg/gNB_DU_Configuration.cfg
 
-sed -i '/&lt;RlcProvsioningParams&gt;/,$s/&lt;CoreNumWorkerThread&gt;.*&lt;/&lt;CoreNumWorkerThread&gt;1&lt;/' /etc/BBU_cfg/du_cfg/Proprietary_gNodeB_DU_Data_Model.xml
-sed -i '/&lt;RlclSystemParams&gt;/,$s/&lt;CoreNumWorkerThread&gt;.*&lt;/&lt;CoreNumWorkerThread&gt;4&lt;/' /etc/BBU_cfg/du_cfg/Proprietary_gNodeB_DU_Data_Model.xml
+sed -i '/&lt;RlcProvsioningParams&gt;/,$s/&lt;CoreNumWorkerThread&gt;.*&lt;/&lt;CoreNumWorkerThread&gt;1&lt;/'    /etc/BBU_cfg/du_cfg/Proprietary_gNodeB_DU_Data_Model.xml
+sed -i '/&lt;RlclSystemParams&gt;/,$s/&lt;CoreNumWorkerThread&gt;.*&lt;/&lt;CoreNumWorkerThread&gt;4&lt;/'        /etc/BBU_cfg/du_cfg/Proprietary_gNodeB_DU_Data_Model.xml
 sed -i '/&lt;F1uProvisioningParams&gt;/,$s/&lt;numCoreWorkerThreads&gt;.*&lt;/&lt;numCoreWorkerThreads&gt;3&lt;/' /etc/BBU_cfg/du_cfg/Proprietary_gNodeB_DU_Data_Model.xml
 
+#  --a=8 --t=8  --b=8  
 sed -i 's/\.\/gnb_cu_pdcp .* &gt;/\.\/gnb_cu_pdcp --r=2 --a=2 --t=2 --m=2 --i=0 --b=2 --p=0 --s=50 --n=10 &gt;/' /home/BaiBBU_XSS/BaiBBU_SXSS/gNB_app
 
 EOF
@@ -280,17 +321,21 @@ RUN chmod +x /root/systemd/set_ip.sh
 COPY setip.service  /etc/systemd/system/setip.service
 RUN systemctl enable setip.service
 
+COPY convert_hex.sh /root/convert_hex.sh
+
+# COPY htop-3.0.5-1.el8.x86_64.rpm /root/tmp/
+# RUN dnf install -y /root/tmp/htop-3.0.5-1.el8.x86_64.rpm
+
 EOF
 
 cd /data/nepdemo
 podman build --squash -f /data/nepdemo/flexran_vdu.dockerfile -t flexran.docker.registry/flexran_vdu:wzh .
 
-# upload the project container image to local registry
 export REG_TMP=&quot;reg-tmp.redhat.ren:5443&quot;
 
-podman tag flexran.docker.registry/flexran_vdu:wzh  ${REG_TMP}/nepdemo/flexran_vdu:flexran-20.11-dpdk-19.11-ocp4.9.5-ubi-8.4
+podman tag flexran.docker.registry/flexran_vdu:wzh  ${REG_TMP}/nepdemo/flexran_vdu:flexran-20.11-dpdk-19.11-ocp4.9.5-ubi-8.4-core-12
 
-podman push --tls-verify=false ${REG_TMP}/nepdemo/flexran_vdu:flexran-20.11-dpdk-19.11-ocp4.9.5-ubi-8.4
+podman push --tls-verify=false ${REG_TMP}/nepdemo/flexran_vdu:flexran-20.11-dpdk-19.11-ocp4.9.5-ubi-8.4-core-12
 
 </code></pre>
 <h1 id="deploy-on-ocp-495"><a class="header" href="#deploy-on-ocp-495">deploy on ocp 4.9.5</a></h1>
@@ -347,21 +392,21 @@ spec:
     # - clocksource=tsc
     # - tsc=perfect
     # set selinux
-    # - selinux=0
-    # - enforcing=0
+    - selinux=0
+    - enforcing=0
     # end set selinux
     - nmi_watchdog=0
     # - softlockup_panic=0
     - isolcpus=1-18
     - nohz_full=1-18
     # - idle=poll
-    - default_hugepagesz=1G
-    - hugepagesz=1G
-    - hugepages=24
+    # - default_hugepagesz=1G
+    # - hugepagesz=1G
+    # - hugepages=24
     # - skew_tick=1
     - rcu_nocbs=1-18
-    - kthread_cpus=0
-    - irqaffinity=0
+    - kthread_cpus=0,19
+    - irqaffinity=0,19
     # - rcu_nocb_poll
     - iommu=pt
     - intel_iommu=on
@@ -381,6 +426,11 @@ spec:
   cpu:
       isolated: &quot;1-18&quot;
       reserved: &quot;0,19&quot;
+  hugepages:
+    defaultHugepagesSize: &quot;1G&quot;
+    pages:
+    - size:  &quot;1G&quot;
+      count:  24
   realTimeKernel:
       enabled: true
   numa:  
@@ -401,17 +451,6 @@ oc label node worker-2.ocp4.redhat.ren node-role.kubernetes.io/worker-rt-2=&quot
 <h2 id="intel-e810-driver"><a class="header" href="#intel-e810-driver">intel e810 driver</a></h2>
 <p>openshift 4.9.5 对应的coreos操作系统里面自带的e810驱动ice.ko，版本比较低，无法支持ptp，我们需要升级驱动。但是coreos升级驱动操作比较麻烦，我们需要制作一个systemd service，让他在kubelet之前启动，在这个service 里面，用podman启动一个特权容器，在容器里面，insmod ice.ko。当然一切的前提，是在kernel参数上，屏蔽了ice的自动加载。</p>
 <pre><code class="language-bash">
-oc new-project vbbu-demo
-
-oc project vbbu-demo
-
-export REG_TMP='tmp-registry.ocp4.redhat.ren:5443'
-
-# kernel driver deployment
-oc create serviceaccount svcacct-driver -n vbbu-demo
-oc adm policy add-scc-to-user privileged -z svcacct-driver -n vbbu-demo
-# oc adm policy add-scc-to-user anyuid -z mysvcacct -n vbbu-demo
-
 cat &lt;&lt; EOF &gt; /data/sno/static-pod.bu
 variant: openshift
 version: 4.9.0
@@ -438,7 +477,7 @@ systemd:
       enabled: true
       contents: |
         [Unit]
-        Description=set ip service
+        Description=driver.ice service
         After=network.target
         Before=kubelet.target
 
@@ -446,7 +485,7 @@ systemd:
         Type=oneshot
         User=root
         WorkingDirectory=/root/
-        ExecStart=podman run --privileged --rm -it quay.io/nepdemo/intel-driver:2022-06-13-1318 /bin/sh -c &quot; rmmod ice; rmmod auxiliary ; insmod /diy/auxiliary.ko; insmod /diy/ice.ko ; &quot;
+        ExecStart=podman run --privileged --rm -it quay.io/nepdemo/intel-driver:8.4-rt-1.9.7 /bin/sh -c &quot; rmmod ice; rmmod auxiliary ; insmod /diy/auxiliary.ko; insmod /diy/ice.ko ; &quot;
 
         [Install]
         WantedBy=multi-user.target
@@ -675,7 +714,7 @@ verbose                 1
 logging_level           7
 ts2phc.pulsewidth       100000000
 # For GNSS module
-ts2phc.nmea_serialport /dev/ttyGNSS_1700_0
+ts2phc.nmea_serialport /dev/ttyGNSS_6500_0
 [ens2f0]
 ts2phc.extts_polarity rising
 EOF
@@ -684,7 +723,11 @@ oc delete configmap ptp-config -n vbbu-demo
 
 oc create configmap ptp-config -n vbbu-demo --from-file=/data/install/ptp4l.conf --from-file=/data/install/ts2phc.cfg --save-config=true
 
-cat &lt;&lt; 'EOF' &gt; /data/install/ptp.demo.yaml
+# 06 for fifo
+# 07 for nice
+export VAR_IMAGE='quay.io/nepdemo/linuxptp:3.1.1-ubi-8.4-v06'
+
+cat &lt;&lt; EOF &gt; /data/install/ptp.demo.yaml
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -700,7 +743,7 @@ spec:
   template:
     metadata:
       annotations:
-        cpu-load-balancing.crio.io: &quot;true&quot;
+        # cpu-load-balancing.crio.io: &quot;true&quot;
       labels:
         app: nepdemo-linuxptp-daemon
       name: nepdemo-linuxptp-daemon
@@ -715,64 +758,85 @@ spec:
                 operator: In
                 values:
                 - worker-2.ocp4.redhat.ren
-      runtimeClassName: performance-wzh-performanceprofile-2
+      # runtimeClassName: performance-wzh-performanceprofile-2
       containers:
       - name: ptp4l
-        image: quay.io/nepdemo/linuxptp:3.1.1-ubi-8.4-v06
-        imagePullPolicy: IfNotPresent
+        image: $VAR_IMAGE
         command: [&quot;/bin/sh&quot;, &quot;-c&quot;, &quot;--&quot;]
         args: [&quot; /usr/local/sbin/ptp4l.sh ;&quot;]
         env:
         - name: DEMO_ENV_PTP4L_ARG
           value: &quot; -i ens2f0 -2 &quot;
-        # - name: DEMO_ENV_PRIO
-        #   value: &quot;65&quot;
+        - name: DEMO_ENV_PRIO
+          value: &quot;65&quot;
         securityContext:
           privileged: true
-          runAsUser: 0    
+          runAsUser: 0 
+        # resources:
+        #   requests:
+        #     cpu: 1
+        #     memory: &quot;100Mi&quot;
+        #   limits:
+        #     cpu: 1
+        #     memory: &quot;100Mi&quot;   
         volumeMounts:
         - mountPath: /etc/ptp4l.conf
           subPath: ptp4l.conf
           name: config-volume
-        - mountPath: /var/run/ptp4l
+        - mountPath: /var/run
           name: socket-dir
       - name: phc2sys
-        image: quay.io/nepdemo/linuxptp:3.1.1-ubi-8.4-v06
+        image: $VAR_IMAGE
         imagePullPolicy: IfNotPresent
         command: [&quot;/bin/sh&quot;, &quot;-c&quot;, &quot;--&quot;]
         args: [&quot; /usr/local/sbin/phc2sys.sh ;&quot;]
         env:
         - name: DEMO_ENV_PHC2SYS_ARG
+          # value: &quot; -s ens2f0 -O 0 -R 8 &quot;  
           value: &quot; -s ens2f0 -r -u 1 -O 0 -R 8 &quot;
-        # - name: DEMO_ENV_PRIO
-        #   value: &quot;65&quot;
+        - name: DEMO_ENV_PRIO
+          value: &quot;65&quot;
         securityContext:
           privileged: true
           runAsUser: 0    
+        # resources:
+        #   requests:
+        #     cpu: 1
+        #     memory: &quot;100Mi&quot;
+        #   limits:
+        #     cpu: 1
+        #     memory: &quot;100Mi&quot;   
         volumeMounts:
         - mountPath: /etc/ptp4l.conf
           subPath: ptp4l.conf
           name: config-volume
-        - mountPath: /var/run/ptp4l
+        - mountPath: /var/run
           name: socket-dir
       - name: ts2phc
-        image: quay.io/nepdemo/linuxptp:3.1.1-ubi-8.4-v06
+        image: $VAR_IMAGE
         imagePullPolicy: IfNotPresent
         command: [&quot;/bin/sh&quot;, &quot;-c&quot;, &quot;--&quot;]
         args: [&quot; /usr/local/sbin/ts2phc.sh ;&quot;]
         env:
         - name: DEMO_ENV_TS2PHC_ARG
           value: &quot; -s generic -c ens2f0 &quot;
-        # - name: DEMO_ENV_PRIO
-        #   value: &quot;65&quot;
+        - name: DEMO_ENV_PRIO
+          value: &quot;65&quot;
         securityContext:
           privileged: true
           runAsUser: 0    
+        # resources:
+        #   requests:
+        #     cpu: 1
+        #     memory: &quot;100Mi&quot;
+        #   limits:
+        #     cpu: 1
+        #     memory: &quot;100Mi&quot;   
         volumeMounts:
         - mountPath: /etc/ts2phc.cfg
           subPath: ts2phc.cfg
           name: config-volume
-        - mountPath: /var/run/ptp4l
+        - mountPath: /var/run
           name: socket-dir
         - name: dev
           mountPath: /dev
@@ -784,10 +848,8 @@ spec:
           defaultMode: 420
           name: ptp-config
         name: config-volume
-      - hostPath:
-          path: /var/run/ptp
-          type: DirectoryOrCreate
-        name: socket-dir
+      - name: socket-dir
+        emptyDir: {}
       - name: dev
         hostPath:
           path: &quot;/dev&quot;
@@ -944,7 +1006,7 @@ spec:
   resourceName: intel_810_nic01_rt2
   nodeSelector:
     kubernetes.io/hostname: worker-2.ocp4.redhat.ren
-  numVfs: 4
+  numVfs: 2
   nicSelector:
     vendor: &quot;8086&quot;
     deviceID: &quot;1593&quot;
@@ -1036,10 +1098,13 @@ spec:
   config: '{
     &quot;cniVersion&quot;: &quot;0.3.1&quot;,
     &quot;type&quot;: &quot;host-device&quot;,
-    &quot;device&quot;: &quot;eno1&quot;,
+    &quot;device&quot;: &quot;ens2f2&quot;,
     &quot;ipam&quot;: {
       &quot;type&quot;: &quot;static&quot;,
       &quot;addresses&quot;: [
+        {
+          &quot;address&quot;: &quot;192.168.12.20/24&quot;
+        },
         {
           &quot;address&quot;: &quot;192.168.12.19/24&quot;
         }
@@ -1080,7 +1145,9 @@ spec:
               &quot;mac&quot;: &quot;00:11:22:33:44:67&quot;
             }
           ]
-        # cpu-load-balancing.crio.io: &quot;true&quot;
+        # cpu-load-balancing.crio.io: &quot;disable&quot;
+        # cpu-quota.crio.io: &quot;disable&quot;
+        # irq-load-balancing.crio.io: &quot;disable&quot;
     spec:
       affinity:
         podAntiAffinity:
@@ -1102,7 +1169,7 @@ spec:
                 - worker-2.ocp4.redhat.ren
       # nodeSelector:
       #   kubernetes.io/hostname: worker-2.ocp4.redhat.ren
-      runtimeClassName: performance-wzh-performanceprofile-2
+      # runtimeClassName: performance-wzh-performanceprofile-2
       serviceAccountName: svcacct-driver
       containers:
       - name: flexran-release-running
@@ -1110,13 +1177,13 @@ spec:
           privileged: true
           capabilities:
             add:
-              - SYS_ADMIN
-              - IPC_LOCK
-              - SYS_NICE
-              - SYS_RESOURCE
-              - NET_RAW
+              # - SYS_ADMIN
+              # - IPC_LOCK
+              # - SYS_NICE
+              # - SYS_RESOURCE
+              # - NET_RAW
               - CAP_SYS_ADMIN
-          # runAsUser: 0
+          runAsUser: 0
           # seLinuxOptions:
           #   level: &quot;s0&quot;
           #   type: &quot;spc_t&quot;
@@ -1125,8 +1192,7 @@ spec:
         args: [&quot; /root/systemd/set_ip.sh ; cd /home/BaiBBU_XSS/tools/ ; ./XRAN_BBU start ;  sleep infinity ; &quot;]
         tty: true
         stdin: true
-        image: ${REG_TMP}/nepdemo/flexran_vdu:flexran-20.11-dpdk-19.11-ocp4.9.5-ubi-8.4
-        # image: ${REG_TMP}/nepdemo/flexran_basekit:dpdk-19.11-ocp-4.9.5-ubi-8.4 
+        image: ${REG_TMP}/nepdemo/flexran_vdu:flexran-20.11-dpdk-19.11-ocp4.9.5-ubi-8.4-core-16
         imagePullPolicy: Always
         env:
           - name: DEMO_ENV_NIC
@@ -1137,11 +1203,11 @@ spec:
             value: &quot;24&quot;
         resources:
           requests:
-            cpu: 12
+            cpu: 16
             memory: &quot;64Gi&quot; 
             hugepages-1Gi: 24Gi  
           limits:
-            cpu: 12
+            cpu: 16
             memory: &quot;64Gi&quot;
             hugepages-1Gi: 24Gi
         volumeMounts:
@@ -1154,27 +1220,6 @@ spec:
         - name: swap
           mountPath: /swap
           readOnly: false
-        # - name: oneapi
-        #   mountPath: /opt/intel/oneapi
-        #   readOnly: false
-        # - name: system-studio-2019
-        #   mountPath: /opt/intel/system_studio_2019
-        #   readOnly: false   
-        # - name: licenses
-        #   mountPath: /opt/intel/licenses
-        #   readOnly: false
-        # - name: packagemanager
-        #   mountPath: /opt/intel/packagemanager
-        #   readOnly: false 
-        # - name: dpdk-19-11
-        #   mountPath: /opt/dpdk-19.11
-        #   readOnly: false
-        # - name: flexran
-        #   mountPath: /data/flexran
-        #   readOnly: false   
-        # - name: sys
-        #   mountPath: /sys/
-        #   readOnly: false
         - name: lib-modules
           mountPath: /lib/modules
         - name: src
@@ -1194,27 +1239,6 @@ spec:
         emptyDir: {}
       - name: swap
         emptyDir: {}
-      # - name: dpdk-19-11
-      #   hostPath:
-      #     path: &quot;/var/nepdemo/dpdk-19.11&quot;
-      # - name: flexran
-      #   hostPath:
-      #     path: &quot;/var/nepdemo/flexran&quot;
-      # - name: oneapi
-      #   hostPath:
-      #     path: &quot;/var/nepdemo/oneapi&quot;
-      # - name: system-studio-2019
-      #   hostPath:
-      #     path: &quot;/var/nepdemo/system_studio_2019&quot;
-      # - name: licenses
-      #   hostPath:
-      #     path: &quot;/var/nepdemo/licenses&quot;
-      # - name: packagemanager
-      #   hostPath:
-      #     path: &quot;/var/nepdemo/packagemanager&quot;
-      # - name: sys
-      #   hostPath:
-      #     path: &quot;/sys/&quot;
       - name: lib-modules
         hostPath:
           path: /lib/modules
@@ -1323,98 +1347,99 @@ scp root@192.168.7.11:/root/tmp/Phy.log /data/wzh/
 
 
 </code></pre>
-<h3 id="16-cpu-core-config"><a class="header" href="#16-cpu-core-config">16 cpu core config</a></h3>
+<h3 id="16-cpu-core-config-auto-convert"><a class="header" href="#16-cpu-core-config-auto-convert">16 cpu core config, auto convert</a></h3>
 <p>cpu core 1-16</p>
 <pre><code class="language-bash">
-sed -i 's/&lt;systemThread&gt;.*&lt;\/systemThread&gt;/&lt;systemThread&gt;2, 0, 0&lt;\/systemThread&gt;/'  /root/flexran/bin/nr5g/gnb/l1/phycfg_xran.xml
-sed -i 's/&lt;timerThread&gt;.*&lt;\/timerThread&gt;/&lt;timerThread&gt;1, 96, 0&lt;\/timerThread&gt;/'     /root/flexran/bin/nr5g/gnb/l1/phycfg_xran.xml
-sed -i 's/&lt;FpgaDriverCpuInfo&gt;.*&lt;\/FpgaDriverCpuInfo&gt;/&lt;FpgaDriverCpuInfo&gt;3, 96, 0&lt;\/FpgaDriverCpuInfo&gt;/' /root/flexran/bin/nr5g/gnb/l1/phycfg_xran.xml
-sed -i 's/&lt;FrontHaulCpuInfo&gt;.*&lt;\/FrontHaulCpuInfo&gt;/&lt;FrontHaulCpuInfo&gt;3, 96, 0&lt;\/FrontHaulCpuInfo&gt;/'     /root/flexran/bin/nr5g/gnb/l1/phycfg_xran.xml
-sed -i 's/&lt;radioDpdkMaster&gt;.*&lt;\/radioDpdkMaster&gt;/&lt;radioDpdkMaster&gt;2, 99, 0&lt;\/radioDpdkMaster&gt;/'         /root/flexran/bin/nr5g/gnb/l1/phycfg_xran.xml
-sed -i 's/&lt;BbuPoolThreadDefault_0_63&gt;.*&lt;\/BbuPoolThreadDefault_0_63&gt;/&lt;BbuPoolThreadDefault_0_63&gt;0xFC00&lt;\/BbuPoolThreadDefault_0_63&gt;/'   /root/flexran/bin/nr5g/gnb/l1/phycfg_xran.xml
+sed -i 's/&lt;systemThread&gt;.*&lt;/&lt;systemThread&gt;2, 0, 0&lt;/'  /root/flexran/bin/nr5g/gnb/l1/phycfg_xran.xml
+sed -i 's/&lt;timerThread&gt;.*&lt;/&lt;timerThread&gt;1, 96, 0&lt;/'   /root/flexran/bin/nr5g/gnb/l1/phycfg_xran.xml
+sed -i 's/&lt;FpgaDriverCpuInfo&gt;.*&lt;/&lt;FpgaDriverCpuInfo&gt;3, 96, 0&lt;/'   /root/flexran/bin/nr5g/gnb/l1/phycfg_xran.xml
+sed -i 's/&lt;FrontHaulCpuInfo&gt;.*&lt;/&lt;FrontHaulCpuInfo&gt;3, 96, 0&lt;/'     /root/flexran/bin/nr5g/gnb/l1/phycfg_xran.xml
+sed -i 's/&lt;radioDpdkMaster&gt;.*&lt;/&lt;radioDpdkMaster&gt;2, 99, 0&lt;/'       /root/flexran/bin/nr5g/gnb/l1/phycfg_xran.xml
+sed -i &quot;s/&lt;BbuPoolThreadDefault_0_63&gt;.*&lt;/&lt;BbuPoolThreadDefault_0_63&gt;0x$(to_hex '10,11,12,13,14,15')&lt;/&quot;   /root/flexran/bin/nr5g/gnb/l1/phycfg_xran.xml
 
-sed -i 's/&lt;xRANThread&gt;.*&lt;\/xRANThread&gt;/&lt;xRANThread&gt;9, 96, 0&lt;\/xRANThread&gt;/'       /root/flexran/bin/nr5g/gnb/l1/xrancfg_sub6.xml
-sed -i 's/&lt;xRANWorker&gt;.*&lt;\/xRANWorker&gt;/&lt;xRANWorker&gt;0x10000, 96, 0&lt;\/xRANWorker&gt;/' /root/flexran/bin/nr5g/gnb/l1/xrancfg_sub6.xml
+sed -i 's/&lt;xRANThread&gt;.*&lt;/&lt;xRANThread&gt;9, 96, 0&lt;/'     /root/flexran/bin/nr5g/gnb/l1/xrancfg_sub6.xml
+sed -i &quot;s/&lt;xRANWorker&gt;.*&lt;/&lt;xRANWorker&gt;0x$(to_hex '16'), 96, 0&lt;/&quot; /root/flexran/bin/nr5g/gnb/l1/xrancfg_sub6.xml
 
-sed -i 's/OAM_SHARED_CORE_BITMAP=.*/OAM_SHARED_CORE_BITMAP=24/'   /etc/BBU_cfg/cu_cfg/gNodeB_CU_Configuration.cfg
-sed -i 's/L3_SHARED_CORE_BITMAP=.*/L3_SHARED_CORE_BITMAP=48/'     /etc/BBU_cfg/cu_cfg/gNodeB_CU_Configuration.cfg
-sed -i 's/PDCP_SHRED_CORE_BITMAP=.*/PDCP_SHRED_CORE_BITMAP=384/'  /etc/BBU_cfg/cu_cfg/gNodeB_CU_Configuration.cfg
-sed -i 's/RRM_SHARED_CORE_BITMAP=.*/RRM_SHARED_CORE_BITMAP=258/'  /etc/BBU_cfg/cu_cfg/gNodeB_CU_Configuration.cfg
-sed -i 's/SON_SHARED_CORE_BITMAP=.*/SON_SHARED_CORE_BITMAP=6/'    /etc/BBU_cfg/cu_cfg/gNodeB_CU_Configuration.cfg
-
-# https://unix.stackexchange.com/questions/487451/sed-replace-a-pattern-between-a-pattern-and-the-end-of-file
-sed -i '/&lt;oam_shm_logger_cfg&gt;/,$s/&lt;cpu_bitmap&gt;.*&lt;/&lt;cpu_bitmap&gt;128&lt;/'  /etc/BBU_cfg/cu_cfg/Proprietary_gNodeB_CU_Data_Model.xml
-sed -i '/&lt;shm_logger_cfg&gt;/,$s/&lt;cpu_bitmap&gt;.*&lt;/&lt;cpu_bitmap&gt;128&lt;/'      /etc/BBU_cfg/cu_cfg/Proprietary_gNodeB_CU_Data_Model.xml
-sed -i '/&lt;L3Params&gt;/,$s/&lt;core_no&gt;.*&lt;/&lt;core_no&gt;2&lt;/'                    /etc/BBU_cfg/cu_cfg/Proprietary_gNodeB_CU_Data_Model.xml
-sed -i '/&lt;process_name&gt;gnb_cu_son&lt;/,$s/&lt;process_args&gt;.* /&lt;process_args&gt;2 /' /etc/BBU_cfg/cu_cfg/Proprietary_gNodeB_CU_Data_Model.xml
-sed -i '/&lt;process_name&gt;gnb_cu_rrm&lt;/,$s/&lt;process_args&gt;.* /&lt;process_args&gt;2 /' /etc/BBU_cfg/cu_cfg/Proprietary_gNodeB_CU_Data_Model.xml
-sed -i '/&lt;pdcp_index&gt;0&lt;/,$s/&lt;core_num_for_worker_thread&gt;.*&lt;/&lt;core_num_for_worker_thread&gt;3&lt;/'      /etc/BBU_cfg/cu_cfg/Proprietary_gNodeB_CU_Data_Model.xml
-sed -i '/&lt;pdcp_index&gt;1&lt;/,$s/&lt;core_num_for_worker_thread&gt;.*&lt;/&lt;core_num_for_worker_thread&gt;3&lt;/'      /etc/BBU_cfg/cu_cfg/Proprietary_gNodeB_CU_Data_Model.xml
-sed -i '/&lt;egtpu_instance&gt;0&lt;/,$s/&lt;core_num_for_worker_thread&gt;.*&lt;/&lt;core_num_for_worker_thread&gt;6&lt;/'  /etc/BBU_cfg/cu_cfg/Proprietary_gNodeB_CU_Data_Model.xml
-sed -i '/&lt;egtpu_instance&gt;1&lt;/,$s/&lt;core_num_for_worker_thread&gt;.*&lt;/&lt;core_num_for_worker_thread&gt;6&lt;/'  /etc/BBU_cfg/cu_cfg/Proprietary_gNodeB_CU_Data_Model.xml
-sed -i '/&lt;f1u_instance&gt;0&lt;/,$s/&lt;core_num_for_worker_thread&gt;.*&lt;/&lt;core_num_for_worker_thread&gt;6&lt;/'    /etc/BBU_cfg/cu_cfg/Proprietary_gNodeB_CU_Data_Model.xml
-sed -i '/&lt;f1u_instance&gt;1&lt;/,$s/&lt;core_num_for_worker_thread&gt;.*&lt;/&lt;core_num_for_worker_thread&gt;6&lt;/'    /etc/BBU_cfg/cu_cfg/Proprietary_gNodeB_CU_Data_Model.xml
-sed -i 's/&lt;core_num_mapping&gt;.*&lt;/&lt;core_num_mapping&gt;4,4&lt;/'                                          /etc/BBU_cfg/cu_cfg/Proprietary_gNodeB_CU_Data_Model.xml
-
-sed -i 's/MAC_BINREAD_CORE_NUM=.*/MAC_BINREAD_CORE_NUM=1/'    /etc/BBU_cfg/du_cfg/gNB_DU_Configuration.cfg
-sed -i 's/RLC_BINREAD_CORE_NUM=.*/RLC_BINREAD_CORE_NUM=1/' /etc/BBU_cfg/du_cfg/gNB_DU_Configuration.cfg
-sed -i 's/MAC_HP_CORE_NUM=.*/MAC_HP_CORE_NUM=5/' /etc/BBU_cfg/du_cfg/gNB_DU_Configuration.cfg
-sed -i 's/RLC_MASTER_CORE_NUM=.*/RLC_MASTER_CORE_NUM=2/' /etc/BBU_cfg/du_cfg/gNB_DU_Configuration.cfg
-sed -i 's/SHARED_CORE_BITMAP=.*/SHARED_CORE_BITMAP=96/' /etc/BBU_cfg/du_cfg/gNB_DU_Configuration.cfg
-sed -i 's/RELAY_ADAPTER_RECVR_THREAD_CORE_NUM=.*/RELAY_ADAPTER_RECVR_THREAD_CORE_NUM=4/' /etc/BBU_cfg/du_cfg/gNB_DU_Configuration.cfg
-
-sed -i '/&lt;RlcProvsioningParams&gt;/,$s/&lt;CoreNumWorkerThread&gt;.*&lt;/&lt;CoreNumWorkerThread&gt;7&lt;/' /etc/BBU_cfg/du_cfg/Proprietary_gNodeB_DU_Data_Model.xml
-sed -i '/&lt;RlclSystemParams&gt;/,$s/&lt;CoreNumWorkerThread&gt;.*&lt;/&lt;CoreNumWorkerThread&gt;7&lt;/' /etc/BBU_cfg/du_cfg/Proprietary_gNodeB_DU_Data_Model.xml
-sed -i '/&lt;F1uProvisioningParams&gt;/,$s/&lt;numCoreWorkerThreads&gt;.*&lt;/&lt;numCoreWorkerThreads&gt;7&lt;/' /etc/BBU_cfg/du_cfg/Proprietary_gNodeB_DU_Data_Model.xml
-
-sed -i 's/\.\/gnb_cu_pdcp .* &gt;/\.\/gnb_cu_pdcp --r=2 --a=8 --t=8 --m=2 --i=0 --b=8 --p=0 --s=50 --n=10 &gt;/' /home/BaiBBU_XSS/BaiBBU_SXSS/gNB_app
-
-
-</code></pre>
-<h3 id="12-cpu-core-config"><a class="header" href="#12-cpu-core-config">12 cpu core config</a></h3>
-<p>cpu core 1-12</p>
-<pre><code class="language-bash">
-sed -i 's/&lt;systemThread&gt;.*&lt;\/systemThread&gt;/&lt;systemThread&gt;2, 0, 0&lt;\/systemThread&gt;/' /root/flexran/bin/nr5g/gnb/l1/phycfg_xran.xml
-sed -i 's/&lt;timerThread&gt;.*&lt;\/timerThread&gt;/&lt;timerThread&gt;1, 96, 0&lt;\/timerThread&gt;/' /root/flexran/bin/nr5g/gnb/l1/phycfg_xran.xml
-sed -i 's/&lt;FpgaDriverCpuInfo&gt;.*&lt;\/FpgaDriverCpuInfo&gt;/&lt;FpgaDriverCpuInfo&gt;3, 96, 0&lt;\/FpgaDriverCpuInfo&gt;/' /root/flexran/bin/nr5g/gnb/l1/phycfg_xran.xml
-sed -i 's/&lt;FrontHaulCpuInfo&gt;.*&lt;\/FrontHaulCpuInfo&gt;/&lt;FrontHaulCpuInfo&gt;3, 96, 0&lt;\/FrontHaulCpuInfo&gt;/' /root/flexran/bin/nr5g/gnb/l1/phycfg_xran.xml
-sed -i 's/&lt;radioDpdkMaster&gt;.*&lt;\/radioDpdkMaster&gt;/&lt;radioDpdkMaster&gt;2, 99, 0&lt;\/radioDpdkMaster&gt;/' /root/flexran/bin/nr5g/gnb/l1/phycfg_xran.xml
-sed -i 's/&lt;BbuPoolThreadDefault_0_63&gt;.*&lt;\/BbuPoolThreadDefault_0_63&gt;/&lt;BbuPoolThreadDefault_0_63&gt;0x1F80&lt;\/BbuPoolThreadDefault_0_63&gt;/' /root/flexran/bin/nr5g/gnb/l1/phycfg_xran.xml
-
-sed -i 's/&lt;xRANThread&gt;.*&lt;\/xRANThread&gt;/&lt;xRANThread&gt;5, 96, 0&lt;\/xRANThread&gt;/' /root/flexran/bin/nr5g/gnb/l1/xrancfg_sub6.xml
-sed -i 's/&lt;xRANWorker&gt;.*&lt;\/xRANWorker&gt;/&lt;xRANWorker&gt;0x40, 96, 0&lt;\/xRANWorker&gt;/' /root/flexran/bin/nr5g/gnb/l1/xrancfg_sub6.xml
-
-sed -i 's/OAM_SHARED_CORE_BITMAP=.*/OAM_SHARED_CORE_BITMAP=24/' /etc/BBU_cfg/cu_cfg/gNodeB_CU_Configuration.cfg
-sed -i 's/L3_SHARED_CORE_BITMAP=.*/L3_SHARED_CORE_BITMAP=20/' /etc/BBU_cfg/cu_cfg/gNodeB_CU_Configuration.cfg
-sed -i 's/PDCP_SHRED_CORE_BITMAP=.*/PDCP_SHRED_CORE_BITMAP=6/' /etc/BBU_cfg/cu_cfg/gNodeB_CU_Configuration.cfg
-sed -i 's/RRM_SHARED_CORE_BITMAP=.*/RRM_SHARED_CORE_BITMAP=6/' /etc/BBU_cfg/cu_cfg/gNodeB_CU_Configuration.cfg
-sed -i 's/SON_SHARED_CORE_BITMAP=.*/SON_SHARED_CORE_BITMAP=6/' /etc/BBU_cfg/cu_cfg/gNodeB_CU_Configuration.cfg
+sed -i &quot;s/OAM_SHARED_CORE_BITMAP=.*/OAM_SHARED_CORE_BITMAP=$(to_dec '3,4')/&quot;  /etc/BBU_cfg/cu_cfg/gNodeB_CU_Configuration.cfg
+sed -i &quot;s/L3_SHARED_CORE_BITMAP=.*/L3_SHARED_CORE_BITMAP=$(to_dec '4,5')/&quot;    /etc/BBU_cfg/cu_cfg/gNodeB_CU_Configuration.cfg
+sed -i &quot;s/PDCP_SHRED_CORE_BITMAP=.*/PDCP_SHRED_CORE_BITMAP=$(to_dec '7,8')/&quot;  /etc/BBU_cfg/cu_cfg/gNodeB_CU_Configuration.cfg
+sed -i &quot;s/RRM_SHARED_CORE_BITMAP=.*/RRM_SHARED_CORE_BITMAP=$(to_dec '1,8')/&quot;  /etc/BBU_cfg/cu_cfg/gNodeB_CU_Configuration.cfg
+sed -i &quot;s/SON_SHARED_CORE_BITMAP=.*/SON_SHARED_CORE_BITMAP=$(to_dec '1,2')/&quot;  /etc/BBU_cfg/cu_cfg/gNodeB_CU_Configuration.cfg
 
 # https://unix.stackexchange.com/questions/487451/sed-replace-a-pattern-between-a-pattern-and-the-end-of-file
-sed -i '/&lt;oam_shm_logger_cfg&gt;/,$s/&lt;cpu_bitmap&gt;.*&lt;/&lt;cpu_bitmap&gt;2&lt;/' /etc/BBU_cfg/cu_cfg/Proprietary_gNodeB_CU_Data_Model.xml
-sed -i '/&lt;shm_logger_cfg&gt;/,$s/&lt;cpu_bitmap&gt;.*&lt;/&lt;cpu_bitmap&gt;2&lt;/' /etc/BBU_cfg/cu_cfg/Proprietary_gNodeB_CU_Data_Model.xml
-sed -i '/&lt;L3Params&gt;/,$s/&lt;core_no&gt;.*&lt;/&lt;core_no&gt;2&lt;/' /etc/BBU_cfg/cu_cfg/Proprietary_gNodeB_CU_Data_Model.xml
+sed -i &quot;/&lt;oam_shm_logger_cfg&gt;/,\$s/&lt;cpu_bitmap&gt;.*&lt;/&lt;cpu_bitmap&gt;$(to_dec '7')&lt;/&quot; /etc/BBU_cfg/cu_cfg/Proprietary_gNodeB_CU_Data_Model.xml
+sed -i &quot;/&lt;shm_logger_cfg&gt;/,\$s/&lt;cpu_bitmap&gt;.*&lt;/&lt;cpu_bitmap&gt;$(to_dec '7')&lt;/&quot;     /etc/BBU_cfg/cu_cfg/Proprietary_gNodeB_CU_Data_Model.xml
+sed -i '/&lt;L3Params&gt;/,$s/&lt;core_no&gt;.*&lt;/&lt;core_no&gt;2&lt;/'        /etc/BBU_cfg/cu_cfg/Proprietary_gNodeB_CU_Data_Model.xml
 sed -i '/&lt;process_name&gt;gnb_cu_son&lt;/,$s/&lt;process_args&gt;.* /&lt;process_args&gt;2 /' /etc/BBU_cfg/cu_cfg/Proprietary_gNodeB_CU_Data_Model.xml
 sed -i '/&lt;process_name&gt;gnb_cu_rrm&lt;/,$s/&lt;process_args&gt;.* /&lt;process_args&gt;2 /' /etc/BBU_cfg/cu_cfg/Proprietary_gNodeB_CU_Data_Model.xml
 sed -i '/&lt;pdcp_index&gt;0&lt;/,$s/&lt;core_num_for_worker_thread&gt;.*&lt;/&lt;core_num_for_worker_thread&gt;3&lt;/' /etc/BBU_cfg/cu_cfg/Proprietary_gNodeB_CU_Data_Model.xml
 sed -i '/&lt;pdcp_index&gt;1&lt;/,$s/&lt;core_num_for_worker_thread&gt;.*&lt;/&lt;core_num_for_worker_thread&gt;3&lt;/' /etc/BBU_cfg/cu_cfg/Proprietary_gNodeB_CU_Data_Model.xml
-sed -i '/&lt;egtpu_instance&gt;0&lt;/,$s/&lt;core_num_for_worker_thread&gt;.*&lt;/&lt;core_num_for_worker_thread&gt;2&lt;/' /etc/BBU_cfg/cu_cfg/Proprietary_gNodeB_CU_Data_Model.xml
-sed -i '/&lt;egtpu_instance&gt;1&lt;/,$s/&lt;core_num_for_worker_thread&gt;.*&lt;/&lt;core_num_for_worker_thread&gt;2&lt;/' /etc/BBU_cfg/cu_cfg/Proprietary_gNodeB_CU_Data_Model.xml
-sed -i '/&lt;f1u_instance&gt;0&lt;/,$s/&lt;core_num_for_worker_thread&gt;.*&lt;/&lt;core_num_for_worker_thread&gt;2&lt;/' /etc/BBU_cfg/cu_cfg/Proprietary_gNodeB_CU_Data_Model.xml
-sed -i '/&lt;f1u_instance&gt;1&lt;/,$s/&lt;core_num_for_worker_thread&gt;.*&lt;/&lt;core_num_for_worker_thread&gt;2&lt;/' /etc/BBU_cfg/cu_cfg/Proprietary_gNodeB_CU_Data_Model.xml
-sed -i 's/&lt;core_num_mapping&gt;.*&lt;/&lt;core_num_mapping&gt;4,4&lt;/' /etc/BBU_cfg/cu_cfg/Proprietary_gNodeB_CU_Data_Model.xml
+sed -i '/&lt;egtpu_instance&gt;0&lt;/,$s/&lt;core_num_of_worker_thread&gt;.*&lt;/&lt;core_num_of_worker_thread&gt;6&lt;/'  /etc/BBU_cfg/cu_cfg/Proprietary_gNodeB_CU_Data_Model.xml
+sed -i '/&lt;egtpu_instance&gt;1&lt;/,$s/&lt;core_num_of_worker_thread&gt;.*&lt;/&lt;core_num_of_worker_thread&gt;6&lt;/'  /etc/BBU_cfg/cu_cfg/Proprietary_gNodeB_CU_Data_Model.xml
+sed -i '/&lt;f1u_instance&gt;0&lt;/,$s/&lt;core_num_of_worker_thread&gt;.*&lt;/&lt;core_num_of_worker_thread&gt;6&lt;/'    /etc/BBU_cfg/cu_cfg/Proprietary_gNodeB_CU_Data_Model.xml
+sed -i '/&lt;f1u_instance&gt;1&lt;/,$s/&lt;core_num_of_worker_thread&gt;.*&lt;/&lt;core_num_of_worker_thread&gt;6&lt;/'    /etc/BBU_cfg/cu_cfg/Proprietary_gNodeB_CU_Data_Model.xml
+sed -i 's/&lt;core_num_mapping&gt;.*&lt;/&lt;core_num_mapping&gt;4,4&lt;/'    /etc/BBU_cfg/cu_cfg/Proprietary_gNodeB_CU_Data_Model.xml
 
-sed -i 's/MAC_BINREAD_CORE_NUM=.*/MAC_BINREAD_CORE_NUM=1/' /etc/BBU_cfg/du_cfg/gNB_DU_Configuration.cfg
-sed -i 's/RLC_BINREAD_CORE_NUM=.*/RLC_BINREAD_CORE_NUM=1/' /etc/BBU_cfg/du_cfg/gNB_DU_Configuration.cfg
-sed -i 's/MAC_HP_CORE_NUM=.*/MAC_HP_CORE_NUM=3/' /etc/BBU_cfg/du_cfg/gNB_DU_Configuration.cfg
-sed -i 's/RLC_MASTER_CORE_NUM=.*/RLC_MASTER_CORE_NUM=2/' /etc/BBU_cfg/du_cfg/gNB_DU_Configuration.cfg
-sed -i 's/SHARED_CORE_BITMAP=.*/SHARED_CORE_BITMAP=6/' /etc/BBU_cfg/du_cfg/gNB_DU_Configuration.cfg
-sed -i 's/RELAY_ADAPTER_RECVR_THREAD_CORE_NUM=.*/RELAY_ADAPTER_RECVR_THREAD_CORE_NUM=4/' /etc/BBU_cfg/du_cfg/gNB_DU_Configuration.cfg
+sed -i 's/MAC_BINREAD_CORE_NUM=.*/MAC_BINREAD_CORE_NUM=1/'  /etc/BBU_cfg/du_cfg/gNB_DU_Configuration.cfg
+sed -i 's/RLC_BINREAD_CORE_NUM=.*/RLC_BINREAD_CORE_NUM=1/'  /etc/BBU_cfg/du_cfg/gNB_DU_Configuration.cfg
+sed -i 's/MAC_HP_CORE_NUM=.*/MAC_HP_CORE_NUM=5/'            /etc/BBU_cfg/du_cfg/gNB_DU_Configuration.cfg
+sed -i 's/RLC_MASTER_CORE_NUM=.*/RLC_MASTER_CORE_NUM=2/'    /etc/BBU_cfg/du_cfg/gNB_DU_Configuration.cfg
+sed -i &quot;s/SHARED_CORE_BITMAP=.*/SHARED_CORE_BITMAP=$(to_dec '5,6')/&quot;      /etc/BBU_cfg/du_cfg/gNB_DU_Configuration.cfg
+sed -i 's/RELAY_ADAPTER_RECVR_THREAD_CORE_NUM=.*/RELAY_ADAPTER_RECVR_THREAD_CORE_NUM=4/'  /etc/BBU_cfg/du_cfg/gNB_DU_Configuration.cfg
 
-sed -i '/&lt;RlcProvsioningParams&gt;/,$s/&lt;CoreNumWorkerThread&gt;.*&lt;/&lt;CoreNumWorkerThread&gt;1&lt;/' /etc/BBU_cfg/du_cfg/Proprietary_gNodeB_DU_Data_Model.xml
-sed -i '/&lt;RlclSystemParams&gt;/,$s/&lt;CoreNumWorkerThread&gt;.*&lt;/&lt;CoreNumWorkerThread&gt;4&lt;/' /etc/BBU_cfg/du_cfg/Proprietary_gNodeB_DU_Data_Model.xml
+sed -i '/&lt;RlcProvsioningParams&gt;/,$s/&lt;CoreNumWorkerThread&gt;.*&lt;/&lt;CoreNumWorkerThread&gt;7&lt;/'    /etc/BBU_cfg/du_cfg/Proprietary_gNodeB_DU_Data_Model.xml
+sed -i '/&lt;RlclSystemParams&gt;/,$s/&lt;CoreNumWorkerThread&gt;.*&lt;/&lt;CoreNumWorkerThread&gt;7&lt;/'        /etc/BBU_cfg/du_cfg/Proprietary_gNodeB_DU_Data_Model.xml
+sed -i '/&lt;F1uProvisioningParams&gt;/,$s/&lt;numCoreWorkerThreads&gt;.*&lt;/&lt;numCoreWorkerThreads&gt;7&lt;/' /etc/BBU_cfg/du_cfg/Proprietary_gNodeB_DU_Data_Model.xml
+
+#  --a=8 --t=8  --b=8  
+sed -i 's/\.\/gnb_cu_pdcp .* &gt;/\.\/gnb_cu_pdcp --r=2 --a=8 --t=8 --m=2 --i=0 --b=8 --p=0 --s=50 --n=10 &gt;/' /home/BaiBBU_XSS/BaiBBU_SXSS/gNB_app
+
+</code></pre>
+<h3 id="12-cpu-core-config-auto-convert"><a class="header" href="#12-cpu-core-config-auto-convert">12 cpu core config, auto convert</a></h3>
+<p>cpu core 1-12</p>
+<pre><code class="language-bash">
+sed -i 's/&lt;systemThread&gt;.*&lt;/&lt;systemThread&gt;2, 0, 0&lt;/'  /root/flexran/bin/nr5g/gnb/l1/phycfg_xran.xml
+sed -i 's/&lt;timerThread&gt;.*&lt;/&lt;timerThread&gt;1, 96, 0&lt;/'   /root/flexran/bin/nr5g/gnb/l1/phycfg_xran.xml
+sed -i 's/&lt;FpgaDriverCpuInfo&gt;.*&lt;/&lt;FpgaDriverCpuInfo&gt;3, 96, 0&lt;/'   /root/flexran/bin/nr5g/gnb/l1/phycfg_xran.xml
+sed -i 's/&lt;FrontHaulCpuInfo&gt;.*&lt;/&lt;FrontHaulCpuInfo&gt;3, 96, 0&lt;/'     /root/flexran/bin/nr5g/gnb/l1/phycfg_xran.xml
+sed -i 's/&lt;radioDpdkMaster&gt;.*&lt;/&lt;radioDpdkMaster&gt;2, 99, 0&lt;/'       /root/flexran/bin/nr5g/gnb/l1/phycfg_xran.xml
+sed -i &quot;s/&lt;BbuPoolThreadDefault_0_63&gt;.*&lt;/&lt;BbuPoolThreadDefault_0_63&gt;0x$(to_hex '7,8,9,10,11,12')&lt;/&quot;   /root/flexran/bin/nr5g/gnb/l1/phycfg_xran.xml
+
+sed -i 's/&lt;xRANThread&gt;.*&lt;/&lt;xRANThread&gt;5, 96, 0&lt;/'     /root/flexran/bin/nr5g/gnb/l1/xrancfg_sub6.xml
+sed -i &quot;s/&lt;xRANWorker&gt;.*&lt;/&lt;xRANWorker&gt;0x$(to_hex '6'), 96, 0&lt;/&quot; /root/flexran/bin/nr5g/gnb/l1/xrancfg_sub6.xml
+
+sed -i &quot;s/OAM_SHARED_CORE_BITMAP=.*/OAM_SHARED_CORE_BITMAP=$(to_dec '3,4')/&quot;  /etc/BBU_cfg/cu_cfg/gNodeB_CU_Configuration.cfg
+sed -i &quot;s/L3_SHARED_CORE_BITMAP=.*/L3_SHARED_CORE_BITMAP=$(to_dec '2,4')/&quot;    /etc/BBU_cfg/cu_cfg/gNodeB_CU_Configuration.cfg
+sed -i &quot;s/PDCP_SHRED_CORE_BITMAP=.*/PDCP_SHRED_CORE_BITMAP=$(to_dec '1,2')/&quot;  /etc/BBU_cfg/cu_cfg/gNodeB_CU_Configuration.cfg
+sed -i &quot;s/RRM_SHARED_CORE_BITMAP=.*/RRM_SHARED_CORE_BITMAP=$(to_dec '1,2')/&quot;  /etc/BBU_cfg/cu_cfg/gNodeB_CU_Configuration.cfg
+sed -i &quot;s/SON_SHARED_CORE_BITMAP=.*/SON_SHARED_CORE_BITMAP=$(to_dec '1,2')/&quot;  /etc/BBU_cfg/cu_cfg/gNodeB_CU_Configuration.cfg
+
+# https://unix.stackexchange.com/questions/487451/sed-replace-a-pattern-between-a-pattern-and-the-end-of-file
+sed -i &quot;/&lt;oam_shm_logger_cfg&gt;/,\$s/&lt;cpu_bitmap&gt;.*&lt;/&lt;cpu_bitmap&gt;$(to_dec '1')&lt;/&quot; /etc/BBU_cfg/cu_cfg/Proprietary_gNodeB_CU_Data_Model.xml
+sed -i &quot;/&lt;shm_logger_cfg&gt;/,\$s/&lt;cpu_bitmap&gt;.*&lt;/&lt;cpu_bitmap&gt;$(to_dec '1')&lt;/&quot;     /etc/BBU_cfg/cu_cfg/Proprietary_gNodeB_CU_Data_Model.xml
+sed -i '/&lt;L3Params&gt;/,$s/&lt;core_no&gt;.*&lt;/&lt;core_no&gt;2&lt;/'        /etc/BBU_cfg/cu_cfg/Proprietary_gNodeB_CU_Data_Model.xml
+sed -i '/&lt;process_name&gt;gnb_cu_son&lt;/,$s/&lt;process_args&gt;.* /&lt;process_args&gt;2 /' /etc/BBU_cfg/cu_cfg/Proprietary_gNodeB_CU_Data_Model.xml
+sed -i '/&lt;process_name&gt;gnb_cu_rrm&lt;/,$s/&lt;process_args&gt;.* /&lt;process_args&gt;2 /' /etc/BBU_cfg/cu_cfg/Proprietary_gNodeB_CU_Data_Model.xml
+sed -i '/&lt;pdcp_index&gt;0&lt;/,$s/&lt;core_num_for_worker_thread&gt;.*&lt;/&lt;core_num_for_worker_thread&gt;3&lt;/' /etc/BBU_cfg/cu_cfg/Proprietary_gNodeB_CU_Data_Model.xml
+sed -i '/&lt;pdcp_index&gt;1&lt;/,$s/&lt;core_num_for_worker_thread&gt;.*&lt;/&lt;core_num_for_worker_thread&gt;3&lt;/' /etc/BBU_cfg/cu_cfg/Proprietary_gNodeB_CU_Data_Model.xml
+sed -i '/&lt;egtpu_instance&gt;0&lt;/,$s/&lt;core_num_of_worker_thread&gt;.*&lt;/&lt;core_num_of_worker_thread&gt;2&lt;/'  /etc/BBU_cfg/cu_cfg/Proprietary_gNodeB_CU_Data_Model.xml
+sed -i '/&lt;egtpu_instance&gt;1&lt;/,$s/&lt;core_num_of_worker_thread&gt;.*&lt;/&lt;core_num_of_worker_thread&gt;2&lt;/'  /etc/BBU_cfg/cu_cfg/Proprietary_gNodeB_CU_Data_Model.xml
+sed -i '/&lt;f1u_instance&gt;0&lt;/,$s/&lt;core_num_of_worker_thread&gt;.*&lt;/&lt;core_num_of_worker_thread&gt;2&lt;/'    /etc/BBU_cfg/cu_cfg/Proprietary_gNodeB_CU_Data_Model.xml
+sed -i '/&lt;f1u_instance&gt;1&lt;/,$s/&lt;core_num_of_worker_thread&gt;.*&lt;/&lt;core_num_of_worker_thread&gt;2&lt;/'    /etc/BBU_cfg/cu_cfg/Proprietary_gNodeB_CU_Data_Model.xml
+sed -i 's/&lt;core_num_mapping&gt;.*&lt;/&lt;core_num_mapping&gt;4,4&lt;/'    /etc/BBU_cfg/cu_cfg/Proprietary_gNodeB_CU_Data_Model.xml
+
+sed -i 's/MAC_BINREAD_CORE_NUM=.*/MAC_BINREAD_CORE_NUM=1/'  /etc/BBU_cfg/du_cfg/gNB_DU_Configuration.cfg
+sed -i 's/RLC_BINREAD_CORE_NUM=.*/RLC_BINREAD_CORE_NUM=1/'  /etc/BBU_cfg/du_cfg/gNB_DU_Configuration.cfg
+sed -i 's/MAC_HP_CORE_NUM=.*/MAC_HP_CORE_NUM=3/'            /etc/BBU_cfg/du_cfg/gNB_DU_Configuration.cfg
+sed -i 's/RLC_MASTER_CORE_NUM=.*/RLC_MASTER_CORE_NUM=2/'    /etc/BBU_cfg/du_cfg/gNB_DU_Configuration.cfg
+sed -i &quot;s/SHARED_CORE_BITMAP=.*/SHARED_CORE_BITMAP=$(to_dec '1,2')/&quot;      /etc/BBU_cfg/du_cfg/gNB_DU_Configuration.cfg
+sed -i 's/RELAY_ADAPTER_RECVR_THREAD_CORE_NUM=.*/RELAY_ADAPTER_RECVR_THREAD_CORE_NUM=4/'  /etc/BBU_cfg/du_cfg/gNB_DU_Configuration.cfg
+
+sed -i '/&lt;RlcProvsioningParams&gt;/,$s/&lt;CoreNumWorkerThread&gt;.*&lt;/&lt;CoreNumWorkerThread&gt;1&lt;/'    /etc/BBU_cfg/du_cfg/Proprietary_gNodeB_DU_Data_Model.xml
+sed -i '/&lt;RlclSystemParams&gt;/,$s/&lt;CoreNumWorkerThread&gt;.*&lt;/&lt;CoreNumWorkerThread&gt;4&lt;/'        /etc/BBU_cfg/du_cfg/Proprietary_gNodeB_DU_Data_Model.xml
 sed -i '/&lt;F1uProvisioningParams&gt;/,$s/&lt;numCoreWorkerThreads&gt;.*&lt;/&lt;numCoreWorkerThreads&gt;3&lt;/' /etc/BBU_cfg/du_cfg/Proprietary_gNodeB_DU_Data_Model.xml
 
+#  --a=8 --t=8  --b=8  
 sed -i 's/\.\/gnb_cu_pdcp .* &gt;/\.\/gnb_cu_pdcp --r=2 --a=2 --t=2 --m=2 --i=0 --b=2 --p=0 --s=50 --n=10 &gt;/' /home/BaiBBU_XSS/BaiBBU_SXSS/gNB_app
 
 </code></pre>

@@ -5,25 +5,25 @@ dockerimagename=flexran.docker.registry/flexran_vdu
 http_proxy=`env|grep http_proxy |awk -F '=' '{print $2}'`
 https_proxy=`env|grep https_proxy|awk -F '=' '{print $2}'`
 rm -rf $tmp_path
-rm -rf bin/nr5g/gnb/l1/l1app
-echo "Note please first build dpdk!!!"
-source ./set_env_var.sh
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/data/flexran/wls_mod/lib
-./flexran_build.sh $*
-if [ ! -f "bin/nr5g/gnb/l1/l1app" ]; then
-   echo "flexran build failed , docker image not build!!"
-   exit -1
-else
-   echo "flexran build success"
-fi
-echo "build xran"
-cd framework/bbupool/
-make clean
-make all
-cd $local_path
-cd xran
-./build.sh xclean
-./build.sh SAMPLEAPP
+# rm -rf bin/nr5g/gnb/l1/l1app
+# echo "Note please first build dpdk!!!"
+# source ./set_env_var.sh
+# export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/data/flexran/wls_mod/lib
+# ./flexran_build.sh $*
+# if [ ! -f "bin/nr5g/gnb/l1/l1app" ]; then
+#    echo "flexran build failed , docker image not build!!"
+#    exit -1
+# else
+#    echo "flexran build success"
+# fi
+# echo "build xran"
+# cd framework/bbupool/
+# make clean
+# make all
+# cd $local_path
+# cd xran
+# ./build.sh xclean
+# ./build.sh SAMPLEAPP
 
 cd $local_path
 mkdir $tmp_path
