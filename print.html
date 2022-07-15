@@ -14199,15 +14199,19 @@ export AWS_SECRET_ACCESS_KEY=$(kubectl -n default get secret ceph-bucket -o json
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><div style="break-before: page; page-break-before: always;"></div><h1 id="flexran-2011-enable-on-ocp4-pf-mode"><a class="header" href="#flexran-2011-enable-on-ocp4-pf-mode">FlexRAN 20.11 enable on ocp4, pf mode</a></h1>
 <p>本文描述，如何把 intel 的 oran 解决方案 flexran (版本 20.11) ，移植到 openshift 平台之上。</p>
+<p>This article describes how to port Intel's oran solution flexran (version 20.11) to the openshift platform.</p>
 <p>本运行环境，是在openshift 4.9.5 上，硬件包含了intel e810网卡， ACC100 加速卡。 由于软件的限制，网卡开启了VF模式，但是ACC100没有开启VF模式，使用的PF模式。 PTP 组件没有使用openshift自带的ptp operator，而是使用了升级的自定义版本。 容器运行的时候，和operator以及硬件的关系结构图：</p>
+<p>This operating environment is based on openshift 4.9.5, and the hardware includes intel e810 network card and ACC100 accelerator card. Due to software limitations, the network card enables the VF mode, but the ACC100 does not enable the VF mode and uses the PF mode. The PTP component does not use the ptp operator that comes with openshift, but uses an upgraded custom version. When the container is running, the structure diagram of the relationship with the operator and hardware:</p>
 <p><img src="ocp4/4.10/dia/4.10.flexran.pf.operator.drawio.svg" alt="" /></p>
-<p>本次实验整体网络架构图：</p>
+<p>本次实验整体网络架构图：
+The overall network architecture diagram of this experiment:</p>
 <p><img src="ocp4/4.10/dia/4.9.real-time.kernel.drawio.svg" alt="" /></p>
 <p>intel E810 Nic 的样子：</p>
 <p><img src="ocp4/4.10/imgs/2022-07-14-11-01-51.png" alt="" /></p>
 <p>intel ACC100 是这个样子的</p>
 <p><img src="ocp4/4.10/imgs/2022-07-14-11-02-25.png" alt="" /></p>
-<p>实验用的RU 长这个样子</p>
+<p>实验用的RU 长这个样子
+The RU used for the experiment looks like this</p>
 <p><img src="ocp4/4.10/imgs/2022-07-14-11-06-42.png" alt="" /></p>
 <p>视频讲解</p>
 <p><a href="https://www.bilibili.com/video/BV1LY4y1n7sQ"><kbd><img src="ocp4/4.10/imgs/2022-06-30-11-32-47.png" width="600"></kbd></a></p>
@@ -14216,11 +14220,12 @@ export AWS_SECRET_ACCESS_KEY=$(kubectl -n default get secret ceph-bucket -o json
 <li><a href="https://youtu.be/Nz0-6fhPoOM">youtube</a></li>
 </ul>
 <p>如何编译相关的基础镜像，请参考<a href="ocp4/4.10/./4.10.flexran.20.11.pf.html">环境开发文档</a> 。</p>
+<p>How to compile the relevant basic image, please refer to <a href="ocp4/4.10/./4.10.flexran.20.11.pf.html">Environmental Development Documentation</a> 。</p>
 <h1 id="应用镜像编译"><a class="header" href="#应用镜像编译">应用镜像编译</a></h1>
 <p>我们已经制作好了一个基础镜像，quay.io/nepdemo/flexran_vdu:flexran-20.11-dpdk-19.11-ocp4.9.5-ubi-8.4 ，但是在项目现场，我们是需要调整bbu应用参数的，所以我们需要在现场编译出一个镜像来，并push到项目现场的镜像仓库，因为镜像很大（&gt;5G)， 项目现场有一个镜像仓库，就很有必要了。</p>
 <h2 id="核配置"><a class="header" href="#核配置">核配置</a></h2>
-<p>bbu应用是大型的dpdk应用，而dpdk应用，cpu绑定配置，非常重要，配置不善，直接导致dpdk应用core dump，甚至物理机死机，这里，我们就提供一个 12 核配置的模板。他使用 1-12 core，实际测试证明，稳定性还是可以接受的。</p>
-<p>demo bbu 应用的特点，是物理层使用8个core，l2, l3使用剩下的4个core，这些core如果相互冲突，物理层就会coredump.</p>
+<p>bbu应用是大型的dpdk应用，而dpdk应用，cpu绑定配置，非常重要，配置不善，直接导致dpdk应用core dump，甚至物理机死机，这里，我们就提供一个 16 核配置的模板。他使用 1-16 core，实际测试证明，稳定性还是可以接受的。</p>
+<p>demo bbu 应用的特点，是物理层使用8个core，l2, l3使用剩下的8个core，这些core如果相互冲突，物理层就会coredump.</p>
 <h1 id="制作镜像"><a class="header" href="#制作镜像">制作镜像</a></h1>
 <p>上游镜像是一个包含systemd的ubi-init镜像，里面是有一个set_ip.sh的脚本，并且配置了对应的system service。 但是在项目实际过程中，发现通过systemd 启动服务的方式，启动bbu等应用，有莫名其妙的退出问题，于是我们还是用这个 ubi-init 的镜像，但是启动的时候，就不去用默认的init了，而是指定脚本运行。</p>
 <p>既然指定脚本运行了，那我们就在这个脚本里面，做环境初始化，并且把bbu的核绑定参数也放进去。最后，在k8s的配置里面，启动bbu应用。</p>
@@ -14266,6 +14271,7 @@ oc create -f /data/sno/99-zzz-worker-temp-images.yaml
 </code></pre>
 <h2 id="worker-2-node-rt-kernel-setting"><a class="header" href="#worker-2-node-rt-kernel-setting">worker-2 node, rt-kernel setting</a></h2>
 <p>bbu 应用是需要实时操作系统支持的，那么我们就用openshift的performance addon operator来搞这个事情，pao支持激活rt-kernel，同时还能设置一些内核参数，我们需要把hugepage，cpu隔离设置好，还有e810的驱动屏蔽。</p>
+<p>The bbu application needs the support of the real-time operating system, so we use the performance addon operator of openshift to do this. Pao supports the activation of rt-kernel, and can also set some kernel parameters. We need to set hugepage and cpu isolation. There are driver shields for e810.</p>
 <pre><code class="language-bash">
 cat &lt;&lt; EOF &gt; /data/install/performance-2.yaml
 ---
@@ -14337,6 +14343,7 @@ oc label node worker-2.ocp4.redhat.ren node-role.kubernetes.io/worker-rt-2=&quot
 </code></pre>
 <h2 id="intel-e810-driver"><a class="header" href="#intel-e810-driver">intel e810 driver</a></h2>
 <p>openshift 4.9.5 对应的coreos操作系统里面自带的e810驱动ice.ko，版本比较低，无法支持ptp，我们需要升级驱动。但是coreos升级驱动操作比较麻烦，我们需要制作一个systemd service，让他在kubelet之前启动，在这个service 里面，用podman启动一个特权容器，在容器里面，insmod ice.ko。当然一切的前提，是在kernel参数上，屏蔽了ice的自动加载。</p>
+<p>The e810 driver ice.ko that comes with the coreos operating system corresponding to openshift 4.9.5 has a relatively low version and cannot support ptp. We need to upgrade the driver. But the coreos upgrade driver operation is more troublesome, we need to make a systemd service, let it start before kubelet, in this service, use podman to start a privileged container, in the container, insmod ice.ko. Of course, the premise of everything is that the automatic loading of ice is blocked on the kernel parameters.</p>
 <pre><code class="language-bash">
 cat &lt;&lt; EOF &gt; /data/sno/static-pod.bu
 variant: openshift
@@ -14960,6 +14967,7 @@ oc create configmap -n vbbu-demo license.for.nepdemo --from-file=license=./34965
 </code></pre>
 <h2 id="create-deployment-for-releaseproduction"><a class="header" href="#create-deployment-for-releaseproduction">create deployment for release/production</a></h2>
 <p>终于, 我们要启动服务了, 这是一个dpdk程序, 我们设置resource request, limits, 达到绑核的目的.　</p>
+<p>Finally, we have to start the service, this is a dpdk program, we set the resource request, limits, to achieve the purpose of binding the core.</p>
 <pre><code class="language-bash">
 oc new-project vbbu-demo
 
@@ -15332,6 +15340,7 @@ sed -i 's/\.\/gnb_cu_pdcp .* &gt;/\.\/gnb_cu_pdcp --r=2 --a=2 --t=2 --m=2 --i=0 
 </code></pre>
 <h2 id="top-to-show-thread-and-core"><a class="header" href="#top-to-show-thread-and-core">top to show thread and core</a></h2>
 <p>我们在调优的时候，特别是分配核绑定的时候，经常需要看看现在都有哪些线程，占用了哪些核，或者说，哪些核比较繁忙，我们就要重新平衡一下。那么就需要一个好用的工具，来帮助我们。很幸运top本身就具备这样的功能。我们只要 -H 运行 top，然后打开线程绑定的核的显示项就可以了。</p>
+<p>When we are tuning, especially when assigning core bindings, we often need to see which threads are currently available, which cores are occupied, or which cores are busy, and we need to rebalance. Then we need a useful tool to help us. Fortunately, top itself has such a function. We just need to run top with -H, and then open the display item of the core bound to the thread.</p>
 <pre><code class="language-bash">
 sudo -i
 # /root/.config/procps/toprc
