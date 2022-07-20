@@ -5,32 +5,32 @@ dockerimagename=flexran.docker.registry/flexran_vdu
 http_proxy=`env|grep http_proxy |awk -F '=' '{print $2}'`
 https_proxy=`env|grep https_proxy|awk -F '=' '{print $2}'`
 rm -rf $tmp_path
-rm -rf bin/nr5g/gnb/l1/l1app
-echo "Note please first build dpdk!!!"
-source ./set_env_var.sh
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/data/flexran/wls_mod/lib
-./flexran_build.sh $*
-if [ ! -f "bin/nr5g/gnb/l1/l1app" ]; then
-   echo "flexran build failed , docker image not build!!"
-   exit -1
-else
-   echo "flexran build success"
-fi
-echo "build xran"
-cd framework/bbupool/
-make clean
-make all
-cd $local_path
-cd xran
-./build.sh xclean
-./build.sh SAMPLEAPP
+# rm -rf bin/nr5g/gnb/l1/l1app
+# echo "Note please first build dpdk!!!"
+# source ./set_env_var.sh
+# export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/data/flexran/wls_mod/lib
+# ./flexran_build.sh $*
+# if [ ! -f "bin/nr5g/gnb/l1/l1app" ]; then
+#    echo "flexran build failed , docker image not build!!"
+#    exit -1
+# else
+#    echo "flexran build success"
+# fi
+# echo "build xran"
+# cd framework/bbupool/
+# make clean
+# make all
+# cd $local_path
+# cd xran
+# ./build.sh xclean
+# ./build.sh SAMPLEAPP
 
 cd $local_path
 mkdir $tmp_path
 mkdir $tmp_path/flexran
 mkdir $tmp_path/{home,intel,phy,intel.so}
 
-wget -O $tmp_path/htop-3.0.5-1.el8.x86_64.rpm https://download-ib01.fedoraproject.org/pub/epel/8/Everything/x86_64/Packages/h/htop-3.0.5-1.el8.x86_64.rpm
+cp /data/nepdemo/htop-3.0.5-1.el8.x86_64.rpm $tmp_path/
 
 echo "copy flexran bin"
 cp -r bin $tmp_path/flexran/
@@ -152,8 +152,8 @@ RUN yum update -y
 RUN yum install -y libhugetlbfs-utils libhugetlbfs-devel libhugetlbfs numactl-devel pciutils libaio libaio-devel net-tools libpcap kernel-rt-core kernel-rt-devel kernel-rt-modules kernel-rt-modules-extra kernel-headers lksctp-tools
 
 RUN dnf install -y --allowerasing coreutils
-# RUN dnf groupinstall -y server
-RUN dnf install -y python3 iproute kernel-tools strace openssh-clients compat-openssl10 dos2unix
+RUN dnf groupinstall -y server
+RUN dnf install -y python3 iproute kernel-tools strace openssh-clients compat-openssl10 dos2unix bc tcpdump nc iputils
 
 COPY htop-3.0.5-1.el8.x86_64.rpm /root/tmp/
 RUN dnf install -y /root/tmp/htop-3.0.5-1.el8.x86_64.rpm
