@@ -943,7 +943,14 @@ oc create configmap vbbu-core-config -n vbbu-demo --from-file=/data/install/bbu.
 
 </code></pre>
 <h3 id="create-vbbu-deployment"><a class="header" href="#create-vbbu-deployment">create vbbu deployment</a></h3>
-<pre><code class="language-bash">
+<pre><code class="language-bash">oc adm taint nodes worker-2.ocp4.redhat.ren vbbu=realtime:NoSchedule 
+# oc adm taint nodes worker-2.ocp4.redhat.ren vbbu=realtime:NoExecute-
+
+oc get nodes -o json | jq '.items[] | .metadata.name, (.spec.taints | tostring )' | paste - -
+# &quot;master-0&quot;      &quot;null&quot;
+# &quot;worker-1&quot;      &quot;null&quot;
+# &quot;worker-2.ocp4.redhat.ren&quot;      &quot;[{\&quot;effect\&quot;:\&quot;NoSchedule\&quot;,\&quot;key\&quot;:\&quot;vbbu\&quot;,\&quot;value\&quot;:\&quot;realtime\&quot;}]&quot;
+
 export REG_TMP='tmp-registry.ocp4.redhat.ren:5443'
 
 # the pod with vbbu container and dev container
@@ -1006,9 +1013,6 @@ spec:
               &quot;mac&quot;: &quot;00:11:22:33:44:67&quot;
             }
           ]
-        # cpu-load-balancing.crio.io: &quot;disable&quot;
-        # cpu-quota.crio.io: &quot;disable&quot;
-        # irq-load-balancing.crio.io: &quot;disable&quot;
     spec:
       affinity:
         podAntiAffinity:
@@ -1028,26 +1032,16 @@ spec:
                 operator: In
                 values:
                 - worker-2.ocp4.redhat.ren
-      # nodeSelector:
-      #   kubernetes.io/hostname: worker-2.ocp4.redhat.ren
-      # runtimeClassName: performance-wzh-performanceprofile-2
+      tolerations:
+      - key: &quot;vbbu&quot;
+        operator: &quot;Exists&quot;
+        effect: &quot;NoSchedule&quot;
       serviceAccountName: svcacct-driver
       containers:
       - name: flexran-release-running
         securityContext:
           privileged: true
-          capabilities:
-            add:
-              # - SYS_ADMIN
-              # - IPC_LOCK
-              # - SYS_NICE
-              # - SYS_RESOURCE
-              # - NET_RAW
-              # - CAP_SYS_ADMIN
           runAsUser: 0
-          # seLinuxOptions:
-          #   level: &quot;s0&quot;
-          #   type: &quot;spc_t&quot;
         # command: [ &quot;/sbin/init&quot; ]
         command: [ &quot;/bin/sh&quot;,&quot;-c&quot;,&quot;--&quot; ]
         args: [&quot; /root/systemd/set_ip.sh ; cd /home/BaiBBU_XSS/tools/ ; ./XRAN_BBU start ;  sleep infinity ; &quot;]
@@ -1055,21 +1049,14 @@ spec:
         stdin: true
         image: ${REG_TMP}/nepdemo/flexran_vdu:flexran-20.11-dpdk-19.11-ocp4.9.5-ubi-8.4-core-conf
         imagePullPolicy: Always
-        # env:
-        #   - name: DEMO_ENV_NIC
-        #     value: &quot;net1:0&quot;
-        #   - name: DEMO_ENV_IP
-        #     value: &quot;192.168.12.20&quot;
-        #   - name: DEMO_ENV_MASK
-        #     value: &quot;24&quot;
         resources:
           requests:
             cpu: 16
-            memory: &quot;32Gi&quot; 
+            memory: &quot;48Gi&quot; 
             hugepages-1Gi: 24Gi  
           limits:
             cpu: 16
-            memory: &quot;32Gi&quot;
+            memory: &quot;48Gi&quot;
             hugepages-1Gi: 24Gi
         volumeMounts:
         - name: hugepage
