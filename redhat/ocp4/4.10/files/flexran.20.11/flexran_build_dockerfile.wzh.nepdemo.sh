@@ -50,7 +50,7 @@ rm -rf $tmp_path/flexran/source
 rm -rf $tmp_path/flexran/bin/lte
 rm -rf $tmp_path/flexran/libs/ferrybridge
 rm -rf $tmp_path/flexran/framework
-#rm -rf $tmp_path/flexran/xran
+rm -rf $tmp_path/flexran/xran
 
 echo "copy nepdemo files under home"
 cp -r /data/nepdemo/flexran_cfg/* $tmp_path/flexran/bin/nr5g/gnb/l1/
@@ -203,6 +203,11 @@ RUN systemctl enable setip.service
 RUN cd /home/BaiBBU_XSS/BaiBBU_SXSS/DU/bin && ln -snf gnb_du_layer2--0422 gnb_du_layer2
 RUN cd /home/BaiBBU_XSS/BaiBBU_SXSS/CU/bin && ln -snf gnb_cu_l3_no_licence gnb_cu_l3
 RUN cd /root/flexran/bin/nr5g/gnb/l1/ && ln -snf l1app_1109 l1app
+
+RUN find /root/flexran -name *.c -exec rm {} \;
+RUN find /root/flexran -name *.cpp -exec rm {} \;
+RUN find /root/flexran -name *.cc -exec rm {} \;
+RUN find /root/flexran -name *.h -exec rm {} \;
 
 # entrypoint ["/usr/sbin/init"]
 
