@@ -30,6 +30,7 @@
   - [openshift4 单节点 安装精简版 ODF/ceph](ocp4/4.10/4.10.sno.odf.md)
   - [定制 rhcos](ocp4/4.10/4.10.replace.coreos.md)
   - [rhcos 里面安装 rpm](ocp4/4.10/4.10.rpm-ostree.install.md)
+  - [openshift 4 组件版本](ocp4/4.10/4.10.component.version.md)
 - [openshift4 使用系列](./usage.md)
   - [在openshift4上运行 OpenRAN 无线基站应用](ocp4/4.10/4.10.flexran.20.11.pf.deploy.md)
   - [openshift4 可视化 ovs netflow](ocp4/4.10/4.10.netflow.table.md)

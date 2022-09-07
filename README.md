@@ -33,6 +33,7 @@
   - [2022.05 openshift4 单节点 安装精简版 ODF/ceph](redhat/ocp4/4.10/4.10.sno.odf.md)
   - [2022.08 定制 rhcos](redhat/ocp4/4.10/4.10.replace.coreos.md)
   - [2022.08 rhcos 里面安装 rpm](redhat/ocp4/4.10/4.10.rpm-ostree.install.md)
+  - [2022.09 openshift 4 组件版本](redhat/ocp4/4.10/4.10.component.version.md)
 - openshift4 使用系列
   - [2022.06 在 openshift4 上运行 OpenRAN 无线基站应用](redhat/ocp4/4.10/4.10.flexran.20.11.pf.deploy.md)
   - [2022.05 openshift4 可视化 ovs netflow](redhat/ocp4/4.10/4.10.netflow.table.md)
