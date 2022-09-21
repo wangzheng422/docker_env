@@ -16637,6 +16637,318 @@ mkdir -p /var/wzh-registry
 
 systemctl restart docker-distribution
 
+</code></pre>
+<h2 id="podman-for-pdns--registrty"><a class="header" href="#podman-for-pdns--registrty">podman for pdns &amp; registrty</a></h2>
+<pre><code class="language-bash">
+mkdir -p /data/pdns
+cd /data/pdns
+
+cat &gt; /data/pdns/pdns.Dockerfile &lt;&lt; EOF
+FROM registry.access.redhat.com/ubi8
+
+RUN dnf -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
+
+RUN dnf -y install pdns pdns-recursor
+
+EOF
+
+podman build -t quay.io/nepdemo/pdns:ubi8 -f pdns.Dockerfile .
+
+podman push quay.io/nepdemo/pdns:ubi8
+
+</code></pre>
+<h3 id="registry-1"><a class="header" href="#registry-1">registry</a></h3>
+<pre><code class="language-bash">
+cat &lt;&lt; EOF &gt; ${BASE_DIR}/data/sno/registry.images.bu
+variant: openshift
+version: 4.10.0
+metadata:
+  labels:
+    machineconfiguration.openshift.io/role: master
+  name: 99-zzz-master-registry
+storage:
+  files:
+    - path: /etc/wzh/redhat.ren.crt
+      overwrite: true
+      contents:
+        source: data:text/plain;charset=utf-8;base64,$( base64 -w 0 &lt; ${VAR_CERT_DIR}/redhat.ren.crt )
+      mode: 420
+      user:
+        name: root
+
+    - path: /etc/wzh/redhat.ren.key
+      overwrite: true
+      contents:
+        source: data:text/plain;charset=utf-8;base64,$( base64 -w 0 &lt; ${VAR_CERT_DIR}/redhat.ren.key )
+      mode: 420
+      user:
+        name: root
+
+    - path: /etc/wzh/registry-config.yml
+      overwrite: true
+      contents:
+        inline: |
+          version: 0.1
+          log:
+            accesslog:
+                disabled: true
+            fields:
+                service: registry
+          storage:
+              cache:
+                  layerinfo: inmemory
+              filesystem:
+                  rootdirectory: /var/wzh-registry
+              delete:
+                  enabled: true
+              maintenance:
+                  readonly:
+                      enabled: false
+          http:
+              addr: :8443
+              tls:
+                certificate: /etc/wzh/redhat.ren.crt
+                key: /etc/wzh/redhat.ren.key
+      mode: 420
+      user:
+        name: root
+
+systemd:
+  units:
+    - contents: |
+        [Unit]
+        Description=Set SELinux chcon for image registry
+        Before=docker-distribution.service
+
+        [Service]
+        Type=oneshot
+        RemainAfterExit=yes
+        User=root
+        ExecStartPre=-mkdir -p /var/wzh-registry
+        ExecStart=/usr/bin/chcon -Rt container_file_t /var/wzh-registry
+
+        [Install]
+        WantedBy=multi-user.target
+      enabled: true
+      name: hostpath-registry.service
+
+    - contents: |
+        [Unit]
+        Description=v2 Registry server for Docker
+        After=network.target hostpath-registry.service
+        Requires=hostpath-registry.service
+        Before=kubelet.service
+
+        [Service]
+        Type=simple
+        TimeoutStartSec=5m
+        ExecStartPre=-/bin/rm -f %t/%n-pid %t/%n-cid
+        ExecStart=/usr/bin/podman run \
+            --name local-registry \
+            --network=host \
+            -v /var/wzh-registry/:/var/lib/registry:z \
+            -v /etc/wzh:/certs:z \
+            -e REGISTRY_HTTP_ADDR=0.0.0.0:8443 \
+            -e REGISTRY_HTTP_TLS_CERTIFICATE=/certs/redhat.ren.crt \
+            -e REGISTRY_HTTP_TLS_KEY=/certs/redhat.ren.key \
+            --conmon-pidfile %t/%n-pid \
+            --cidfile %t/%n-cid \
+            --cgroups=no-conmon \
+            --replace \
+            docker.io/library/registry:2
+
+        ExecStop=-/usr/bin/podman stop --ignore --cidfile %t/%n-cid -t 10
+        ExecStopPost=-/usr/bin/podman rm --ignore -f --cidfile %t/%n-cid
+        PIDFile=%t/%n-pid
+        KillMode=none
+        Restart=always
+        RestartSec=30
+
+        [Install]
+        WantedBy=multi-user.target
+      enabled: true
+      name: docker-distribution.service
+
+    - name: kubelet.service
+      dropins:
+      - name: 99-after-registry.conf
+        contents: |
+          [Unit]
+          Requires=docker-distribution.service
+          After=docker-distribution.service
+
+EOF
+
+butane ${BASE_DIR}/data/sno/registry.images.bu &gt; ${BASE_DIR}/data/sno/99-zzz-master-registry.yaml
+
+oc create --save-config -f ${BASE_DIR}/data/sno/99-zzz-master-registry.yaml
+
+# oc apply -f ${BASE_DIR}/data/sno/99-zzz-master-registry.yaml
+# oc delete -f ${BASE_DIR}/data/sno/99-zzz-master-registry.yaml
+
+
+</code></pre>
+<h3 id="pdns"><a class="header" href="#pdns">pdns</a></h3>
+<pre><code class="language-bash">
+
+cat &gt; ${BASE_DIR}/data/sno/pdns.bu &lt;&lt; 'EOF' 
+variant: openshift
+version: 4.10.0
+metadata:
+  labels:
+    machineconfiguration.openshift.io/role: master
+  name: 99-zzz-master-pdns
+storage:
+  files:
+    - path: /etc/pdns/pdns.conf
+      overwrite: true
+      contents:
+        inline: |
+          launch=bind
+          local-address=0.0.0.0
+          local-port=53
+          setgid=pdns
+          setuid=pdns
+          bind-config=/etc/pdns/bind.conf
+          bind-check-interval=300
+          enable-lua-records=yes
+      mode: 420
+      user:
+        name: root
+
+    - path: /etc/pdns/bind.conf
+      overwrite: true
+      contents:
+        inline: |
+          zone &quot;acm-demo-hub.redhat.ren&quot; { type master; file &quot;/etc/pdns/inside-out.xyz&quot;; };
+          zone &quot;infra.redhat.ren&quot; { type master; file &quot;/etc/pdns/infra.xyz&quot;; };
+      mode: 420
+      user:
+        name: root
+
+    - path: /etc/pdns/inside-out.xyz
+      overwrite: true
+      contents:
+        inline: |
+          $TTL 10 
+          @ IN SOA ns1.acm-demo-hub.redhat.ren. postmaster.acm-demo-hub.redhat.ren. (
+                  2014080704 ; Serial Number (date YYYYMMDD++) 
+                  3H              ; refresh (3 hours)
+                  30M             ; retry (30 minutes)
+                  2W              ; expiry (2 weeks)
+                  1W )            ; minimum (1 week)
+                  ;IN NS ns1.ocp4.redhat.ren.
+                  ;IN NS ns2.ocp4.redhat.ren.
+          @       IN    A    192.168.7.13
+          ;ns1     IN A 8.8.8.8 
+          ;ns2     IN A 8.8.4.4
+          helper  IN      A       192.168.7.11
+          ;
+          ;
+          ; The api points to the IP of your load balancer
+          api             IN    A    192.168.7.13
+          api-int         IN    A    192.168.7.13
+          ;
+          ; The wildcard also points to the load balancer
+          *.apps          IN    A    192.168.7.13
+          ;
+          ; Create entry for the bootstrap host
+          ; bootstrap       IN      A       192.168.7.12
+          ;
+          ; Create entries for the master hosts
+          master-0                IN      A       192.168.7.13
+          ;master-1                IN      A       192.168.7.14
+          ;master-2                IN      A       192.168.7.15
+          ;
+          ; Create entries for the worker hosts
+          ;worker-0                IN      A       192.168.7.16
+          ;worker-1                IN      A       192.168.7.17
+          ;worker-2                IN      A       192.168.7.18
+          ;
+          ; The ETCd cluster lives on the masters...so point these to the IP of the masters
+          ;etcd-0  IN      A       192.168.7.13
+          ;etcd-1  IN      A       192.168.7.14
+          ;etcd-2  IN      A       192.168.7.15
+          ;
+          ; Create entries for the other hosts
+          registry        IN      A       192.168.7.13
+          yum             IN      A       192.168.7.1
+          nexus           IN      A       192.168.7.1
+          git             IN      A       192.168.7.11
+          tmp-registry    IN      A       192.168.7.177
+      mode: 420
+      user:
+        name: root
+
+    - path: /etc/pdns/infra.xyz
+      overwrite: true
+      contents:
+        inline: |
+          $TTL 10 
+          @ IN SOA ns1.infra.redhat.ren. postmaster.infra.redhat.ren. (
+                  2014080704 ; Serial Number (date YYYYMMDD++) 
+                  3H              ; refresh (3 hours)
+                  30M             ; retry (30 minutes)
+                  2W              ; expiry (2 weeks)
+                  1W )            ; minimum (1 week)
+                  ;IN NS ns1.ocp4.redhat.ren.
+                  ;IN NS ns2.ocp4.redhat.ren.
+          @       IN    A    192.168.7.13
+          quay            IN    A    192.168.7.13
+          quaylab         IN    A    192.168.7.13
+
+      mode: 420
+      user:
+        name: root
+systemd:
+  units:
+    - contents: |
+        [Unit]
+        Description=PowerDNS Authoritative Server
+        After=network.target
+        Before=kubelet.service
+
+        [Service]
+        Type=simple
+        TimeoutStartSec=5m
+        ExecStartPre=-/bin/rm -f %t/%n-pid %t/%n-cid
+        ExecStart=/usr/bin/podman run \
+            --name local-registry \
+            --network=host \
+            -v /etc/pdns/:/etc/pdns/:z \
+            --conmon-pidfile %t/%n-pid \
+            --cidfile %t/%n-cid \
+            --cgroups=no-conmon \
+            --replace \
+            quay.io/nepdemo/pdns:ubi8
+
+        ExecStop=-/usr/bin/podman stop --ignore --cidfile %t/%n-cid -t 10
+        ExecStopPost=-/usr/bin/podman rm --ignore -f --cidfile %t/%n-cid
+        PIDFile=%t/%n-pid
+        KillMode=none
+        Restart=always
+        RestartSec=30
+
+        [Install]
+        WantedBy=multi-user.target
+      name: pdns.service
+      enabled: true
+
+    - name: kubelet.service
+      dropins:
+      - name: 99-after-pdns.conf
+        contents: |
+          [Unit]
+          Requires=pdns.service
+          After=pdns.service
+
+EOF
+
+butane ${BASE_DIR}/data/sno/pdns.bu &gt; ${BASE_DIR}/data/sno/99-zzz-master-pdns.yaml
+
+oc create --save-config -f ${BASE_DIR}/data/sno/99-zzz-master-pdns.yaml
+
+# oc apply -f ${BASE_DIR}/data/sno/99-zzz-master-pdns.yaml
 
 
 </code></pre>
