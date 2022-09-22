@@ -15107,6 +15107,7 @@ mirror:
     - name: registry.redhat.io/redhat/certified-operator-index:v4.10
     - name: registry.redhat.io/redhat/community-operator-index:v4.10
     - name: registry.redhat.io/redhat/redhat-marketplace-index:v4.10
+
 EOF
 
 mkdir -p /data/install/mirror-tmp
@@ -15121,6 +15122,8 @@ oc-mirror --config /data/ocp4/mirror.yaml file:///data/install/mirror-tmp
 <ul>
 <li><a href="https://access.redhat.com/support/cases/#/case/03228254">After ocp restarts, a large number of images will disappear and need to be downloaded again</a></li>
 </ul>
+<p>有同事建议，可以使用podman/systemd的方式，在systemd里面注册一个服务，在服务里面通过podman启动pdns, registry，经过实验测试，断电重启的情况下，podman的镜像，也会丢失，所以对应的systemd service也启动不了。所以我们就彻底放弃容器解决方案。</p>
+<p>A colleague suggested that we can use the podman/systemd method to register a service in systemd, and start pdns and registry through podman in the service. After experimental testing, in the case of power failure and restart, the image of podman will also be lost, so the corresponding The systemd service does not start either. So we dropped the container solution entirely.</p>
 <p>我们还需要做一个rpm repo源，这里作者做好了一个demo rpm repo源，注意，这个源引用了epel的rpm, 还有作者自己打包的rpm。所以这个源只能作为学习和测试之用。</p>
 <p>We also need to make an rpm repo source. Here the author has prepared a demo rpm repo source. Note that this source refers to the rpm of epel and the rpm packaged by the author himself. So this source should only be used for learning and testing purposes.</p>
 <p>最后，用rpm-ostree向rhcos装rpm，这个技术是openshift 4自己就在使用的，openshift 4 extension功能，比如real-time kernel extension, 就是通过rpm-ostree向rhcos装了对应的kernel包实现的。</p>
@@ -16640,21 +16643,136 @@ systemctl restart docker-distribution
 </code></pre>
 <h2 id="podman-for-pdns--registrty"><a class="header" href="#podman-for-pdns--registrty">podman for pdns &amp; registrty</a></h2>
 <pre><code class="language-bash">
-mkdir -p /data/pdns
+mkdir -p /data/pdns/conf
 cd /data/pdns
+
+cat &gt; /data/pdns/pdns.Dockerfile &lt;&lt; EOF
+FROM docker.io/library/almalinux:8
+
+RUN dnf -y install epel-release
+
+RUN dnf -y update
+
+RUN dnf -y install pdns pdns-recursor
+
+ENTRYPOINT [&quot;/usr/sbin/pdns_server&quot;]
+CMD [&quot;--socket-dir=/tmp/pdns&quot;, &quot;--guardian=no&quot;, &quot;--daemon=no&quot;, &quot;--disable-syslog&quot;, &quot;--log-timestamp=no&quot;, &quot;--write-pid=no&quot;]
+EOF
+
+podman build --squash -t quay.io/nepdemo/pdns:4.6.2-alma8 -f pdns.Dockerfile .
+
+podman push quay.io/nepdemo/pdns:4.6.2-alma8
 
 cat &gt; /data/pdns/pdns.Dockerfile &lt;&lt; EOF
 FROM registry.access.redhat.com/ubi8
 
 RUN dnf -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
 
+RUN dnf -y update
+
 RUN dnf -y install pdns pdns-recursor
 
+ENTRYPOINT [&quot;/usr/sbin/pdns_server&quot;]
+CMD [&quot;--socket-dir=/tmp/pdns&quot;, &quot;--guardian=no&quot;, &quot;--daemon=no&quot;, &quot;--disable-syslog&quot;, &quot;--log-timestamp=no&quot;, &quot;--write-pid=no&quot;]
 EOF
 
-podman build -t quay.io/nepdemo/pdns:ubi8 -f pdns.Dockerfile .
+podman build --squash -t quay.io/nepdemo/pdns:4.6.2-ubi8 -f pdns.Dockerfile .
 
-podman push quay.io/nepdemo/pdns:ubi8
+podman push quay.io/nepdemo/pdns:4.6.2-ubi8
+
+cat &gt; /data/pdns/conf/pdns.conf &lt;&lt; EOF
+launch=bind
+local-address=0.0.0.0
+local-port=53
+setgid=pdns
+setuid=pdns
+bind-config=/etc/pdns/bind.conf
+bind-check-interval=300
+enable-lua-records=yes
+EOF
+
+cat &gt; /data/pdns/conf/bind.conf &lt;&lt; EOF
+zone &quot;acm-demo-hub.redhat.ren&quot; { type master; file &quot;/etc/pdns/inside-out.xyz&quot;; };
+zone &quot;infra.redhat.ren&quot; { type master; file &quot;/etc/pdns/infra.xyz&quot;; };
+EOF
+
+cat &gt; /data/pdns/conf/inside-out.xyz &lt;&lt; 'EOF'
+$TTL 10 
+@ IN SOA ns1.acm-demo-hub.redhat.ren. postmaster.acm-demo-hub.redhat.ren. (
+        2014080704 ; Serial Number (date YYYYMMDD++) 
+        3H              ; refresh (3 hours)
+        30M             ; retry (30 minutes)
+        2W              ; expiry (2 weeks)
+        1W )            ; minimum (1 week)
+        ;IN NS ns1.ocp4.redhat.ren.
+        ;IN NS ns2.ocp4.redhat.ren.
+@       IN    A    192.168.7.13
+;ns1     IN A 8.8.8.8 
+;ns2     IN A 8.8.4.4
+helper  IN      A       192.168.7.11
+;
+;
+; The api points to the IP of your load balancer
+api             IN    A    192.168.7.13
+api-int         IN    A    192.168.7.13
+;
+; The wildcard also points to the load balancer
+*.apps          IN    A    192.168.7.13
+;
+; Create entry for the bootstrap host
+; bootstrap       IN      A       192.168.7.12
+;
+; Create entries for the master hosts
+master-0                IN      A       192.168.7.13
+;master-1                IN      A       192.168.7.14
+;master-2                IN      A       192.168.7.15
+;
+; Create entries for the worker hosts
+;worker-0                IN      A       192.168.7.16
+;worker-1                IN      A       192.168.7.17
+;worker-2                IN      A       192.168.7.18
+;
+; The ETCd cluster lives on the masters...so point these to the IP of the masters
+;etcd-0  IN      A       192.168.7.13
+;etcd-1  IN      A       192.168.7.14
+;etcd-2  IN      A       192.168.7.15
+;
+; Create entries for the other hosts
+registry        IN      A       192.168.7.13
+yum             IN      A       192.168.7.1
+nexus           IN      A       192.168.7.1
+git             IN      A       192.168.7.11
+tmp-registry    IN      A       192.168.7.177
+EOF
+
+cat &gt; /data/pdns/conf/infra.xyz &lt;&lt; 'EOF'
+$TTL 10 
+@ IN SOA ns1.infra.redhat.ren. postmaster.infra.redhat.ren. (
+        2014080704 ; Serial Number (date YYYYMMDD++) 
+        3H              ; refresh (3 hours)
+        30M             ; retry (30 minutes)
+        2W              ; expiry (2 weeks)
+        1W )            ; minimum (1 week)
+        ;IN NS ns1.ocp4.redhat.ren.
+        ;IN NS ns2.ocp4.redhat.ren.
+@       IN    A    192.168.7.13
+quay            IN    LUA    A    &quot;ifportup(5180, {'158.247.225.4', '192.168.7.14', '192.168.7.15'})&quot;
+quaylab         IN    A    192.168.7.13
+EOF
+
+rm -f /tmp/pdns-*
+
+podman run \
+  --name local-pdns \
+  --network=host \
+  -v /data/pdns/conf/:/etc/pdns/:z \
+  --conmon-pidfile /tmp/pdns-pid \
+  --cidfile /tmp/pdns-cid \
+  --cgroups=no-conmon \
+  --replace \
+  quay.io/nepdemo/pdns:4.6.2-ubi8
+
+/usr/bin/podman stop --ignore --cidfile /tmp/pdns-cid -t 1
 
 </code></pre>
 <h3 id="registry-1"><a class="header" href="#registry-1">registry</a></h3>
@@ -16757,7 +16875,7 @@ systemd:
             --replace \
             docker.io/library/registry:2
 
-        ExecStop=-/usr/bin/podman stop --ignore --cidfile %t/%n-cid -t 10
+        ExecStop=-/usr/bin/podman stop --ignore --cidfile %t/%n-cid -t 1
         ExecStopPost=-/usr/bin/podman rm --ignore -f --cidfile %t/%n-cid
         PIDFile=%t/%n-pid
         KillMode=none
@@ -16913,21 +17031,26 @@ systemd:
         TimeoutStartSec=5m
         ExecStartPre=-/bin/rm -f %t/%n-pid %t/%n-cid
         ExecStart=/usr/bin/podman run \
-            --name local-registry \
+            --name local-pdns \
             --network=host \
             -v /etc/pdns/:/etc/pdns/:z \
             --conmon-pidfile %t/%n-pid \
             --cidfile %t/%n-cid \
             --cgroups=no-conmon \
             --replace \
-            quay.io/nepdemo/pdns:ubi8
+            quay.io/nepdemo/pdns:4.6.2-ubi8
 
-        ExecStop=-/usr/bin/podman stop --ignore --cidfile %t/%n-cid -t 10
+        ExecStop=-/usr/bin/podman stop --ignore --cidfile %t/%n-cid -t 1
         ExecStopPost=-/usr/bin/podman rm --ignore -f --cidfile %t/%n-cid
         PIDFile=%t/%n-pid
         KillMode=none
         Restart=always
-        RestartSec=30
+        SyslogIdentifier=pdns_server
+        User=pdns
+        Group=pdns
+        RestartSec=1
+        StartLimitInterval=0
+        RuntimeDirectory=pdns
 
         [Install]
         WantedBy=multi-user.target
