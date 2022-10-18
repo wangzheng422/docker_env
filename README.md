@@ -98,7 +98,6 @@
   - [检查OS是否是运行在虚拟机上](redhat/ocp4/4.5/4.5.check.whether.vm.md)
   - [两个主机用ovs组网](redhat/ocp4/4.4/4.4.ovs.md)
   - [CentOS Stream是什么](https://www.bilibili.com/video/BV1Go4y1o7hn/)
-  - [内网隔离情况下，使用SSH正向和反向代理，实现连通外网http proxy](redhat/notes/2021/2021.01.ssh.tunnel.md)
 - 优秀的workshop
   - [openshift4 & openshift storage workshop](redhat/ocp4/4.5/4.5.ocp.ocs.workshop.md)
 - POC

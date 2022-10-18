@@ -94,7 +94,6 @@
   - [RHEL8编译定制化内核](rhel/rhel.build.kernel.md)
   - [检查OS是否是运行在虚拟机上](ocp4/4.5/4.5.check.whether.vm.md)
   - [两个主机用ovs组网](ocp4/4.4/4.4.ovs.md)
-  - [内网隔离情况下，使用SSH正向和反向代理，实现连通外网http proxy](notes/2021/2021.01.ssh.tunnel.md)
 - [优秀的workshop](./workshop.md)
   - [openshift4 & openshift storage workshop](ocp4/4.5/4.5.ocp.ocs.workshop.md)
 - [POC](./poc.md)
