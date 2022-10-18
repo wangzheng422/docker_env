@@ -26,7 +26,19 @@
   - [2022.04 IPI模式 单节点 离线 单网络模式 安装](redhat/ocp4/4.10/4.10.disconnect.bm.ipi.sno.static.ip.md)
   - [2022.04 ACM zero touch provision 远程单节点集群 全自动安装](redhat/ocp4/4.10/4.10.acm.ztp.disconnected.auto.md)
   - [2022.04 coreos 启动和分区挂载分析](redhat/ocp4/4.10/4.10.coreos.boot.md)
+  - [2022.05 openshift4 单节点 命令行安装](redhat/ocp4/4.10/4.10.sno.installer.md)
+  - [2022.05 openshift4 单节点 在第一块硬盘上添加更多分区](redhat/ocp4/4.10/4.10.sno.partition.quay.md)
+  - [2022.05 openshift4 单节点 使用 lvm 和 nfs 在集群内提供存储](redhat/ocp4/4.10/4.10.sno.nfs.lvm.md)
+  - [2022.05 openshift4 单节点 从centos7/8 开始安装](redhat/ocp4/4.10/4.10.sno.boot.from.linux.md)
+  - [2022.05 openshift4 单节点 安装精简版 ODF/ceph](redhat/ocp4/4.10/4.10.sno.odf.md)
+  - [2022.08 定制 rhcos](redhat/ocp4/4.10/4.10.replace.coreos.md)
+  - [2022.08 rhcos 里面安装 rpm](redhat/ocp4/4.10/4.10.rpm-ostree.install.md)
+  - [2022.09 openshift 4 组件版本](redhat/ocp4/4.10/4.10.component.version.md)
+  - [2022.09 内嵌 dns, haproxy, registrty](redhat/ocp4/4.10/4.10.embeded.dns.haproxy.registry.md)
 - openshift4 使用系列
+  - [2022.06 在 openshift4 上运行 OpenRAN 无线基站应用](redhat/ocp4/4.10/4.10.flexran.20.11.pf.deploy.md)
+  - [2022.05 openshift4 可视化 ovs netflow](redhat/ocp4/4.10/4.10.netflow.table.md)
+  - [2022.05 intel o-ran flexran 方案在openshift4上的安装和使用](redhat/ocp4/4.10/4.10.flexran.20.11.md)
   - [2022.01 ci/cd pipeline gitops演示](redhat/ocp4/4.9/4.9.ci.cd.demo.md)
   - [2021.12 oc exec 原理分析](redhat/ocp4/4.9/4.9.oc.exec.md)
   - [2021.12 nf_conntrack 在 openshift4.9上的处理](redhat/ocp4/4.9/4.9.nf.conntrack.md)
@@ -67,6 +79,7 @@
   - [应用上云系列教程 containerized cloud native (CCN) for openshift 4.6](redhat/ocp4/4.6/4.6.ccn.devops.deploy.md)
   - [CCN 安装介质制作 for openshift 4.6](redhat/ocp4/4.6/4.6.ccn.devops.build.md)
 - 红帽其他产品系列
+  - [2022.05 ACM observability for openshift 4.10](redhat/ocp4/4.10/4.10.acm.observ.md)
   - [2022.01 离线安装 ansible platform](redhat/notes/2022/2022.01.ansible.install.md)
   - [2021.12 RHACS 应对log4j 原理和实践](redhat/notes/2021/2021.08.virus.md)
   - [openshift承载虚拟化业务(CNV)](redhat/ocp4/4.5/4.5.ocp.ocs.cnv.ceph.md)
@@ -85,7 +98,6 @@
   - [检查OS是否是运行在虚拟机上](redhat/ocp4/4.5/4.5.check.whether.vm.md)
   - [两个主机用ovs组网](redhat/ocp4/4.4/4.4.ovs.md)
   - [CentOS Stream是什么](https://www.bilibili.com/video/BV1Go4y1o7hn/)
-  - [内网隔离情况下，使用SSH正向和反向代理，实现连通外网http proxy](redhat/notes/2021/2021.01.ssh.tunnel.md)
 - 优秀的workshop
   - [openshift4 & openshift storage workshop](redhat/ocp4/4.5/4.5.ocp.ocs.workshop.md)
 - POC
