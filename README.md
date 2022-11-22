@@ -36,6 +36,7 @@
   - [2022.09 openshift 4 组件版本](redhat/ocp4/4.10/4.10.component.version.md)
   - [2022.09 内嵌 dns, haproxy, registrty](redhat/ocp4/4.10/4.10.embeded.dns.haproxy.registry.md)
 - openshift4 使用系列
+  - [2022.11 在 openshift 4.11 上安装和运行 openstack](redhat/ocp4/4.11/4.11.3node.ipi.for.osp.prod.md)
   - [2022.06 在 openshift4 上运行 OpenRAN 无线基站应用](redhat/ocp4/4.10/4.10.flexran.20.11.pf.deploy.md)
   - [2022.05 openshift4 可视化 ovs netflow](redhat/ocp4/4.10/4.10.netflow.table.md)
   - [2022.05 intel o-ran flexran 方案在openshift4上的安装和使用](redhat/ocp4/4.10/4.10.flexran.20.11.md)

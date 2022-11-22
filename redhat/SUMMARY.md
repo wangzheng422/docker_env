@@ -33,6 +33,7 @@
   - [openshift 4 组件版本](ocp4/4.10/4.10.component.version.md)
   - [内嵌 dns, haproxy, registrty](ocp4/4.10/4.10.embeded.dns.haproxy.registry.md)
 - [openshift4 使用系列](./usage.md)
+  - [在 openshift 4.11 上安装和运行 openstack](ocp4/4.11/4.11.3node.ipi.for.osp.prod.md)
   - [在openshift4上运行 OpenRAN 无线基站应用](ocp4/4.10/4.10.flexran.20.11.pf.deploy.md)
   - [openshift4 可视化 ovs netflow](ocp4/4.10/4.10.netflow.table.md)
   - [intel o-ran flexran 方案在openshift4上的安装和使用](ocp4/4.10/4.10.flexran.20.11.md)
