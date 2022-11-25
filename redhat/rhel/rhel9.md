@@ -1,6 +1,8 @@
 # rhel9 tips
 
 ```bash
+export PROXY="127.0.0.1:18801"
+
 subscription-manager register --proxy=$PROXY --auto-attach --username ********* --password ********
 
 subscription-manager repos --proxy=$PROXY --list  > list
