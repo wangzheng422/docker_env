@@ -759,7 +759,11 @@ appendWindowsPath = false
 
 # Set the user when launching a distribution with WSL.
 [user]
-default = wzh
+default = root
+# default = wzh
+
+# [boot]
+# systemd=true
 EOF
 
 wsl --shutdown
