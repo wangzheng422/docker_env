@@ -18084,6 +18084,252 @@ oc get co
 # storage                                    4.10.41   True        False         False      44m
 </code></pre>
 <p><img src="ocp4/4.10/imgs/2022-11-30-13-36-03.png" alt="" /></p>
+<h1 id="config-to-fix-errors"><a class="header" href="#config-to-fix-errors">config to fix errors</a></h1>
+<h2 id="disk-flag-rm"><a class="header" href="#disk-flag-rm">disk flag RM</a></h2>
+<pre><code class="language-bash">
+lsblk
+# NAME   MAJ:MIN RM   SIZE RO TYPE MOUNTPOINTS
+# sda      8:0    1   3.6T  0 disk
+# |-sda1   8:1    1     1M  0 part
+# |-sda2   8:2    1   127M  0 part
+# |-sda3   8:3    1   384M  0 part /boot
+# `-sda4   8:4    1   3.6T  0 part /var/lib/kubelet/pods/9c993e46-ed1f-4f5c-a48a-bf563a29d6b8/volume-subpaths/etc/tuned/5
+#                                  /var/lib/kubelet/pods/9c993e46-ed1f-4f5c-a48a-bf563a29d6b8/volume-subpaths/etc/tuned/4
+#                                  /var/lib/kubelet/pods/9c993e46-ed1f-4f5c-a48a-bf563a29d6b8/volume-subpaths/etc/tuned/3
+#                                  /var/lib/kubelet/pods/9c993e46-ed1f-4f5c-a48a-bf563a29d6b8/volume-subpaths/etc/tuned/2
+#                                  /var/lib/kubelet/pods/9c993e46-ed1f-4f5c-a48a-bf563a29d6b8/volume-subpaths/etc/tuned/1
+#                                  /var/lib/containers/storage/overlay
+#                                  /var
+#                                  /sysroot/ostree/deploy/rhcos/var
+#                                  /usr
+#                                  /etc
+#                                  /
+#                                  /sysroot
+# sdb      8:16   1 447.1G  0 disk
+# sdc      8:32   1 447.1G  0 disk
+
+
+cat &lt;&lt; EOF &gt; ~/wzh/blk.rm.flag.bu
+variant: openshift
+version: 4.10.0
+metadata:
+  labels:
+    machineconfiguration.openshift.io/role: master
+  name: 99-zzz-master-blk-rm-flag
+storage:
+  files:
+    - path: /etc/udev/rules.d/62-internal-disk.rules
+      mode: 0644
+      overwrite: true
+      contents:
+        inline: |
+           KERNEL==&quot;sd[b-c]*&quot;,ENV{UDISKS_IGNORE}=&quot;1&quot;
+EOF
+
+# /etc/udev/rules.d/62-internal-disk.rules
+#  KERNEL==&quot;sd[b-c]*&quot;,ENV{UDISKS_IGNORE}=&quot;1&quot;
+
+butane ~/wzh/blk.rm.flag.bu &gt; ~/wzh/99-zzz-master-blk-rm-flag.yaml
+
+oc create --save-config -f ~/wzh/99-zzz-master-blk-rm-flag.yaml
+
+udevadm info --query all --path /sys/block/sdb --attribute-walk
+  # looking at device '/devices/pci0000:00/0000:00:08.1/0000:05:00.2/ata18/host17/target17:0:0/17:0:0:0/block/sdb':
+  #   KERNEL==&quot;sdb&quot;
+  #   SUBSYSTEM==&quot;block&quot;
+  #   DRIVER==&quot;&quot;
+  #   ATTR{alignment_offset}==&quot;0&quot;
+  #   ATTR{capability}==&quot;1&quot;
+  #   ATTR{discard_alignment}==&quot;0&quot;
+  #   ATTR{diskseq}==&quot;2&quot;
+  #   ATTR{events}==&quot;media_change&quot;
+  #   ATTR{events_async}==&quot;&quot;
+  #   ATTR{events_poll_msecs}==&quot;-1&quot;
+  #   ATTR{ext_range}==&quot;256&quot;
+  #   ATTR{hidden}==&quot;0&quot;
+  #   ATTR{inflight}==&quot;       0        0&quot;
+  #   ATTR{integrity/device_is_integrity_capable}==&quot;0&quot;
+  #   ATTR{integrity/format}==&quot;none&quot;
+  #   ATTR{integrity/protection_interval_bytes}==&quot;0&quot;
+  #   ATTR{integrity/read_verify}==&quot;0&quot;
+  #   ATTR{integrity/tag_size}==&quot;0&quot;
+  #   ATTR{integrity/write_generate}==&quot;0&quot;
+  #   ATTR{mq/0/cpu_list}==&quot;0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127&quot;
+  #   ATTR{mq/0/nr_reserved_tags}==&quot;0&quot;
+  #   ATTR{mq/0/nr_tags}==&quot;32&quot;
+  #   ATTR{power/control}==&quot;auto&quot;
+  #   ATTR{power/runtime_active_time}==&quot;0&quot;
+  #   ATTR{power/runtime_status}==&quot;unsupported&quot;
+  #   ATTR{power/runtime_suspended_time}==&quot;0&quot;
+  #   ATTR{queue/add_random}==&quot;0&quot;
+  #   ATTR{queue/chunk_sectors}==&quot;0&quot;
+  #   ATTR{queue/dax}==&quot;0&quot;
+  #   ATTR{queue/discard_granularity}==&quot;4096&quot;
+  #   ATTR{queue/discard_max_bytes}==&quot;2147450880&quot;
+  #   ATTR{queue/discard_max_hw_bytes}==&quot;2147450880&quot;
+  #   ATTR{queue/discard_zeroes_data}==&quot;0&quot;
+  #   ATTR{queue/fua}==&quot;0&quot;
+  #   ATTR{queue/hw_sector_size}==&quot;512&quot;
+  #   ATTR{queue/io_poll}==&quot;0&quot;
+  #   ATTR{queue/io_poll_delay}==&quot;-1&quot;
+  #   ATTR{queue/io_timeout}==&quot;30000&quot;
+  #   ATTR{queue/iosched/async_depth}==&quot;48&quot;
+  #   ATTR{queue/iosched/fifo_batch}==&quot;16&quot;
+  #   ATTR{queue/iosched/front_merges}==&quot;1&quot;
+  #   ATTR{queue/iosched/prio_aging_expire}==&quot;10000&quot;
+  #   ATTR{queue/iosched/read_expire}==&quot;500&quot;
+  #   ATTR{queue/iosched/write_expire}==&quot;5000&quot;
+  #   ATTR{queue/iosched/writes_starved}==&quot;2&quot;
+  #   ATTR{queue/iostats}==&quot;1&quot;
+  #   ATTR{queue/logical_block_size}==&quot;512&quot;
+  #   ATTR{queue/max_discard_segments}==&quot;1&quot;
+  #   ATTR{queue/max_hw_sectors_kb}==&quot;32767&quot;
+  #   ATTR{queue/max_integrity_segments}==&quot;0&quot;
+  #   ATTR{queue/max_sectors_kb}==&quot;1280&quot;
+  #   ATTR{queue/max_segment_size}==&quot;65536&quot;
+  #   ATTR{queue/max_segments}==&quot;168&quot;
+  #   ATTR{queue/minimum_io_size}==&quot;4096&quot;
+  #   ATTR{queue/nomerges}==&quot;0&quot;
+  #   ATTR{queue/nr_requests}==&quot;64&quot;
+  #   ATTR{queue/nr_zones}==&quot;0&quot;
+  #   ATTR{queue/optimal_io_size}==&quot;0&quot;
+  #   ATTR{queue/physical_block_size}==&quot;4096&quot;
+  #   ATTR{queue/read_ahead_kb}==&quot;128&quot;
+  #   ATTR{queue/rotational}==&quot;0&quot;
+  #   ATTR{queue/rq_affinity}==&quot;1&quot;
+  #   ATTR{queue/scheduler}==&quot;[mq-deadline] kyber bfq none&quot;
+  #   ATTR{queue/stable_writes}==&quot;0&quot;
+  #   ATTR{queue/virt_boundary_mask}==&quot;0&quot;
+  #   ATTR{queue/wbt_lat_usec}==&quot;2000&quot;
+  #   ATTR{queue/write_cache}==&quot;write back&quot;
+  #   ATTR{queue/write_same_max_bytes}==&quot;0&quot;
+  #   ATTR{queue/write_zeroes_max_bytes}==&quot;0&quot;
+  #   ATTR{queue/zone_append_max_bytes}==&quot;0&quot;
+  #   ATTR{queue/zone_write_granularity}==&quot;0&quot;
+  #   ATTR{queue/zoned}==&quot;none&quot;
+  #   ATTR{range}==&quot;16&quot;
+  #   ATTR{removable}==&quot;1&quot;
+  #   ATTR{ro}==&quot;0&quot;
+  #   ATTR{size}==&quot;937703088&quot;
+  #   ATTR{stat}==&quot;      94        0     4504       16        0        0        0        0        0       16       16        0        0        0        0        0        0&quot;
+  #   ATTR{trace/act_mask}==&quot;disabled&quot;
+  #   ATTR{trace/enable}==&quot;0&quot;
+  #   ATTR{trace/end_lba}==&quot;disabled&quot;
+  #   ATTR{trace/pid}==&quot;disabled&quot;
+  #   ATTR{trace/start_lba}==&quot;disabled&quot;
+</code></pre>
+<h2 id="build-local-storage-operator"><a class="header" href="#build-local-storage-operator">build local-storage-operator</a></h2>
+<pre><code class="language-bash"># https://github.com/wangzheng422/local-storage-operator
+
+dnf module -y install go-toolset docker ruby
+
+rm -rf /data/operator
+mkdir -p /data/operator
+cd /data/operator
+
+git clone https://github.com/wangzheng422/local-storage-operator
+cd local-storage-operator
+git checkout wzh-ocp-4.10
+
+export REGISTRY=quay.io/wangzheng422/ocp/
+export VERSION=wzh-ocp-4.10-v01
+
+sed -i 's/REPO_IP/45.63.52.61:5180/g' wzh.repo
+
+make images
+
+make push-images
+# quay.io/wangzheng422/ocp/local-diskmaker:wzh-ocp-4.10-v01
+# quay.io/wangzheng422/ocp/local-storage-operator:wzh-ocp-4.10-v01
+# quay.io/wangzheng422/ocp/local-must-gather:wzh-ocp-4.10-v01
+
+make bundle
+# quay.io/wangzheng422/ocp/local-storage-bundle:wzh-ocp-4.10-v01
+# quay.io/wangzheng422/ocp/local-storage-index:wzh-ocp-4.10-v01
+
+</code></pre>
+<h2 id="deploy-the-fix"><a class="header" href="#deploy-the-fix">deploy the fix</a></h2>
+<pre><code class="language-bash">
+cat &lt;&lt; EOF &gt;&gt; ~/wzh/disk.fix.project.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    openshift.io/cluster-monitoring: &quot;true&quot;
+  name: openshift-local-storage
+EOF
+oc create --save-config -f ~/wzh/disk.fix.project.yaml
+
+oc project openshift-local-storage
+
+cat &lt;&lt; EOF &gt; ~/wzh/disk.fix.sub.yaml
+# apiVersion: v1
+# kind: Namespace
+# metadata:
+#   labels:
+#     openshift.io/cluster-monitoring: &quot;true&quot;
+#   name: openshift-local-storage
+---
+apiVersion: operators.coreos.com/v1alpha2
+kind: OperatorGroup
+metadata:
+  name: local-operator-group
+  namespace: openshift-local-storage
+spec:
+  targetNamespaces:
+  - openshift-local-storage
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: CatalogSource
+metadata:
+  name: localstorage-operator-manifests
+  namespace: openshift-local-storage
+spec:
+  sourceType: grpc
+  # replace this with your index image
+  image: quay.io/wangzheng422/ocp/local-storage-index:wzh-ocp-4.10-v01
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: local-storage-subscription
+  namespace: openshift-local-storage
+spec:
+  channel: preview   # this is the default channel name defined in config bundle file
+  name: local-storage-operator
+  source: localstorage-operator-manifests
+  sourceNamespace: openshift-local-storage
+EOF
+
+oc create --save-config -f ~/wzh/disk.fix.sub.yaml
+
+oc delete -f ~/wzh/disk.fix.sub.yaml
+
+
+</code></pre>
+<h2 id="grow-fs"><a class="header" href="#grow-fs">grow fs</a></h2>
+<pre><code class="language-bash">dnf install -y cloud-utils-growpart 
+
+lsblk
+# NAME   MAJ:MIN RM  SIZE RO TYPE MOUNTPOINTS
+# sr0     11:0    1 1024M  0 rom
+# vda    253:0    0   50G  0 disk
+# ├─vda1 253:1    0    1G  0 part /boot
+# ├─vda2 253:2    0    2G  0 part [SWAP]
+# └─vda3 253:3    0   47G  0 part /
+# vdb    253:16   0   80G  0 disk
+# └─vdb1 253:17   0   40G  0 part
+
+growpart /dev/vdb 1
+
+e2fsck -fp /dev/vdb1
+
+mount /dev/vdb1 /data/dnf
+
+resize2fs /dev/vdb1
+
+
+</code></pre>
 <h1 id="end-8"><a class="header" href="#end-8">end</a></h1>
 <div style="break-before: page; page-break-before: always;"></div><div style="break-before: page; page-break-before: always;"></div><h1 id="在-openshift-411-上安装和运行-openstack"><a class="header" href="#在-openshift-411-上安装和运行-openstack">在 openshift 4.11 上安装和运行 openstack</a></h1>
 <p>➡️<a href="https://github-com.translate.goog/wangzheng422/docker_env/blob/dev/redhat/ocp4/4.11/4.11.3node.ipi.for.osp.prod.md?_x_tr_sl=auto&amp;_x_tr_tl=en&amp;_x_tr_hl=en&amp;_x_tr_pto=wapp">In English (google translated)</a></p>
