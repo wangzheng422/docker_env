@@ -684,9 +684,13 @@ SEC_FILE=&quot;$XDG_RUNTIME_DIR/containers/auth.json&quot;
 # $XDG_RUNTIME_DIR/containers
 mkdir -p ${SEC_FILE%/*}
 
+# OR
+SEC_FILE=&quot;$HOME/.docker/config.json&quot;
+mkdir -p ${SEC_FILE%/*}
+
 # copy the password file 
 
-podman login quaylab.infra.redhat.ren:8443 --username admin --password shadowman
+podman login quaylab.infra.redhat.ren:8443 --username admin --password redhatadmin
 
 export VAR_RELEASE_VER=4.10.41-rhel-9.1-v02
 
@@ -803,7 +807,7 @@ mkdir -p ${BASE_DIR}/data/{sno/disconnected,install}
 NODE_SSH_KEY=&quot;$(cat ${BASE_DIR}/.ssh/id_rsa.pub)&quot;
 INSTALL_IMAGE_REGISTRY=quaylab.infra.redhat.ren:8443
 
-PULL_SECRET='{&quot;auths&quot;:{&quot;registry.redhat.io&quot;: {&quot;auth&quot;: &quot;ZHVtbXk6ZHVtbXk=&quot;,&quot;email&quot;: &quot;noemail@localhost&quot;},&quot;registry.ocp4.redhat.ren:5443&quot;: {&quot;auth&quot;: &quot;ZHVtbXk6ZHVtbXk=&quot;,&quot;email&quot;: &quot;noemail@localhost&quot;},&quot;'${INSTALL_IMAGE_REGISTRY}'&quot;: {&quot;auth&quot;: &quot;'$( echo -n 'admin:shadowman' | openssl base64 )'&quot;,&quot;email&quot;: &quot;noemail@localhost&quot;}}}'
+PULL_SECRET='{&quot;auths&quot;:{&quot;registry.redhat.io&quot;: {&quot;auth&quot;: &quot;ZHVtbXk6ZHVtbXk=&quot;,&quot;email&quot;: &quot;noemail@localhost&quot;},&quot;registry.ocp4.redhat.ren:5443&quot;: {&quot;auth&quot;: &quot;ZHVtbXk6ZHVtbXk=&quot;,&quot;email&quot;: &quot;noemail@localhost&quot;},&quot;'${INSTALL_IMAGE_REGISTRY}'&quot;: {&quot;auth&quot;: &quot;'$( echo -n 'admin:redhatadmin' | openssl base64 )'&quot;,&quot;email&quot;: &quot;noemail@localhost&quot;}}}'
 
 NTP_SERVER=192.168.7.11
 HELP_SERVER=192.168.7.11
@@ -1473,6 +1477,116 @@ lspci -vs 0000:23:00.0
 #         Kernel modules: i40e
 
 
+</code></pre>
+<h2 id="hugepage-numa-allocation"><a class="header" href="#hugepage-numa-allocation">hugepage numa allocation</a></h2>
+<p>默认hugepage会平均分配在numa node之上，而dpdk程序，是绑定numa node运行得，所以一个不小心，就会出现hugepage不足，导致dpdk启动不了得情况</p>
+<pre><code class="language-bash"># https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/7/html/performance_tuning_guide/sect-red_hat_enterprise_linux-performance_tuning_guide-memory-configuring-huge-pages
+
+# build debug pod
+mkdir -p /data/pod
+cd /data/pod
+
+cat &lt;&lt; EOF &gt; debugpod.dockerfile
+FROM docker.io/library/almalinux:9
+
+RUN dnf install -y epel-release &amp;&amp; dnf update -y 
+RUN dnf repolist
+
+RUN dnf install -y --allowerasing which iproute bind-utils wget htop bash-completion curl net-tools java-1.8.0-openjdk git iperf3 tcpdump stress-ng fio numactl hwloc-gui
+
+RUN dnf clean all -y
+EOF
+
+podman build --squash -t quay.io/wangzheng422/debug-pod:alma-9.1 -f debugpod.dockerfile ./
+
+podman push quay.io/wangzheng422/debug-pod:alma-9.1
+
+# try it
+oc debug node/master1.ocp.ytl.com --image=quay.io/wangzheng422/debug-pod:alma-9.1
+
+numastat -cm | egrep 'Node|Huge'
+#                  Node 0 Node 1 Node 2 Node 3 Node 4 Node 5 Node 6 Node 7  Total
+# AnonHugePages       810    270    466    518    616    476    694   1230   5080
+# ShmemHugePages        0      0      0      0      0      0      0      0      0
+# HugePages_Total    3072   3072   3072   3072   3072   3072   3072   3072  24576
+# HugePages_Free     3072   3072   3072   3072   3072   3072   3072   3072  24576
+# HugePages_Surp        0      0      0      0      0      0      0      0      0
+
+# check nic belongs to numa node
+cat /sys/class/net/ens22f0/device/numa_node
+# 2
+
+# check hugepage belongs to numa node
+cat /sys/devices/system/node/node2/hugepages/hugepages-1048576kB/nr_hugepages
+# 0
+
+cat &lt;&lt; 'EOF' &gt; ~/wzh/hugepage.bu
+variant: openshift
+version: 4.10.0
+metadata:
+  labels:
+    machineconfiguration.openshift.io/role: master
+  name: 99-zzz-master-hugetlb-gigantic-pages
+storage:
+  files:
+
+    - path: /etc/lib/systemd/hugetlb-reserve-pages.sh
+      overwrite: true
+      contents:
+        inline: |
+          #!/bin/sh
+
+          nodes_path=/sys/devices/system/node/
+          if [ ! -d $nodes_path ]; then
+            echo &quot;ERROR: $nodes_path does not exist&quot;
+            exit 1
+          fi
+
+          reserve_pages()
+          {
+            echo $1 &gt; $nodes_path/$2/hugepages/hugepages-1048576kB/nr_hugepages
+          }
+
+          reserve_pages 0 node0
+          reserve_pages 0 node1
+          reserve_pages 24 node2
+          reserve_pages 0 node3
+          reserve_pages 0 node4
+          reserve_pages 0 node5
+          reserve_pages 0 node6
+          reserve_pages 0 node7
+      mode: 493
+      user:
+        name: root
+
+systemd:
+  units:
+
+    - contents: |
+        [Unit]
+        Description=HugeTLB Gigantic Pages Reservation
+        DefaultDependencies=no
+        Before=dev-hugepages.mount
+        ConditionPathExists=/sys/devices/system/node
+        ConditionKernelCommandLine=hugepagesz=1G
+
+        [Service]
+        Type=oneshot
+        RemainAfterExit=yes
+        ExecStart=/etc/lib/systemd/hugetlb-reserve-pages.sh
+
+        [Install]
+        WantedBy=sysinit.target
+      enabled: true
+      name: hugetlb-gigantic-pages.service
+
+EOF
+
+butane ~/wzh/hugepage.bu &gt; ~/wzh/hugepage.yaml
+
+oc create --save-config -f ~/wzh/hugepage.yaml
+
+# oc delete -f ~/wzh/hugepage.yaml
 </code></pre>
 <h1 id="end"><a class="header" href="#end">end</a></h1>
 <h1 id="other-backup"><a class="header" href="#other-backup">other backup</a></h1>
