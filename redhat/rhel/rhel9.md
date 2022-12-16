@@ -31,7 +31,6 @@ dnf install -y htop
 
 dnf config-manager --set-enabled crb
 
-
 ######################################################
 # begin to build kernel
 # 真正开始我们的内核编译
@@ -121,6 +120,7 @@ cd /root/rpmbuild/BUILD/kernel-5.14.0-162.6.1.el9_1/linux-5.14.0-162.6.1.el9.x86
 make clean
 
 git config --global credential.credentialStore cache
+git config --global user.email "wangzheng422@gmail.com"
 
 mkdir -p ~/tmp
 cd ~/tmp
@@ -131,6 +131,7 @@ git-credential-manager configure
 
 cd ~
 git clone https://github.com/wangzheng422/kernel-learn
+
 cd kernel-learn
 mv /root/rpmbuild/BUILD/kernel-5.14.0-162.6.1.el9_1/linux-5.14.0-162.6.1.el9.x86_64 ./
 
