@@ -88,6 +88,7 @@
   - [RHACS / stackrox](redhat/ocp4/4.7/4.7.rhacs.md)
   - [为 RHACS 找个应用场景： 安全合规测试云 ](redhat/ocp4/4.7/4.7.rhacs.deep.md)
 - 操作系统相关
+  - [2022.12 通过新增系统启动项来原地重装操作系统](redhat/notes/2022/2022.12.boot.to.install.md)
   - [2022.04 Relax and Recover(ReaR) 系统备份和灾难恢复](redhat/notes/2022/2022.04.os.backup.ReaR.md)
   - [2022.04 红帽免费的开发者订阅申请和使用](redhat/notes/2022/2022.04.no-cost.rhel.sub.md)
   - [2022.01 在红帽官网查询rpm属于哪个repo](redhat/notes/2022/2022.01.rpm.belongs.md)
