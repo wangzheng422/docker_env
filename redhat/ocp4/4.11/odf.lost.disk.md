@@ -105,5 +105,89 @@ cat ceph-volume.log
 # [2022-12-13 11:25:49,765][ceph_volume.process][INFO  ] Running command: /usr/sbin/udevadm info --query=property /mnt/ocs-deviceset-local-volume-set-0-data-4tfgts
 # [2022-12-13 11:25:49,773][ceph_volume.process][INFO  ] stderr Unknown device, --name=, --path=, or absolute path in /dev/ or /sys expected.
 
+blkid
+# /dev/loop0: TYPE="ceph_bluestore"
+# /dev/sdc: TYPE="ceph_bluestore"
+# /dev/sda4: LABEL="root" UUID="dacef59a-d53a-4667-b048-4a95e0194701" TYPE="xfs" PARTLABEL="root" PARTUUID="b19fb155-6356-4057-b629-5d4476c3f7c4"
+# /dev/sda2: SEC_TYPE="msdos" LABEL_FATBOOT="EFI-SYSTEM" LABEL="EFI-SYSTEM" UUID="5D94-88B5" TYPE="vfat" PARTLABEL="EFI-SYSTEM" PARTUUID="6f163303-0fe9-4326-b5a4-238e92df3818"
+# /dev/sda3: LABEL="boot" UUID="90b0d270-6651-4b56-8f97-85b759c47b4f" TYPE="ext4" PARTLABEL="boot" PARTUUID="b0a96f94-5792-4e05-9d40-32471de101be"
+# /dev/sdb: PTUUID="6fe29d49-b979-4839-ba6c-0cd8ee29dd8f" PTTYPE="gpt"
+# /dev/sda1: PARTLABEL="BIOS-BOOT" PARTUUID="7233ed0d-12d0-4b4b-9a71-997dd675f1d6"
+
+blkid | grep 6fe29d49
+# /dev/sdb: PTUUID="6fe29d49-b979-4839-ba6c-0cd8ee29dd8f" PTTYPE="gpt"
+
+
+ceph osd df
+# ID  CLASS  WEIGHT   REWEIGHT  SIZE     RAW USE  DATA     OMAP     META     AVAIL    %USE   VAR   PGS  STATUS
+#  2    ssd  0.43669   1.00000  447 GiB  164 GiB  164 GiB  124 KiB  633 MiB  283 GiB  36.72  0.84  130      up
+#  3    ssd  0.43669   1.00000  447 GiB  228 GiB  227 GiB  1.7 MiB  1.1 GiB  219 GiB  50.99  1.16  142      up
+#  0    ssd  0.43669   1.00000  447 GiB  213 GiB  212 GiB  1.9 MiB  1.2 GiB  234 GiB  47.56  1.08  134      up
+#  1    ssd  0.43669   1.00000  447 GiB  182 GiB  181 GiB   17 KiB  1.2 GiB  265 GiB  40.79  0.93  139      up
+#  4    ssd  0.43669   1.00000  447 GiB  384 GiB  384 GiB  1.8 MiB  871 MiB   63 GiB  85.99  1.96  184      up
+#  5    ssd  0.43669   1.00000  447 GiB  4.5 GiB  4.4 GiB      0 B   69 MiB  443 GiB   1.01  0.02   65      up
+#                        TOTAL  2.6 TiB  1.1 TiB  1.1 TiB  5.5 MiB  5.0 GiB  1.5 TiB  43.84
+# MIN/MAX VAR: 0.02/1.96  STDDEV: 24.95
+
+
+ceph osd tree
+# ID  CLASS  WEIGHT   TYPE NAME                     STATUS  REWEIGHT  PRI-AFF
+# -1         2.62015  root default
+# -7         0.87338      host master1-ocp-ytl-com
+#  2    ssd  0.43669          osd.2                     up   1.00000  1.00000
+#  3    ssd  0.43669          osd.3                     up   1.00000  1.00000
+# -3         0.87338      host master2-ocp-ytl-com
+#  0    ssd  0.43669          osd.0                     up   1.00000  1.00000
+#  1    ssd  0.43669          osd.1                     up   1.00000  1.00000
+# -5         0.87338      host master3-ocp-ytl-com
+#  4    ssd  0.43669          osd.4                     up   1.00000  1.00000
+#  5    ssd  0.43669          osd.5                     up   1.00000  1.00000
+
+ceph osd status
+# ID  HOST                  USED  AVAIL  WR OPS  WR DATA  RD OPS  RD DATA  STATE
+#  0  master2.ocp.ytl.com   212G   235G      9     20.1M      1        3   exists,up
+#  1  master2.ocp.ytl.com   181G   265G      7     16.8M      2      105   exists,up
+#  2  master1.ocp.ytl.com   162G   284G      3     11.1M      0        0   exists,up
+#  3  master1.ocp.ytl.com   230G   217G      9     20.0M      1        0   exists,up
+#  4  master3.ocp.ytl.com   379G  67.5G      9     21.5M      0        0   backfillfull,exists,up
+#  5  master3.ocp.ytl.com  10.7G   436G      0      819k      0        0   exists,up
+
+ceph osd pool stats
+# pool ocs-storagecluster-cephblockpool id 1
+#   13866/318540 objects degraded (4.353%)
+#   49587/318540 objects misplaced (15.567%)
+#   recovery io 15 MiB/s, 3 objects/s
+#   client io 80 MiB/s wr, 0 op/s rd, 40 op/s wr
+
+# pool device_health_metrics id 2
+#   nothing is going on
+
+# pool ocs-storagecluster-cephobjectstore.rgw.log id 3
+#   127/1020 objects misplaced (12.451%)
+#   client io 511 B/s rd, 0 B/s wr, 0 op/s rd, 0 op/s wr
+
+# pool .rgw.root id 4
+#   nothing is going on
+
+# pool ocs-storagecluster-cephobjectstore.rgw.control id 5
+#   nothing is going on
+
+# pool ocs-storagecluster-cephobjectstore.rgw.buckets.index id 6
+#   2/66 objects misplaced (3.030%)
+
+# pool ocs-storagecluster-cephobjectstore.rgw.meta id 7
+#   client io 170 B/s rd, 85 B/s wr, 0 op/s rd, 0 op/s wr
+
+# pool ocs-storagecluster-cephobjectstore.rgw.buckets.non-ec id 8
+#   nothing is going on
+
+# pool ocs-storagecluster-cephfilesystem-metadata id 9
+#   client io 852 B/s rd, 1 op/s rd, 0 op/s wr
+
+# pool ocs-storagecluster-cephobjectstore.rgw.buckets.data id 10
+#   nothing is going on
+
+# pool ocs-storagecluster-cephfilesystem-data0 id 11
+#   nothing is going on
 
 ```
