@@ -1532,6 +1532,36 @@ cat /sys/class/net/ens22f0/device/numa_node
 cat /sys/devices/system/node/node2/hugepages/hugepages-1048576kB/nr_hugepages
 # 24
 
+
+oc patch mcp/master --patch '{&quot;spec&quot;:{&quot;paused&quot;:true}}' --type=merge
+oc patch mcp/worker --patch '{&quot;spec&quot;:{&quot;paused&quot;:true}}' --type=merge
+
+cat &lt;&lt; EOF &gt; ~/wzh/master-hugepage.yaml
+kind: MachineConfig
+apiVersion: machineconfiguration.openshift.io/v1
+metadata:
+  #name: 80-worker-hugepages
+  name: 80-master-hugepages
+  labels:
+   # machineconfiguration.openshift.io/role: worker
+    machineconfiguration.openshift.io/role: master
+spec:
+  osImageURL: &quot;&quot;
+  config:
+    ignition:
+      version: 3.1.0
+  kernelArguments:
+    - hugepagesz=1G
+    - hugepages=32
+    - hugepagesz=2M
+    - hugepages=0
+    - default_hugepagesz=1G
+    - intel_iommu=on
+    - iommu=pt
+EOF
+
+oc apply -f ~/wzh/master-hugepage.yaml
+
 cat &lt;&lt; 'EOF' &gt; ~/wzh/hugepage.bu
 variant: openshift
 version: 4.10.0
@@ -1561,7 +1591,7 @@ storage:
 
           reserve_pages 0 node0
           reserve_pages 0 node1
-          reserve_pages 24 node2
+          reserve_pages 32 node2
           reserve_pages 0 node3
           reserve_pages 0 node4
           reserve_pages 0 node5
@@ -1601,6 +1631,10 @@ oc apply -f ~/wzh/hugepage.yaml
 # oc create --save-config -f ~/wzh/hugepage.yaml
 
 # oc delete -f ~/wzh/hugepage.yaml
+
+oc patch mcp/master --patch '{&quot;spec&quot;:{&quot;paused&quot;:false}}' --type=merge
+oc patch mcp/worker --patch '{&quot;spec&quot;:{&quot;paused&quot;:false}}' --type=merge
+
 </code></pre>
 <h2 id="cnv-disable-auto-import"><a class="header" href="#cnv-disable-auto-import">cnv disable auto import</a></h2>
 <ul>

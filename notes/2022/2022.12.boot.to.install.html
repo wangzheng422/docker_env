@@ -257,10 +257,12 @@ virt-install --name=&quot;ocp4-acm-hub&quot; --vcpus=16 --ram=$((4*1024)) \
 # 然后，我们在web server上，下载alma8的安装光盘，我们用minimal的版本就好了。
 cd /data/dnf
 wget -O alma8.iso http://mirrors.nju.edu.cn/almalinux/8/isos/x86_64/AlmaLinux-8-latest-x86_64-minimal.iso
+# wget -O rocky8.iso http://mirrors.nju.edu.cn/rocky/8/isos/x86_64/Rocky-x86_64-minimal.iso
 
 # 我们把光盘挂载在本地，然后我们的web server会自动的发布出去。
 mkdir -p /data/dnf/cdrom
 mount alma8.iso /data/dnf/cdrom
+# mount rocky8.iso /data/dnf/cdrom
 
 # on the centos7 vm
 # 登录到新安装的centos7， 修改启动项，让下次启动的时候，直接进入安装界面
@@ -453,34 +455,22 @@ reboot
 <ul>
 <li>https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/6/html-single/installation_guide/index#s2-kickstart2-boot-media</li>
 </ul>
-<pre><code class="language-bash">dnf install -y isomd5sum
+<pre><code class="language-bash">
+dnf install -y isomd5sum
 
 cd /data/dnf
 
+wget -O rocky8.iso http://mirrors.nju.edu.cn/rocky/8/isos/x86_64/Rocky-x86_64-minimal.iso
+mount rocky8.iso /data/dnf/cdrom
+
 # create a kickstart file and copy to /data/dnf/
 # 本文的目录里面，有kickstart的配置模板，我们改变一下里面的IP地址i配置，安装源的URL就能用了。
+cd /data/dnf
 /bin/cp -f helper-ks-alma.cfg helper-ks-alma-wutong.cfg
 
-sed -i '0,/^network.*/s/^network.*/network  --bootproto=static --device=eno1 --gateway=172.21.6.254 --ip=172.21.6.101  --netmask=255.255.255.0 --nameserver=172.21.1.1  --ipv6=auto --activate/' helper-ks-alma-wutong.cfg
-sed -i 's/network  --hostname=helper/network  --hostname=panlab-101/' helper-ks-alma-wutong.cfg
-
-sed -i '0,/^url --url.*/s/^url --url.*/url --url=&quot;http:\/\/172.21.6.11:5000\/cdrom\/&quot;/' helper-ks-alma-wutong.cfg
-
-sed -i 's/vda/sda/g' helper-ks-alma-wutong.cfg
-
-
-mount /data/dnf/alma8.iso /data/dnf/cdrom
-
-mkdir -p /data/tmp/iso
-
-cp -pRf /data/dnf/cdrom /data/tmp/iso
-
-cd /data/tmp/iso
-
-rm -rf Minimal/
-rm -f images/install.img
-
+# for 101
 SNO_IP=172.21.6.101
+SNO_IP_INSTALL=172.21.6.199
 SNO_GW=172.21.6.254
 SNO_NETMAST=255.255.255.0
 SNO_HOSTNAME=panlab-101
@@ -490,6 +480,50 @@ SNO_DISK=/dev/sda
 SNO_ROOTFS=http://172.21.6.11:5000/cdrom/
 SNO_IGN=http://172.21.6.11:5000/helper-ks-alma-wutong.cfg
 
+# for 102
+SNO_IP=172.21.6.102
+SNO_IP_INSTALL=172.21.6.199
+SNO_GW=172.21.6.254
+SNO_NETMAST=255.255.255.0
+SNO_HOSTNAME=panlab-102
+SNO_IF=eno1
+SNO_DNS=172.21.1.1
+SNO_DISK=/dev/sda
+SNO_ROOTFS=http://172.21.6.11:5000/cdrom/
+SNO_IGN=http://172.21.6.11:5000/helper-ks-alma-wutong.cfg
+
+# for 103
+SNO_IP=172.21.6.103
+SNO_IP_INSTALL=172.21.6.199
+SNO_GW=172.21.6.254
+SNO_NETMAST=255.255.255.0
+SNO_HOSTNAME=panlab-102
+SNO_IF=eno1
+SNO_DNS=172.21.1.1
+SNO_DISK=/dev/sda
+SNO_ROOTFS=http://172.21.6.11:5000/cdrom/
+SNO_IGN=http://172.21.6.11:5000/helper-ks-alma-wutong.cfg
+
+
+sed -i &quot;0,/^network.*/s/^network.*/network  --bootproto=static --device=$SNO_IF --gateway=$SNO_GW --ip=$SNO_IP  --netmask=$SNO_NETMAST --nameserver=$SNO_DNS  --ipv6=auto --activate/&quot; helper-ks-alma-wutong.cfg
+sed -i &quot;s/network  --hostname=.*/network  --hostname=$SNO_HOSTNAME/&quot; helper-ks-alma-wutong.cfg
+
+sed -i &quot;0,/^url --url.*/s#^url --url.*#url --url=\&quot;$SNO_ROOTFS\&quot;#&quot; helper-ks-alma-wutong.cfg
+
+sed -i 's/vda/sda/g' helper-ks-alma-wutong.cfg
+
+
+# mount /data/dnf/alma8.iso /data/dnf/cdrom
+
+mkdir -p /data/tmp/
+
+/bin/cp -pRf /data/dnf/cdrom/ /data/tmp/
+
+cd /data/tmp/cdrom
+
+rm -rf BaseOS/
+rm -rf Minimal/
+rm -f images/install.img
 
 cat &lt;&lt;EOF &gt; isolinux/isolinux.cfg
 default vesamenu.c32
@@ -553,13 +587,13 @@ menu separator # insert an empty line
 menu separator # insert an empty line
 
 label linux
-  menu label ^Install AlmaLinux 8.7
+  menu label ^Install WZH Linux 8.7
   menu default
   kernel vmlinuz
-  append initrd=initrd.img rd.neednet=1 ip=$SNO_IP::$SNO_GW:$SNO_NETMAST:$SNO_HOSTNAME:$SNO_IF:none nameserver=$SNO_DNS  inst.ks=$SNO_IGN inst.repo=$SNO_ROOTFS
+  append initrd=initrd.img rd.neednet=1 ip=$SNO_IP_INSTALL::$SNO_GW:$SNO_NETMAST:$SNO_HOSTNAME:$SNO_IF:none nameserver=$SNO_DNS  inst.ks=$SNO_IGN inst.repo=$SNO_ROOTFS
 
 label check
-  menu label Test this ^media &amp; install AlmaLinux 8.7
+  menu label Test this ^media &amp; install WZH Linux 8.7
   kernel vmlinuz
   append initrd=initrd.img inst.stage2=hd:LABEL=AlmaLinux-8-7-x86_64-dvd rd.live.check quiet
 
@@ -619,6 +653,11 @@ EOF
 genisoimage -U -r -v -T -J -joliet-long -V &quot;RHEL-6.9&quot; -volset &quot;RHEL-6.9&quot; -A &quot;RHEL-6.9&quot; -b isolinux/isolinux.bin -c isolinux/boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table -eltorito-alt-boot -e images/efiboot.img -no-emul-boot -o ../wzh.iso .
 
 implantisomd5 ../wzh.iso
+
+</code></pre>
+<h1 id="update-minimal"><a class="header" href="#update-minimal">update minimal</a></h1>
+<pre><code class="language-bash">
+dnf update-minimal --security
 
 </code></pre>
 <h1 id="end"><a class="header" href="#end">end</a></h1>
