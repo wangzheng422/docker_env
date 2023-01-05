@@ -18098,8 +18098,8 @@ oc get co
 # storage                                    4.10.41   True        False         False      44m
 </code></pre>
 <p><img src="ocp4/4.10/imgs/2022-11-30-13-36-03.png" alt="" /></p>
-<h1 id="config-to-fix-errors"><a class="header" href="#config-to-fix-errors">config to fix errors</a></h1>
-<h2 id="disk-flag-rm"><a class="header" href="#disk-flag-rm">disk flag RM</a></h2>
+<h1 id="other-config-to-fix-hygon-deploy-errors"><a class="header" href="#other-config-to-fix-hygon-deploy-errors">other config to fix hygon deploy errors</a></h1>
+<h2 id="disk-treated-as-removalable-disk-flag-rm"><a class="header" href="#disk-treated-as-removalable-disk-flag-rm">disk treated as removalable disk (flag RM)</a></h2>
 <p>不知道是海关x86 cpu的问题，还是这个服务器主板的问题，所有内置硬盘都会认成移动硬盘。在主板bios里面，sata controller没有可以配置的项，只有海光cpu有相关的配置，ACHI的相关配置，没有关闭热插拔的选项。</p>
 <p>这个问题，对于安装openshift倒是没看出来有什么影响，但是会影响安装openshift data fundation(odf)，因为odf安装的时候，会默认扫描节点的硬盘，然后把移动硬盘都排除。结果，海光cpu的服务器，就变成没有硬盘可以来装了。</p>
 <p>没办法，我们只好定制local storage operator，这个东西是odf的底层，真正的硬盘扫描，就是这个operator干的。</p>
@@ -18218,7 +18218,8 @@ udevadm info --query all --path /sys/block/sdb --attribute-walk
   #   ATTR{trace/pid}==&quot;disabled&quot;
   #   ATTR{trace/start_lba}==&quot;disabled&quot;
 </code></pre>
-<h2 id="build-local-storage-operator"><a class="header" href="#build-local-storage-operator">build local-storage-operator</a></h2>
+<h3 id="build-local-storage-operator"><a class="header" href="#build-local-storage-operator">build local-storage-operator</a></h3>
+<p>我们要做的，就是修改local-storage-operator里面的源代码，在源代码里面，写死了移动硬盘不能作为local-storage使用，我们就把这个限制放开。比较走运的是，这个项目的代码逻辑还算是简单，让我们比较方便的找到了写死的地方。</p>
 <pre><code class="language-bash"># https://github.com/wangzheng422/local-storage-operator
 
 dnf module -y install go-toolset docker ruby
@@ -18248,7 +18249,8 @@ make bundle
 # quay.io/wangzheng422/ocp/local-storage-index:wzh-ocp-4.10-v01
 
 </code></pre>
-<h2 id="deploy-rm-the-fix"><a class="header" href="#deploy-rm-the-fix">deploy RM the fix</a></h2>
+<h3 id="deploy-rm-hotfix-to-openshift"><a class="header" href="#deploy-rm-hotfix-to-openshift">deploy RM hotfix to openshift</a></h3>
+<p>我们编译好了自定义版本的local-storage-operator，里面包括了operator本身，还有catalog source。接下来，我们就部署这个local-storage-operator版本，然后在这个基础之上，再部署odf。</p>
 <pre><code class="language-bash">
 cat &lt;&lt; EOF &gt;&gt; ~/wzh/disk.fix.project.yaml
 apiVersion: v1
@@ -18307,13 +18309,19 @@ oc delete -f ~/wzh/disk.fix.sub.yaml
 
 </code></pre>
 <h2 id="fix-image-mirror"><a class="header" href="#fix-image-mirror">fix image mirror</a></h2>
-<pre><code class="language-bash">cd /data/ocp4
+<p>我们在实验环境里面，部署了一个nexus镜像缓存，那么我们就把缓存配置信息，导入到openshift里面去。</p>
+<pre><code class="language-bash">
+cd /data/ocp4
 bash image.registries.conf.sh nexus.casa.wzhlab.top:8083
-
 
 </code></pre>
 <h2 id="sriov-fix"><a class="header" href="#sriov-fix">sriov fix</a></h2>
+<p>实验环境，有sriov官方不支持的网卡，那么我们需要激活这些网卡支持，要做2个事情，一个是禁用webhook，另外一个是配置一个config map，把网卡识别信息放进去。</p>
 <pre><code class="language-bash"># disable sriov webhook
+# https://docs.openshift.com/container-platform/4.10/networking/hardware_networks/configuring-sriov-operator.html#disable-enable-sr-iov-operator-admission-control-webhook_configuring-sriov-operator
+oc patch sriovoperatorconfig default --type=merge \
+  -n openshift-sriov-network-operator \
+  --patch '{ &quot;spec&quot;: { &quot;enableOperatorWebhook&quot;: false } }'
 
 # add unsupport nic ids 
 
@@ -18329,9 +18337,8 @@ metadata:
 EOF
 oc apply -f ~/wzh/sriov-unsupport.yaml
 
-pwd
-# /sys/class/net/ens19f0/device
 
+# 如何查找上面的那些网卡参数？在kernel里面能找到。
 VAR_IF=ens19f0
 cat /sys/class/net/$VAR_IF/device/vendor
 # 0x8086
@@ -18340,9 +18347,6 @@ cat /sys/class/net/$VAR_IF/device/device
 cat /sys/class/net/$VAR_IF/device/sriov_vf_device
 # 1520
 
-oc patch sriovoperatorconfig default --type=merge \
-  -n openshift-sriov-network-operator \
-  --patch '{ &quot;spec&quot;: { &quot;enableOperatorWebhook&quot;: false } }'
 
 [root@master1 device]# dmesg  |grep i40
 [    3.700084] i40e: Intel(R) Ethernet Connection XL710 Network Driver
@@ -18433,10 +18437,10 @@ lspci -vs 0000:23:00.0
 #         Kernel driver in use: i40e
 #         Kernel modules: i40e
 
-
 </code></pre>
 <h2 id="hugepage-numa-allocation"><a class="header" href="#hugepage-numa-allocation">hugepage numa allocation</a></h2>
-<p>默认hugepage会平均分配在numa node之上，而dpdk程序，是绑定numa node运行得，所以一个不小心，就会出现hugepage不足，导致dpdk启动不了得情况</p>
+<p>默认hugepage会平均分配在numa node之上，而dpdk程序，是绑定numa node运行得，所以一个不小心，就会出现hugepage不足，导致dpdk启动不了得情况。</p>
+<p>这里，我们先看看这个环境里面的numa是个什么情况。</p>
 <pre><code class="language-bash"># https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/7/html/performance_tuning_guide/sect-red_hat_enterprise_linux-performance_tuning_guide-memory-configuring-huge-pages
 
 # build debug pod
@@ -18479,8 +18483,13 @@ cat /sys/class/net/ens22f0/device/numa_node
 cat /sys/devices/system/node/node2/hugepages/hugepages-1048576kB/nr_hugepages
 # 24
 
-
-oc patch mcp/master --patch '{&quot;spec&quot;:{&quot;paused&quot;:true}}' --type=merge
+</code></pre>
+<h3 id="config-numa-hugepage-binding"><a class="header" href="#config-numa-hugepage-binding">config numa hugepage binding</a></h3>
+<p>我们参考官方文档，配置hugepage和numa的绑定关系。</p>
+<ul>
+<li>https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/7/html/performance_tuning_guide/sect-red_hat_enterprise_linux-performance_tuning_guide-memory-configuring-huge-pages</li>
+</ul>
+<pre><code class="language-bash">oc patch mcp/master --patch '{&quot;spec&quot;:{&quot;paused&quot;:true}}' --type=merge
 oc patch mcp/worker --patch '{&quot;spec&quot;:{&quot;paused&quot;:true}}' --type=merge
 
 cat &lt;&lt; EOF &gt; ~/wzh/master-hugepage.yaml
@@ -18584,6 +18593,7 @@ oc patch mcp/worker --patch '{&quot;spec&quot;:{&quot;paused&quot;:false}}' --ty
 
 </code></pre>
 <h2 id="cnv-disable-auto-import"><a class="header" href="#cnv-disable-auto-import">cnv disable auto import</a></h2>
+<p>实验室环境的外网非常慢，而cnv安装完了，会自动导入centos, rhel的镜像，这些镜像我们根本用不到，那么就禁止这种自动下载和导入。</p>
 <ul>
 <li>https://docs.openshift.com/container-platform/4.10/virt/virtual_machines/advanced_vm_management/virt-automatic-bootsource-updates.html</li>
 </ul>
@@ -18592,6 +18602,7 @@ oc patch hco kubevirt-hyperconverged -n openshift-cnv --type json -p '[{&quot;op
 
 </code></pre>
 <h2 id="numa"><a class="header" href="#numa">numa</a></h2>
+<p>默认有一些系统关于numa和cpu manager的配置。</p>
 <pre><code class="language-bash">
 cat &lt;&lt; EOF &gt; ~/wzh/numa.yaml
 apiVersion: machineconfiguration.openshift.io/v1
@@ -18618,6 +18629,7 @@ oc adm taint nodes worker1.ocp.ytl.com intel_cpu=true:NoExecute
 
 </code></pre>
 <h2 id="odf-error-fix"><a class="header" href="#odf-error-fix">odf error fix</a></h2>
+<p>odf有过一些故障，有一个比较打的，是硬盘上有分区信息，于是ceph不纳管。另外，就是pod有遗留的volumn，导致新的pod无法创建，于是手动清理了这些volumn，让新的pod能继续创建。</p>
 <pre><code class="language-bash"># https://access.redhat.com/solutions/5512711
 journalctl -r -u kubelet | grep 'orphaned pod' | head -1
 
@@ -18631,9 +18643,9 @@ rm -rf /var/lib/kubelet/pods/$POD_NAME/volumes
 
 journalctl -r -u kubelet | grep 'orphaned pod' | head -1
 
-
 </code></pre>
 <h2 id="timezone"><a class="header" href="#timezone">timezone</a></h2>
+<p>openshift默认的时区是utf+0的，我们要按照中国时区显示时间，就可以这么做。</p>
 <pre><code class="language-bash">
 TZ=&quot;:Asia/Shanghai&quot; date
 
@@ -18688,8 +18700,6 @@ EOF
 butane ~/wzh/blk.rm.flag.bu &gt; ~/wzh/99-zzz-master-blk-rm-flag.yaml
 
 oc create --save-config -f ~/wzh/99-zzz-master-blk-rm-flag.yaml
-
-
 
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><div style="break-before: page; page-break-before: always;"></div><h1 id="在-openshift-411-上安装和运行-openstack"><a class="header" href="#在-openshift-411-上安装和运行-openstack">在 openshift 4.11 上安装和运行 openstack</a></h1>
