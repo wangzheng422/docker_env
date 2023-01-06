@@ -17578,7 +17578,7 @@ rm -rf /data/ocp4/
 mkdir -p /data/ocp4/
 cd /data/ocp4
 
-export BUILDNUMBER=4.11.6
+export BUILDNUMBER=4.11.18
 
 wget -O openshift-client-linux-${BUILDNUMBER}.tar.gz https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/${BUILDNUMBER}/openshift-client-linux-${BUILDNUMBER}.tar.gz
 wget -O openshift-install-linux-${BUILDNUMBER}.tar.gz https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/${BUILDNUMBER}/openshift-install-linux-${BUILDNUMBER}.tar.gz
@@ -17608,7 +17608,7 @@ bash prepare.content.with.oc.mirror.sh -v ${BUILDNUMBER}, -m ${BUILDNUMBER%.*} -
 <p>第二部，根据我们自定义的release image，同步安装镜像，到我们内部的镜像仓库，并且抽取安装二进制文件。</p>
 <p>The second part, according to our custom release image, synchronously installs the image to our internal mirror warehouse, and extracts the installation binary file.</p>
 <pre><code class="language-bash">
-export BUILDNUMBER=4.11.6
+export BUILDNUMBER=4.11.18
 
 pushd /data/ocp4/${BUILDNUMBER}
 tar -xzf openshift-client-linux-${BUILDNUMBER}.tar.gz -C /usr/local/bin/
@@ -17635,7 +17635,7 @@ export VAR_RELEASE_VER=4.10.41-rhel-9.1-v02
 
 oc adm release mirror -a /data/pull-secret.json \
   --from=quay.io/wangzheng422/ocp:$VAR_RELEASE_VER \
-  --to=quaylab.infra.redhat.ren:8443/ocp4/openshift4
+  --to=quaylab.infra.wzhlab.top:5443/ocp4/openshift4
 # ......
 # Success
 # Update image:  quaylab.infra.redhat.ren:8443/ocp4/openshift4:4.8.53-x86_64
@@ -17669,8 +17669,8 @@ oc adm release mirror -a /data/pull-secret.json \
 
 # !!!! 注意，以下步骤必须执行，因为版本信息在可执行程序和里面 ！！！
 
-mkdir -p /data/ocp-4.8/ext-client
-cd /data/ocp-4.8/ext-client
+mkdir -p /data/work/ext-client
+cd /data/work/ext-client
 
 RELEASE_IMAGE=quay.io/wangzheng422/ocp:$VAR_RELEASE_VER
 LOCAL_SECRET_JSON=/data/pull-secret.json
@@ -17689,9 +17689,79 @@ oc adm release extract --registry-config ${LOCAL_SECRET_JSON} --command='oc' ${R
 # release image quay.io/wangzheng422/ocp@sha256:1c6a539ac44c65e2d1005a270e5d05442deaa9b3a0101edab695010a90f09aed
 # release architecture amd64
 
-install -m 755 /data/ocp-4.8/ext-client/openshift-install /usr/local/bin/openshift-install
-install -m 755 /data/ocp-4.8/ext-client/oc /usr/local/bin/oc
+install -m 755 /data/work/ext-client/openshift-install /usr/local/bin/openshift-install
+install -m 755 /data/work/ext-client/oc /usr/local/bin/oc
 # install -m 755 /data/ocp4/clients/butane-amd64 /usr/local/bin/butane
+
+</code></pre>
+<h2 id="mirror-for-disconnected"><a class="header" href="#mirror-for-disconnected">mirror for disconnected</a></h2>
+<pre><code class="language-bash"># we use oc-mirror from ocp 4.11
+
+cat &gt; /data/ocp4/mirror.yaml &lt;&lt; EOF
+apiVersion: mirror.openshift.io/v1alpha2
+kind: ImageSetConfiguration
+# archiveSize: 4
+mirror:
+  platform:
+    architectures:
+      - amd64
+      # - arm64
+    channels:
+      # - name: stable-4.11
+      #   type: ocp
+      #   minVersion: 4.11.18
+      #   maxVersion: 4.11.18
+      #   shortestPath: true
+      # - name: stable-4.10
+      #   type: ocp
+      #   minVersion: 4.10.45
+      #   maxVersion: 4.10.45
+      #   shortestPath: true
+    graph: false
+  additionalImages:
+    - name: registry.redhat.io/redhat/redhat-operator-index:v4.10
+    - name: registry.redhat.io/redhat/certified-operator-index:v4.10
+    - name: registry.redhat.io/redhat/community-operator-index:v4.10
+    - name: registry.redhat.io/redhat/redhat-marketplace-index:v4.10 
+  operators:
+    - catalog: registry.redhat.io/redhat/redhat-operator-index:v4.10  
+      packages:
+      - name: cluster-logging                                   
+        channels:
+        - name: stable
+          minVersion: 5.5.5
+      - name: elasticsearch-operator                               
+        channels:
+        - name: stable
+          minVersion: 5.5.5
+      - name: jaeger-product                             
+        channels:
+        - name: stable
+          minVersion: 1.39.0-3
+      - name: kubernetes-nmstate-operator                               
+        channels:
+        - name: stable
+          minVersion: 4.10.0-202212061900
+      - name: odf-operator                                 
+        channels:
+        - name: stable-4.10
+          minVersion: 4.10.9
+      - name: sriov-network-operator                             
+        channels:
+        - name: stable
+          minVersion: 4.10.0-202212061900
+    - catalog: quay.io/wangzheng422/ocp/local-storage-index:wzh-ocp-4.10-v01
+      packages:
+      - name: local-storage-operator                              
+        channels:
+        - name: preview
+EOF
+
+mkdir -p /data/install/mirror-tmp
+cd /data/install/mirror-tmp
+
+oc-mirror --config /data/ocp4/mirror.yaml docker://quaylab.infra.wzhlab.top:5443
+
 
 </code></pre>
 <h2 id="try-to-config-the-ocp-install"><a class="header" href="#try-to-config-the-ocp-install">try to config the ocp install</a></h2>
@@ -17744,21 +17814,21 @@ mkdir -p ${BASE_DIR}/data/{sno/disconnected,install}
 # set some parameter of you rcluster
 
 NODE_SSH_KEY=&quot;$(cat ${BASE_DIR}/.ssh/id_rsa.pub)&quot;
-INSTALL_IMAGE_REGISTRY=quaylab.infra.redhat.ren:8443
+INSTALL_IMAGE_REGISTRY=quaylab.infra.wzhlab.top:5443
 
 PULL_SECRET='{&quot;auths&quot;:{&quot;registry.redhat.io&quot;: {&quot;auth&quot;: &quot;ZHVtbXk6ZHVtbXk=&quot;,&quot;email&quot;: &quot;noemail@localhost&quot;},&quot;registry.ocp4.redhat.ren:5443&quot;: {&quot;auth&quot;: &quot;ZHVtbXk6ZHVtbXk=&quot;,&quot;email&quot;: &quot;noemail@localhost&quot;},&quot;'${INSTALL_IMAGE_REGISTRY}'&quot;: {&quot;auth&quot;: &quot;'$( echo -n 'admin:redhatadmin' | openssl base64 )'&quot;,&quot;email&quot;: &quot;noemail@localhost&quot;}}}'
 
-NTP_SERVER=192.168.7.11
-HELP_SERVER=192.168.7.11
-KVM_HOST=192.168.7.11
-API_VIP=192.168.7.100
-INGRESS_VIP=192.168.7.101
-CLUSTER_PROVISION_IP=192.168.7.103
-BOOTSTRAP_IP=192.168.7.12
+# NTP_SERVER=192.168.7.11
+# HELP_SERVER=192.168.7.11
+# KVM_HOST=192.168.7.11
+# API_VIP=192.168.7.100
+# INGRESS_VIP=192.168.7.101
+# CLUSTER_PROVISION_IP=192.168.7.103
+# BOOTSTRAP_IP=192.168.7.12
 
 # 定义单节点集群的节点信息
 SNO_CLUSTER_NAME=acm-demo-one
-SNO_BASE_DOMAIN=redhat.ren
+SNO_BASE_DOMAIN=wzhlab.top
 
 # echo ${SNO_IF_MAC} &gt; /data/sno/sno.mac
 
@@ -17822,7 +17892,7 @@ bash image.registries.conf.sh nexus.infra.redhat.ren:8083
 # /bin/cp -f /data/ocp4/image.registries.conf /etc/containers/registries.conf.d/
 #############################################
 
-sudo bash -c &quot;cd /data/ocp4 ; bash image.registries.conf.sh nexus.infra.redhat.ren:8083 ;&quot;
+sudo bash -c &quot;cd /data/ocp4 ; bash image.registries.conf.sh quaylab.infra.wzhlab.top:5443 ;&quot;
 
 /bin/cp -f /data/ocp4/99-worker-container-registries.yaml ${BASE_DIR}/data/install/openshift
 /bin/cp -f /data/ocp4/99-master-container-registries.yaml ${BASE_DIR}/data/install/openshift
@@ -17831,10 +17901,10 @@ cd ${BASE_DIR}/data/install/
 
 openshift-install --dir=${BASE_DIR}/data/install create ignition-configs 
 
-BOOTSTRAP_IP=192.168.7.22
-MASTER_01_IP=192.168.7.23
-MASTER_02_IP=192.168.7.24
-MASTER_03_IP=192.168.7.25
+BOOTSTRAP_IP=192.168.77.22
+MASTER_01_IP=192.168.77.23
+MASTER_02_IP=192.168.77.24
+MASTER_03_IP=192.168.77.25
 
 BOOTSTRAP_HOSTNAME=bootstrap-demo
 MASTER_01_HOSTNAME=master-01-demo
@@ -17851,10 +17921,10 @@ MASTER_01_DISK=/dev/vda
 MASTER_02_DISK=/dev/vda
 MASTER_03_DISK=/dev/vda
 
-OCP_GW=192.168.7.11
+OCP_GW=192.168.77.11
 OCP_NETMASK=255.255.255.0
 OCP_NETMASK_S=24
-OCP_DNS=192.168.7.11
+OCP_DNS=192.168.77.11
 
 # HTTP_PATH=http://192.168.7.11:8080/ignition
 
@@ -17877,20 +17947,20 @@ cat ${BASE_DIR}/data/install/master.ign \
 VAR_IMAGE_VER=410.91.202211291516-wzh-0
 
 cd ${BASE_DIR}/data/install/
-/bin/cp -f /data/ocp-4.8/ext-client/iso/rhcos-$VAR_IMAGE_VER-live.x86_64.iso bootstrap.iso
+/bin/cp -f /data/work/ext-client/iso/rhcos-$VAR_IMAGE_VER-live.x86_64.iso bootstrap.iso
 /bin/cp -f bootstrap.iso master01.iso
 /bin/cp -f bootstrap.iso master02.iso
 /bin/cp -f bootstrap.iso master03.iso
-sudo /bin/cp -f /data/ocp-4.8/ext-client/iso/rhcos-$VAR_IMAGE_VER-metal.x86_64.raw /data/dnf/
+sudo /bin/cp -f /data/work/ext-client/iso/rhcos-$VAR_IMAGE_VER-metal.x86_64.raw /data/dnf/
 sudo /bin/cp -f ${BASE_DIR}/data/install/{bootstrap,master}-iso.ign /data/dnf/
 
-coreos-installer iso kargs modify -a &quot;ip=$BOOTSTRAP_IP::$OCP_GW:$OCP_NETMASK:$BOOTSTRAP_HOSTNAME:$BOOTSTRAP_INTERFACE:none nameserver=$OCP_DNS coreos.inst.install_dev=$BOOTSTRAP_DISK coreos.inst.ignition_url=http://192.168.7.11:5000/bootstrap-iso.ign coreos.inst.image_url=http://192.168.7.11:5000/rhcos-$VAR_IMAGE_VER-metal.x86_64.raw coreos.inst.insecure&quot; bootstrap.iso
+coreos-installer iso kargs modify -a &quot;ip=$BOOTSTRAP_IP::$OCP_GW:$OCP_NETMASK:$BOOTSTRAP_HOSTNAME:$BOOTSTRAP_INTERFACE:none nameserver=$OCP_DNS coreos.inst.install_dev=$BOOTSTRAP_DISK coreos.inst.ignition_url=http://192.168.77.11:5000/bootstrap-iso.ign coreos.inst.image_url=http://192.168.77.11:5000/rhcos-$VAR_IMAGE_VER-metal.x86_64.raw coreos.inst.insecure&quot; bootstrap.iso
 
-coreos-installer iso kargs modify -a &quot;ip=$MASTER_01_IP::$OCP_GW:$OCP_NETMASK:$MASTER_01_HOSTNAME:$MASTER_01_INTERFACE:none nameserver=$OCP_DNS coreos.inst.install_dev=$MASTER_01_DISK coreos.inst.ignition_url=http://192.168.7.11:5000/master-iso.ign coreos.inst.image_url=http://192.168.7.11:5000/rhcos-$VAR_IMAGE_VER-metal.x86_64.raw coreos.inst.insecure&quot; master01.iso
+coreos-installer iso kargs modify -a &quot;ip=$MASTER_01_IP::$OCP_GW:$OCP_NETMASK:$MASTER_01_HOSTNAME:$MASTER_01_INTERFACE:none nameserver=$OCP_DNS coreos.inst.install_dev=$MASTER_01_DISK coreos.inst.ignition_url=http://192.168.77.11:5000/master-iso.ign coreos.inst.image_url=http://192.168.77.11:5000/rhcos-$VAR_IMAGE_VER-metal.x86_64.raw coreos.inst.insecure&quot; master01.iso
 
-coreos-installer iso kargs modify -a &quot;ip=$MASTER_02_IP::$OCP_GW:$OCP_NETMASK:$MASTER_02_HOSTNAME:$MASTER_02_INTERFACE:none nameserver=$OCP_DNS coreos.inst.install_dev=$MASTER_02_DISK coreos.inst.ignition_url=http://192.168.7.11:5000/master-iso.ign coreos.inst.image_url=http://192.168.7.11:5000/rhcos-$VAR_IMAGE_VER-metal.x86_64.raw coreos.inst.insecure&quot; master02.iso
+coreos-installer iso kargs modify -a &quot;ip=$MASTER_02_IP::$OCP_GW:$OCP_NETMASK:$MASTER_02_HOSTNAME:$MASTER_02_INTERFACE:none nameserver=$OCP_DNS coreos.inst.install_dev=$MASTER_02_DISK coreos.inst.ignition_url=http://192.168.77.11:5000/master-iso.ign coreos.inst.image_url=http://192.168.77.11:5000/rhcos-$VAR_IMAGE_VER-metal.x86_64.raw coreos.inst.insecure&quot; master02.iso
 
-coreos-installer iso kargs modify -a &quot;ip=$MASTER_03_IP::$OCP_GW:$OCP_NETMASK:$MASTER_03_HOSTNAME:$MASTER_03_INTERFACE:none nameserver=$OCP_DNS coreos.inst.install_dev=$MASTER_03_DISK coreos.inst.ignition_url=http://192.168.7.11:5000/master-iso.ign coreos.inst.image_url=http://192.168.7.11:5000/rhcos-$VAR_IMAGE_VER-metal.x86_64.raw coreos.inst.insecure&quot; master03.iso
+coreos-installer iso kargs modify -a &quot;ip=$MASTER_03_IP::$OCP_GW:$OCP_NETMASK:$MASTER_03_HOSTNAME:$MASTER_03_INTERFACE:none nameserver=$OCP_DNS coreos.inst.install_dev=$MASTER_03_DISK coreos.inst.ignition_url=http://192.168.77.11:5000/master-iso.ign coreos.inst.image_url=http://192.168.77.11:5000/rhcos-$VAR_IMAGE_VER-metal.x86_64.raw coreos.inst.insecure&quot; master03.iso
 
 
 </code></pre>
@@ -17910,11 +17980,12 @@ openshift-install wait-for install-complete --log-level debug
 # ......
 # INFO Install complete!
 # INFO To access the cluster as the system:admin user when using 'oc', run 'export KUBECONFIG=/home/3node/data/install/auth/kubeconfig'
-# INFO Access the OpenShift web-console here: https://console-openshift-console.apps.acm-demo-one.redhat.ren
-# INFO Login to the console with user: &quot;kubeadmin&quot;, and password: &quot;Z7xsb-2VB9N-KHKEW-PCPnz&quot;
+# INFO Access the OpenShift web-console here: https://console-openshift-console.apps.acm-demo-one.wzhlab.top
+# INFO Login to the console with user: &quot;kubeadmin&quot;, and password: &quot;oEWps-IaWRY-GJsx6-sXhxB&quot;
 # DEBUG Time elapsed per stage:
-# DEBUG Cluster Operators: 15m51s
-# INFO Time elapsed: 15m51s
+# DEBUG Cluster Operators: 21m31s
+# DEBUG           Console: 1s
+# INFO Time elapsed: 21m32s
 
 </code></pre>
 <h1 id="password-login-and-oc-config"><a class="header" href="#password-login-and-oc-config">password login and oc config</a></h1>
@@ -17939,13 +18010,13 @@ sudo systemctl restart sshd
 
 sudo sh -c 'echo &quot;export KUBECONFIG=/etc/kubernetes/static-pod-resources/kube-apiserver-certs/secrets/node-kubeconfigs/localhost.kubeconfig&quot; &gt;&gt; /root/.bashrc'
 
-sudo sh -c 'echo &quot;RET=\\\`oc config use-context system:admin\\\`&quot; &gt;&gt; /root/.bashrc'
+sudo sh -c 'echo &quot;RET=\`oc config use-context system:admin\`&quot; &gt;&gt; /root/.bashrc'
 
 EOF
 
 for i in 23 24 25
 do
-  ssh core@192.168.7.$i &lt; ${BASE_DIR}/data/install/crack.txt
+  ssh core@192.168.77.$i &lt; ${BASE_DIR}/data/install/crack.txt
 done
 
 </code></pre>
@@ -17955,7 +18026,7 @@ dnf install -y sshpass
 
 for i in 23 24 25
 do
-  sshpass -p 'redhat' ssh-copy-id root@192.168.7.$i
+  sshpass -p 'redhat' ssh-copy-id root@192.168.77.$i
 done
 
 </code></pre>
@@ -18305,7 +18376,7 @@ EOF
 
 oc create --save-config -f ~/wzh/disk.fix.sub.yaml
 
-oc delete -f ~/wzh/disk.fix.sub.yaml
+# oc delete -f ~/wzh/disk.fix.sub.yaml
 
 </code></pre>
 <h2 id="fix-image-mirror"><a class="header" href="#fix-image-mirror">fix image mirror</a></h2>
