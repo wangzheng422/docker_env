@@ -17583,9 +17583,15 @@ export BUILDNUMBER=4.11.18
 wget -O openshift-client-linux-${BUILDNUMBER}.tar.gz https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/${BUILDNUMBER}/openshift-client-linux-${BUILDNUMBER}.tar.gz
 wget -O openshift-install-linux-${BUILDNUMBER}.tar.gz https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/${BUILDNUMBER}/openshift-install-linux-${BUILDNUMBER}.tar.gz
 
-tar -xzf openshift-client-linux-${BUILDNUMBER}.tar.gz -C /usr/local/sbin/
-tar -xzf openshift-install-linux-${BUILDNUMBER}.tar.gz -C /usr/local/sbin/
+tar -xzf openshift-client-linux-${BUILDNUMBER}.tar.gz -C /usr/local/bin/
+tar -xzf openshift-install-linux-${BUILDNUMBER}.tar.gz -C /usr/local/bin/
 
+wget -O opm-linux.tar.gz https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/opm/4.6.1/opm-linux-4.6.1.tar.gz
+tar -xzf opm-linux.tar.gz -C /usr/local/bin/
+
+wget https://github.com/operator-framework/operator-registry/releases/download/v1.26.2/linux-amd64-opm
+chmod +x linux-amd64-opm
+install linux-amd64-opm /usr/local/bin/opm
 
 rm -rf /data/ocp4/
 
@@ -17723,6 +17729,12 @@ mirror:
     - name: registry.redhat.io/redhat/certified-operator-index:v4.10
     - name: registry.redhat.io/redhat/community-operator-index:v4.10
     - name: registry.redhat.io/redhat/redhat-marketplace-index:v4.10 
+    - name: quay.io/wangzheng422/local-storage-operator:wzh-ocp-4.10-v01
+    - name: quay.io/wangzheng422/local-storage-bundle:wzh-ocp-4.10-v01
+    - name: quay.io/wangzheng422/local-diskmaker:wzh-ocp-4.10-v01
+    - name: quay.io/wangzheng422/local-storage-operator:wzh-ocp-4.10-v01
+    - name: quay.io/wangzheng422/local-must-gather:wzh-ocp-4.10-v01
+    - name: quay.io/openshift/origin-kube-rbac-proxy:latest
   operators:
     - catalog: registry.redhat.io/redhat/redhat-operator-index:v4.10  
       packages:
@@ -17750,7 +17762,11 @@ mirror:
         channels:
         - name: stable
           minVersion: 4.10.0-202212061900
-    - catalog: quay.io/wangzheng422/ocp/local-storage-index:wzh-ocp-4.10-v01
+      - name: kubevirt-hyperconverged
+        channels:
+        - name: stable
+          minVersion: 4.10.7
+    - catalog: quay.io/wangzheng422/local-storage-index:wzh-ocp-4.10-v01
       packages:
       - name: local-storage-operator                              
         channels:
@@ -18293,7 +18309,10 @@ udevadm info --query all --path /sys/block/sdb --attribute-walk
 <p>我们要做的，就是修改local-storage-operator里面的源代码，在源代码里面，写死了移动硬盘不能作为local-storage使用，我们就把这个限制放开。比较走运的是，这个项目的代码逻辑还算是简单，让我们比较方便的找到了写死的地方。</p>
 <pre><code class="language-bash"># https://github.com/wangzheng422/local-storage-operator
 
-dnf module -y install go-toolset docker ruby
+# dnf module -y install go-toolset docker ruby
+
+dnf module -y install go-toolset  ruby
+dnf install -y docker
 
 rm -rf /data/operator
 mkdir -p /data/operator
@@ -18303,20 +18322,20 @@ git clone https://github.com/wangzheng422/local-storage-operator
 cd local-storage-operator
 git checkout wzh-ocp-4.10
 
-export REGISTRY=quay.io/wangzheng422/ocp/
+export REGISTRY=quay.io/wangzheng422/
 export VERSION=wzh-ocp-4.10-v01
 
-sed -i 's/REPO_IP/45.63.52.61:5180/g' wzh.repo
+sed -i 's/REPO_IP/45.76.77.134:5180/g' wzh.repo
 
 make images
 
 make push-images
-# quay.io/wangzheng422/ocp/local-diskmaker:wzh-ocp-4.10-v01
-# quay.io/wangzheng422/ocp/local-storage-operator:wzh-ocp-4.10-v01
-# quay.io/wangzheng422/ocp/local-must-gather:wzh-ocp-4.10-v01
+# quay.io/wangzheng422/local-diskmaker:wzh-ocp-4.10-v01
+# quay.io/wangzheng422/local-storage-operator:wzh-ocp-4.10-v01
+# quay.io/wangzheng422/local-must-gather:wzh-ocp-4.10-v01
 
 make bundle
-# quay.io/wangzheng422/ocp/local-storage-bundle:wzh-ocp-4.10-v01
+# quay.io/wangzheng422/local-storage-bundle:wzh-ocp-4.10-v01
 # quay.io/wangzheng422/ocp/local-storage-index:wzh-ocp-4.10-v01
 
 </code></pre>
@@ -18360,7 +18379,7 @@ metadata:
 spec:
   sourceType: grpc
   # replace this with your index image
-  image: quay.io/wangzheng422/ocp/local-storage-index:wzh-ocp-4.10-v01
+  image: quay.io/wangzheng422/local-storage-index:wzh-ocp-4.10-v01
 ---
 apiVersion: operators.coreos.com/v1alpha1
 kind: Subscription
@@ -18377,6 +18396,8 @@ EOF
 oc create --save-config -f ~/wzh/disk.fix.sub.yaml
 
 # oc delete -f ~/wzh/disk.fix.sub.yaml
+
+oc patch storageclass ocs-storagecluster-ceph-rbd -p '{&quot;metadata&quot;: {&quot;annotations&quot;:{&quot;storageclass.kubernetes.io/is-default-class&quot;:&quot;true&quot;}}}'
 
 </code></pre>
 <h2 id="fix-image-mirror"><a class="header" href="#fix-image-mirror">fix image mirror</a></h2>
