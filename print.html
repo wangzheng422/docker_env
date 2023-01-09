@@ -18742,6 +18742,31 @@ journalctl -r -u kubelet | grep 'orphaned pod' | head -1
 TZ=&quot;:Asia/Shanghai&quot; date
 
 </code></pre>
+<h2 id="disable-container-image-wipe"><a class="header" href="#disable-container-image-wipe">disable container image wipe</a></h2>
+<p>openshift在节点上有一个crio-wipe.service的systemd启动服务，他会运行crio wipe来清空本地镜像缓存，至于原因，说是因为重启，会有一定概率损坏容器存储，所以最简单的办法，就是删掉，重新下载。</p>
+<p>我们可以把这个服务屏蔽掉，然后看看实际测试的效果，如果可以接受，那么就避免重启后去下载系统镜像了。</p>
+<pre><code class="language-bash">
+cat &lt;&lt; EOF &gt; ${BASE_DIR}/data/install/crio-wipe.bu
+variant: openshift
+version: 4.9.0
+metadata:
+  labels:
+    machineconfiguration.openshift.io/role: master
+  name: 99-zzz-disable-crio-wipe-master
+
+systemd:
+  units:
+    - name: crio-wipe.service
+      mask: true
+
+EOF
+
+butane -d ${BASE_DIR}/data/install ${BASE_DIR}/data/install/crio-wipe.bu &gt; ${BASE_DIR}/data/install/99-zzz-disable-crio-wipe-master.yaml
+
+oc create --save-config -f ${BASE_DIR}/data/install/99-zzz-disable-crio-wipe-master.yaml
+
+
+</code></pre>
 <h1 id="end-8"><a class="header" href="#end-8">end</a></h1>
 <h1 id="other-backup"><a class="header" href="#other-backup">other backup</a></h1>
 <h2 id="grow-fs"><a class="header" href="#grow-fs">grow fs</a></h2>
