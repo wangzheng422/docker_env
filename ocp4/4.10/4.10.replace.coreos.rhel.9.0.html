@@ -942,14 +942,14 @@ networking:
   clusterNetwork:
   - cidr: 10.128.0.0/14
     hostPrefix: 23
-  # - cidr: fd01::/48
-  #   hostPrefix: 64
+  - cidr: fd01::/48
+    hostPrefix: 64
   serviceNetwork:
   - 172.30.0.0/16
-  # - fd02::/112
+  - fd02::/112
   machineNetwork:
   - cidr: 10.0.0.0/16
-  # - cidr: fd03::/64
+  - cidr: fd03::/64
 platform:
   none: {}
 pullSecret: '${PULL_SECRET}'
@@ -980,8 +980,8 @@ openshift-install create manifests --dir=${BASE_DIR}/data/install
 # run as root if you have not run below, at least one time
 # it will generate registry configuration
 # copy image registry proxy related config
-cd /data/ocp4
-bash image.registries.conf.sh nexus.infra.redhat.ren:8083
+# cd /data/ocp4
+# bash image.registries.conf.sh nexus.infra.redhat.ren:8083
 
 # /bin/cp -f /data/ocp4/image.registries.conf /etc/containers/registries.conf.d/
 #############################################
@@ -1073,7 +1073,7 @@ coreos-installer iso kargs modify -a &quot; ip=$MASTER_01_IP::$OCP_GW:$OCP_NETMA
 
 coreos-installer iso kargs modify -a &quot; ip=$MASTER_02_IP::$OCP_GW:$OCP_NETMASK:$MASTER_02_HOSTNAME:$MASTER_02_INTERFACE:none   nameserver=$OCP_DNS   ip=[$MASTER_02_IPv6]::[$OCP_GW_v6]:$OCP_NETMASK_v6:$MASTER_02_HOSTNAME:$MASTER_02_INTERFACE:none  coreos.inst.install_dev=$MASTER_02_DISK   coreos.inst.ignition_url=http://192.168.77.11:5000/master-iso.ign   coreos.inst.image_url=http://192.168.77.11:5000/rhcos-$VAR_IMAGE_VER-metal.x86_64.raw   coreos.inst.insecure &quot; master02.iso
 
-coreos-installer iso kargs modify -a &quot; ip=$MASTER_03_IP::$OCP_GW:$OCP_NETMASK:$MASTER_03_HOSTNAME:$MASTER_03_INTERFACE:none   nameserver=$OCP_DNS   ip=[$MASTER_03_IPv6]::[$OCP_GW]:$OCP_NETMASK_v6:$MASTER_03_HOSTNAME:$MASTER_03_INTERFACE:none  coreos.inst.install_dev=$MASTER_03_DISK   coreos.inst.ignition_url=http://192.168.77.11:5000/master-iso.ign   coreos.inst.image_url=http://192.168.77.11:5000/rhcos-$VAR_IMAGE_VER-metal.x86_64.raw   coreos.inst.insecure &quot; master03.iso
+coreos-installer iso kargs modify -a &quot; ip=$MASTER_03_IP::$OCP_GW:$OCP_NETMASK:$MASTER_03_HOSTNAME:$MASTER_03_INTERFACE:none   nameserver=$OCP_DNS   ip=[$MASTER_03_IPv6]::[$OCP_GW_v6]:$OCP_NETMASK_v6:$MASTER_03_HOSTNAME:$MASTER_03_INTERFACE:none  coreos.inst.install_dev=$MASTER_03_DISK   coreos.inst.ignition_url=http://192.168.77.11:5000/master-iso.ign   coreos.inst.image_url=http://192.168.77.11:5000/rhcos-$VAR_IMAGE_VER-metal.x86_64.raw   coreos.inst.insecure &quot; master03.iso
 
 </code></pre>
 <h2 id="deploy-on-kvm-host"><a class="header" href="#deploy-on-kvm-host">deploy on kvm host</a></h2>
@@ -1093,10 +1093,8 @@ openshift-install wait-for install-complete --log-level debug
 # INFO Install complete!
 # INFO To access the cluster as the system:admin user when using 'oc', run 'export KUBECONFIG=/home/3node/data/install/auth/kubeconfig'
 # INFO Access the OpenShift web-console here: https://console-openshift-console.apps.acm-demo-one.wzhlab.top
-# INFO Login to the console with user: &quot;kubeadmin&quot;, and password: &quot;zT622-zi5AL-vGIIk-9gk75&quot;
-# DEBUG Time elapsed per stage:
-# DEBUG Cluster Operators: 20m17s
-# INFO Time elapsed: 20m17s
+# INFO Login to the console with user: &quot;kubeadmin&quot;, and password: &quot;hywxk-JVZvb-ALk38-9ewXh&quot;
+# INFO Time elapsed: 0s
 
 </code></pre>
 <h1 id="password-login-and-oc-config"><a class="header" href="#password-login-and-oc-config">password login and oc config</a></h1>
@@ -1871,6 +1869,7 @@ oc create --save-config -f ${BASE_DIR}/data/install/99-zzz-disable-crio-wipe-mas
 
 </code></pre>
 <h2 id="sctp-with-externalip"><a class="header" href="#sctp-with-externalip">sctp with externalIP</a></h2>
+<h3 id="ipv4-single-stack"><a class="header" href="#ipv4-single-stack">ipv4 single stack</a></h3>
 <pre><code class="language-bash"># https://docs.openshift.com/container-platform/4.10/networking/using-sctp.html
 
 cat &lt;&lt; EOF &gt; ${BASE_DIR}/data/install/99-load-sctp-module-master.yaml
@@ -1983,6 +1982,128 @@ echo '1111' | ncat 192.168.77.88 30102 --sctp -v
 # Ncat: Version 7.91 ( https://nmap.org/ncat )
 # Ncat: Connected to 192.168.77.88:30102.
 # Ncat: 5 bytes sent, 0 bytes received in 0.12 seconds.
+</code></pre>
+<h3 id="ipv4-and-ipv6-dual-stack"><a class="header" href="#ipv4-and-ipv6-dual-stack">ipv4 and ipv6 dual stack</a></h3>
+<pre><code class="language-bash"># https://docs.openshift.com/container-platform/4.10/networking/using-sctp.html
+
+cat &lt;&lt; EOF &gt; ${BASE_DIR}/data/install/99-load-sctp-module-master.yaml
+apiVersion: machineconfiguration.openshift.io/v1
+kind: MachineConfig
+metadata:
+  name: 99-load-sctp-module-master
+  labels:
+    machineconfiguration.openshift.io/role: master
+spec:
+  config:
+    ignition:
+      version: 3.2.0
+    storage:
+      files:
+        - path: /etc/modprobe.d/sctp-blacklist.conf
+          mode: 0644
+          overwrite: true
+          contents:
+            source: data:,
+        - path: /etc/modules-load.d/sctp-load.conf
+          mode: 0644
+          overwrite: true
+          contents:
+            source: data:,sctp
+EOF
+oc create --save-config -f ${BASE_DIR}/data/install/99-load-sctp-module-master.yaml
+
+cat &lt;&lt; EOF &gt; ${BASE_DIR}/data/install/sctp.demo.yaml
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: sctpserver
+  labels:
+    app: sctpserver
+spec:
+  containers:
+    - name: sctpserver
+      image: quay.io/wangzheng422/debug-pod:alma-9.1
+      imagePullPolicy: Always
+      command: [&quot;/bin/sh&quot;, &quot;-c&quot;]
+      args:
+        [&quot;while true; do ncat -l 30102 --sctp -v 2&gt;&amp;1 ; done; &quot;]
+      ports:
+        - containerPort: 30102
+          name: sctpserver
+          protocol: SCTP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sctpservice
+  labels:
+    app: sctpserver
+spec:
+  type: ClusterIP
+  ipFamilyPolicy: RequireDualStack
+  externalIPs:
+    - 192.168.77.88
+    - fd03::88
+  selector:
+    app: sctpserver
+  ports:
+    - name: sctpserver
+      protocol: SCTP
+      port: 30102
+      targetPort: 30102
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: sctpclient
+  labels:
+    app: sctpclient
+spec:
+  containers:
+    - name: sctpclient
+      image: quay.io/wangzheng422/debug-pod:alma-9.1
+      imagePullPolicy: Always
+      command: [&quot;/bin/sh&quot;, &quot;-c&quot;]
+      args:
+        [&quot;sleep inf&quot;]
+---
+EOF
+
+oc create --save-config -n default -f ${BASE_DIR}/data/install/sctp.demo.yaml
+
+# to restore
+oc delete -n default -f ${BASE_DIR}/data/install/sctp.demo.yaml
+
+oc get pod -n default -o wide
+# NAME         READY   STATUS    RESTARTS   AGE   IP            NODE             NOMINATED NODE   READINESS GATES
+# sctpclient   1/1     Running   0          41s   10.128.0.21   master-03-demo   &lt;none&gt;           &lt;none&gt;
+# sctpserver   1/1     Running   0          41s   10.128.0.20   master-03-demo   &lt;none&gt;           &lt;none&gt;
+
+oc get services sctpservice -n default -o json | jq -r .spec.clusterIPs[]
+172.30.239.166
+fd02::600
+
+oc rsh -n default sctpclient
+
+echo '111' | ncat 172.30.239.166 30102 --sctp -v
+# Ncat: Version 7.91 ( https://nmap.org/ncat )
+# Ncat: Connected to 172.30.127.122:30102.
+# Ncat: 4 bytes sent, 0 bytes received in 0.13 seconds.
+
+echo '111' | ncat fd02::72fb 30102 --sctp -v
+# Ncat: Version 7.91 ( https://nmap.org/ncat )
+# Ncat: Connected to fd02::72fb:30102.
+# Ncat: 4 bytes sent, 0 bytes received in 0.12 seconds.
+
+# login to master-01
+ssh root@192.168.77.23
+
+echo '1111' | ncat 192.168.77.88 30102 --sctp -v
+# Ncat: Version 7.91 ( https://nmap.org/ncat )
+# Ncat: Connected to 192.168.77.88:30102.
+# Ncat: 5 bytes sent, 0 bytes received in 0.12 seconds.
+
 </code></pre>
 <h1 id="end"><a class="header" href="#end">end</a></h1>
 <h1 id="other-backup"><a class="header" href="#other-backup">other backup</a></h1>
