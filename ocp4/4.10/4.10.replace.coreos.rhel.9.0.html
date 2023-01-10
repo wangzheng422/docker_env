@@ -806,6 +806,7 @@ mirror:
     - name: quay.io/wangzheng422/local-storage-operator:wzh-ocp-4.10-v01
     - name: quay.io/wangzheng422/local-must-gather:wzh-ocp-4.10-v01
     - name: quay.io/openshift/origin-kube-rbac-proxy:latest
+    - name: quay.io/wangzheng422/debug-pod:alma-9.1
   operators:
     - catalog: registry.redhat.io/redhat/redhat-operator-index:v4.10  
       packages:
@@ -1629,6 +1630,7 @@ lspci -vs 0000:23:00.0
 <h2 id="hugepage-numa-allocation"><a class="header" href="#hugepage-numa-allocation">hugepage numa allocation</a></h2>
 <p>默认hugepage会平均分配在numa node之上，而dpdk程序，是绑定numa node运行得，所以一个不小心，就会出现hugepage不足，导致dpdk启动不了得情况。</p>
 <p>这里，我们先看看这个环境里面的numa是个什么情况。</p>
+<h3 id="debug-pod"><a class="header" href="#debug-pod">debug pod</a></h3>
 <pre><code class="language-bash"># https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/7/html/performance_tuning_guide/sect-red_hat_enterprise_linux-performance_tuning_guide-memory-configuring-huge-pages
 
 # build debug pod
@@ -1641,14 +1643,20 @@ FROM docker.io/library/almalinux:9
 RUN dnf install -y epel-release &amp;&amp; dnf update -y 
 RUN dnf repolist
 
-RUN dnf install -y --allowerasing which iproute bind-utils wget htop bash-completion curl net-tools java-1.8.0-openjdk git iperf3 tcpdump stress-ng fio numactl hwloc-gui lshw nc
+RUN dnf install -y --allowerasing which iproute bind-utils wget htop bash-completion curl net-tools java-1.8.0-openjdk git iperf3 tcpdump stress-ng fio numactl hwloc-gui lshw nc nmap-ncat
 
 RUN dnf clean all -y
 EOF
 
+# VAR_IMAGE=quay.io/wangzheng422/debug-pod:alma-9.1
+
 podman build --squash -t quay.io/wangzheng422/debug-pod:alma-9.1 -f debugpod.dockerfile ./
 
 podman push quay.io/wangzheng422/debug-pod:alma-9.1
+
+podman tag quay.io/wangzheng422/debug-pod:alma-9.1 quaylab.infra.wzhlab.top:5443/wangzheng422/debug-pod:alma-9.1
+
+podman push quaylab.infra.wzhlab.top:5443/wangzheng422/debug-pod:alma-9.1
 
 # try it
 oc debug node/master1.ocp.ytl.com --image=quay.io/wangzheng422/debug-pod:alma-9.1
@@ -1903,9 +1911,10 @@ spec:
   containers:
     - name: sctpserver
       image: quay.io/wangzheng422/debug-pod:alma-9.1
+      imagePullPolicy: Always
       command: [&quot;/bin/sh&quot;, &quot;-c&quot;]
       args:
-        [&quot; nc -l 30102 --sctp &quot;]
+        [&quot; ncat -l 30102 --sctp -v &quot;]
       ports:
         - containerPort: 30102
           name: sctpserver
@@ -1918,7 +1927,9 @@ metadata:
   labels:
     app: sctpserver
 spec:
-  type: NodePort
+  type: ClusterIP
+  externalIPs:
+    - 192.168.77.88
   selector:
     app: sctpserver
   ports:
@@ -1937,12 +1948,41 @@ spec:
   containers:
     - name: sctpclient
       image: quay.io/wangzheng422/debug-pod:alma-9.1
+      imagePullPolicy: Always
       command: [&quot;/bin/sh&quot;, &quot;-c&quot;]
       args:
         [&quot;sleep inf&quot;]
 ---
 EOF
 
+oc create --save-config -n default -f ${BASE_DIR}/data/install/sctp.demo.yaml
+
+# to restore
+oc delete -n default -f ${BASE_DIR}/data/install/sctp.demo.yaml
+
+oc get services sctpservice -o go-template='{{.spec.clusterIP}}{{&quot;\n&quot;}}'
+# 172.30.40.207
+
+
+oc get pod -n default -o wide
+# NAME         READY   STATUS    RESTARTS       AGE   IP            NODE             NOMINATED NODE   READINESS GATES
+# sctpclient   1/1     Running   0              15m   10.128.0.45   master-03-demo   &lt;none&gt;           &lt;none&gt;
+# sctpserver   1/1     Running   4 (4m8s ago)   15m   10.128.0.44   master-03-demo   &lt;none&gt;           &lt;none&gt;
+
+oc rsh sctpclient
+
+echo '111' | ncat 172.30.40.207 30102 --sctp -v
+# Ncat: Version 7.91 ( https://nmap.org/ncat )
+# Ncat: Connected to 172.30.40.207:30102.
+# Ncat: 4 bytes sent, 0 bytes received in 0.13 seconds.
+
+# login to master-01
+ssh root@192.168.77.23
+
+echo '1111' | ncat 192.168.77.88 30102 --sctp -v
+# Ncat: Version 7.91 ( https://nmap.org/ncat )
+# Ncat: Connected to 192.168.77.88:30102.
+# Ncat: 5 bytes sent, 0 bytes received in 0.12 seconds.
 </code></pre>
 <h1 id="end"><a class="header" href="#end">end</a></h1>
 <h1 id="other-backup"><a class="header" href="#other-backup">other backup</a></h1>
