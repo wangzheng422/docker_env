@@ -18570,7 +18570,7 @@ FROM docker.io/library/almalinux:9
 RUN dnf install -y epel-release &amp;&amp; dnf update -y 
 RUN dnf repolist
 
-RUN dnf install -y --allowerasing which iproute bind-utils wget htop bash-completion curl net-tools java-1.8.0-openjdk git iperf3 tcpdump stress-ng fio numactl hwloc-gui lshw nc nmap-ncat
+RUN dnf install -y --allowerasing which iproute bind-utils wget htop bash-completion curl net-tools java-1.8.0-openjdk git iperf3 tcpdump stress-ng fio numactl hwloc-gui lshw nc nmap-ncat tshark 
 
 RUN dnf clean all -y
 EOF
@@ -18913,7 +18913,30 @@ echo '1111' | ncat 192.168.77.88 30102 --sctp -v
 # Ncat: 5 bytes sent, 0 bytes received in 0.12 seconds.
 </code></pre>
 <h3 id="ipv4-and-ipv6-dual-stack"><a class="header" href="#ipv4-and-ipv6-dual-stack">ipv4 and ipv6 dual stack</a></h3>
-<pre><code class="language-bash"># https://docs.openshift.com/container-platform/4.10/networking/using-sctp.html
+<pre><code class="language-bash"># build debug pod
+mkdir -p /data/pod
+cd /data/pod
+
+cat &lt;&lt; EOF &gt; debugpod.dockerfile
+FROM registry.access.redhat.com/ubi8/ubi
+
+RUN dnf update -y 
+RUN dnf repolist
+
+RUN dnf install -y --allowerasing which iproute bind-utils wget  bash-completion curl net-tools java-1.8.0-openjdk git     lshw nc nmap-ncat
+
+RUN dnf clean all -y
+EOF
+
+# VAR_IMAGE=quay.io/wangzheng422/debug-pod:alma-9.1
+
+podman build --squash -t quay.io/wangzheng422/debug-pod:ubi8 -f debugpod.dockerfile ./
+
+podman push quay.io/wangzheng422/debug-pod:ubi8
+
+
+
+# https://docs.openshift.com/container-platform/4.10/networking/using-sctp.html
 
 cat &lt;&lt; EOF &gt; ${BASE_DIR}/data/install/99-load-sctp-module-master.yaml
 apiVersion: machineconfiguration.openshift.io/v1
@@ -18956,7 +18979,8 @@ spec:
       imagePullPolicy: Always
       command: [&quot;/bin/sh&quot;, &quot;-c&quot;]
       args:
-        [&quot;while true; do ncat -l 30102 --sctp -v 2&gt;&amp;1 ; done; &quot;]
+        [&quot;sleep inf&quot;]
+        # [&quot;while true; do ncat -l 30102 --sctp -v 2&gt;&amp;1 ; done; &quot;]
       ports:
         - containerPort: 30102
           name: sctpserver
@@ -19001,26 +19025,28 @@ EOF
 
 oc create --save-config -n default -f ${BASE_DIR}/data/install/sctp.demo.yaml
 
+ncat -l 30102 --sctp -v
+
 # to restore
 oc delete -n default -f ${BASE_DIR}/data/install/sctp.demo.yaml
 
 oc get pod -n default -o wide
-# NAME         READY   STATUS    RESTARTS   AGE   IP            NODE             NOMINATED NODE   READINESS GATES
-# sctpclient   1/1     Running   0          41s   10.128.0.21   master-03-demo   &lt;none&gt;           &lt;none&gt;
-# sctpserver   1/1     Running   0          41s   10.128.0.20   master-03-demo   &lt;none&gt;           &lt;none&gt;
+# NAME         READY   STATUS    RESTARTS   AGE    IP            NODE             NOMINATED NODE   READINESS GATES
+# sctpclient   1/1     Running   0          112s   10.128.0.71   master-03-demo   &lt;none&gt;           &lt;none&gt;
+# sctpserver   1/1     Running   0          112s   10.128.0.70   master-03-demo   &lt;none&gt;           &lt;none&gt;
 
 oc get services sctpservice -n default -o json | jq -r .spec.clusterIPs[]
-172.30.239.166
-fd02::600
+172.30.72.242
+fd02::5d45
 
 oc rsh -n default sctpclient
 
-echo '111' | ncat 172.30.239.166 30102 --sctp -v
+echo '1234' | ncat 172.30.72.242 30102 --sctp -v
 # Ncat: Version 7.91 ( https://nmap.org/ncat )
 # Ncat: Connected to 172.30.127.122:30102.
 # Ncat: 4 bytes sent, 0 bytes received in 0.13 seconds.
 
-echo '111' | ncat fd02::72fb 30102 --sctp -v
+echo '1234' | ncat fd02::4be6 30102 --sctp -v
 # Ncat: Version 7.91 ( https://nmap.org/ncat )
 # Ncat: Connected to fd02::72fb:30102.
 # Ncat: 4 bytes sent, 0 bytes received in 0.12 seconds.
@@ -19028,10 +19054,15 @@ echo '111' | ncat fd02::72fb 30102 --sctp -v
 # login to master-01
 ssh root@192.168.77.23
 
-echo '1111' | ncat 192.168.77.88 30102 --sctp -v
+echo '1234' | ncat 192.168.77.88 30102 --sctp -v
 # Ncat: Version 7.91 ( https://nmap.org/ncat )
 # Ncat: Connected to 192.168.77.88:30102.
 # Ncat: 5 bytes sent, 0 bytes received in 0.12 seconds.
+
+echo '1234' |  ncat fd03::88 30102 --sctp -v
+
+podman run -it --rm --network=host quay.io/wangzheng422/debug-pod:alma-9.1 bash
+
 
 </code></pre>
 <h1 id="end-8"><a class="header" href="#end-8">end</a></h1>
