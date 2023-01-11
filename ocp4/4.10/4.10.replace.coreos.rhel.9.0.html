@@ -1986,6 +1986,28 @@ echo '1111' | ncat 192.168.77.88 30102 --sctp -v
 <h3 id="ipv4-and-ipv6-dual-stack"><a class="header" href="#ipv4-and-ipv6-dual-stack">ipv4 and ipv6 dual stack</a></h3>
 <pre><code class="language-bash">oc edit network/cluster
 # remove external ip policy by set it to null.
+# by setting .spec.externalIP.policy -&gt; null
+
+# apiVersion: config.openshift.io/v1
+# kind: Network
+# metadata:
+#   creationTimestamp: &quot;2023-01-10T06:39:18Z&quot;
+#   generation: 2
+#   name: cluster
+#   resourceVersion: &quot;3473&quot;
+#   uid: c871e247-f941-426f-8f0e-02ecd2d497b8
+# spec:
+#   clusterNetwork:
+#   - cidr: 10.128.0.0/14
+#     hostPrefix: 23
+#   - cidr: fd01::/48
+#     hostPrefix: 64
+#   externalIP:
+#     policy: {}
+#   networkType: OVNKubernetes
+#   serviceNetwork:
+#   - 172.30.0.0/16
+#   - fd02::/112
 
 # https://docs.openshift.com/container-platform/4.10/networking/using-sctp.html
 
@@ -2031,7 +2053,7 @@ spec:
       command: [&quot;/bin/sh&quot;, &quot;-c&quot;]
       args:
         [&quot;sleep inf&quot;]
-        # [&quot;while true; do ncat -l 30102 --sctp -v 2&gt;&amp;1 ; done; &quot;]
+        # [&quot; while true; do ncat -l 30102 --sctp -v 2&gt;&amp;1 ; done; &quot;]
       ports:
         - containerPort: 30102
           name: sctpserver
@@ -2045,7 +2067,10 @@ metadata:
     app: sctpserver
 spec:
   type: ClusterIP
-  ipFamilyPolicy: RequireDualStack
+  ipFamilyPolicy: RequireDualStack  
+  ipFamilies:
+    - IPv4
+    - IPv6
   externalIPs:
     - 192.168.77.88
     - fd03::88
@@ -2056,6 +2081,27 @@ spec:
       protocol: SCTP
       port: 30102
       targetPort: 30102
+# ---
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   name: sctpservice-v6
+#   labels:
+#     app: sctpserver
+# spec:
+#   type: ClusterIP
+#   ipFamilyPolicy: SingleStack
+#   ipFamilies:
+#     - IPv6
+#   externalIPs:
+#     - fd03::88
+#   selector:
+#     app: sctpserver
+#   ports:
+#     - name: sctpserver
+#       protocol: SCTP
+#       port: 30102
+#       targetPort: 30102
 ---
 apiVersion: v1
 kind: Pod
@@ -2076,7 +2122,6 @@ EOF
 
 oc create --save-config -n default -f ${BASE_DIR}/data/install/sctp.demo.yaml
 
-ncat -l 30102 --sctp -v
 
 # to restore
 oc delete -n default -f ${BASE_DIR}/data/install/sctp.demo.yaml
@@ -2087,30 +2132,33 @@ oc get pod -n default -o wide
 # sctpserver   1/1     Running   0          112s   10.128.0.70   master-03-demo   &lt;none&gt;           &lt;none&gt;
 
 oc get services sctpservice -n default -o json | jq -r .spec.clusterIPs[]
-172.30.72.242
-fd02::5d45
+# 172.30.74.183
+# fd02::776e
 
 oc rsh -n default sctpclient
 
-echo '1234' | ncat 172.30.72.242 30102 --sctp -v
+echo '12345' | ncat 172.30.74.183 30102 --sctp -v
 # Ncat: Version 7.91 ( https://nmap.org/ncat )
-# Ncat: Connected to 172.30.127.122:30102.
-# Ncat: 4 bytes sent, 0 bytes received in 0.13 seconds.
+# Ncat: Connected to 172.30.74.183:30102.
+# Ncat: 6 bytes sent, 0 bytes received in 0.12 seconds.
 
-echo '1234' | ncat fd02::4be6 30102 --sctp -v
+echo '123456' | ncat fd02::776e 30102 --sctp -v
 # Ncat: Version 7.91 ( https://nmap.org/ncat )
-# Ncat: Connected to fd02::72fb:30102.
-# Ncat: 4 bytes sent, 0 bytes received in 0.12 seconds.
+# Ncat: Connected to fd02::776e:30102.
+# Ncat: 7 bytes sent, 0 bytes received in 0.12 seconds.
 
 # login to master-01
 ssh root@192.168.77.23
 
-echo '1234' | ncat 192.168.77.88 30102 --sctp -v
+echo '12' | ncat 192.168.77.88 30102 --sctp -v
 # Ncat: Version 7.91 ( https://nmap.org/ncat )
 # Ncat: Connected to 192.168.77.88:30102.
-# Ncat: 5 bytes sent, 0 bytes received in 0.12 seconds.
+# Ncat: 3 bytes sent, 0 bytes received in 0.13 seconds.
 
-echo '1234' |  ncat fd03::88 30102 --sctp -v
+echo '123' |  ncat fd03::88 30102 --sctp -v
+# Ncat: Version 7.91 ( https://nmap.org/ncat )
+# Ncat: Connected to fd03::88:30102.
+# Ncat: 4 bytes sent, 0 bytes received in 3.11 seconds.
 
 podman run -it --rm --network=host quay.io/wangzheng422/debug-pod:alma-9.1 bash
 
