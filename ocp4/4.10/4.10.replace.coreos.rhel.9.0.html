@@ -852,6 +852,173 @@ oc-mirror --config /data/ocp4/mirror.yaml docker://quaylab.infra.wzhlab.top:5443
 
 
 </code></pre>
+<h2 id="mirror-to-files-and-import-back"><a class="header" href="#mirror-to-files-and-import-back">mirror to files and import back</a></h2>
+<pre><code class="language-bash">mkdir -p /data/ocp4/
+mkdir -p /data/ocp-install/images/
+mkdir -p /data/ocp-install/clients/
+
+cd /data/ocp4/
+
+export BUILDNUMBER=4.10.41
+
+wget -O openshift-client-linux-${BUILDNUMBER}.tar.gz https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/${BUILDNUMBER}/openshift-client-linux-${BUILDNUMBER}.tar.gz
+wget -O openshift-install-linux-${BUILDNUMBER}.tar.gz https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/${BUILDNUMBER}/openshift-install-linux-${BUILDNUMBER}.tar.gz
+
+tar -xzf openshift-client-linux-${BUILDNUMBER}.tar.gz -C /usr/local/bin/
+tar -xzf openshift-install-linux-${BUILDNUMBER}.tar.gz -C /usr/local/bin/
+
+export BUILDNUMBER=4.11.18
+
+wget -O oc-mirror.tar.gz https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/${BUILDNUMBER}/oc-mirror.tar.gz
+tar -xzf oc-mirror.tar.gz -C /usr/local/bin/
+chmod +x /usr/local/bin/oc-mirror
+
+# SEC_FILE=&quot;$XDG_RUNTIME_DIR/containers/auth.json&quot;
+# # $XDG_RUNTIME_DIR/containers
+# mkdir -p ${SEC_FILE%/*}
+
+# OR
+SEC_FILE=&quot;$HOME/.docker/config.json&quot;
+mkdir -p ${SEC_FILE%/*}
+
+# copy the password file 
+
+# podman login quaylab.infra.redhat.ren:8443 --username admin --password redhatadmin
+
+export VAR_RELEASE_VER=4.10.41-rhel-9.1-v02
+
+oc adm release mirror -a $SEC_FILE \
+  --from=quay.io/wangzheng422/ocp:$VAR_RELEASE_VER \
+  --to-dir=/data/ocp-install/images/
+# ......
+# Success
+# Update image:  openshift/release:4.10.41-x86_64
+
+# To upload local images to a registry, run:
+
+#     oc image mirror --from-dir=/data/ocp-install/images/ 'file://openshift/release:4.10.41-x86_64*' REGISTRY/REPOSITORY
+
+oc adm release mirror --to-dir=/data/tmp/ocp-install/images/ quay.io/wangzheng422/ocp:$VAR_RELEASE_VER
+
+cd /data/ocp-install/clients/
+
+RELEASE_IMAGE=quay.io/wangzheng422/ocp:$VAR_RELEASE_VER
+LOCAL_SECRET_JSON=$SEC_FILE
+
+oc adm release extract --registry-config ${LOCAL_SECRET_JSON} --command='openshift-baremetal-install' ${RELEASE_IMAGE}
+
+oc adm release extract --registry-config ${LOCAL_SECRET_JSON} --command='openshift-install' ${RELEASE_IMAGE}
+
+oc adm release extract --registry-config ${LOCAL_SECRET_JSON} --command='oc' ${RELEASE_IMAGE}
+
+
+
+
+
+cat &gt; /data/ocp4/mirror.yaml &lt;&lt; EOF
+apiVersion: mirror.openshift.io/v1alpha2
+kind: ImageSetConfiguration
+# archiveSize: 4
+mirror:
+  platform:
+    architectures:
+      - amd64
+      # - arm64
+    channels:
+      # - name: stable-4.11
+      #   type: ocp
+      #   minVersion: 4.11.18
+      #   maxVersion: 4.11.18
+      #   shortestPath: true
+      # - name: stable-4.10
+      #   type: ocp
+      #   minVersion: 4.10.45
+      #   maxVersion: 4.10.45
+      #   shortestPath: true
+    graph: false
+  additionalImages:
+    - name: registry.redhat.io/redhat/redhat-operator-index:v4.10
+    - name: registry.redhat.io/redhat/certified-operator-index:v4.10
+    - name: registry.redhat.io/redhat/community-operator-index:v4.10
+    - name: registry.redhat.io/redhat/redhat-marketplace-index:v4.10 
+    - name: quay.io/wangzheng422/local-storage-operator:wzh-ocp-4.10-v01
+    - name: quay.io/wangzheng422/local-storage-bundle:wzh-ocp-4.10-v01
+    - name: quay.io/wangzheng422/local-diskmaker:wzh-ocp-4.10-v01
+    - name: quay.io/wangzheng422/local-storage-operator:wzh-ocp-4.10-v01
+    - name: quay.io/wangzheng422/local-must-gather:wzh-ocp-4.10-v01
+    - name: quay.io/openshift/origin-kube-rbac-proxy:latest
+    - name: quay.io/wangzheng422/debug-pod:alma-9.1
+  operators:
+    - catalog: registry.redhat.io/redhat/redhat-operator-index:v4.10  
+      packages:
+      - name: cluster-logging                                   
+        channels:
+        - name: stable
+          minVersion: 5.5.5
+      - name: elasticsearch-operator                               
+        channels:
+        - name: stable
+          minVersion: 5.5.5
+      - name: jaeger-product                             
+        channels:
+        - name: stable
+          minVersion: 1.39.0-3
+      - name: kubernetes-nmstate-operator                               
+        channels:
+        - name: stable
+          minVersion: 4.10.0-202212061900
+      - name: odf-operator                                 
+        channels:
+        - name: stable-4.10
+          minVersion: 4.10.9
+      - name: sriov-network-operator                             
+        channels:
+        - name: stable
+          minVersion: 4.10.0-202212061900
+      - name: kubevirt-hyperconverged
+        channels:
+        - name: stable
+          minVersion: 4.10.7
+    - catalog: quay.io/wangzheng422/local-storage-index:wzh-ocp-4.10-v01
+      packages:
+      - name: local-storage-operator                              
+        channels:
+        - name: preview
+EOF
+
+mkdir -p /data/ocp-install/oc-mirror/
+cd /data/ocp-install/oc-mirror/
+
+oc-mirror --config /data/ocp4/mirror.yaml file:///data/ocp-install/oc-mirror/
+
+
+
+mkdir -p /data/bypy
+cd /data/bypy
+
+cd /data
+# export BUILDNUMBER=4.8.17
+
+tar -cvf - ocp-install/ | pigz -c &gt; /data/bypy/ocp-install.tgz
+
+cd /data/bypy
+# https://github.com/houtianze/bypy
+# yum -y install python3-pip
+# pip3 install --user bypy 
+# /root/.local/bin/bypy list
+/root/.local/bin/bypy upload
+
+
+# test import
+tar zvxf ocp-install.tgz
+
+
+oc image mirror --from-dir=./ocp-install/images/ 'file://openshift/release:4.10.41-x86_64*' quaylab.infra.wzhlab.top:5443
+
+oc mirror --from=./ocp-install/oc-mirror/mirror_seq1_000000.tar \ 
+  docker://quaylab.infra.wzhlab.top:5443
+
+</code></pre>
 <h2 id="try-to-config-the-ocp-install"><a class="header" href="#try-to-config-the-ocp-install">try to config the ocp install</a></h2>
 <p>然后，我们就开始定义ocp的安装install配置文件，并且由于我们是UPI安装，我们还要定制iso。</p>
 <p>Then, we start to define the installation configuration file of ocp, and since we are installing using UPI, we also need to customize the iso.</p>
@@ -1629,6 +1796,7 @@ lspci -vs 0000:23:00.0
 <p>默认hugepage会平均分配在numa node之上，而dpdk程序，是绑定numa node运行得，所以一个不小心，就会出现hugepage不足，导致dpdk启动不了得情况。</p>
 <p>这里，我们先看看这个环境里面的numa是个什么情况。</p>
 <h3 id="debug-pod"><a class="header" href="#debug-pod">debug pod</a></h3>
+<p>为了方便测试，我们搞一个debug pod，然后oc debug node的方式，来运行这个pod，这样以后方便查询各种主机上的硬件信息。</p>
 <pre><code class="language-bash"># https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/7/html/performance_tuning_guide/sect-red_hat_enterprise_linux-performance_tuning_guide-memory-configuring-huge-pages
 
 # build debug pod
@@ -1641,7 +1809,7 @@ FROM docker.io/library/almalinux:9
 RUN dnf install -y epel-release &amp;&amp; dnf update -y 
 RUN dnf repolist
 
-RUN dnf install -y --allowerasing which iproute bind-utils wget htop bash-completion curl net-tools java-1.8.0-openjdk git iperf3 tcpdump stress-ng fio numactl hwloc-gui lshw nc nmap-ncat tshark 
+RUN dnf install -y --allowerasing which iproute bind-utils wget htop btop bash-completion curl net-tools java-1.8.0-openjdk git iperf3 tcpdump stress-ng fio numactl hwloc-gui lshw nc nmap-ncat tshark 
 
 RUN dnf clean all -y
 EOF
@@ -1793,6 +1961,41 @@ oc patch mcp/worker --patch '{&quot;spec&quot;:{&quot;paused&quot;:false}}' --ty
 </ul>
 <pre><code class="language-bash">
 oc patch hco kubevirt-hyperconverged -n openshift-cnv --type json -p '[{&quot;op&quot;: &quot;replace&quot;, &quot;path&quot;: &quot;/spec/featureGates/enableCommonBootImageImport&quot;, &quot;value&quot;: false}]'
+
+</code></pre>
+<h2 id="cluster-logging-storage-sizing"><a class="header" href="#cluster-logging-storage-sizing">cluster logging storage sizing</a></h2>
+<p>默认ocp cluster logging operator，会使用200G的存储，如果我们集群内部ODF的存储很小，那么我们要调整，减小存储需求，并且配置他每天清楚旧的日志。</p>
+<pre><code class="language-bash">
+oc get clusterlogging/instance -n openshift-logging -o yaml
+# ......
+#   logStore:
+#     elasticsearch:
+#       nodeCount: 3
+#       proxy:
+#         resources:
+#           limits:
+#             memory: 256Mi
+#           requests:
+#             memory: 256Mi
+#       redundancyPolicy: SingleRedundancy
+#       resources:
+#         limits:
+#           cpu: 1
+#           memory: 8Gi
+#         requests:
+#           cpu: 500m
+#           memory: 8Gi
+#       storage:
+#         size: 52Gi
+#     retentionPolicy:
+#       application:
+#         maxAge: 1d
+#       audit:
+#         maxAge: 1d
+#       infra:
+#         maxAge: 1d
+#     type: elasticsearch
+# ......
 
 </code></pre>
 <h2 id="numa"><a class="header" href="#numa">numa</a></h2>
