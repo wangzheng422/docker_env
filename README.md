@@ -36,6 +36,7 @@
   - [2022.09 openshift 4 组件版本](redhat/ocp4/4.10/4.10.component.version.md)
   - [2022.09 内嵌 dns, haproxy, registrty](redhat/ocp4/4.10/4.10.embeded.dns.haproxy.registry.md)
   - [2022.12 升级 openshift 4.10 内核到 rhel 9.1 支持 海光 x86 cpu](redhat/ocp4/4.10/4.10.replace.coreos.rhel.9.0.md)
+  - [2023.01 使用 hypershift 安装控制面托管的 openshift 集群](redhat/ocp4/4.11/4.11.acm.hypershift.md)
 - openshift4 使用系列
   - [2022.11 在 openshift 4.11 上安装和运行 openstack](redhat/ocp4/4.11/4.11.3node.ipi.for.osp.prod.md)
   - [2022.06 在 openshift4 上运行 OpenRAN 无线基站应用](redhat/ocp4/4.10/4.10.flexran.20.11.pf.deploy.md)

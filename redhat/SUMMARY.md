@@ -33,6 +33,7 @@
   - [openshift 4 组件版本](ocp4/4.10/4.10.component.version.md)
   - [内嵌 dns, haproxy, registrty](ocp4/4.10/4.10.embeded.dns.haproxy.registry.md)
   - [升级 openshift 4.10 内核到 rhel 9.1 支持 海光 x86 cpu](ocp4/4.10/4.10.replace.coreos.rhel.9.0.md)
+  - [使用 hypershift 安装控制面托管的 openshift 集群](ocp4/4.11/4.11.acm.hypershift.md)
 - [openshift4 使用系列](./usage.md)
   - [在 openshift 4.11 上安装和运行 openstack](ocp4/4.11/4.11.3node.ipi.for.osp.prod.md)
   - [在openshift4上运行 OpenRAN 无线基站应用](ocp4/4.10/4.10.flexran.20.11.pf.deploy.md)
