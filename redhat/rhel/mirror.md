@@ -113,7 +113,7 @@ vmhgfs-fuse .host:/mirror /mnt/hgfs/mirror
 mkdir -p /mnt/hgfs/mirror/centos-7
 cd /mnt/hgfs/mirror/centos-7
 
-reposync -n -d -l -m --repoid=base --repoid=extras --repoid=updates
+reposync -n -d -l -m --download-metadata --repoid=base --repoid=extras --repoid=updates
 
 export http_proxy=http://10.147.17.89:5085
 export https_proxy=http://10.147.17.89:5085
@@ -121,9 +121,56 @@ export https_proxy=http://10.147.17.89:5085
 yum install -y epel-release
 yum update -y
 
-reposync -n -d -l -m --repoid=epel
+reposync -n -d -l -m --download-metadata --repoid=epel
 
-createrepo --groupfile /path/to/local/repo/centos7/repodata/*comps*.xml -g /path/to/local/repo/centos7/repodata/*comps*.xml /path/to/local/repo/centos7
+# createrepo --groupfile /path/to/local/repo/centos7/repodata/*comps*.xml -g /path/to/local/repo/centos7/repodata/*comps*.xml /path/to/local/repo/centos7
+
+cd base
+createrepo --groupfile comps.xml ./
+
+cd ../extras
+createrepo ./
+
+cd ../updates
+createrepo ./
+
+cd ../epel
+createrepo --groupfile comps.xml ./
+
+
+
+```
+
+# rhel 8
+
+```bash
+
+export http_proxy=http://10.147.17.89:5085
+export https_proxy=http://10.147.17.89:5085
+
+subscription-manager release --set=8
+
+dnf install -y open-vm-tools
+
+subscription-manager repos --list
+
+mkdir -p /mnt/hgfs/mirror
+vmhgfs-fuse .host:/mirror /mnt/hgfs/mirror
+
+mkdir -p /mnt/hgfs/mirror/rhel-8
+cd /mnt/hgfs/mirror/rhel-8
+
+unset http_proxy
+unset https_proxy
+
+dnf reposync --repoid rhel-8-for-x86_64-baseos-rpms -m --download-metadata --delete -n
+dnf reposync --repoid=rhel-8-for-x86_64-appstream-rpms -m --download-metadata --delete -n
+dnf reposync --repoid=rhel-8-for-x86_64-rt -m --download-metadata --delete -n
+dnf reposync --repoid=rhel-8-for-x86_64-nfv-rpms -m --download-metadata --delete -n
+dnf reposync --repoid=advanced-virt-for-rhel-8-x86_64-rpms -m --download-metadata --delete -n
+dnf reposync --repoid=fast-datapath-for-rhel-8-x86_64-rpms -m --download-metadata --delete -n
+dnf reposync --repoid=codeready-builder-for-rhel-8-x86_64-rpms -m --download-metadata --delete -n
+
 
 
 ```
