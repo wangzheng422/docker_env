@@ -384,18 +384,21 @@ Now I use the following site: http://bimg.top/down-help
 
 ```bash
 # on vultr
-mkdir -p /data/bing/img
-cd /data/bing
+export VAR_DIR=/root/tmp/bing/
+mkdir -p $VAR_DIR/img
+cd $VAR_DIR
 
 wget https://github.com/ameizi/bing-wallpaper
 grep 'download 4k' bing-wallpaper | sed 's/^.*href="//' | sed 's/" rel=.*$//' > list
 
-cd /data/bing/img
+cd $VAR_DIR/img
 while IFS= read -r url;do
     fileName=`echo $url | sed 's/^.*id=OHR\.//'`
     test -f "$fileName" ||  wget -O "$fileName" "$url" || rm -f "$fileName"
     echo $fileName
-done < /data/bing/list
+done < $VAR_DIR/list
+
+
 
 ```
 
@@ -756,7 +759,11 @@ appendWindowsPath = false
 
 # Set the user when launching a distribution with WSL.
 [user]
-default = wzh
+default = root
+# default = wzh
+
+# [boot]
+# systemd=true
 EOF
 
 wsl --shutdown

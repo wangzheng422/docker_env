@@ -32,11 +32,11 @@ subscription-manager --proxy=$PROXY register --username **** --password ********
 
 subscription-manager config --rhsm.baseurl=https://china.cdn.redhat.com
 # subscription-manager config --rhsm.baseurl=https://cdn.redhat.com
-# subscription-manager --proxy=$PROXY refresh
+# subscription-manager refresh --proxy=$PROXY 
 
 # subscription-manager --proxy=$PROXY repos --help
 
-# subscription-manager --proxy=$PROXY repos --list > list
+# subscription-manager repos  --proxy=$PROXY --list > list
 
 # cat list | grep 'Repo ID' | grep -v source | grep -v debug
 # cat list | grep 'Repo ID' | grep source
