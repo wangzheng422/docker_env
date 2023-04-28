@@ -37,6 +37,8 @@
   - [2022.09 内嵌 dns, haproxy, registrty](redhat/ocp4/4.10/4.10.embeded.dns.haproxy.registry.md)
   - [2022.12 升级 openshift 4.10 内核到 rhel 9.1 支持 海光 x86 cpu](redhat/ocp4/4.10/4.10.replace.coreos.rhel.9.0.md)
   - [2023.01 使用 hypershift 安装控制面托管的 openshift 集群](redhat/ocp4/4.11/4.11.acm.hypershift.md)
+  - [2023.04 使用 agent based installer 安装 3 节点集群](redhat/ocp4/4.12/4.12.3node.upi.agent.md)
+  - [2023.04 使用 agent based installer 安装 单节点集群](redhat/ocp4/4.12/4.12.single.node.upi.agent.md)
 - openshift4 使用系列
   - [2022.11 在 openshift 4.11 上安装和运行 openstack](redhat/ocp4/4.11/4.11.3node.ipi.for.osp.prod.md)
   - [2022.06 在 openshift4 上运行 OpenRAN 无线基站应用](redhat/ocp4/4.10/4.10.flexran.20.11.pf.deploy.md)
@@ -87,8 +89,9 @@
   - [2021.12 RHACS 应对log4j 原理和实践](redhat/notes/2021/2021.08.virus.md)
   - [openshift承载虚拟化业务(CNV)](redhat/ocp4/4.5/4.5.ocp.ocs.cnv.ceph.md)
   - [RHACS / stackrox](redhat/ocp4/4.7/4.7.rhacs.md)
-  - [为 RHACS 找个应用场景： 安全合规测试云 ](redhat/ocp4/4.7/4.7.rhacs.deep.md)
+  - [为 RHACS 找个应用场景： 安全合规测试云](redhat/ocp4/4.7/4.7.rhacs.deep.md)
 - 操作系统相关
+  - [2023.04 RHEL 订阅在线注册相关问题](redhat/notes/2023/rhel.subscription.register.md)
   - [2022.12 通过新增系统启动项来原地重装操作系统](redhat/notes/2022/2022.12.boot.to.install.md)
   - [2022.04 Relax and Recover(ReaR) 系统备份和灾难恢复](redhat/notes/2022/2022.04.os.backup.ReaR.md)
   - [2022.04 红帽免费的开发者订阅申请和使用](redhat/notes/2022/2022.04.no-cost.rhel.sub.md)

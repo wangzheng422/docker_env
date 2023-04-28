@@ -12,6 +12,15 @@ export PROXY="127.0.0.1:18801"
 subscription-manager register --proxy=$PROXY --auto-attach --username ********* --password ********
 ```
 官方知识库： https://access.redhat.com/solutions/253273
+### debug
+如果不太清楚慢的原因，那么就需要打开rhsm的log，看看日志，确定问题原因了。
+```bash
+sed -i 's/default_log_level = .*/default_log_level = DEBUG/' /etc/rhsm/rhsm.conf
+
+subscription-manager status
+
+cat /var/log/rhsm/rhsm.log
+```
 ## 离线注册过程
 如果客户网络情况太特殊，那么我们还可以走离线注册过程。背后的原理是，之前的在线注册，经过用户名密码验证后，系统会下载一个证书，保存在系统里面，后续再和红帽系统建立连接，就使用这个证书了。
 
@@ -36,3 +45,9 @@ yum makecache
 企业用户的私有云，都是离线的环境。红帽提供了一个产品叫satellite，相当于一个注册服务器的代理和rpm源的私有CDN。
 
 ![](imgs/2023-04-28-15-28-55.png)
+
+## local repo mirror
+如果客户认为使用satellite太复杂，部署太麻烦，那么还有一种笨拙，但是简单的方法，就是先注册一台主机，把红帽官方的repo给镜像到本地，在这个主机上开启web服务，把这个主机给变成一个本地repo源。其他主机指向这个本地源就可以了。
+
+官方知识库： https://access.redhat.com/solutions/23016
+
