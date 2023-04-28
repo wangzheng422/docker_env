@@ -5,7 +5,7 @@
 ```bash
 subscription-manager register --auto-attach --username ********* --password ********
 ```
-上述命令在国内的网络情况下，经常出现速度慢，超时等错误。这是因为，register过程，要访问国外的服务器。那我们可以搞一个proxy，然后让注册过程做proxy，就能加速。
+上述命令在国内的网络情况下，经常出现速度慢，超时等错误。这是因为，register过程，要访问国外的服务器。那我们可以搞一个proxy，然后让注册过程走proxy，就能加速。
 ```bash
 export PROXY="127.0.0.1:18801"
 
