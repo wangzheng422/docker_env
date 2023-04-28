@@ -31,3 +31,8 @@ yum clean all
 yum makecache
 ```
 官方知识库： https://access.redhat.com/solutions/5090421
+
+## satellite
+企业用户的私有云，都是离线的环境。红帽提供了一个产品叫satellite，相当于一个注册服务器的代理和rpm源的私有CDN。
+
+![](imgs/2023-04-28-15-28-55.png)
