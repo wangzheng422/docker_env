@@ -17,7 +17,7 @@ subscription-manager register --proxy=$PROXY --auto-attach --username ********* 
 
 离线注册流程，就是去手动下载这个证书，导入到系统中去，然后走后续流程。
 
-具体步骤，见这个在线知识库： subscription-manager list --consumed
+具体步骤，见这个在线知识库： https://access.redhat.com/solutions/3121571
 
 ## CCSP订阅的注册过程
 CCSP订阅是为云主机厂商提供的一种订阅方式。有了CCSP订阅，云主机厂商需要去维护一套RHUI（Red Hat Update Infrastructure），然后云上的rhel都去访问RHUI来获得更新。
