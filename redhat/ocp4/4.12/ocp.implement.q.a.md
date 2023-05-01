@@ -16,7 +16,7 @@
 
 问题：客户要求，pod能指定cpu core, numa node, nic来运行。要保证分配给pod的vcpu，都在一个cpu core上。
 
-解决思路：openshift4有PerformanceProfile，会整合cpu manager, topology manager，来保证vcpu, cpu core, numa node绑定，其中vcpu绑定，是自动开启full-pcpus-only实现。另外，还有NUMA Resources Operator，来保证nic和numa node绑定。
+解决思路：openshift4有PerformanceProfile，会整合cpu manager, topology manager，来保证vcpu, cpu core, numa node绑定，其中vcpu绑定相同的物理core，是自动开启full-pcpus-only实现。另外，还有NUMA Resources Operator，来保证nic和numa node绑定。
 
 如果我们给系统添加以下配置：
 ```yaml
