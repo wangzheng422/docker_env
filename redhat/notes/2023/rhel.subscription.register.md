@@ -5,7 +5,7 @@
 ```bash
 subscription-manager register --auto-attach --username ********* --password ********
 ```
-上述命令在国内的网络情况下，经常出现速度慢，超时等错误。这是因为，register过程，要访问国外的服务器。那我们可以搞一个proxy，然后让注册过程走proxy，就能加速。
+上述命令在国内的网络情况下，经常出现速度慢，超时等错误。这是因为，register过程，要访问国外的服务器(subscription.rhsm.redhat.com)。那我们可以搞一个proxy，然后让注册过程走proxy，就能加速。
 ```bash
 export PROXY="127.0.0.1:18801"
 
@@ -51,3 +51,25 @@ yum makecache
 
 官方知识库： https://access.redhat.com/solutions/23016
 
+## 第二年续订
+
+通常，rhel订阅都是一年的，第二年续订就好。。。但是，续订以后，rhel上要做什么操作呢？需要刷新，并重新绑定。
+
+```bash
+# 刷新订阅信息
+subscription-manager refresh
+
+# 自动选择匹配的订阅附加
+subscription-manager auto-attach
+```
+
+如果不清楚，或者忘记了有什么订阅了？那么用以下命令查看
+
+```bash
+# 此命令是查看当前账号下所有可用的有效订阅，其中也可以看到每个订阅的有效期
+subscription-manager list --available
+
+# 此命令是查看当前这台机器所消耗的订阅类型，其中也包括有效时间
+subscription-manager list --consumed
+
+```
