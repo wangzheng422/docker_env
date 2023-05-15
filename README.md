@@ -39,6 +39,7 @@
   - [2023.01 使用 hypershift 安装控制面托管的 openshift 集群](redhat/ocp4/4.11/4.11.acm.hypershift.md)
   - [2023.04 使用 agent based installer 安装 3 节点集群](redhat/ocp4/4.12/4.12.3node.upi.agent.md)
   - [2023.04 使用 agent based installer 安装 单节点集群](redhat/ocp4/4.12/4.12.single.node.upi.agent.md)
+  - [2023.05 在 openshift 内部编译内核驱动 rpm 并使用](redhat/ocp4/4.12/4.12.ocp.driver.build.md)
 - openshift4 使用系列
   - [2022.11 在 openshift 4.11 上安装和运行 openstack](redhat/ocp4/4.11/4.11.3node.ipi.for.osp.prod.md)
   - [2022.06 在 openshift4 上运行 OpenRAN 无线基站应用](redhat/ocp4/4.10/4.10.flexran.20.11.pf.deploy.md)
