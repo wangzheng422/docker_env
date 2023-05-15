@@ -21,6 +21,37 @@ subscription-manager status
 
 cat /var/log/rhsm/rhsm.log
 ```
+### 后台持续访问红帽服务器
+rhsm带了一些服务，其中有一个服务 rhsmcertd.service 默认是激活的。
+```bash
+systemctl list-unit-files | grep rhsm
+# rhsm-facts.service                         disabled
+# rhsm.service                               disabled
+# rhsmcertd.service                          enabled
+
+systemctl cat rhsmcertd.service
+# # /usr/lib/systemd/system/rhsmcertd.service
+# [Unit]
+# Description=Enable periodic update of entitlement certificates.
+# After=network.target
+
+# [Service]
+# Type=forking
+# ExecStart=/usr/bin/rhsmcertd
+
+# [Install]
+# WantedBy=multi-user.target
+```
+我们可以看到，它启动了一个系统管理的服务，我们可以```man rhsmcertd```看看这个服务是做什么的。原来，它是定期去红帽服务器检查和更新证书的。我们是在线系统，留着它就好。
+### Simple Content Access
+红帽提供了一种新的消费订阅的模式，Simple Content Access，原来管理员需要一台主机一台主机的register, 然后在主机上添加订阅。这么操作有点麻烦。在新的 SCA 模式下，管理员只需要 register 这个主机就可以了，主机可以使用任何当前 org 下的订阅。
+
+那问题来了，怎么保证订阅用来不超额呢？答案是，没办法。红帽的 SCA 政策，就是变相的鼓励大家超用订阅，然后第二年红帽销售就有理由管客户多要一笔钱了。这也是为什么，笔者不建议对订阅数量敏感的客户，激活SCA模式的原因。SCA本质上，是把系统管理员的工作量，转移给了采购人员。
+
+官方文档：
+- [Simple Content Access](https://access.redhat.com/articles/simple-content-access)
+- [Simple Content Access - FAQ](https://access.redhat.com/articles/4903191)
+
 ## 离线注册过程
 如果客户网络情况太特殊，那么我们还可以走离线注册过程。背后的原理是，之前的在线注册，经过用户名密码验证后，系统会下载一个证书，保存在系统里面，后续再和红帽系统建立连接，就使用这个证书了。
 
