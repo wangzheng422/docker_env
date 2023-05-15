@@ -52,7 +52,7 @@ systemctl cat rhsmcertd.service
 - [Simple Content Access](https://access.redhat.com/articles/simple-content-access)
 - [Simple Content Access - FAQ](https://access.redhat.com/articles/4903191)
 ### 取消订阅过程
-如果vm要销毁了，那么怎么取消订阅的使用呢，很简单
+如果vm要销毁了，那么怎么取消订阅的使用呢，很简单。但是一定要记得，在vm销毁之前运行哦。。。
 ```bash
 subscription-manager unregister
 ```
