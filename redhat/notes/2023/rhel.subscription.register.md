@@ -51,7 +51,11 @@ systemctl cat rhsmcertd.service
 官方文档：
 - [Simple Content Access](https://access.redhat.com/articles/simple-content-access)
 - [Simple Content Access - FAQ](https://access.redhat.com/articles/4903191)
-
+### 取消订阅过程
+如果vm要销毁了，那么怎么取消订阅的使用呢，很简单
+```bash
+subscription-manager unregister
+```
 ## 离线注册过程
 如果客户网络情况太特殊，那么我们还可以走离线注册过程。背后的原理是，之前的在线注册，经过用户名密码验证后，系统会下载一个证书，保存在系统里面，后续再和红帽系统建立连接，就使用这个证书了。
 
