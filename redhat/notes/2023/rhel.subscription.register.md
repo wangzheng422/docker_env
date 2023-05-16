@@ -46,7 +46,7 @@ systemctl cat rhsmcertd.service
 ### Simple Content Access
 红帽提供了一种新的消费订阅的模式，Simple Content Access，原来管理员需要一台主机一台主机的register, 然后在主机上添加订阅。这么操作有点麻烦。在新的 SCA 模式下，管理员只需要 register 这个主机就可以了，主机可以使用任何当前 org 下的订阅。
 
-那问题来了，怎么保证订阅用来不超额呢？答案是，没办法。红帽的 SCA 政策，就是变相的鼓励大家超用订阅，然后第二年红帽销售就有理由管客户多要一笔钱了。这也是为什么，笔者不建议对订阅数量敏感的客户，激活SCA模式的原因。SCA本质上，是把系统管理员的工作量，转移给了采购人员。
+那问题来了，怎么保证订阅用来不超额呢？答案是，没办法。红帽的 SCA 政策，就是变相的鼓励大家超用订阅，然后第二年红帽销售就有理由管客户多要一笔钱了。这也是为什么，笔者不建议对订阅数量敏感的客户，激活SCA模式的原因。
 
 官方文档：
 - [Simple Content Access](https://access.redhat.com/articles/simple-content-access)

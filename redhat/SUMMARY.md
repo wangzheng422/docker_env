@@ -37,6 +37,7 @@
   - [使用 agent based installer 安装 3 节点集群](ocp4/4.12/4.12.3node.upi.agent.md)
   - [使用 agent based installer 安装 单节点集群](ocp4/4.12/4.12.single.node.upi.agent.md)
   - [在 openshift 内部编译内核驱动 rpm 并使用](ocp4/4.12/4.12.ocp.driver.build.md)
+  - [替换 rhcos 为 openAnolis 支持国产操作系统](ocp4/4.10/4.10.replace.coreos.to.anolis.md)
 - [openshift4 使用系列](./usage.md)
   - [在 openshift 4.11 上安装和运行 openstack](ocp4/4.11/4.11.3node.ipi.for.osp.prod.md)
   - [在openshift4上运行 OpenRAN 无线基站应用](ocp4/4.10/4.10.flexran.20.11.pf.deploy.md)
