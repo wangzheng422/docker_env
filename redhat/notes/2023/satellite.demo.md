@@ -9,9 +9,19 @@
 
 本文，就演示一个最简单的场景，安装satellite，并且内网rhel在satellite上激活订阅，并使用satellite作为yum repo源。
 
-实验架构图：
+实验架构图，请注意，本次实验展示的satellite的功能和场景很简单，其他satellite的功能，比如内容视图，satellite集群，离线操作等等很多功能，依然等待大家去探索。
 
+![](./dia/satellite.demo.01.drawio.svg)
 
+# 安装 satellite server
+
+satellite的完整产品架构里面，有server，还有独立的capsule，我们是极简部署，而且server里面也有内置的capsule，所以我们这次就部署一个server就好了。
+
+![](imgs/2023-05-17-22-58-51.png)
+
+服务器用的是16C 32G，500G HDD的VM，实际项目里面，硬盘要大点。
+
+另外，server要有域名，而且要配置好反向解析。
 
 ```bash
 # satellite server
@@ -38,8 +48,10 @@ ping -c1 `hostname -f`
 # PING panlab-satellite-server.wzhlab.top (172.21.6.171) 56(84) bytes of data.
 # 64 bytes from bogon (172.21.6.171): icmp_seq=1 ttl=64 time=0.047 ms
 
+# active subscrition on this rhel.
 subscription-manager register --auto-attach --username xxxxxxxxx --password xxxxxxxxxx
 
+# add repo for satellite
 subscription-manager repos --enable=rhel-8-for-x86_64-baseos-rpms \
   --enable=rhel-8-for-x86_64-appstream-rpms \
   --enable=satellite-6.13-for-rhel-8-x86_64-rpms \
@@ -57,6 +69,7 @@ dnf install satellite chrony sos -y
 
 systemctl enable --now chronyd
 
+# begin install satellite
 satellite-installer --scenario satellite \
 --foreman-initial-organization "My_Organization" \
 --foreman-initial-location "My_Location" \
@@ -78,25 +91,55 @@ satellite-installer --scenario satellite \
 
 ```
 
+安装很容易，但是时间有点长，十几分钟，官方建议套在 tmux 里面运行安装程序。安装完成了，浏览器直接访问 url 就可以了。
+
 ![](imgs/2023-05-16-22-50-40.png)
+
+我们可以在系统里面，看到satellite server作为一个host已经存在了。
 
 ![](imgs/2023-05-16-23-07-37.png)
 
-export Subscription Manifest from redhat portal
+# 下载订阅信息
+
+我们的业务场景，是内网主机都注册到satellite上来，这必然需要把红帽官网上的订阅信息导入到satellite里面去，我们来一步一步做一下。
+<!-- export Subscription Manifest from redhat portal -->
+
+首先，我们要去红帽官网，创建一个订阅分配，如果我们有100个订阅，都要用到satellite上，那么就分配100个来。我们做实验，就分配1个，后面好实验超用，还有添加数量的场景。
 
 ![](imgs/2023-05-16-23-51-22.png)
 
+我们创建的订阅分配，类型和我们装的satellite版本要保持一致。
+
 ![](imgs/2023-05-16-23-52-08.png)
+
+切换到订阅tab:
 
 ![](imgs/2023-05-16-23-53-01.png)
 
+添加订阅，会打开一个页面，让你搜索你有的订阅，并挑选一个出来：
+
 ![](imgs/2023-05-16-23-59-18.png)
+
+我们选好了订阅以后，设定数量，根据需要的数量来，一般情况，把你所以的订阅都加进来。我们做实验，就设置 1. 然后下载。
 
 ![](imgs/2023-05-17-00-09-53.png)
 
+# 导入订阅信息
+
+我们已经有了订阅信息文件，那么我们回到satellite管理界面里面，导入它。
+
 ![](imgs/2023-05-17-00-12-05.png)
 
+完成以后，我们就能看到订阅信息了。
+
 ![](imgs/2023-05-17-00-18-28.png)
+
+# 配置 yum repo 镜像
+
+![](imgs/2023-05-17-11-18-07.png)
+
+![](imgs/2023-05-17-11-18-38.png)
+
 
 ![](imgs/2023-05-17-00-18-57.png)
 
@@ -112,7 +155,9 @@ export Subscription Manifest from redhat portal
 
 ![](imgs/2023-05-17-09-57-43.png)
 
-![](imgs/2023-05-17-10-14-08.png)
+<!-- ![](imgs/2023-05-17-10-14-08.png) -->
+
+![](imgs/2023-05-17-14-33-41.png)
 
 ```bash
 
@@ -134,11 +179,28 @@ satellite-maintain service list
 # All services listed                                                   [OK]
 # --------------------------------------------------------------------------------
 
+df -h
+# Filesystem      Size  Used Avail Use% Mounted on
+# devtmpfs         16G     0   16G   0% /dev
+# tmpfs            16G  148K   16G   1% /dev/shm
+# tmpfs            16G  8.9M   16G   1% /run
+# tmpfs            16G     0   16G   0% /sys/fs/cgroup
+# /dev/sda3       499G  106G  393G  22% /
+# /dev/sda2      1014M  265M  749M  27% /boot
+# /dev/sda1       599M  9.6M  590M   2% /boot/efi
+# tmpfs           3.2G     0  3.2G   0% /run/user/0
+
+free -h
+#               total        used        free      shared  buff/cache   available
+# Mem:           31Gi        21Gi       1.7Gi       567Mi       7.9Gi       8.6Gi
+# Swap:            0B          0B          0B
+
 ```
 
-![](imgs/2023-05-17-11-18-07.png)
 
-![](imgs/2023-05-17-11-18-38.png)
+<!-- ![](imgs/2023-05-17-11-18-07.png)
+
+![](imgs/2023-05-17-11-18-38.png) -->
 
 ![](imgs/2023-05-17-12-42-56.png)
 
@@ -165,25 +227,6 @@ satellite-maintain service list
 
 
 ![](imgs/2023-05-17-14-33-41.png)
-
-```bash
-df -h
-# Filesystem      Size  Used Avail Use% Mounted on
-# devtmpfs         16G     0   16G   0% /dev
-# tmpfs            16G  148K   16G   1% /dev/shm
-# tmpfs            16G  8.9M   16G   1% /run
-# tmpfs            16G     0   16G   0% /sys/fs/cgroup
-# /dev/sda3       499G  106G  393G  22% /
-# /dev/sda2      1014M  265M  749M  27% /boot
-# /dev/sda1       599M  9.6M  590M   2% /boot/efi
-# tmpfs           3.2G     0  3.2G   0% /run/user/0
-
-free -h
-#               total        used        free      shared  buff/cache   available
-# Mem:           31Gi        21Gi       1.7Gi       567Mi       7.9Gi       8.6Gi
-# Swap:            0B          0B          0B
-
-```
 
 ![](imgs/2023-05-17-14-35-06.png)
 
