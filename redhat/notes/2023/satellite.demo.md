@@ -136,28 +136,49 @@ satellite-installer --scenario satellite \
 
 # 配置 yum repo 镜像
 
+我们实验的目的，就是配置一个yum repo 镜像源出来，但是默认satellite使用的是on demand 的方式来下载 rpm，我们希望让他一气呵成，主动提前的下载好，那么需要做一个配置。
+
 ![](imgs/2023-05-17-11-18-07.png)
+
+激活主动下载配置
 
 ![](imgs/2023-05-17-11-18-38.png)
 
+做了主动下载配置以后，我们就来添加 yum 源。
 
 ![](imgs/2023-05-17-00-18-57.png)
 
+我们先搜索 appstream 。
+
 ![](imgs/2023-05-17-00-21-12.png)
+
+然后我们选择小版本
 
 ![](imgs/2023-05-17-00-21-45.png)
 
+为了做实验，凸显效果，我们只选择8.6这个非最新版本。
+
 ![](imgs/2023-05-17-00-22-43.png)
+
+我们再搜索 baseos ，并选择 8.6 版本
 
 ![](imgs/2023-05-17-00-23-02.png)
 
+选择好了yum 源以后，我们开始手动同步。
+
 ![](imgs/2023-05-17-09-57-12.png)
+
+选择要同步的repo, 开始
 
 ![](imgs/2023-05-17-09-57-43.png)
 
 <!-- ![](imgs/2023-05-17-10-14-08.png) -->
 
+经过漫长的时间，下载完成。
+
 ![](imgs/2023-05-17-14-33-41.png)
+
+satellite服务器端的基本服务，就配置完了，我们看看系统情况。
 
 ```bash
 
@@ -197,38 +218,70 @@ free -h
 
 ```
 
+内存占用21G，硬盘占用 110G。这个数据给以后部署提供一个依据吧。。。
 
 <!-- ![](imgs/2023-05-17-11-18-07.png)
 
 ![](imgs/2023-05-17-11-18-38.png) -->
 
+我们查看capsule的使用资源情况。
+
+![](imgs/2023-05-17-15-17-41.png)
+
+# 配置 active key
+
+我们导入了 subscription，要给rhel使用，需要创建active key并绑定。active key可以灵活的控制激活的 rhel 数量，确保我们不超量使用订阅。
+
 ![](imgs/2023-05-17-12-42-56.png)
+
+随便起一个名字
 
 ![](imgs/2023-05-17-12-43-39.png)
 
+active key的详细配置里面, 我们设置 host limite 为 unlimited, 这个建议设置为具体数字, 保证不超用。我们还要选择 environment， 简单的场景，默认的就好，这个配置能让我们把主机分成不同的group来管理。 content view 也是默认的， 这个配置可以让不同的主机组，看到的rpm 版本不同 。release version 放空，这个配置可以配置主机默认的release版本。
+
+可以看到，satellite的功能很多，是面向大规模主机部署场景设计的。
+
+![](imgs/2023-05-17-14-56-51.png)
+
+然后，我们把订阅附加到 active key里面去。
+
+![](imgs/2023-05-17-14-58-08.png)
+
+我们的orgnization启用了 simple access control， 为了对比，我们先 disable它，后面我们会打开它，来做个对比。
+
 ![](imgs/2023-05-17-12-47-33.png)
+
+取消 SAC 的激活
 
 ![](imgs/2023-05-17-12-48-05.png)
 
-![](imgs/2023-05-17-12-50-16.png)
+<!-- ![](imgs/2023-05-17-12-50-16.png) -->
+
+# 注册主机
+
+我们来创建就一个 URI, 目标rhel，curl这个 URL，会下载一个脚本，运行这个脚本，目标rhel就注册到我们的satellite server上了。
 
 ![](imgs/2023-05-17-13-24-23.png)
 
-
-
+根据图例，来配置，注意，激活insecure，因为我们是自签名证书
 
 <!-- ![](imgs/2023-05-17-13-24-53.png) -->
+![](imgs/2023-05-17-14-35-06.png)
 
-
+详细配置里面，我们disable全部功能，因为我们不需要satellite来帮助我们部署服务器。我们让这个URL一直有效。
 
 ![](imgs/2023-05-17-13-28-04.png)
+
+
+点击生成以后，就得到一个命令，复制下来，保存起来。
 
 ![](imgs/2023-05-17-13-28-36.png)
 
 
-![](imgs/2023-05-17-14-33-41.png)
+<!-- ![](imgs/2023-05-17-14-33-41.png) -->
 
-![](imgs/2023-05-17-14-35-06.png)
+有了命令，我们就找一台rhel，来试试。
 
 ```bash
 # on client host
@@ -310,45 +363,83 @@ subscription-manager repos
 
 ```
 
-![](imgs/2023-05-17-14-56-51.png)
+<!-- ![](imgs/2023-05-17-14-56-51.png) -->
 
-![](imgs/2023-05-17-14-58-08.png)
+<!-- ![](imgs/2023-05-17-14-58-08.png) -->
+
+我们回到active key，可以看到已经激活的 repo
 
 ![](imgs/2023-05-17-15-00-11.png)
 
+然后看到，我们没有配置host collection，所以这里也是空的。
+
 ![](imgs/2023-05-17-15-00-22.png)
+
+最后，我们在active key的host列表中，看到了我们刚才的主机。
 
 ![](imgs/2023-05-17-15-00-55.png)
 
+点进去看看，可以看到主机的rpm的安全问题，satellite已经能够看到。
+
 ![](imgs/2023-05-17-15-09-56.png)
 
-![](imgs/2023-05-17-15-14-52.png)
-
-![](imgs/2023-05-17-15-15-23.png)
-
-![](imgs/2023-05-17-15-15-46.png)
-
-![](imgs/2023-05-17-15-16-44.png)
-
-![](imgs/2023-05-17-15-17-41.png)
-
-![](imgs/2023-05-17-15-18-46.png)
-
-![](imgs/2023-05-17-15-26-21.png)
-
-![](imgs/2023-05-17-15-27-14.png)
-
-![](imgs/2023-05-17-15-28-45.png)
-
-![](imgs/2023-05-17-15-29-32.png)
-
+问题那么多，我们更新一下看看
 ```bash
 # on satellite-client
 dnf update -y
 
 ```
+哈哈，问题都解决了。
 
 ![](imgs/2023-05-17-18-18-48.png)
+
+我们能看到，已经使用了一个订阅
+
+![](imgs/2023-05-17-15-14-52.png)
+
+在订阅详细信息里面，也能看到一个activation key
+
+![](imgs/2023-05-17-15-15-23.png)
+
+订阅包含的，使用的产品内容就是baseos, appstream
+
+![](imgs/2023-05-17-15-15-46.png)
+
+主机列表多了我们刚才激活的主机。
+
+![](imgs/2023-05-17-15-16-44.png)
+
+<!-- 我们查看capsule的使用资源情况。
+
+![](imgs/2023-05-17-15-17-41.png) -->
+
+# 增加订阅数量
+
+如果我们多买了一些订阅，怎么添加数量呢？这里，我们就模拟增加1个订阅的场景。
+
+我们访问redhat portal，点击之前创建的订阅分配。
+
+![](imgs/2023-05-17-15-18-46.png)
+
+调整数量为 2
+
+![](imgs/2023-05-17-15-26-21.png)
+
+回到satellite里面，我们维护一下我们的manifect
+
+![](imgs/2023-05-17-15-27-14.png)
+
+点击刷新，他会在线更新
+
+![](imgs/2023-05-17-15-28-45.png)
+
+更新完成以后，数量就变成 2 了。
+
+![](imgs/2023-05-17-15-29-32.png)
+
+# 超用会发生什么
+
+我们回复订阅分配为 1 ，然后在第二台主机上激活订阅，会发生什么呢？
 
 ```bash
 # on client-02 , to try over use
@@ -387,19 +478,32 @@ subscription-manager status
 
 # System Purpose Status: Not Specified
 ```
+我们可以看到，订阅没有激活。我们确认一下，在订阅里面看，消耗量为 1
 
 ![](imgs/2023-05-17-19-00-41.png)
 
+但是在activation key 里面，host 为2
+
 ![](imgs/2023-05-17-19-10-32.png)
+
+不过，这个host list里面，有一个主机没有激活。
 
 ![](imgs/2023-05-17-19-12-23.png)
 
-if we enable SCA, and limit the active key host number, what happend?
+# 激活 Simple Content Access (SCA)
+<!-- if we enable SCA, and limit the active key host number, what happend? -->
+
+我们激活SCA，并限制 activation key 的 host 数量，用这种方法，来平衡使用方便和订阅不要超用。
+
+激活 SCA
 
 ![](imgs/2023-05-17-20-05-11.png)
 
+限制host 数量为1
 ![](imgs/2023-05-17-20-05-56.png)
 
+
+我们在第二台主机上在激活试试
 ```bash
 # on client-02 , to try over use
 curl -sS --insecure 'https://panlab-satellite-server.infra.wzhlab.top/register?activation_keys=demo-activate&location_id=2&organization_id=1&setup_insights=false&setup_remote_execution=false&setup_remote_execution_pull=false&update_packages=false' -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjo0LCJpYXQiOjE2ODQzMDU1MTYsImp0aSI6IjdiODBkNzdmMjVjYzY1MDZjODQ3OGI2Y2VjNzRkZWZjOGM2YjAyMDUxMDQ4YTcyYTJlMWE1YzRiNTgyMjE5NzAiLCJzY29wZSI6InJlZ2lzdHJhdGlvbiNnbG9iYWwgcmVnaXN0cmF0aW9uI2hvc3QifQ.EVXyW9gjWyAQIFYUxnwwdxAigrPmUo_XYWnqn-Wh1Fw' | bash
@@ -415,3 +519,6 @@ curl -sS --insecure 'https://panlab-satellite-server.infra.wzhlab.top/register?a
 # Max Hosts (1) reached for activation key 'demo-activate' (HTTP error code 409: Conflict)
 
 ```
+激活失败。
+
+# end

@@ -51,6 +51,13 @@ systemctl cat rhsmcertd.service
 官方文档：
 - [Simple Content Access](https://access.redhat.com/articles/simple-content-access)
 - [Simple Content Access - FAQ](https://access.redhat.com/articles/4903191)
+
+### activation key
+
+SCA 太好用了，怎么能严格的控制使用量呢？方法是activation key。active key可以指定host 数量，就可以避免超量使用啦。
+
+具体方法见官方文档： https://access.redhat.com/articles/1378093
+
 ### 取消订阅过程
 如果vm要销毁了，那么怎么取消订阅的使用呢，很简单。但是一定要记得，在vm销毁之前运行哦。。。
 ```bash
