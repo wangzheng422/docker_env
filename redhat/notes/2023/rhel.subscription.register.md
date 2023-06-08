@@ -15,9 +15,13 @@ export PROXY="127.0.0.1:18801"
 
 subscription-manager register --proxy=$PROXY --auto-attach --username ********* --password ********
 ```
+
 官方知识库： https://access.redhat.com/solutions/253273
+
 ### debug
+
 如果不太清楚慢的原因，那么就需要打开rhsm的log，看看日志，确定问题原因了。
+
 ```bash
 sed -i 's/default_log_level = .*/default_log_level = DEBUG/' /etc/rhsm/rhsm.conf
 
@@ -50,6 +54,21 @@ systemctl cat rhsmcertd.service
 ```
 我们可以看到，它启动了一个系统管理的服务，我们可以```man rhsmcertd```看看这个服务是做什么的。原来，它是定期去红帽服务器检查和更新证书的。我们是在线系统，留着它就好。
 
+### dnf using subscription-manager as plugin
+
+我们平常使用dnf的时候，会不会触发subscription-manager里面的功能呢？笔者认为不会，这是因为RHEL的dnf里面，有一个plugin
+```bash
+cat /etc/dnf/plugins/subscription-manager.conf
+# [main]
+# enabled=1
+
+# # When following option is set to 1, then all repositories defined outside redhat.repo will be disabled
+# # every time subscription-manager plugin is triggered by dnf or yum
+# disable_system_repos=0
+```
+
+我们可以看到，dnf有一个subscription-manager的plugin，具体他做什么，可以看看 dnf-plugin-subscription-manager 这个rpm，可以看到他有几个python脚本，他只有在特定的，有satellite的情况下，使用 upload subcommand 触发类似subscription-manager的逻辑，向satellite汇报本机情况。
+
 ### Simple Content Access
 
 红帽提供了一种新的消费订阅的模式，Simple Content Access，原来管理员需要一台主机一台主机的register, 然后在主机上添加订阅。这么操作有点麻烦。在新的 SCA 模式下，管理员只需要 register 这个主机就可以了，主机可以使用任何当前 org 下的订阅。
@@ -69,6 +88,7 @@ SCA 太好用了，怎么能严格的控制使用量呢？方法是activation ac
 ### 取消订阅过程
 
 如果vm要销毁了，那么怎么取消订阅的使用呢，很简单。但是一定要记得，在vm销毁之前运行哦。。。
+
 ```bash
 subscription-manager unregister
 ```
@@ -130,3 +150,5 @@ subscription-manager list --available
 subscription-manager list --consumed
 
 ```
+
+如果担心订阅号改变，会影响业务，那么我们可以在RHSM web console上，把新的订阅号加上，然后提前 ```subscription-manager refresh``` ， 这样就可以了。在RHSM web console上的操作，也可以通过rest api完成，方便有大量订阅的客户，自动化处理。
