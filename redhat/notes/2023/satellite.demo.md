@@ -521,4 +521,89 @@ curl -sS --insecure 'https://panlab-satellite-server.infra.wzhlab.top/register?a
 ```
 激活失败。
 
+# 使用 API 来注销主机
+
+一般情况下，主机注册以后就一直在satellite里面了，但是如果我们是一个云环境，主机需要频繁的注册和注销，那么我们需要一个自动的方法，让云平台来调用 satellite API，实现satellite里面的主机自动注销。
+
+[satellite官方文档](https://access.redhat.com/documentation/en-us/red_hat_satellite/6.11/html/api_guide/chap-red_hat_satellite-api_guide-using_the_red_hat_satellite_api#sect-Working_with_Hosts)里面，已经提供了一个API，可以自动注销主机。
+
+![](imgs/2023-06-25-15-25-39.png)
+
+本次实验就试试把client-2给删掉。
+
+```bash
+
+curl --request DELETE --insecure --user admin:redhat \
+https://panlab-satellite-server.infra.wzhlab.top/api/v2/hosts/satellite-client-02 | jq .
+# {
+#   "id": 3,
+#   "name": "satellite-client-02",
+#   "last_compile": "2023-05-17T10:21:24.000Z",
+#   "last_report": null,
+#   "updated_at": "2023-05-17T10:21:24.861Z",
+#   "created_at": "2023-05-17T10:19:49.756Z",
+#   "root_pass": null,
+#   "architecture_id": 1,
+#   "operatingsystem_id": 2,
+#   "ptable_id": null,
+#   "medium_id": null,
+#   "build": false,
+#   "comment": null,
+#   "disk": null,
+#   "installed_at": null,
+#   "model_id": 1,
+#   "hostgroup_id": null,
+#   "owner_id": 1,
+#   "owner_type": "User",
+#   "enabled": true,
+#   "puppet_ca_proxy_id": null,
+#   "managed": false,
+#   "use_image": null,
+#   "image_file": "",
+#   "uuid": null,
+#   "compute_resource_id": null,
+#   "puppet_proxy_id": null,
+#   "certname": "satellite-client-02",
+#   "image_id": null,
+#   "organization_id": 1,
+#   "location_id": 2,
+#   "otp": null,
+#   "realm_id": null,
+#   "compute_profile_id": null,
+#   "provision_method": "build",
+#   "grub_pass": null,
+#   "discovery_rule_id": null,
+#   "global_status": 2,
+#   "lookup_value_matcher": "fqdn=satellite-client-02",
+#   "openscap_proxy_id": null,
+#   "pxe_loader": null,
+#   "initiated_at": null,
+#   "build_errors": null,
+#   "content_facet_attributes": {
+#     "id": 2,
+#     "host_id": 3,
+#     "uuid": null,
+#     "content_view_id": 1,
+#     "lifecycle_environment_id": 1,
+#     "kickstart_repository_id": null,
+#     "content_source_id": null,
+#     "installable_security_errata_count": 0,
+#     "installable_enhancement_errata_count": 0,
+#     "installable_bugfix_errata_count": 0,
+#     "applicable_rpm_count": 0,
+#     "upgradable_rpm_count": 0,
+#     "applicable_module_stream_count": 0,
+#     "upgradable_module_stream_count": 0,
+#     "applicable_deb_count": 0,
+#     "upgradable_deb_count": 0
+#   }
+# }
+
+
+```
+
+![](imgs/2023-06-25-15-50-41.png)
+
+API 调用以后，我们就能看到 client-2 这个主机被注销了。
+
 # end
