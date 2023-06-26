@@ -46162,11 +46162,12 @@ curl -sS --insecure 'https://panlab-satellite-server.infra.wzhlab.top/register?a
 <p>激活失败。</p>
 <h1 id="使用-api-来注销主机"><a class="header" href="#使用-api-来注销主机">使用 API 来注销主机</a></h1>
 <p>一般情况下，主机注册以后就一直在satellite里面了，但是如果我们是一个云环境，主机需要频繁的注册和注销，那么我们需要一个自动的方法，让云平台来调用 satellite API，实现satellite里面的主机自动注销。</p>
+<h2 id="使用-hostname-来注销"><a class="header" href="#使用-hostname-来注销">使用 hostname 来注销</a></h2>
 <p><a href="https://access.redhat.com/documentation/en-us/red_hat_satellite/6.11/html/api_guide/chap-red_hat_satellite-api_guide-using_the_red_hat_satellite_api#sect-Working_with_Hosts">satellite官方文档</a>里面，已经提供了一个API，可以自动注销主机。</p>
 <p><img src="notes/2023/imgs/2023-06-25-15-25-39.png" alt="" /></p>
 <p>本次实验就试试把client-2给删掉。</p>
 <pre><code class="language-bash">
-curl --request DELETE --insecure --user admin:redhat \
+curl -s --request DELETE --insecure --user admin:redhat \
 https://panlab-satellite-server.infra.wzhlab.top/api/v2/hosts/satellite-client-02 | jq .
 # {
 #   &quot;id&quot;: 3,
@@ -46236,6 +46237,100 @@ https://panlab-satellite-server.infra.wzhlab.top/api/v2/hosts/satellite-client-0
 </code></pre>
 <p><img src="notes/2023/imgs/2023-06-25-15-50-41.png" alt="" /></p>
 <p>API 调用以后，我们就能看到 client-2 这个主机被注销了。</p>
+<p>这个注销主机的方法，有一个潜在问题，就是这个主机名会不会改变，如果我们在主机上，把主机名给改了，satellite里面会自动改，还是不会变呢？我们继续实验看看。</p>
+<h2 id="使用-host-id-来注销"><a class="header" href="#使用-host-id-来注销">使用 host id 来注销</a></h2>
+<pre><code class="language-bash"># get host id from satellite
+curl -s --request GET --insecure --user admin:redhat \
+https://panlab-satellite-server.infra.wzhlab.top/api/hosts/panlab-satellite-client | jq .id
+# 2
+
+# delete host using host id
+curl -s --request DELETE --insecure --user admin:redhat \
+https://panlab-satellite-server.infra.wzhlab.top/api/hosts/2 | jq .
+# {
+#   &quot;id&quot;: 2,
+#   &quot;name&quot;: &quot;panlab-satellite-client&quot;,
+#   &quot;last_compile&quot;: &quot;2023-05-17T12:26:28.000Z&quot;,
+#   &quot;last_report&quot;: null,
+#   &quot;updated_at&quot;: &quot;2023-05-17T12:26:28.289Z&quot;,
+#   &quot;created_at&quot;: &quot;2023-05-17T06:43:46.628Z&quot;,
+#   &quot;root_pass&quot;: null,
+#   &quot;architecture_id&quot;: 1,
+#   &quot;operatingsystem_id&quot;: 2,
+#   &quot;ptable_id&quot;: null,
+#   &quot;medium_id&quot;: null,
+#   &quot;build&quot;: false,
+#   &quot;comment&quot;: null,
+#   &quot;disk&quot;: null,
+#   &quot;installed_at&quot;: &quot;2023-05-17T06:44:01.221Z&quot;,
+#   &quot;model_id&quot;: 1,
+#   &quot;hostgroup_id&quot;: null,
+#   &quot;owner_id&quot;: 1,
+#   &quot;owner_type&quot;: &quot;User&quot;,
+#   &quot;enabled&quot;: true,
+#   &quot;puppet_ca_proxy_id&quot;: null,
+#   &quot;managed&quot;: false,
+#   &quot;use_image&quot;: null,
+#   &quot;image_file&quot;: &quot;&quot;,
+#   &quot;uuid&quot;: null,
+#   &quot;compute_resource_id&quot;: null,
+#   &quot;puppet_proxy_id&quot;: null,
+#   &quot;certname&quot;: &quot;panlab-satellite-client&quot;,
+#   &quot;image_id&quot;: null,
+#   &quot;organization_id&quot;: 1,
+#   &quot;location_id&quot;: 2,
+#   &quot;otp&quot;: null,
+#   &quot;realm_id&quot;: null,
+#   &quot;compute_profile_id&quot;: null,
+#   &quot;provision_method&quot;: &quot;build&quot;,
+#   &quot;grub_pass&quot;: null,
+#   &quot;discovery_rule_id&quot;: null,
+#   &quot;global_status&quot;: 0,
+#   &quot;lookup_value_matcher&quot;: &quot;fqdn=panlab-satellite-client&quot;,
+#   &quot;openscap_proxy_id&quot;: null,
+#   &quot;pxe_loader&quot;: null,
+#   &quot;initiated_at&quot;: &quot;2023-05-17T06:43:59.574Z&quot;,
+#   &quot;build_errors&quot;: null,
+#   &quot;content_facet_attributes&quot;: {
+#     &quot;id&quot;: 1,
+#     &quot;host_id&quot;: 2,
+#     &quot;uuid&quot;: &quot;e9d03372-d3f4-4970-bb38-3a2282458e29&quot;,
+#     &quot;content_view_id&quot;: 1,
+#     &quot;lifecycle_environment_id&quot;: 1,
+#     &quot;kickstart_repository_id&quot;: null,
+#     &quot;content_source_id&quot;: null,
+#     &quot;installable_security_errata_count&quot;: 0,
+#     &quot;installable_enhancement_errata_count&quot;: 0,
+#     &quot;installable_bugfix_errata_count&quot;: 0,
+#     &quot;applicable_rpm_count&quot;: 0,
+#     &quot;upgradable_rpm_count&quot;: 0,
+#     &quot;applicable_module_stream_count&quot;: 0,
+#     &quot;upgradable_module_stream_count&quot;: 0,
+#     &quot;applicable_deb_count&quot;: 0,
+#     &quot;upgradable_deb_count&quot;: 0
+#   },
+#   &quot;subscription_facet_attributes&quot;: {
+#     &quot;id&quot;: 1,
+#     &quot;host_id&quot;: 2,
+#     &quot;uuid&quot;: &quot;e9d03372-d3f4-4970-bb38-3a2282458e29&quot;,
+#     &quot;last_checkin&quot;: &quot;2023-06-26T03:27:43.457Z&quot;,
+#     &quot;service_level&quot;: &quot;&quot;,
+#     &quot;release_version&quot;: &quot;8.6&quot;,
+#     &quot;autoheal&quot;: true,
+#     &quot;registered_at&quot;: &quot;2023-05-17T06:43:47.000Z&quot;,
+#     &quot;registered_through&quot;: &quot;panlab-satellite-server.infra.wzhlab.top&quot;,
+#     &quot;user_id&quot;: null,
+#     &quot;hypervisor&quot;: false,
+#     &quot;hypervisor_host_id&quot;: null,
+#     &quot;purpose_usage&quot;: &quot;&quot;,
+#     &quot;purpose_role&quot;: &quot;&quot;,
+#     &quot;dmi_uuid&quot;: &quot;4C6B4D56-ACB7-585F-EB20-90FD676DEA4B&quot;
+#   }
+# }
+
+</code></pre>
+<p>调用了这个接口之后，我们就能看到这个主机被注销了。</p>
+<p><img src="notes/2023/imgs/2023-06-26-11-52-35.png" alt="" /></p>
 <h1 id="end-19"><a class="header" href="#end-19">end</a></h1>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="rhel-订阅在线注册相关问题"><a class="header" href="#rhel-订阅在线注册相关问题">RHEL 订阅在线注册相关问题</a></h1>
 <h2 id="在线注册过程"><a class="header" href="#在线注册过程">在线注册过程</a></h2>
