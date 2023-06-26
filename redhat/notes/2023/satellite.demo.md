@@ -525,6 +525,8 @@ curl -sS --insecure 'https://panlab-satellite-server.infra.wzhlab.top/register?a
 
 一般情况下，主机注册以后就一直在satellite里面了，但是如果我们是一个云环境，主机需要频繁的注册和注销，那么我们需要一个自动的方法，让云平台来调用 satellite API，实现satellite里面的主机自动注销。
 
+## 使用 hostname 来注销
+
 [satellite官方文档](https://access.redhat.com/documentation/en-us/red_hat_satellite/6.11/html/api_guide/chap-red_hat_satellite-api_guide-using_the_red_hat_satellite_api#sect-Working_with_Hosts)里面，已经提供了一个API，可以自动注销主机。
 
 ![](imgs/2023-06-25-15-25-39.png)
@@ -533,7 +535,7 @@ curl -sS --insecure 'https://panlab-satellite-server.infra.wzhlab.top/register?a
 
 ```bash
 
-curl --request DELETE --insecure --user admin:redhat \
+curl -s --request DELETE --insecure --user admin:redhat \
 https://panlab-satellite-server.infra.wzhlab.top/api/v2/hosts/satellite-client-02 | jq .
 # {
 #   "id": 3,
@@ -605,5 +607,105 @@ https://panlab-satellite-server.infra.wzhlab.top/api/v2/hosts/satellite-client-0
 ![](imgs/2023-06-25-15-50-41.png)
 
 API 调用以后，我们就能看到 client-2 这个主机被注销了。
+
+这个注销主机的方法，有一个潜在问题，就是这个主机名会不会改变，如果我们在主机上，把主机名给改了，satellite里面会自动改，还是不会变呢？我们继续实验看看。
+
+## 使用 host id 来注销
+
+```bash
+# get host id from satellite
+curl -s --request GET --insecure --user admin:redhat \
+https://panlab-satellite-server.infra.wzhlab.top/api/hosts/panlab-satellite-client | jq .id
+# 2
+
+# delete host using host id
+curl -s --request DELETE --insecure --user admin:redhat \
+https://panlab-satellite-server.infra.wzhlab.top/api/hosts/2 | jq .
+# {
+#   "id": 2,
+#   "name": "panlab-satellite-client",
+#   "last_compile": "2023-05-17T12:26:28.000Z",
+#   "last_report": null,
+#   "updated_at": "2023-05-17T12:26:28.289Z",
+#   "created_at": "2023-05-17T06:43:46.628Z",
+#   "root_pass": null,
+#   "architecture_id": 1,
+#   "operatingsystem_id": 2,
+#   "ptable_id": null,
+#   "medium_id": null,
+#   "build": false,
+#   "comment": null,
+#   "disk": null,
+#   "installed_at": "2023-05-17T06:44:01.221Z",
+#   "model_id": 1,
+#   "hostgroup_id": null,
+#   "owner_id": 1,
+#   "owner_type": "User",
+#   "enabled": true,
+#   "puppet_ca_proxy_id": null,
+#   "managed": false,
+#   "use_image": null,
+#   "image_file": "",
+#   "uuid": null,
+#   "compute_resource_id": null,
+#   "puppet_proxy_id": null,
+#   "certname": "panlab-satellite-client",
+#   "image_id": null,
+#   "organization_id": 1,
+#   "location_id": 2,
+#   "otp": null,
+#   "realm_id": null,
+#   "compute_profile_id": null,
+#   "provision_method": "build",
+#   "grub_pass": null,
+#   "discovery_rule_id": null,
+#   "global_status": 0,
+#   "lookup_value_matcher": "fqdn=panlab-satellite-client",
+#   "openscap_proxy_id": null,
+#   "pxe_loader": null,
+#   "initiated_at": "2023-05-17T06:43:59.574Z",
+#   "build_errors": null,
+#   "content_facet_attributes": {
+#     "id": 1,
+#     "host_id": 2,
+#     "uuid": "e9d03372-d3f4-4970-bb38-3a2282458e29",
+#     "content_view_id": 1,
+#     "lifecycle_environment_id": 1,
+#     "kickstart_repository_id": null,
+#     "content_source_id": null,
+#     "installable_security_errata_count": 0,
+#     "installable_enhancement_errata_count": 0,
+#     "installable_bugfix_errata_count": 0,
+#     "applicable_rpm_count": 0,
+#     "upgradable_rpm_count": 0,
+#     "applicable_module_stream_count": 0,
+#     "upgradable_module_stream_count": 0,
+#     "applicable_deb_count": 0,
+#     "upgradable_deb_count": 0
+#   },
+#   "subscription_facet_attributes": {
+#     "id": 1,
+#     "host_id": 2,
+#     "uuid": "e9d03372-d3f4-4970-bb38-3a2282458e29",
+#     "last_checkin": "2023-06-26T03:27:43.457Z",
+#     "service_level": "",
+#     "release_version": "8.6",
+#     "autoheal": true,
+#     "registered_at": "2023-05-17T06:43:47.000Z",
+#     "registered_through": "panlab-satellite-server.infra.wzhlab.top",
+#     "user_id": null,
+#     "hypervisor": false,
+#     "hypervisor_host_id": null,
+#     "purpose_usage": "",
+#     "purpose_role": "",
+#     "dmi_uuid": "4C6B4D56-ACB7-585F-EB20-90FD676DEA4B"
+#   }
+# }
+
+```
+
+调用了这个接口之后，我们就能看到这个主机被注销了。
+
+![](imgs/2023-06-26-11-52-35.png)
 
 # end
