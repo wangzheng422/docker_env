@@ -639,20 +639,7 @@ subscription-manager refresh
 我们在satellite里面确认一下，主机名没有修改
 ![](imgs/2023-06-29-11-27-10.png)
 
-那么，什么情况下，satellite里面的主机名会改变呢，通过笔者的实验，发现必须unregister以后，重新注册才可以。具体到命令，有一个命令可以完成上面2步操作
-```bash
-subscription-manager register --force
-# Unregistering from: panlab-satellite-server.infra.wzhlab.top:443/rhsm
-# The system with UUID 62c21ba4-3441-44fc-9f8e-33eb53a5da4d has been unregistered
-# All local data removed
-# Registering to: panlab-satellite-server.infra.wzhlab.top:443/rhsm
-# Username: admin
-# Password:
-# The system has been registered with ID: fc4ec475-bce1-4471-a4af-336370ff68dd
-# The registered system name is: client-0-changed
-
-```
-
+那么，什么情况下，satellite里面的主机名会改变呢，通过笔者的实验，发现必须unregister以后，重新注册才可以。
 
 ## 使用 host id 来注销
 
