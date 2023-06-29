@@ -610,6 +610,50 @@ API 调用以后，我们就能看到 client-2 这个主机被注销了。
 
 这个注销主机的方法，有一个潜在问题，就是这个主机名会不会改变，如果我们在主机上，把主机名给改了，satellite里面会自动改，还是不会变呢？我们继续实验看看。
 
+我们先看看现在的主机名是什么
+```bash
+hostnamectl
+  #  Static hostname: client-0
+  #        Icon name: computer-vm
+  #          Chassis: vm
+  #       Machine ID: 75587495919e40b7a0d39f7168df895e
+  #          Boot ID: a15f631019d0463395d12c332873eb52
+  #   Virtualization: vmware
+  # Operating System: Red Hat Enterprise Linux 8.6 (Ootpa)
+  #      CPE OS Name: cpe:/o:redhat:enterprise_linux:8::baseos
+  #           Kernel: Linux 4.18.0-372.32.1.el8_6.x86_64
+  #     Architecture: x86-64
+
+```
+
+在satellite里面确认一下主机名
+![](imgs/2023-06-29-11-25-05.png)
+
+接着，我们修改主机名，并刷新
+```bash
+hostnamectl set-hostname client-0-changed
+
+subscription-manager refresh
+```
+
+我们在satellite里面确认一下，主机名没有修改
+![](imgs/2023-06-29-11-27-10.png)
+
+那么，什么情况下，satellite里面的主机名会改变呢，通过笔者的实验，发现必须unregister以后，重新注册才可以。具体到命令，有一个命令可以完成上面2步操作
+```bash
+subscription-manager register --force
+# Unregistering from: panlab-satellite-server.infra.wzhlab.top:443/rhsm
+# The system with UUID 62c21ba4-3441-44fc-9f8e-33eb53a5da4d has been unregistered
+# All local data removed
+# Registering to: panlab-satellite-server.infra.wzhlab.top:443/rhsm
+# Username: admin
+# Password:
+# The system has been registered with ID: fc4ec475-bce1-4471-a4af-336370ff68dd
+# The registered system name is: client-0-changed
+
+```
+
+
 ## 使用 host id 来注销
 
 ```bash
