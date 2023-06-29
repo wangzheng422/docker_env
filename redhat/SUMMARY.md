@@ -90,6 +90,7 @@
   - [RHACS / stackrox](ocp4/4.7/4.7.rhacs.md)
   - [为 RHACS 找个应用场景: 安全合规测试云 ](ocp4/4.7/4.7.rhacs.deep.md)
 - [操作系统相关](./os.md)
+  - [红帽断供centos的思考](notes/2023/2023.06.rhel.centos.md)
   - [satellite 红帽注册和内容分发代理](notes/2023/satellite.demo.md)
   - [RHEL 订阅在线注册相关问题](notes/2023/rhel.subscription.register.md)
   - [通过新增系统启动项来原地重装操作系统](notes/2022/2022.12.boot.to.install.md)
