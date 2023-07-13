@@ -747,6 +747,8 @@ https://panlab-satellite-server.infra.wzhlab.top/api/hosts/2 | jq .
 1. [How to access Red Hat Subscription Manager (RHSM) through a firewall or proxy](https://access.redhat.com/solutions/65300)
 2. [Public CIDR Lists for Red Hat (IP Addresses for cdn.redhat.com)](https://access.redhat.com/articles/1525183)
 3. [Downloading Packages via Red Hat Official Network is Slow in mainland China](https://access.redhat.com/solutions/5090421)
+4. [What is the IP address range for 'subscription.rhn.redhat.com' and 'subscription.rhsm.redhat.com'?](https://access.redhat.com/solutions/2109761)
+5. [How do I configure my firewall for api.access.redhat.com?](https://access.redhat.com/solutions/1179133)
 
 
 我们总结出了一些域名需要放开
@@ -755,6 +757,6 @@ https://panlab-satellite-server.infra.wzhlab.top/api/hosts/2 | jq .
 3. *.akamaiedge.net:443 [https] OR *.akamaitechnologies.com:443 [https]
 4. china.cdn.redhat.com:443 [https]
 
-如果客户网络的防火墙，只支持ip，那么要放开如下的[一系列网络段](./files/rh.cdn.ip.list.txt)
+如果客户网络的防火墙，只支持ip，那么要放开如下的[一系列网络段](./files/rh.cdn.ip.list.txt)，不过根据作者实际测试，这个ip地址列表并不准确，或者说，更新的并不及时。
 
 # end
