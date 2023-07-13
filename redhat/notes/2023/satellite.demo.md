@@ -739,4 +739,22 @@ https://panlab-satellite-server.infra.wzhlab.top/api/hosts/2 | jq .
 
 ![](imgs/2023-06-26-11-52-35.png)
 
+# 网络端口
+
+客户的网络有严格的限制，要访问公网，需要特定的开防火墙，那么satellite需要开什么防火墙策略呢？
+
+根据以下的一些官方知识库
+1. [How to access Red Hat Subscription Manager (RHSM) through a firewall or proxy](https://access.redhat.com/solutions/65300)
+2. [Public CIDR Lists for Red Hat (IP Addresses for cdn.redhat.com)](https://access.redhat.com/articles/1525183)
+3. [Downloading Packages via Red Hat Official Network is Slow in mainland China](https://access.redhat.com/solutions/5090421)
+
+
+我们总结出了一些域名需要放开
+1. subscription.rhn.redhat.com:443 [https] AND subscription.rhsm.redhat.com:443 [https] (This is the new default address in newer versions of RHEL 7)
+2. cdn.redhat.com:443 [https]
+3. *.akamaiedge.net:443 [https] OR *.akamaitechnologies.com:443 [https]
+4. china.cdn.redhat.com:443 [https]
+
+如果客户网络的防火墙，只支持ip，那么要放开如下的[一系列网络段](./files/rh.cdn.ip.list.txt)
+
 # end
