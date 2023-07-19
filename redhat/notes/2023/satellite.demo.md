@@ -802,6 +802,17 @@ systemctl enable --now iptables.service
 
 # semanage port -a -t http_port_t -p tcp 6443
 
+
+# on client node
+curl -sS --insecure 'https://panlab-satellite-server.infra.wzhlab.top:6443/register?activation_keys=demo-activate&location_id=2&organization_id=1&setup_insights=false&setup_remote_execution=false&update_packages=false' -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjo0LCJpYXQiOjE2ODk3NTI1NzcsImp0aSI6IjhlZTJiM2Q1MjBhZTE3OTZmZGM1NWM5YWRjNWU1Yzc3MzA0NDNjYzcxZDhlZDZhYjM1MjUzNzc5NDA5YWIzN2MiLCJzY29wZSI6InJlZ2lzdHJhdGlvbiNnbG9iYWwgcmVnaXN0cmF0aW9uI2hvc3QifQ.4oRrFy649nVvyrB8cZp_AA7dQDTqw12S53NJF50lcQ4' > sub.sh
+
+sed -i 's/--server.port="443"/--server.port="6443"/g' sub.sh 
+
+sed -i 's|https://panlab-satellite-server.infra.wzhlab.top/|https://panlab-satellite-server.infra.wzhlab.top:6443/|g' sub.sh 
+
+bash sub.sh
+
+
 ```
 
 ![](imgs/2023-07-19-12-27-24.png)
