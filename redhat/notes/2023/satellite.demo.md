@@ -759,4 +759,52 @@ https://panlab-satellite-server.infra.wzhlab.top/api/hosts/2 | jq .
 
 如果客户网络的防火墙，只支持ip，那么要放开如下的[一系列网络段](./files/rh.cdn.ip.list.txt)，不过根据作者实际测试，这个ip地址列表并不准确，或者说，更新的并不及时。
 
+
 # end
+
+# 端口转发
+
+客户内网有严格的流量管理，不允许443端口通讯，需要把satellite的https 443端口，变成6443，那么我们来试试
+
+```bash
+# on satellite server
+# redirect 6443 to 443
+iptables -t nat -A PREROUTING -p tcp --dport 6443 -j REDIRECT --to-port 443
+
+# block 443 traffic REJECT
+# iptables -A INPUT -p tcp --dport 443 -j DROP
+# iptables -A INPUT -p tcp --dport 443 -j REJECT
+iptables -A INPUT -p tcp --dport 443 -j ACCEPT
+iptables -A INPUT -p tcp --dport 80 -j ACCEPT
+
+# persistent
+iptables-save > /etc/sysconfig/iptables
+
+cat << EOF > /etc/systemd/system/iptables.service
+[Unit]
+Description=iptables Firewall Rules
+After=network.target
+
+[Service]
+ExecStart=/sbin/iptables-restore /etc/sysconfig/iptables
+Type=oneshot
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl enable --now iptables.service
+
+# systemctl disable --now iptables.service
+
+# sed -i "s/443/6443/g" /etc/httpd/conf/ports.conf
+
+# semanage port -a -t http_port_t -p tcp 6443
+
+```
+
+![](imgs/2023-07-19-12-27-24.png)
+
+
+# next
