@@ -46387,6 +46387,46 @@ https://panlab-satellite-server.infra.wzhlab.top/api/hosts/2 | jq .
 </ol>
 <p>如果客户网络的防火墙，只支持ip，那么要放开如下的<a href="notes/2023/./files/rh.cdn.ip.list.txt">一系列网络段</a>，不过根据作者实际测试，这个ip地址列表并不准确，或者说，更新的并不及时。</p>
 <h1 id="end-19"><a class="header" href="#end-19">end</a></h1>
+<h1 id="端口转发"><a class="header" href="#端口转发">端口转发</a></h1>
+<p>客户内网有严格的流量管理，不允许443端口通讯，需要把satellite的https 443端口，变成6443，那么我们来试试</p>
+<pre><code class="language-bash"># on satellite server
+# redirect 6443 to 443
+iptables -t nat -A PREROUTING -p tcp --dport 6443 -j REDIRECT --to-port 443
+
+# block 443 traffic REJECT
+# iptables -A INPUT -p tcp --dport 443 -j DROP
+# iptables -A INPUT -p tcp --dport 443 -j REJECT
+iptables -A INPUT -p tcp --dport 443 -j ACCEPT
+iptables -A INPUT -p tcp --dport 80 -j ACCEPT
+
+# persistent
+iptables-save &gt; /etc/sysconfig/iptables
+
+cat &lt;&lt; EOF &gt; /etc/systemd/system/iptables.service
+[Unit]
+Description=iptables Firewall Rules
+After=network.target
+
+[Service]
+ExecStart=/sbin/iptables-restore /etc/sysconfig/iptables
+Type=oneshot
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl enable --now iptables.service
+
+# systemctl disable --now iptables.service
+
+# sed -i &quot;s/443/6443/g&quot; /etc/httpd/conf/ports.conf
+
+# semanage port -a -t http_port_t -p tcp 6443
+
+</code></pre>
+<p><img src="notes/2023/imgs/2023-07-19-12-27-24.png" alt="" /></p>
+<h1 id="next"><a class="header" href="#next">next</a></h1>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="rhel-订阅在线注册相关问题"><a class="header" href="#rhel-订阅在线注册相关问题">RHEL 订阅在线注册相关问题</a></h1>
 <h2 id="在线注册过程"><a class="header" href="#在线注册过程">在线注册过程</a></h2>
 <p>国内客户，购买了rhel订阅以后，就可以把自己的系统，在线注册了。一般用如下的命令：</p>
