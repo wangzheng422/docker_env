@@ -739,7 +739,7 @@ https://panlab-satellite-server.infra.wzhlab.top/api/hosts/2 | jq .
 
 ![](imgs/2023-06-26-11-52-35.png)
 
-# 网络端口
+# 网络防火墙端口
 
 客户的网络有严格的限制，要访问公网，需要特定的开防火墙，那么satellite需要开什么防火墙策略呢？
 
@@ -955,6 +955,24 @@ https://panlab-satellite-server.infra.wzhlab.top:6443/api/hosts/6 | jq .
 从上面的操作，可以看到，客户的需求非常简单，那么我们是可以把端口从443变成6443的。大致的过程，是在web console上配置一下入口url，然后在主机上配置iptables，做端口转发。然后，在被管理节点上，把下发的shell脚本，做个定制，就可以了。
 
 但是，需要注意，更改443端口，是红帽官方不支持的定制化，所以只能用于需求非常简单的场景中。
+
+# 中国区加速
+
+satellite默认会从cdn.redhat.com上下载rpm，但是在客户网络里面很慢，从china.cdn.redhat.com下载比较快，那么我们怎么配置，来用中国区的镜像呢？
+
+第一步，配置一个 Content Credentials，注意，这里面的文件，是/etc/rhsm/ca/redhat-uep.pem，你可以下载到本地上传，也可以复制内容进去。
+
+![](imgs/2023-07-20-16-27-48.png)
+
+第二步，是配置一个 "Custom CDN"，注意这里面要配置 SSL CA Content Credential ，用我们第一步配置的就好。
+
+![](imgs/2023-07-20-16-29-17.png)
+
+第三步，是刷新一下
+
+![](imgs/2023-07-20-16-30-49.png)
+
+到这里，我们就配置成功，可以同步啦。
 
 # end
 
