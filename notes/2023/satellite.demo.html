@@ -750,9 +750,10 @@ https://panlab-satellite-server.infra.wzhlab.top/api/hosts/2 | jq .
 <li>china.cdn.redhat.com:443 [https]</li>
 </ol>
 <p>如果客户网络的防火墙，只支持ip，那么要放开如下的<a href="./files/rh.cdn.ip.list.txt">一系列网络段</a>，不过根据作者实际测试，这个ip地址列表并不准确，或者说，更新的并不及时。</p>
-<h1 id="end"><a class="header" href="#end">end</a></h1>
 <h1 id="端口转发"><a class="header" href="#端口转发">端口转发</a></h1>
 <p>客户内网有严格的流量管理，不允许443端口通讯，需要把satellite的https 443端口，变成6443，那么我们来试试</p>
+<p>先在web console上做一个配置</p>
+<p><img src="imgs/2023-07-19-12-27-24.png" alt="" /></p>
 <pre><code class="language-bash"># on satellite server
 # redirect 6443 to 443
 iptables -t nat -A PREROUTING -p tcp --dport 6443 -j REDIRECT --to-port 443
@@ -760,8 +761,8 @@ iptables -t nat -A PREROUTING -p tcp --dport 6443 -j REDIRECT --to-port 443
 # block 443 traffic REJECT
 # iptables -A INPUT -p tcp --dport 443 -j DROP
 # iptables -A INPUT -p tcp --dport 443 -j REJECT
-iptables -A INPUT -p tcp --dport 443 -j ACCEPT
-iptables -A INPUT -p tcp --dport 80 -j ACCEPT
+# iptables -A INPUT -p tcp --dport 443 -j ACCEPT
+# iptables -A INPUT -p tcp --dport 80 -j ACCEPT
 
 # persistent
 iptables-save &gt; /etc/sysconfig/iptables
@@ -790,7 +791,8 @@ systemctl enable --now iptables.service
 
 
 # on client node
-curl -sS --insecure 'https://panlab-satellite-server.infra.wzhlab.top:6443/register?activation_keys=demo-activate&amp;location_id=2&amp;organization_id=1&amp;setup_insights=false&amp;setup_remote_execution=false&amp;update_packages=false' -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjo0LCJpYXQiOjE2ODk3NTI1NzcsImp0aSI6IjhlZTJiM2Q1MjBhZTE3OTZmZGM1NWM5YWRjNWU1Yzc3MzA0NDNjYzcxZDhlZDZhYjM1MjUzNzc5NDA5YWIzN2MiLCJzY29wZSI6InJlZ2lzdHJhdGlvbiNnbG9iYWwgcmVnaXN0cmF0aW9uI2hvc3QifQ.4oRrFy649nVvyrB8cZp_AA7dQDTqw12S53NJF50lcQ4' &gt; sub.sh
+# to register
+curl -sS --insecure 'https://panlab-satellite-server.infra.wzhlab.top:6443/register?activation_keys=demo-activate&amp;location_id=2&amp;organization_id=1&amp;setup_insights=false&amp;setup_remote_execution=false&amp;update_packages=false' -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjo0LCJpYXQiOjE2ODk4MjMxNDksImp0aSI6IjUxNTNiZmFjMDIxMjNjYjEzZDdjZjM5NWRkMWIyZWEzMWQ3NzA3YTczNzgxNzRhOWI5MDMzMzdjOTA4MzBlY2UiLCJzY29wZSI6InJlZ2lzdHJhdGlvbiNnbG9iYWwgcmVnaXN0cmF0aW9uI2hvc3QifQ.idNFXNsi6mz0fKef42yn_XwVWvwdKD2R3FolAHsrRmo' &gt; sub.sh
 
 sed -i 's/--server.port=&quot;443&quot;/--server.port=&quot;6443&quot;/g' sub.sh 
 
@@ -799,8 +801,146 @@ sed -i 's|https://panlab-satellite-server.infra.wzhlab.top/|https://panlab-satel
 bash sub.sh
 
 
+
+subscription-manager release --list
+# +-------------------------------------------+
+#           Available Releases
+# +-------------------------------------------+
+# 8.6
+
+subscription-manager release --set=8.6
+
+subscription-manager config
+# [server]
+  #  hostname = panlab-satellite-server.infra.wzhlab.top
+  #  insecure = [0]
+  #  no_proxy = []
+  #  port = 6443
+# ......
+# [rhsm]
+#    auto_enable_yum_plugins = [1]
+#    baseurl = https://panlab-satellite-server.infra.wzhlab.top:6443/pulp/content
+# ......
+
+subscription-manager list --installed
+# +-------------------------------------------+
+#     Installed Product Status
+# +-------------------------------------------+
+# Product Name: Red Hat Enterprise Linux for x86_64
+# Product ID:   479
+# Version:      8.6
+# Arch:         x86_64
+
+subscription-manager repos
+# +----------------------------------------------------------+
+#     Available Repositories in /etc/yum.repos.d/redhat.repo
+# +----------------------------------------------------------+
+# Repo ID:   rhel-8-for-x86_64-appstream-rpms
+# Repo Name: Red Hat Enterprise Linux 8 for x86_64 - AppStream (RPMs)
+# Repo URL:  https://panlab-satellite-server.infra.wzhlab.top:6443/pulp/content/My_Organization/Library/content/dist/rhel8/8.6/x86_64/appstream/os
+# Enabled:   1
+
+# Repo ID:   rhel-8-for-x86_64-baseos-rpms
+# Repo Name: Red Hat Enterprise Linux 8 for x86_64 - BaseOS (RPMs)
+# Repo URL:  https://panlab-satellite-server.infra.wzhlab.top:6443/pulp/content/My_Organization/Library/content/dist/rhel8/8.6/x86_64/baseos/os
+# Enabled:   1
+
+# try to unregister using satellite API
+# get host id from satellite
+# do not run below command on satellite server, you will face iptable redirect rule failure
+curl -s --request GET --insecure --user admin:redhat \
+https://panlab-satellite-server.infra.wzhlab.top:6443/api/hosts/client-0-changed | jq .id
+# 6
+
+# delete host using host id
+curl -s --request DELETE --insecure --user admin:redhat \
+https://panlab-satellite-server.infra.wzhlab.top:6443/api/hosts/6 | jq .
+# {
+#   &quot;id&quot;: 6,
+#   &quot;name&quot;: &quot;client-0-changed&quot;,
+#   &quot;last_compile&quot;: &quot;2023-07-20T04:02:48.000Z&quot;,
+#   &quot;last_report&quot;: null,
+#   &quot;updated_at&quot;: &quot;2023-07-20T04:02:48.132Z&quot;,
+#   &quot;created_at&quot;: &quot;2023-07-20T03:19:39.676Z&quot;,
+#   &quot;root_pass&quot;: null,
+#   &quot;architecture_id&quot;: 1,
+#   &quot;operatingsystem_id&quot;: 2,
+#   &quot;ptable_id&quot;: null,
+#   &quot;medium_id&quot;: null,
+#   &quot;build&quot;: false,
+#   &quot;comment&quot;: null,
+#   &quot;disk&quot;: null,
+#   &quot;installed_at&quot;: &quot;2023-07-20T03:20:28.857Z&quot;,
+#   &quot;model_id&quot;: 1,
+#   &quot;hostgroup_id&quot;: null,
+#   &quot;owner_id&quot;: 1,
+#   &quot;owner_type&quot;: &quot;User&quot;,
+#   &quot;enabled&quot;: true,
+#   &quot;puppet_ca_proxy_id&quot;: null,
+#   &quot;managed&quot;: false,
+#   &quot;use_image&quot;: null,
+#   &quot;image_file&quot;: &quot;&quot;,
+#   &quot;uuid&quot;: null,
+#   &quot;compute_resource_id&quot;: null,
+#   &quot;puppet_proxy_id&quot;: null,
+#   &quot;certname&quot;: &quot;client-0-changed&quot;,
+#   &quot;image_id&quot;: null,
+#   &quot;organization_id&quot;: 1,
+#   &quot;location_id&quot;: 2,
+#   &quot;otp&quot;: null,
+#   &quot;realm_id&quot;: null,
+#   &quot;compute_profile_id&quot;: null,
+#   &quot;provision_method&quot;: &quot;build&quot;,
+#   &quot;grub_pass&quot;: null,
+#   &quot;discovery_rule_id&quot;: null,
+#   &quot;global_status&quot;: 0,
+#   &quot;lookup_value_matcher&quot;: &quot;fqdn=client-0-changed&quot;,
+#   &quot;openscap_proxy_id&quot;: null,
+#   &quot;pxe_loader&quot;: null,
+#   &quot;initiated_at&quot;: &quot;2023-07-20T03:20:27.055Z&quot;,
+#   &quot;build_errors&quot;: null,
+#   &quot;content_facet_attributes&quot;: {
+#     &quot;id&quot;: 5,
+#     &quot;host_id&quot;: 6,
+#     &quot;uuid&quot;: &quot;e91e4f8d-6ace-4a7a-8af0-dd7311786042&quot;,
+#     &quot;content_view_id&quot;: 1,
+#     &quot;lifecycle_environment_id&quot;: 1,
+#     &quot;kickstart_repository_id&quot;: null,
+#     &quot;content_source_id&quot;: null,
+#     &quot;installable_security_errata_count&quot;: 0,
+#     &quot;installable_enhancement_errata_count&quot;: 0,
+#     &quot;installable_bugfix_errata_count&quot;: 0,
+#     &quot;applicable_rpm_count&quot;: 0,
+#     &quot;upgradable_rpm_count&quot;: 0,
+#     &quot;applicable_module_stream_count&quot;: 0,
+#     &quot;upgradable_module_stream_count&quot;: 0,
+#     &quot;applicable_deb_count&quot;: 0,
+#     &quot;upgradable_deb_count&quot;: 0
+#   },
+#   &quot;subscription_facet_attributes&quot;: {
+#     &quot;id&quot;: 9,
+#     &quot;host_id&quot;: 6,
+#     &quot;uuid&quot;: &quot;e91e4f8d-6ace-4a7a-8af0-dd7311786042&quot;,
+#     &quot;last_checkin&quot;: &quot;2023-07-20T04:02:46.801Z&quot;,
+#     &quot;service_level&quot;: &quot;&quot;,
+#     &quot;release_version&quot;: &quot;8.6&quot;,
+#     &quot;autoheal&quot;: true,
+#     &quot;registered_at&quot;: &quot;2023-07-20T03:20:16.000Z&quot;,
+#     &quot;registered_through&quot;: &quot;panlab-satellite-server.infra.wzhlab.top&quot;,
+#     &quot;user_id&quot;: null,
+#     &quot;hypervisor&quot;: false,
+#     &quot;hypervisor_host_id&quot;: null,
+#     &quot;purpose_usage&quot;: &quot;&quot;,
+#     &quot;purpose_role&quot;: &quot;&quot;,
+#     &quot;dmi_uuid&quot;: &quot;4C6B4D56-ACB7-585F-EB20-90FD676DEA4B&quot;
+#   }
+# }
+
+
 </code></pre>
-<p><img src="imgs/2023-07-19-12-27-24.png" alt="" /></p>
+<p>从上面的操作，可以看到，客户的需求非常简单，那么我们是可以把端口从443变成6443的。大致的过程，是在web console上配置一下入口url，然后在主机上配置iptables，做端口转发。然后，在被管理节点上，把下发的shell脚本，做个定制，就可以了。</p>
+<p>但是，需要注意，更改443端口，是红帽官方不支持的定制化，所以只能用于需求非常简单的场景中。</p>
+<h1 id="end"><a class="header" href="#end">end</a></h1>
 <h1 id="next"><a class="header" href="#next">next</a></h1>
 
                     </main>
