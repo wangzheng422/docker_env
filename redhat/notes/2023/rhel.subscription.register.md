@@ -59,6 +59,7 @@ systemctl cat rhsmcertd.service
 ### dnf using subscription-manager as plugin
 
 我们平常使用dnf的时候，会不会触发subscription-manager里面的功能呢？笔者认为不会，这是因为RHEL的dnf里面，有一个plugin
+
 ```bash
 cat /etc/dnf/plugins/subscription-manager.conf
 # [main]
