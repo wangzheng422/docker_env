@@ -2536,11 +2536,83 @@ oc patch OperatorHub/cluster --type merge \
 <p>official document:</p>
 <ul>
 <li><a href="https://access.redhat.com/documentation/en-us/red_hat_openshift_data_foundation/4.12/html/managing_and_allocating_storage_resources/configure-storage-for-openshift-container-platform-services_rhodf#configuring-image-registry-to-use-openshift-data-foundation_rhodf">Configuring Image Registry to use OpenShift Data Foundation</a></li>
+<li><a href="https://docs.openshift.com/container-platform/4.12/registry/securing-exposing-registry.html#registry-exposing-secure-registry-manually_securing-exposing-registry">Exposing the registry</a></li>
 </ul>
 <pre><code class="language-bash"># first check the default storage class
 
+# create the pvc for image registry
+cat &lt;&lt; EOF &gt; ${BASE_DIR}/data/install/pvc.image.registry.yaml
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: ocs4registry
+  namespace: openshift-image-registry
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 200Gi
+  storageClassName: ocs-storagecluster-cephfs
+EOF
 
+oc create --save-config -f ${BASE_DIR}/data/install/pvc.image.registry.yaml
 
+# then patch the cluster object to enable image register and use the pvc
+oc patch configs.imageregistry.operator.openshift.io cluster -p '{&quot;spec&quot;:{&quot;managementState&quot;: &quot;Managed&quot;,&quot;storage&quot;:{&quot;pvc&quot;:{&quot;claim&quot;:&quot;ocs4registry&quot;}}}}' --type=merge
+
+# if you want to restore
+oc patch configs.imageregistry.operator.openshift.io cluster -p '{&quot;spec&quot;:{&quot;managementState&quot;: &quot;Removed&quot;}}' --type=merge
+
+oc get clusteroperator image-registry
+# NAME             VERSION   AVAILABLE   PROGRESSING   DEGRADED   SINCE   MESSAGE
+# image-registry   4.12.16   True        True          False      3d5h    Progressing: The deployment has not completed...
+
+# wait some time for the image registry to be ready
+
+# export the image registry route
+oc patch configs.imageregistry.operator.openshift.io/cluster --patch '{&quot;spec&quot;:{&quot;defaultRoute&quot;:true}}' --type=merge
+
+HOST=$(oc get route default-route -n openshift-image-registry --template='{{ .spec.host }}')
+echo $HOST
+# default-route-openshift-image-registry.apps.demolab-ocp.wzhlab.top
+
+# login as kubeadmin, and podman login to try
+oc login https://api.demolab-ocp.wzhlab.top:6443 -u kubeadmin
+
+podman login -u kubeadmin -p $(oc whoami -t) --tls-verify=false $HOST
+# Login Succeeded!
+
+# oc config switch context back
+oc config use-context admin
+
+oc get configs.imageregistry.operator.openshift.io cluster -o json | jq .spec
+# {
+#   &quot;defaultRoute&quot;: true,
+#   &quot;httpSecret&quot;: &quot;5bb05db2f8a67fcfe9809bf83ae4a492d4ebcf51a50a29a10bea5fda938300f7d6e6c12618a618f8444d0f9579e5ca2f26120b8d90c480a564011cbf356d3528&quot;,
+#   &quot;logLevel&quot;: &quot;Normal&quot;,
+#   &quot;managementState&quot;: &quot;Managed&quot;,
+#   &quot;observedConfig&quot;: null,
+#   &quot;operatorLogLevel&quot;: &quot;Normal&quot;,
+#   &quot;proxy&quot;: {},
+#   &quot;replicas&quot;: 1,
+#   &quot;requests&quot;: {
+#     &quot;read&quot;: {
+#       &quot;maxWaitInQueue&quot;: &quot;0s&quot;
+#     },
+#     &quot;write&quot;: {
+#       &quot;maxWaitInQueue&quot;: &quot;0s&quot;
+#     }
+#   },
+#   &quot;rolloutStrategy&quot;: &quot;RollingUpdate&quot;,
+#   &quot;storage&quot;: {
+#     &quot;managementState&quot;: &quot;Unmanaged&quot;,
+#     &quot;pvc&quot;: {
+#       &quot;claim&quot;: &quot;ocs4registry&quot;
+#     }
+#   },
+#   &quot;unsupportedConfigOverrides&quot;: null
+# }
 </code></pre>
 <h1 id="11-end"><a class="header" href="#11-end">11. end</a></h1>
 
