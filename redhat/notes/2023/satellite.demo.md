@@ -812,6 +812,17 @@ sed -i 's/--server.port="443"/--server.port="6443"/g' sub.sh
 
 sed -i 's|https://panlab-satellite-server.infra.wzhlab.top/|https://panlab-satellite-server.infra.wzhlab.top:6443/|g' sub.sh 
 
+# manually modify the shell
+# comment out 2 step at the end of the script
+# 我们的场景简单，就不需要其他步骤了
+
+#     #register_katello_host | bash
+# 	echo 'skip step'
+# else
+#     #register_host | bash
+# 	echo 'skip step'
+# fi
+
 bash sub.sh
 
 
