@@ -985,6 +985,18 @@ satellite默认会从cdn.redhat.com上下载rpm，但是在客户网络里面很
 
 到这里，我们就配置成功，可以同步啦。
 
+# 安装 insight 插件
+
+```bash
+# block traffic to outside
+# except to satellite
+
+iptables -A OUTPUT -p tcp -d 172.21.6.171 -j ACCEPT
+iptables -A OUTPUT -p tcp -j DROP
+
+
+```
+
 # end
 
 # next
