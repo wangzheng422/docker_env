@@ -521,6 +521,68 @@ curl -sS --insecure 'https://panlab-satellite-server.infra.wzhlab.top/register?a
 ```
 激活失败。
 
+## 超用情况
+
+如果启用了SCA，但是不限制host数量，超用的情况下，能不能激活成功呢？我们做个实验。
+
+先导入只有1个订阅的离线订阅文件。
+
+![](imgs/2023-09-05-12-45-35.png)
+
+然后，在active key里面，放开host limit限制。
+
+![](imgs/2023-09-05-12-40-21.png)
+
+接下来，我们在2个主机上，进行激活。
+
+```bash
+
+# on 172
+# try to register
+curl -sS --insecure 'https://panlab-satellite-server.infra.wzhlab.top:6443/register?activation_keys=demo-activate&location_id=2&organization_id=1&setup_insights=false&setup_remote_execution=false&update_packages=false' -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjo0LCJpYXQiOjE2OTM4ODg5NzIsImp0aSI6IjFlNzdkNDE1OWM4NmE3OGVjOWY5NjViMWQwODRlOWY5NThlN2ExZDBkNWZhZTJjZjY3NjMzMTQ1Nzk5NTRkNWEiLCJzY29wZSI6InJlZ2lzdHJhdGlvbiNnbG9iYWwgcmVnaXN0cmF0aW9uI2hvc3QifQ.aM6lKpNfBCH-FMHU0xkc6q4XaNeuS8JezLIQCf2faxI' | bash
+# #
+# # Running registration
+# #
+# Updating Subscription Management repositories.
+# Unable to read consumer identity
+
+# This system is not registered with an entitlement server. You can use subscription-manager to register.
+
+# Error: There are no enabled repositories in "/etc/yum.repos.d", "/etc/yum/repos.d", "/etc/distro.repos.d".
+# The system has been registered with ID: b853bd17-204a-4eeb-83c7-1d07f3dea7c6
+# The registered system name is: client-0-changed
+# # Running [client-0-changed] host initial configuration
+# Refreshing subscription data
+# All local data refreshed
+# Host [client-0-changed] successfully configured.
+# Successfully updated the system facts.
+
+
+# on 173
+# try to register
+curl -sS --insecure 'https://panlab-satellite-server.infra.wzhlab.top:6443/register?activation_keys=demo-activate&location_id=2&organization_id=1&setup_insights=false&setup_remote_execution=false&update_packages=false' -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjo0LCJpYXQiOjE2OTM4ODg5NzIsImp0aSI6IjFlNzdkNDE1OWM4NmE3OGVjOWY5NjViMWQwODRlOWY5NThlN2ExZDBkNWZhZTJjZjY3NjMzMTQ1Nzk5NTRkNWEiLCJzY29wZSI6InJlZ2lzdHJhdGlvbiNnbG9iYWwgcmVnaXN0cmF0aW9uI2hvc3QifQ.aM6lKpNfBCH-FMHU0xkc6q4XaNeuS8JezLIQCf2faxI' | bash
+# #
+# # Running registration
+# #
+# Updating Subscription Management repositories.
+# Unable to read consumer identity
+
+# This system is not registered with an entitlement server. You can use subscription-manager to register.
+
+# Error: There are no enabled repositories in "/etc/yum.repos.d", "/etc/yum/repos.d", "/etc/distro.repos.d".
+# The system has been registered with ID: 4bba0a26-4f91-4bae-8752-4b073eeaee13
+# The registered system name is: satellite-client-02
+# # Running [satellite-client-02] host initial configuration
+# Refreshing subscription data
+# All local data refreshed
+# Host [satellite-client-02] successfully configured.
+# Successfully updated the system facts.
+
+```
+
+![](imgs/2023-09-05-12-48-49.png)
+
+
 # 使用 API 来注销主机
 
 一般情况下，主机注册以后就一直在satellite里面了，但是如果我们是一个云环境，主机需要频繁的注册和注销，那么我们需要一个自动的方法，让云平台来调用 satellite API，实现satellite里面的主机自动注销。
@@ -987,16 +1049,166 @@ satellite默认会从cdn.redhat.com上下载rpm，但是在客户网络里面很
 
 # 安装 insight 插件
 
+satellite也可以作为insight的proxy来使用，尝试之前，参考以下官方知识库，把对应的insight开关打开。
+
+- [Satellite host registration with insights fails with "Telemetry is not enabled for this host" message.](https://access.redhat.com/solutions/6627771)
+
+对应到实验环境，我们需要去目标主机上，单独打开insight开关
+
+![](imgs/2023-09-05-13-06-50.png)
+
+默认是关上的(false)
+
+![](imgs/2023-09-05-13-07-24.png)
+
+我们打开它。
+![](imgs/2023-09-05-13-08-01.png)
+
+然后，我们去目标主机，进行操作。我们先模拟离线环境，做iptables规则，关闭所有出流量，只留下satellite。
+
 ```bash
 # block traffic to outside
 # except to satellite
 
 iptables -A OUTPUT -p tcp -d 172.21.6.171 -j ACCEPT
-iptables -A OUTPUT -p tcp -j DROP
+iptables -A OUTPUT -p tcp --sport 22 -j ACCEPT
+iptables -A OUTPUT -p tcp -j REJECT
 
+
+# try to register on insight
+insights-client --register
+# Successfully registered host client-0-changed
+# Automatic scheduling for Insights has been enabled.
+# Starting to collect Insights data for client-0-changed
+# Uploading Insights data.
+# Successfully uploaded report from client-0-changed to account 5910538.
+# View the Red Hat Insights console at https://console.redhat.com/insights/
+
+insights-client --check-results
+
+insights-client --show-results
+# [
+#  {
+#   "rule": {
+#    "rule_id": "generate_vmcore_failed_during_makedumpfile|GENERATE_VMCORE_FAILED_DURING_MAKEDUMPFILE",
+#    "created_at": "2023-02-08T08:31:18.561333Z",
+#    "updated_at": "2023-03-05T08:31:21.314917Z",
+#    "description": "The vmcore generation fails in RHEL 8.6 when \"cgroup_disable=memory\" is configured due to a known bug in the kernel",
+#    "active": true,
+#    "category": {
+#     "id": 1,
+#     "name": "Availability"
+#    },
+#    "impact": {
+#     "name": "Kernel Panic",
+#     "impact": 4
+#    },
+#    "likelihood": 3,
+#    "node_id": "6969010",
+#    "tags": "kdump kernel panic",
+#    "reboot_required": true,
+#    "publish_date": "2023-03-05T03:26:00Z",
+#    "summary": "The vmcore generation fails in RHEL 8.6 when \"cgroup_disable=memory\" is configured due to a known bug in the kernel.\n",
+#    "generic": "The vmcore generation fails in RHEL 8.6 when \"cgroup_disable=memory\" is configured due to a known bug in the kernel.\n",
+#    "reason": "This host is running **RHEL 8.6** with **kernel-{{=pydata.rhel_version}}** and \n**\"cgroup_disable=memory\"** is appended to the **KDUMP_COMMANDLINE_APPEND** in\nthe `/etc/sysconfig/kdump`:\n~~~\nKDUMP_COMMANDLINE_APPEND=\"{{=pydata.kdump_data_append}}\"\n~~~\n\nHowever, due to a known bug in the kernel versions prior to **4.18.0-372.40.1.el8_6**, \nthe vmcore generation fails when **\"cgroup_disable=memory\"** is appended to \n**KDUMP_COMMANDLINE_APPEND** in the `/etc/sysconfig/kdump`.\n",
+#    "more_info": "",
+#    "resolution_set": [
+#     {
+#      "system_type": 105,
+#      "resolution": "Red Hat recommends that you perform the following steps:\n\n{{?pydata.cur_lock && pydata.rcm_locks}}\n* Unset the release lock.\n  ~~~\n  # subscription-manager release --unset\n  ~~~\n{{?}}\n\n{{?pydata.no_base &&\n  (pydata.cur_lock==null || (pydata.cur_lock && pydata.rcm_locks))}}\n* Enable the RHEL base repo:\n  ~~~\n  # subscription-manager repos --enable={{=pydata.no_base}}\n  ~~~\n  Note: To fix the issue in the base channel, you have to enable the base channel at first.\n{{?}}\n\n{{?pydata.cur_lock && pydata.req_repos && pydata.rcm_locks==null}}\n* {{?Object.keys(pydata.req_repos).length > 1}}Enable one of the following channels{{??}}Enable the following channel{{?}}:\n  ~~~\n  {{~pydata.req_repos:e}}# subscription-manager repos --enable={{=e}}\n  {{~}}\n  ~~~\n  Note: Red Hat only provides the resolution in the required channel{{?Object.keys(pydata.req_repos).length > 1}}s{{?}}. \n{{?}}\n* Update the `kernel` package:\n  ~~~\n  # yum update kernel\n  ~~~\n* Reboot the system with the new kernel:\n  ~~~\n  # reboot\n  ~~~\n{{?pydata.cur_lock && pydata.rcm_locks}}\n**Alternatively**, if unsetting the release lock is not an option, fix this issue by re-setting the release lock to {{?Object.keys(pydata.rcm_locks).length > 1}}one of the RHEL releases ``{{~pydata.rcm_locks:e}}{{=e}}, {{~}}``{{??}}the RHEL release ``{{=pydata.rcm_locks[0]}}``{{?}} and updating the package.{{?}}\n\n\nAfter applying the remediation, refresh the results of Advisor analysis by running the `insights-client` command on the system. \n~~~ \n# insights-client \n~~~ \n",
+#      "resolution_risk": {
+#       "name": "Upgrade Kernel",
+#       "risk": 3
+#      },
+#      "has_playbook": true
+#     }
+#    ],
+#    "total_risk": 3
+#   },
+#   "details": {
+#    "type": "rule",
+#    "error_key": "GENERATE_VMCORE_FAILED_DURING_MAKEDUMPFILE",
+#    "rhel_version": "4.18.0-372.32.1.el8_6.x86_64",
+#    "kdump_data_append": "irqpoll nr_cpus=1 reset_devices cgroup_disable=memory mce=off numa=off udev.children-max=2 panic=10 rootflags=nofail acpi_no_memhotplug transparent_hugepage=never nokaslr novmcoredd hest_disable"
+#   },
+#   "resolution": {
+#    "system_type": 105,
+#    "resolution": "Red Hat recommends that you perform the following steps:\n\n{{?pydata.cur_lock && pydata.rcm_locks}}\n* Unset the release lock.\n  ~~~\n  # subscription-manager release --unset\n  ~~~\n{{?}}\n\n{{?pydata.no_base &&\n  (pydata.cur_lock==null || (pydata.cur_lock && pydata.rcm_locks))}}\n* Enable the RHEL base repo:\n  ~~~\n  # subscription-manager repos --enable={{=pydata.no_base}}\n  ~~~\n  Note: To fix the issue in the base channel, you have to enable the base channel at first.\n{{?}}\n\n{{?pydata.cur_lock && pydata.req_repos && pydata.rcm_locks==null}}\n* {{?Object.keys(pydata.req_repos).length > 1}}Enable one of the following channels{{??}}Enable the following channel{{?}}:\n  ~~~\n  {{~pydata.req_repos:e}}# subscription-manager repos --enable={{=e}}\n  {{~}}\n  ~~~\n  Note: Red Hat only provides the resolution in the required channel{{?Object.keys(pydata.req_repos).length > 1}}s{{?}}. \n{{?}}\n* Update the `kernel` package:\n  ~~~\n  # yum update kernel\n  ~~~\n* Reboot the system with the new kernel:\n  ~~~\n  # reboot\n  ~~~\n{{?pydata.cur_lock && pydata.rcm_locks}}\n**Alternatively**, if unsetting the release lock is not an option, fix this issue by re-setting the release lock to {{?Object.keys(pydata.rcm_locks).length > 1}}one of the RHEL releases ``{{~pydata.rcm_locks:e}}{{=e}}, {{~}}``{{??}}the RHEL release ``{{=pydata.rcm_locks[0]}}``{{?}} and updating the package.{{?}}\n\n\nAfter applying the remediation, refresh the results of Advisor analysis by running the `insights-client` command on the system. \n~~~ \n# insights-client \n~~~ \n",
+#    "resolution_risk": {
+#     "name": "Upgrade Kernel",
+#     "risk": 3
+#    },
+#    "has_playbook": true
+#   },
+#   "impacted_date": "2023-09-05T05:09:54.945795Z"
+#  },
+#  {
+#   "rule": {
+#    "rule_id": "el8_to_el9_upgrade|RHEL8_TO_RHEL9_UPGRADE_AVAILABLE_V1",
+#    "created_at": "2023-07-18T08:45:10.136263Z",
+#    "updated_at": "2023-09-04T20:32:26.551599Z",
+#    "description": "RHEL 8 system is eligible for an in-place upgrade to RHEL 9 using the Leapp utility",
+#    "active": true,
+#    "category": {
+#     "id": 4,
+#     "name": "Performance"
+#    },
+#    "impact": {
+#     "name": "Best Practice",
+#     "impact": 1
+#    },
+#    "likelihood": 1,
+#    "node_id": "6955478",
+#    "tags": "autoack kernel leapp",
+#    "reboot_required": true,
+#    "publish_date": "2023-08-11T08:32:29Z",
+#    "summary": "Red Hat provides `leapp` utility to support upgrade from **RHEL 8** to **RHEL 9**. The current **RHEL 8** version is eligible for upgrade to **RHEL 9** via `leapp` utility. Red Hat recommends that you install `leapp` packages.\n\nOne way to install `leapp` is during execution of **RHEL preupgrade analysis utility** in *Automation Toolkit -> Tasks* service. Run this task to understand the impact of an upgrade on your fleet and make a remediation plan before your maintenance window begins.\n",
+#    "generic": "Red Hat provides `leapp` utility to support upgrade from **RHEL 8** to **RHEL 9**. The current **RHEL 8** version is eligible for upgrade to **RHEL 9** via `leapp` utility. Red Hat recommends that you install `leapp` packages.\n\nOne way to install `leapp` is during execution of **RHEL preupgrade analysis utility** in *Automation Toolkit -> Tasks* service. Run this task to understand the impact of an upgrade on your fleet and make a remediation plan before your maintenance window begins.\n",
+#    "reason": "{{? pydata.error_key == \"RHEL8_TO_RHEL9_UPGRADE_AVAILABLE\"}}\nThe current **RHEL** version **{{=pydata.supported_path[0]}}** is eligible for upgrade to **RHEL** version {{? pydata.supported_path.length > 2}}**{{=pydata.supported_path[2]}}** (default) or **{{=pydata.supported_path[1]}}**{{??}}**{{=pydata.supported_path[1]}}**{{?}} via the Leapp utility.\n{{?}}\n\n{{? pydata.error_key == \"RHEL8_TO_RHEL9_UPGRADE_AVAILABLE_RPMS\"}}\nThe Leapp utility is available on this system. The current **RHEL** version **{{=pydata.supported_path[0]}}** is eligible for upgrade to **RHEL** version {{? pydata.supported_path.length > 2}}**{{=pydata.supported_path[2]}}** (default) or **{{=pydata.supported_path[1]}}**{{??}}**{{=pydata.supported_path[1]}}**{{?}} via the Leapp utility.\n{{?}}\n",
+#    "more_info": "One way to install `leapp` is during execution of **RHEL preupgrade analysis utility** in [Automation Toolkit -> Tasks](https://console.redhat.com/insights/tasks) service. Run this task to understand the impact of an upgrade on your fleet and make a remediation plan before your maintenance window begins.\n",
+#    "resolution_set": [
+#     {
+#      "system_type": 105,
+#      "resolution": "Red Hat recommends that you upgrade to **RHEL9** with the following steps:\n\n{{? pydata.error_key == \"RHEL8_TO_RHEL9_UPGRADE_AVAILABLE\"}}\n1. Planning an upgrade according to these [points](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/9/html/upgrading_from_rhel_8_to_rhel_9/planning-an-upgrade_upgrading-from-rhel-8-to-rhel-9)\n1. Preparing a RHEL 8 system for the upgrade according to this [procedure](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/9/html/upgrading_from_rhel_8_to_rhel_9/assembly_preparing-for-the-upgrade_upgrading-from-rhel-8-to-rhel-9).\n\n1. Install `leapp` utility.\n   ~~~\n   # dnf install leapp-upgrade\n   ~~~\n1. Identify potential upgrade problems before upgrade.\n   ~~~\n   # leapp preupgrade --target {{? pydata.supported_path.length > 2}}{{=pydata.supported_path[2]}}{{??}}{{=pydata.supported_path[1]}}{{?}}\n   ~~~\n   **Note**: Check `/var/log/leapp/leapp-report.txt` or web console for any pre-check failure and refer to [Reviewing the pre-upgrade report](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/9/html/upgrading_from_rhel_8_to_rhel_9/reviewing-the-pre-upgrade-report_upgrading-from-rhel-8-to-rhel-9) for more details. \n1. Start the upgrade.\n   ~~~\n   # leapp upgrade --target {{? pydata.supported_path.length > 2}}{{=pydata.supported_path[2]}}{{??}}{{=pydata.supported_path[1]}}{{?}}\n   ~~~\n1. Reboot system.\n   ~~~\n   # reboot\n   ~~~\n{{?}}\n\n{{? pydata.error_key == \"RHEL8_TO_RHEL9_UPGRADE_AVAILABLE_RPMS\"}}\n1. Planning an upgrade according to these [points](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/9/html/upgrading_from_rhel_8_to_rhel_9/planning-an-upgrade_upgrading-from-rhel-8-to-rhel-9)\n1. Preparing a RHEL 8 system for the upgrade according to this [procedure](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/9/html/upgrading_from_rhel_8_to_rhel_9/assembly_preparing-for-the-upgrade_upgrading-from-rhel-8-to-rhel-9).\n\n1. Identify potential upgrade problems before upgrade.\n   ~~~\n   # leapp preupgrade --target {{? pydata.supported_path.length > 2}}{{=pydata.supported_path[2]}}{{??}}{{=pydata.supported_path[1]}}{{?}}\n   ~~~\n1. Start the upgrade.\n   ~~~\n   # leapp upgrade --target {{? pydata.supported_path.length > 2}}{{=pydata.supported_path[2]}}{{??}}{{=pydata.supported_path[1]}}{{?}}\n   ~~~\n   **Note**: Check `/var/log/leapp/leapp-report.txt` or web console for any pre-check failure and refer to [Reviewing the pre-upgrade report](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/9/html/upgrading_from_rhel_8_to_rhel_9/reviewing-the-pre-upgrade-report_upgrading-from-rhel-8-to-rhel-9) for more details.\n1. Reboot system.\n   ~~~\n   # reboot\n   ~~~\n{{?}}\nFor more details about upgrading, refer to [Upgrading to RHEL9](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/9/html/upgrading_from_rhel_8_to_rhel_9/index).\n\n\nAfter applying the remediation, refresh the results of Advisor analysis by running the `insights-client` command on the system. \n~~~ \n# insights-client \n~~~ \n",
+#      "resolution_risk": {
+#       "name": "Upgrade RHEL",
+#       "risk": 3
+#      },
+#      "has_playbook": false
+#     }
+#    ],
+#    "total_risk": 1
+#   },
+#   "details": {
+#    "type": "rule",
+#    "error_key": "RHEL8_TO_RHEL9_UPGRADE_AVAILABLE_V1",
+#    "supported_path": [
+#     "8.6",
+#     "9.0"
+#    ]
+#   },
+#   "resolution": {
+#    "system_type": 105,
+#    "resolution": "Red Hat recommends that you upgrade to **RHEL9** with the following steps:\n\n{{? pydata.error_key == \"RHEL8_TO_RHEL9_UPGRADE_AVAILABLE\"}}\n1. Planning an upgrade according to these [points](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/9/html/upgrading_from_rhel_8_to_rhel_9/planning-an-upgrade_upgrading-from-rhel-8-to-rhel-9)\n1. Preparing a RHEL 8 system for the upgrade according to this [procedure](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/9/html/upgrading_from_rhel_8_to_rhel_9/assembly_preparing-for-the-upgrade_upgrading-from-rhel-8-to-rhel-9).\n\n1. Install `leapp` utility.\n   ~~~\n   # dnf install leapp-upgrade\n   ~~~\n1. Identify potential upgrade problems before upgrade.\n   ~~~\n   # leapp preupgrade --target {{? pydata.supported_path.length > 2}}{{=pydata.supported_path[2]}}{{??}}{{=pydata.supported_path[1]}}{{?}}\n   ~~~\n   **Note**: Check `/var/log/leapp/leapp-report.txt` or web console for any pre-check failure and refer to [Reviewing the pre-upgrade report](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/9/html/upgrading_from_rhel_8_to_rhel_9/reviewing-the-pre-upgrade-report_upgrading-from-rhel-8-to-rhel-9) for more details. \n1. Start the upgrade.\n   ~~~\n   # leapp upgrade --target {{? pydata.supported_path.length > 2}}{{=pydata.supported_path[2]}}{{??}}{{=pydata.supported_path[1]}}{{?}}\n   ~~~\n1. Reboot system.\n   ~~~\n   # reboot\n   ~~~\n{{?}}\n\n{{? pydata.error_key == \"RHEL8_TO_RHEL9_UPGRADE_AVAILABLE_RPMS\"}}\n1. Planning an upgrade according to these [points](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/9/html/upgrading_from_rhel_8_to_rhel_9/planning-an-upgrade_upgrading-from-rhel-8-to-rhel-9)\n1. Preparing a RHEL 8 system for the upgrade according to this [procedure](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/9/html/upgrading_from_rhel_8_to_rhel_9/assembly_preparing-for-the-upgrade_upgrading-from-rhel-8-to-rhel-9).\n\n1. Identify potential upgrade problems before upgrade.\n   ~~~\n   # leapp preupgrade --target {{? pydata.supported_path.length > 2}}{{=pydata.supported_path[2]}}{{??}}{{=pydata.supported_path[1]}}{{?}}\n   ~~~\n1. Start the upgrade.\n   ~~~\n   # leapp upgrade --target {{? pydata.supported_path.length > 2}}{{=pydata.supported_path[2]}}{{??}}{{=pydata.supported_path[1]}}{{?}}\n   ~~~\n   **Note**: Check `/var/log/leapp/leapp-report.txt` or web console for any pre-check failure and refer to [Reviewing the pre-upgrade report](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/9/html/upgrading_from_rhel_8_to_rhel_9/reviewing-the-pre-upgrade-report_upgrading-from-rhel-8-to-rhel-9) for more details.\n1. Reboot system.\n   ~~~\n   # reboot\n   ~~~\n{{?}}\nFor more details about upgrading, refer to [Upgrading to RHEL9](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/9/html/upgrading_from_rhel_8_to_rhel_9/index).\n\n\nAfter applying the remediation, refresh the results of Advisor analysis by running the `insights-client` command on the system. \n~~~ \n# insights-client \n~~~ \n",
+#    "resolution_risk": {
+#     "name": "Upgrade RHEL",
+#     "risk": 3
+#    },
+#    "has_playbook": false
+#   },
+#   "impacted_date": "2023-09-05T05:09:54.945795Z"
+#  }
+# ]
 
 ```
 
+最后，我们能在公网的insight console上，看到我们的主机。
+
+![](imgs/2023-09-05-13-13-20.png)
+
+同时，我们注意到，虽然在公网的insight上，能看到这个主机，但是在access.redhat.com的订阅管理中，是看不到这个被管主机的。
+
+总结以下，satellite可以作为insight的proxy使用，但是在实验过程中，我发现insight的结果，只能在主机自己，和insight公网console上展现，而satellite上面，虽然有insight结果展示的入口页面，但是页面是空的，也许有别的配置吧。
 # end
 
 # next
