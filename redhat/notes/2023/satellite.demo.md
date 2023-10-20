@@ -706,7 +706,17 @@ subscription-manager refresh
 ## 使用 host id 来注销
 
 ```bash
-# get host id from satellite
+# get host uuid on the managed host
+subscription-manager facts | grep system.uuid
+# dmi.system.uuid: 4C6B4D56-ACB7-585F-EB20-90FD676DEA4B
+
+# get host id from satellite by identity
+curl -s --request GET --insecure --user admin:redhat \
+  https://panlab-satellite-server.infra.wzhlab.top/api/v2/hosts?search=facts.dmi::system::uuid=4C6B4D56-ACB7-585F-EB20-90FD676DEA4B | \
+  jq .results[0].id
+# 8
+
+# get host id from satellite by name
 curl -s --request GET --insecure --user admin:redhat \
 https://panlab-satellite-server.infra.wzhlab.top/api/hosts/panlab-satellite-client | jq .id
 # 2
