@@ -710,6 +710,11 @@ subscription-manager refresh
 subscription-manager facts | grep system.uuid
 # dmi.system.uuid: 4C6B4D56-ACB7-585F-EB20-90FD676DEA4B
 
+# check how many uuid you can find, from another host
+subscription-manager facts | grep uuid
+# dmi.system.uuid: 8DF84D56-895F-6163-962B-30EF44BDE122
+# virt.uuid: 8DF84D56-895F-6163-962B-30EF44BDE122
+
 # get host id from satellite by uuid
 curl -s --request GET --insecure --user admin:redhat \
   https://panlab-satellite-server.infra.wzhlab.top/api/v2/hosts?search=facts.dmi::system::uuid=4C6B4D56-ACB7-585F-EB20-90FD676DEA4B | \
@@ -1219,6 +1224,34 @@ insights-client --show-results
 同时，我们注意到，虽然在公网的insight上，能看到这个主机，但是在access.redhat.com的订阅管理中，是看不到这个被管主机的。
 
 总结以下，satellite可以作为insight的proxy使用，但是在实验过程中，我发现insight的结果，只能在主机自己，和insight公网console上展现，而satellite上面，虽然有insight结果展示的入口页面，但是页面是空的，也许有别的配置吧。
+
+# 重装os
+
+客户有一个特殊场景，如果rhel重装了，那么satellite上面，原来的信息要怎么处理？是否可以不删除satellite上面的信息，直接在rhel上面注册，复用之前的注册信息呢？我们试试
+
+我们重装实验环境中的一台主机
+
+```bash
+# before reinstall, we check the uuid
+subscription-manager facts | grep uuid
+# dmi.system.uuid: 8DF84D56-895F-6163-962B-30EF44BDE122
+# virt.uuid: 8DF84D56-895F-6163-962B-30EF44BDE122
+
+# after reinstall os
+# we can see the uuid is the same
+subscription-manager facts | grep uuid
+# dmi.system.uuid: 8DF84D56-895F-6163-962B-30EF44BDE122
+# virt.uuid: 8DF84D56-895F-6163-962B-30EF44BDE122
+
+# try to register again
+curl -sS --insecure 'https://panlab-satellite-server.infra.wzhlab.top/register?activation_keys=demo-activate&location_id=2&organization_id=1&setup_insights=false&setup_remote_execution=false&setup_remote_execution_pull=false&update_packages=false' -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjo0LCJpYXQiOjE2ODQzMDU1MTYsImp0aSI6IjdiODBkNzdmMjVjYzY1MDZjODQ3OGI2Y2VjNzRkZWZjOGM2YjAyMDUxMDQ4YTcyYTJlMWE1YzRiNTgyMjE5NzAiLCJzY29wZSI6InJlZ2lzdHJhdGlvbiNnbG9iYWwgcmVnaXN0cmF0aW9uI2hvc3QifQ.EVXyW9gjWyAQIFYUxnwwdxAigrPmUo_XYWnqn-Wh1Fw' | bash
+# ......
+# The DMI UUID of this host (8DF84D56-895F-6163-962B-30EF44BDE122) matches other registered hosts: satellite-client-02 (HTTP error code 422: Unprocessable Entity)
+
+```
+
+好了，我们看到了结论，satellite发现，已经有一个相同的uuid主机存在，不能再注册了。我们能做的，就是先在satellite里面，把现在已经存在的这个registry给删掉。
+
 # end
 
 # next
