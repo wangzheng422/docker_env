@@ -13,6 +13,29 @@
 
 ![](./dia/satellite.demo.01.drawio.svg)
 
+- [satellite 作为yum repo的简单演示](#satellite-作为yum-repo的简单演示)
+- [安装 satellite server](#安装-satellite-server)
+- [下载订阅信息](#下载订阅信息)
+- [导入订阅信息](#导入订阅信息)
+- [配置 yum repo 镜像](#配置-yum-repo-镜像)
+- [配置 active key](#配置-active-key)
+- [注册主机](#注册主机)
+- [增加订阅数量](#增加订阅数量)
+- [超用会发生什么](#超用会发生什么)
+- [激活 Simple Content Access (SCA)](#激活-simple-content-access-sca)
+  - [超用情况](#超用情况)
+- [使用 API 来注销主机](#使用-api-来注销主机)
+  - [使用 hostname 来注销](#使用-hostname-来注销)
+  - [使用 host id 来注销](#使用-host-id-来注销)
+- [网络防火墙端口](#网络防火墙端口)
+- [端口转发](#端口转发)
+- [中国区加速](#中国区加速)
+- [安装 insight 插件](#安装-insight-插件)
+- [重装os](#重装os)
+- [end](#end)
+- [next](#next)
+
+
 # 安装 satellite server
 
 satellite的完整产品架构里面，有server，还有独立的capsule，我们是极简部署，而且server里面也有内置的capsule，所以我们这次就部署一个server就好了。
