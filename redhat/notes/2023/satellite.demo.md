@@ -1273,7 +1273,7 @@ curl -sS --insecure 'https://panlab-satellite-server.infra.wzhlab.top/register?a
 
 ```
 
-好了，我们看到了结论，satellite发现，已经有一个相同的uuid主机存在，不能再注册了。我们能做的，就是先在satellite里面，把现在已经存在的这个registry给删掉。
+好了，我们看到了结论，satellite发现，已经有一个相同的uuid主机存在，不能再注册了。我们能做的，就是先在satellite里面，把现在已经存在的这个主机给删掉。
 
 # end
 
