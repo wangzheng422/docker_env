@@ -32,6 +32,7 @@
 - [中国区加速](#中国区加速)
 - [安装 insight 插件](#安装-insight-插件)
 - [重装os](#重装os)
+  - [change uuid](#change-uuid)
 - [end](#end)
 - [next](#next)
 
@@ -1274,6 +1275,18 @@ curl -sS --insecure 'https://panlab-satellite-server.infra.wzhlab.top/register?a
 ```
 
 好了，我们看到了结论，satellite发现，已经有一个相同的uuid主机存在，不能再注册了。我们能做的，就是先在satellite里面，把现在已经存在的这个主机给删掉。
+
+## change uuid
+
+我们知道了，uuid是注册satellite的一个key，但是，如果我们的环境特殊，uuid就是重复的，那么怎么办呢？官方有解决方案
+- [How to register multiple Content Hosts with same UUID to Red Hat Satellite 6?](https://access.redhat.com/solutions/4207781)
+
+```
+[root@client ~]# vi /etc/rhsm/facts/uuid.facts 
+{"dmi.system.uuid": "customuuid"}
+
+* customuuid = hostname which is unique for every machine.
+```
 
 # end
 
