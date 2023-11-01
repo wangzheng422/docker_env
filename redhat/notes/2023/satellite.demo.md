@@ -1291,7 +1291,7 @@ curl -sS --insecure 'https://panlab-satellite-server.infra.wzhlab.top/register?a
 
 # 监控 subscription / 订阅
 
-客户想自动化的监控订阅的过期时间，好及时的更新订阅。虽然我们可以在红帽的portal上面方便的看到订阅的状态，但是，如果我们是运维组，没有访问红帽portal的权限，还是需要一个监控的工具来做这件事情。
+客户想自动化的监控订阅的过期时间，好及时的更新订阅。虽然我们可以在红帽的portal上面方便的看到订阅的状态，但是，如果我们是运维组，没有访问红帽portal的权限（内部沟通协调问题，你懂的），还是需要一个监控的工具来做这件事情。
 
 那么我们就用 satellite 的 API 来做这件事情。
 
