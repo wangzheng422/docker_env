@@ -33,6 +33,7 @@
 - [安装 insight 插件](#安装-insight-插件)
 - [重装os](#重装os)
   - [change uuid](#change-uuid)
+- [监控 subscription / 订阅](#监控-subscription--订阅)
 - [end](#end)
 - [next](#next)
 
@@ -1287,6 +1288,24 @@ curl -sS --insecure 'https://panlab-satellite-server.infra.wzhlab.top/register?a
 
 * customuuid = hostname which is unique for every machine.
 ```
+
+# 监控 subscription / 订阅
+
+客户想自动化的监控订阅的过期时间，好及时的更新订阅。虽然我们可以在红帽的portal上面方便的看到订阅的状态，但是，如果我们是运维组，没有访问红帽portal的权限，还是需要一个监控的工具来做这件事情。
+
+那么我们就用 satellite 的 API 来做这件事情。
+
+```bash
+
+curl -s --request GET --insecure --user admin:redhat \
+  https://panlab-satellite-server.infra.wzhlab.top:6443//katello/api/subscriptions?organization_id=1 | \
+  jq -r '["Name","End Date"], (.results[] | [.name, .end_date] ) | @tsv '
+# Name    End Date
+# Employee SKU    2027-01-01 04:59:59 UTC
+
+```
+
+从上面的例子，我们可以看到，从 satellite API 里面，能直接拿到订阅的过期时间。方便运维组监控。
 
 # end
 
