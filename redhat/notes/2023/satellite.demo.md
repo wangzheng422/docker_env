@@ -1297,6 +1297,7 @@ curl -sS --insecure 'https://panlab-satellite-server.infra.wzhlab.top/register?a
 
 ```bash
 
+# you can get the org_id by search a host, the result json contain org_id
 curl -s --request GET --insecure --user admin:redhat \
   https://panlab-satellite-server.infra.wzhlab.top:6443//katello/api/subscriptions?organization_id=1 | \
   jq -r '["Name","End Date"], (.results[] | [.name, .end_date] ) | @tsv '
