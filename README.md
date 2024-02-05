@@ -7,7 +7,7 @@
 - 2024 之后
   - [2024.02 llama code 配合 vscode 做代码补全 openshift AI 版本](https://github.com/wangzheng422/pub_env_2024/blob/main/ocp4/4.14/4.14.codellama.vscode.ocp.ai.md)
   - [2024.02 llama code 配合 vscode 做代码补全 openshift 版本](https://github.com/wangzheng422/pub_env_2024/blob/main/ocp4/4.14/4.14.codellama.vscode.ocp.md)
-  - [2024.01 llama code 配合 vscode 做代码补全](https://github.com/wangzheng422/pub_env_2024/blob/main/notes/2024.01.codellama.vscode.md)
+  - [2024.01 llama code 配合 vscode 做代码补全 rhel 版本](https://github.com/wangzheng422/pub_env_2024/blob/main/notes/2024.01.codellama.vscode.md)
 - openshift4 安装系列
   - [如何获得 openshift4 免费下载密钥](redhat/ocp4/4.5/4.5.ocp.pull.secret.md)
   - [openshift4 离线安装介质的制作](redhat/ocp4/4.6/4.6.build.dist.md)
