@@ -5,6 +5,7 @@
 
 目前仓库中，有很多经验分享，其中的一些文章，比较有用：
 - 2024 之后
+  - [2024.02 llama code 配合 vscode 做代码补全 nvidia jetson 版本](https://github.com/wangzheng422/pub_env_2024/blob/main/notes/2024.01.codellama.jetson.md)
   - [2024.02 llama code 配合 vscode 做代码补全 openshift AI 版本](https://github.com/wangzheng422/pub_env_2024/blob/main/ocp4/4.14/4.14.codellama.vscode.ocp.ai.md)
   - [2024.02 llama code 配合 vscode 做代码补全 openshift 版本](https://github.com/wangzheng422/pub_env_2024/blob/main/ocp4/4.14/4.14.codellama.vscode.ocp.md)
   - [2024.01 llama code 配合 vscode 做代码补全 rhel 版本](https://github.com/wangzheng422/pub_env_2024/blob/main/notes/2024.01.codellama.vscode.md)
