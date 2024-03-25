@@ -174,3 +174,14 @@ dnf reposync --repoid=codeready-builder-for-rhel-8-x86_64-rpms -m --download-met
 
 
 ```
+
+# search
+
+```bash
+
+yum provides \*bin/htpasswd
+
+```
+
+
+# end
