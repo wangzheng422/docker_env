@@ -11,25 +11,35 @@ OpenShift的安装方式很多了，现在又多了一种，agent based installe
 # on helper node
 
 ```bash
+# create a user and create the cluster under the user
+
+useradd -m poc
+
+su - poc
 
 # switch to you install version
 
-export BUILDNUMBER=4.12.9
+export BUILDNUMBER=4.12.3
 
-pushd /data/ocp4/${BUILDNUMBER}
-tar -xzf openshift-client-linux-${BUILDNUMBER}.tar.gz -C /usr/local/bin/
-tar -xzf openshift-install-linux-${BUILDNUMBER}.tar.gz -C /usr/local/bin/
+pushd /data/ocp-${BUILDNUMBER}
+tar -xzf openshift-client-linux-${BUILDNUMBER}.tar.gz -C ~/.local/bin/
+tar -xzf openshift-install-linux-${BUILDNUMBER}.tar.gz -C ~/.local/bin/
 # tar -xzf oc-mirror.tar.gz -C /usr/local/bin/
 # chmod +x /usr/local/bin/oc-mirror
-install -m 755 /data/ocp4/clients/butane-amd64 /usr/local/bin/butane
-install -m 755 /data/ocp4/clients/coreos-installer_amd64 /usr/local/bin/coreos-installer
+install -m 755 /data/ocp4/clients/butane-amd64 ~/.local/bin/butane
+install -m 755 /data/ocp4/clients/coreos-installer_amd64 ~/.local/bin/coreos-installer
 popd
+
+oc adm release mirror -a $SEC_FILE \
+  --from=quay.io/openshift-release-dev/ocp-release:$BUILDNUMBER-x86_64 \
+  --to=quaylab.infra.wzhlab.top:5443/ocp4/openshift4
+
 
 # create a user and create the cluster under the user
 
-useradd -m 3node
+useradd -m poc
 
-su - 3node
+su - poc
 
 ssh-keygen
 
@@ -48,7 +58,7 @@ EOF
 
 # export BASE_DIR='/home/3node/'
 
-export BUILDNUMBER=4.12.9
+export BUILDNUMBER=4.12.3
 
 mkdir -p ${BASE_DIR}/data/{sno/disconnected,install}
 
@@ -356,7 +366,7 @@ lvextend -l +100%FREE vgdata/poolA
 
 mkdir -p /data/kvm/one/
 
-scp root@192.168.77.11:/home/3node/data/install/agent.x86_64.iso /data/kvm/one/
+scp root@192.168.77.11:/home/poc/data/install/agent.x86_64.iso /data/kvm/one/
 
 create_lv() {
     var_vg=$1
@@ -378,13 +388,12 @@ SNO_MEM=64
 virsh destroy ocp4-acm-one-master-01
 virsh undefine ocp4-acm-one-master-01
 
-create_lv vgdata poolA lvacm-one-master-01 500G recreate
-create_lv vgdata poolA lvacm-one-master-01-data 500G recreate
+create_lv vgdata poolA lvacm-one-master-01 120G recreate
+# create_lv vgdata poolA lvacm-one-master-01-data 500G recreate
 
 virt-install --name=ocp4-acm-one-master-01 --vcpus=16 --ram=$(($SNO_MEM*1024)) \
   --cpu=host-model \
   --disk path=/dev/vgdata/lvacm-one-master-01,device=disk,bus=virtio,format=raw \
-  --disk path=/dev/vgdata/lvacm-one-master-01-data,device=disk,bus=virtio,format=raw \
   --os-variant rhel8.3 --network bridge=baremetal,model=virtio,mac=52:54:00:12:A1:01 \
   --graphics vnc,port=59003 --noautoconsole \
   --boot menu=on --cdrom /data/kvm/one/agent.x86_64.iso
@@ -414,11 +423,12 @@ openshift-install --dir=${BASE_DIR}/data/install agent wait-for bootstrap-comple
 cd ${BASE_DIR}/data/install
 openshift-install --dir=${BASE_DIR}/data/install agent wait-for install-complete --log-level=debug
 # ......
+# INFO Cluster is installed
 # INFO Install complete!
 # INFO To access the cluster as the system:admin user when using 'oc', run
-# INFO     export KUBECONFIG=/home/3node/data/install/auth/kubeconfig
+# INFO     export KUBECONFIG=/home/poc/data/install/auth/kubeconfig
 # INFO Access the OpenShift web-console here: https://console-openshift-console.apps.osp-demo.wzhlab.top
-# INFO Login to the console with user: "kubeadmin", and password: "UmfI2-99uAb-BRdaS-LLjQ9"
+# INFO Login to the console with user: "kubeadmin", and password: "tY3sx-kb5pt-DSU9B-3Y3Lv"
 
 ```
 
@@ -471,9 +481,9 @@ sudo sh -c 'echo "RET=\\\`oc config use-context system:admin\\\`" >> /root/.bash
 
 EOF
 
-for i in 23 24 25
+for i in 46 47
 do
-  ssh core@192.168.7.$i < ${BASE_DIR}/data/install/crack.txt
+  ssh core@192.168.77.$i < ${BASE_DIR}/data/install/crack.txt
 done
 
 ```
@@ -484,9 +494,9 @@ done
 # https://unix.stackexchange.com/questions/230084/send-the-password-through-stdin-in-ssh-copy-id
 dnf install -y sshpass
 
-for i in 23 24 25
+for i in 43 46 47
 do
-  sshpass -p 'redhat' ssh-copy-id root@192.168.7.$i
+  sshpass -p 'redhat' ssh-copy-id root@192.168.77.$i
 done
 
 ```
@@ -540,7 +550,7 @@ unset KUBECONFIG
 ```bash
 
 # first, lets stick ingress to master
-oc label node acm-demo-hub-master  ocp-ingress-run="true"
+oc label node master-01-demo ocp-ingress-run="true"
 
 oc patch ingresscontroller default -n openshift-ingress-operator --type=merge --patch='{"spec":{"nodePlacement":{"nodeSelector": {"matchLabels":{"ocp-ingress-run":"true"}}}}}'
 
@@ -551,32 +561,39 @@ oc get -n openshift-ingress-operator ingresscontroller/default -o yaml
 
 # then we get worker's ignition file, and start worker node, add it to cluster
 
-oc extract -n openshift-machine-api secret/worker-user-data --keys=userData --to=- > /var/www/html/ignition/sno-worker.ign
+oc extract -n openshift-machine-api secret/worker-user-data --keys=userData --to=- > ${BASE_DIR}/data/install/worker.ign
 
+# copy the ignition file to web server
+sudo bash -c "/bin/cp -f ${BASE_DIR}/data/install/worker.ign /data/dnf ;"
 
-HELP_SERVER=192.168.7.11
+export BUILDNUMBER=4.12.3
+
+###########################
+## worker-01 node
+
+HELP_SERVER=192.168.77.11
 
 # 定义单节点集群的节点信息
-SNO_IP=192.168.7.16
-SNO_GW=192.168.7.11
+SNO_IP=192.168.77.46
+SNO_GW=192.168.77.11
 SNO_NETMAST=255.255.255.0
-SNO_HOSTNAME=acm-demo-hub-worker-01
+SNO_HOSTNAME=worker-01-demo
 SNO_IF=enp1s0
-SNO_DNS=192.168.7.11
+SNO_DNS=192.168.77.11
 SNO_DISK=/dev/vda
-SNO_MEM=16
+SNO_MEM=64
 
-BOOT_ARG=" ip=$SNO_IP::$SNO_GW:$SNO_NETMAST:$SNO_HOSTNAME:$SNO_IF:none nameserver=$SNO_DNS coreos.inst.install_dev=${SNO_DISK##*/} coreos.inst.ignition_url=http://$HELP_SERVER:8080/ignition/sno-worker.ign"
+BOOT_ARG=" ip=$SNO_IP::$SNO_GW:$SNO_NETMAST:$SNO_HOSTNAME:$SNO_IF:none nameserver=$SNO_DNS coreos.inst.install_dev=${SNO_DISK##*/} coreos.inst.ignition_url=http://$HELP_SERVER:5000/worker.ign"
 
-/bin/cp -f /data/ocp4/rhcos-live.x86_64.iso sno.iso
+/bin/cp -f /data/ocp-${BUILDNUMBER}/rhcos-live.x86_64.iso sno.iso
 
 coreos-installer iso kargs modify -a "$BOOT_ARG" sno.iso
 
 # go to kvm host ( 103 )
-scp root@192.168.7.11:/data/install/sno.iso /data/kvm/
+scp root@192.168.77.11:/home/poc/data/install/sno.iso /data/kvm/one/
 
-virsh destroy ocp4-acm-hub-worker01
-virsh undefine ocp4-acm-hub-worker01
+virsh destroy ocp4-acm-one-worker01
+virsh undefine ocp4-acm-one-worker01
 
 create_lv() {
     var_vg=$1
@@ -592,16 +609,70 @@ create_lv() {
     fi
 }
 
-create_lv vgdata poolA lvacmhub-worker01 500G recreate
-# create_lv vgdata poolA lvacmhub-worker01-data 500G remove
+create_lv vgdata poolA lvacm-one-worker-01 120G recreate
+# create_lv vgdata poolA lvacm-one-worker-01-data 500G remove
 
-virt-install --name=ocp4-acm-hub-worker01 --vcpus=16 --ram=$(($SNO_MEM*1024)) \
+virt-install --name=ocp4-acm-one-worker01 --vcpus=16 --ram=$(($SNO_MEM*1024)) \
   --cpu=host-model \
-  --disk path=/dev/vgdata/lvacmhub-worker01,device=disk,bus=virtio,format=raw \
-  `# --disk path=/dev/vgdata/lvacmhub-data,device=disk,bus=virtio,format=raw` \
+  --disk path=/dev/vgdata/lvacm-one-worker-01,device=disk,bus=virtio,format=raw \
   --os-variant rhel8.3 --network bridge=baremetal,model=virtio \
-  --graphics vnc,port=59003 \
-  --boot menu=on --cdrom /data/kvm/sno.iso 
+  --graphics vnc,port=59004 --noautoconsole \
+  --boot menu=on --cdrom /data/kvm/one/sno.iso 
+
+
+
+###########################
+## worker-02 node
+
+HELP_SERVER=192.168.77.11
+
+# 定义单节点集群的节点信息
+SNO_IP=192.168.77.47
+SNO_GW=192.168.77.11
+SNO_NETMAST=255.255.255.0
+SNO_HOSTNAME=worker-02-demo
+SNO_IF=enp1s0
+SNO_DNS=192.168.77.11
+SNO_DISK=/dev/vda
+SNO_MEM=64
+
+BOOT_ARG=" ip=$SNO_IP::$SNO_GW:$SNO_NETMAST:$SNO_HOSTNAME:$SNO_IF:none nameserver=$SNO_DNS coreos.inst.install_dev=${SNO_DISK##*/} coreos.inst.ignition_url=http://$HELP_SERVER:5000/worker.ign"
+
+/bin/cp -f /data/ocp-${BUILDNUMBER}/rhcos-live.x86_64.iso sno.iso
+
+coreos-installer iso kargs modify -a "$BOOT_ARG" sno.iso
+
+# go to kvm host ( 103 )
+scp root@192.168.77.11:/home/poc/data/install/sno.iso /data/kvm/one/
+
+virsh destroy ocp4-acm-one-worker02
+virsh undefine ocp4-acm-one-worker02
+
+create_lv() {
+    var_vg=$1
+    var_pool=$2
+    var_lv=$3
+    var_size=$4
+    var_action=$5
+    lvremove -f $var_vg/$var_lv
+    # lvcreate -y -L $var_size -n $var_lv $var_vg
+    if [ "$var_action" == "recreate" ]; then
+      lvcreate --type thin -n $var_lv -V $var_size --thinpool $var_vg/$var_pool
+      wipefs --all --force /dev/$var_vg/$var_lv
+    fi
+}
+
+create_lv vgdata poolA lvacm-one-worker-02 120G recreate
+# create_lv vgdata poolA lvacm-one-worker-02-data 500G remove
+
+virt-install --name=ocp4-acm-one-worker02 --vcpus=16 --ram=$(($SNO_MEM*1024)) \
+  --cpu=host-model \
+  --disk path=/dev/vgdata/lvacm-one-worker-02,device=disk,bus=virtio,format=raw \
+  --os-variant rhel8.3 --network bridge=baremetal,model=virtio \
+  --graphics vnc,port=59005 --noautoconsole \
+  --boot menu=on --cdrom /data/kvm/one/sno.iso 
+
+
 
 # after 2 boot up,
 # go back to helper
@@ -609,6 +680,112 @@ oc get csr
 oc get csr -ojson | jq -r '.items[] | select(.status == {} ) | .metadata.name' | xargs oc adm certificate approve
 
 ```
+
+
+# setup proxy
+
+```bash
+
+# https://docs.openshift.com/container-platform/4.13/networking/enable-cluster-wide-proxy.html
+printf -v allip '%s,' .{0..255}
+
+cat << EOF > ${BASE_DIR}/data/install/proxy.yaml
+spec:
+  httpProxy: http://192.168.77.8:18801 
+  httpsProxy: http://192.168.77.8:18801 
+  noProxy: localhost,127.0.0.1,${allip%,},.wzhlab.top
+  readinessEndpoints: []
+#   - http://www.gstatic.com/generate_204
+EOF
+
+oc patch proxy/cluster --type merge --patch-file=${BASE_DIR}/data/install/proxy.yaml
+
+# to rollback
+# oc delete proxy/cluster
+
+# oc edit proxy.config.openshift.io cluster
+
+# login to node to check the result
+cat /etc/mco/proxy.env
+# # Proxy environment variables will be populated in this file. Properly
+# # url encoded passwords with special characters will use '%<HEX><HEX>'.
+# # Systemd requires that any % used in a password be represented as
+# # %% in a unit file since % is a prefix for macros; this restriction does not
+# # apply for environment files. Templates that need the proxy set should use
+# # 'EnvironmentFile=/etc/mco/proxy.env'.
+# HTTP_PROXY=http://172.21.6.8:18801
+# HTTPS_PROXY=http://172.21.6.8:18801
+# NO_PROXY=.0,.1,.10,.100,.101,.102,.103,.104,.105,.106,.107,.108,.109,.11,.110,.111,.112,.113,.114,.115,.116,.117,.118,.119,.12,.120,.121,.122,.123,.124,.125,.126,.127,.128,.129,.13,.130,.131,.132,.133,.134,.135,.136,.137,.138,.139,.14,.140,.141,.142,.143,.144,.145,.146,.147,.148,.149,.15,.150,.151,.152,.153,.154,.155,.156,.157,.158,.159,.16,.160,.161,.162,.163,.164,.165,.166,.167,.168,.169,.17,.170,.171,.172,.173,.174,.175,.176,.177,.178,.179,.18,.180,.181,.182,.183,.184,.185,.186,.187,.188,.189,.19,.190,.191,.192,.193,.194,.195,.196,.197,.198,.199,.2,.20,.200,.201,.202,.203,.204,.205,.206,.207,.208,.209,.21,.210,.211,.212,.213,.214,.215,.216,.217,.218,.219,.22,.220,.221,.222,.223,.224,.225,.226,.227,.228,.229,.23,.230,.231,.232,.233,.234,.235,.236,.237,.238,.239,.24,.240,.241,.242,.243,.244,.245,.246,.247,.248,.249,.25,.250,.251,.252,.253,.254,.255,.26,.27,.28,.29,.3,.30,.31,.32,.33,.34,.35,.36,.37,.38,.39,.4,.40,.41,.42,.43,.44,.45,.46,.47,.48,.49,.5,.50,.51,.52,.53,.54,.55,.56,.57,.58,.59,.6,.60,.61,.62,.63,.64,.65,.66,.67,.68,.69,.7,.70,.71,.72,.73,.74,.75,.76,.77,.78,.79,.8,.80,.81,.82,.83,.84,.85,.86,.87,.88,.89,.9,.90,.91,.92,.93,.94,.95,.96,.97,.98,.99,.cluster.local,.svc,.wzhlab.top,10.132.0.0/14,127.0.0.1,172.21.6.0/24,172.22.0.0/16,api-int.demo-gpu.wzhlab.top,localhost
+
+find /etc/systemd -type f -exec grep -H proxy.env {} \;
+# /etc/systemd/system/crio.service.d/10-mco-default-env.conf:EnvironmentFile=/etc/mco/proxy.env
+# /etc/systemd/system/kubelet.service.d/10-mco-default-env.conf:EnvironmentFile=/etc/mco/proxy.env
+# /etc/systemd/system/rpm-ostreed.service.d/10-mco-default-env.conf:EnvironmentFile=/etc/mco/proxy.env
+# /etc/systemd/system/nodeip-configuration.service:EnvironmentFile=/etc/mco/proxy.env
+# /etc/systemd/system/machine-config-daemon-firstboot.service:EnvironmentFile=/etc/mco/proxy.env
+# /etc/systemd/system/machine-config-daemon-pull.service:EnvironmentFile=/etc/mco/proxy.env
+# /etc/systemd/system/pivot.service.d/10-mco-default-env.conf:EnvironmentFile=/etc/mco/proxy.env
+
+
+```
+
+
+# setup hostpath provisioner
+
+1. install OpenShift Virtualization
+
+then: 
+
+```bash
+
+# create some static host path to use
+# go to worker-01-demo
+# 01,02,03,04,05,06,07,08,09,10
+for i in $(seq -w 1 20); do
+  mkdir -p "/var/wzh-local-pv/static/$i"
+done
+mkdir -p /var/wzh-local-pv/dynamic
+chcon -Rt container_file_t /var/wzh-local-pv/
+
+cat << EOF > ${BASE_DIR}/data/install/hostpath-provisioner.yaml
+apiVersion: hostpathprovisioner.kubevirt.io/v1beta1
+kind: HostPathProvisioner
+metadata:
+  name: hostpath-provisioner
+spec:
+  imagePullPolicy: IfNotPresent
+  storagePools: 
+  - name: wzh-local
+    path: "/var/wzh-local-pv/dynamic" 
+  workload:
+    nodeSelector:
+      kubernetes.io/hostname: worker-01-demo
+
+EOF
+oc create --save-config -f ${BASE_DIR}/data/install/hostpath-provisioner.yaml
+
+# oc delete -f ${BASE_DIR}/data/install/hostpath-provisioner.yaml
+
+
+cat << EOF > ${BASE_DIR}/data/install/hostpath-storage-class.yaml
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: hostpath-csi
+  annotations:
+    storageclass.kubernetes.io/is-default-class: 'true'
+provisioner: kubevirt.io.hostpath-provisioner
+reclaimPolicy: Delete 
+volumeBindingMode: WaitForFirstConsumer 
+parameters:
+  storagePool: wzh-local
+EOF
+oc create --save-config -f ${BASE_DIR}/data/install/hostpath-storage-class.yaml
+
+# oc delete -f ${BASE_DIR}/data/install/hostpath-storage-class.yaml
+
+```
+
 
 
 # end
