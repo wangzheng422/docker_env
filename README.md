@@ -5,10 +5,12 @@
 
 目前仓库中，有很多经验分享，其中的一些文章，比较有用：
 - 2024 之后
-  - [2024.02 llama code 配合 vscode 做代码补全 nvidia jetson 版本](https://github.com/wangzheng422/pub_env_2024/blob/main/notes/2024.01.codellama.jetson.md)
-  - [2024.02 llama code 配合 vscode 做代码补全 openshift AI 版本](https://github.com/wangzheng422/pub_env_2024/blob/main/ocp4/4.14/4.14.codellama.vscode.ocp.ai.md)
-  - [2024.02 llama code 配合 vscode 做代码补全 openshift 版本](https://github.com/wangzheng422/pub_env_2024/blob/main/ocp4/4.14/4.14.codellama.vscode.ocp.md)
-  - [2024.01 llama code 配合 vscode 做代码补全 rhel 版本](https://github.com/wangzheng422/pub_env_2024/blob/main/notes/2024.01.codellama.vscode.md)
+  - [2024.04 netobserv 网络可视化](redhat/ocp4/4.14/4.14.net.observ.md)
+  - [2024.03 nginx operator](redhat/ocp4/4.14/4.14.nginx.md)
+  - [2024.02 llama code 配合 vscode 做代码补全 nvidia jetson 版本](redhat/notes/2024/2024.01.codellama.jetson.md)
+  - [2024.02 llama code 配合 vscode 做代码补全 openshift AI 版本](redhat/ocp4/4.14/4.14.codellama.vscode.ocp.ai.md)
+  - [2024.02 llama code 配合 vscode 做代码补全 openshift 版本](redhat/ocp4/4.14/4.14.codellama.vscode.ocp.md)
+  - [2024.01 llama code 配合 vscode 做代码补全 rhel 版本](redhat/notes/2024/2024.01.codellama.vscode.md)
 - openshift4 安装系列
   - [如何获得 openshift4 免费下载密钥](redhat/ocp4/4.5/4.5.ocp.pull.secret.md)
   - [openshift4 离线安装介质的制作](redhat/ocp4/4.6/4.6.build.dist.md)
