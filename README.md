@@ -5,6 +5,7 @@
 
 目前仓库中，有很多经验分享，其中的一些文章，比较有用：
 - 2024 之后
+  - [2024.04 TensorRT-LLM 使用 openai api 来推理](redhat/notes/2024/2024.03.tensorrt.llm.llama.md)
   - [2024.04 netobserv 网络可视化](redhat/ocp4/4.14/4.14.net.observ.md)
   - [2024.03 nginx operator](redhat/ocp4/4.14/4.14.nginx.md)
   - [2024.02 llama code 配合 vscode 做代码补全 nvidia jetson 版本](redhat/notes/2024/2024.01.codellama.jetson.md)
