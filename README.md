@@ -46,7 +46,7 @@
   - [2022.08 定制 rhcos](redhat/ocp4/4.10/4.10.replace.coreos.md)
   - [2022.08 rhcos 里面安装 rpm](redhat/ocp4/4.10/4.10.rpm-ostree.install.md)
   - [2022.09 openshift 4 组件版本](redhat/ocp4/4.10/4.10.component.version.md)
-  - [2022.09 内嵌 dns, haproxy, registrty](redhat/ocp4/4.10/4.10.embeded.dns.haproxy.registry.md)
+  - [2022.09 内嵌 dns, haproxy, registrty](redhat/ocp4/4.10/4.10.embeded.dns.haproxy.registry.podman.md)
   - [2022.12 升级 openshift 4.10 内核到 rhel 9.1 支持 海光 x86 cpu](redhat/ocp4/4.10/4.10.replace.coreos.rhel.9.0.md)
   - [2023.01 使用 hypershift 安装控制面托管的 openshift 集群](redhat/ocp4/4.11/4.11.acm.hypershift.md)
   - [2023.04 使用 agent based installer 安装 3 节点集群](redhat/ocp4/4.12/4.12.3node.upi.agent.md)
