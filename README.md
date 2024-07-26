@@ -5,6 +5,7 @@
 
 目前仓库中，有很多经验分享，其中的一些文章，比较有用：
 - 2024 之后
+  - [2024.07 cnv + ovn on 2nd network + multi-network policy](redhat/ocp4/4.15/2024.07.ovn.multi.network.policy.md)
   - [2024.06 容器化运行 sftp 服务](redhat/ocp4/4.12/2024.06.sftp.pod.md)
   - [2024.05 应用多日志输出持久化](redhat/ocp4/4.14/4.14.log.dir.for.pod.md)
   - [2024.05 redhat developer hub 与 azure devops 集成](redhat/ocp4/4.12/2024.05.rhdp.prod.md)
