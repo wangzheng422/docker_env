@@ -5,6 +5,7 @@
 
 目前仓库中，有很多经验分享，其中的一些文章，比较有用：
 - 2024 之后
+  - [2024.08 redhat developer hub (1.2) based on a book](redhat/ocp4/4.15/2024.08.rhdh.book.md)
   - [2024.07 cnv + ovn on 2nd network + multi-network policy](redhat/ocp4/4.15/2024.07.ovn.multi.network.policy.md)
   - [2024.06 run openssh sftp service in k8s/ocp](redhat/ocp4/4.12/2024.06.sftp.pod.md)
   - [2024.05 java app multiple log/dump files persistent](redhat/ocp4/4.14/4.14.log.dir.for.pod.md)
