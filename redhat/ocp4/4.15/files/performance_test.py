@@ -16,10 +16,10 @@ total_time = 0
 lock = threading.Lock()
 
 # Prometheus metrics
-success_metric = Counter('success_count', 'Number of successful requests')
-failure_metric = Counter('failure_count', 'Number of failed requests')
-avg_time_sec_metric = Gauge('avg_time', 'Average time per request per second')
-avg_time_min_metric = Gauge('avg_time', 'Average time per request per minute')
+success_metric = Counter('wzh_success_count', 'Number of successful requests')
+failure_metric = Counter('wzh_failure_count', 'Number of failed requests')
+avg_time_sec_metric = Gauge('wzh_avg_time_sec', 'Average time per request per second')
+avg_time_min_metric = Gauge('wzh_avg_time_min', 'Average time per request per minute')
 
 def make_request(start, end):
     global success_count, failure_count, total_time
