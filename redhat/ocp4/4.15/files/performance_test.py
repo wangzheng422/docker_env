@@ -20,6 +20,8 @@ success_metric = Counter('wzh_success_count', 'Number of successful requests')
 failure_metric = Counter('wzh_failure_count', 'Number of failed requests')
 avg_time_sec_metric = Gauge('wzh_avg_time_sec', 'Average time per request per second')
 avg_time_min_metric = Gauge('wzh_avg_time_min', 'Average time per request per minute')
+success_rate_sec_metric = Gauge('wzh_success_rate_sec', 'Success rate per second')
+success_rate_min_metric = Gauge('wzh_success_rate_min', 'Success rate per minute')
 
 def make_request(start, end):
     global success_count, failure_count, total_time
@@ -61,6 +63,7 @@ def print_summary():
             success_rate = (success_count / total_requests) * 100 if total_requests > 0 else 0
             avg_time = total_time / total_requests if total_requests > 0 else 0
             avg_time_min_metric.set(avg_time)
+            success_rate_min_metric.set(success_rate)
             print(f"Summary (last minute): Success: {success_count}, Failure: {failure_count}, Success Rate: {success_rate:.2f}%, Avg Time: {avg_time:.2f}s")
             success_count = 0
             failure_count = 0
@@ -75,6 +78,7 @@ def print_secondly_summary():
             success_rate = (success_count / total_requests) * 100 if total_requests > 0 else 0
             avg_time = total_time / total_requests if total_requests > 0 else 0
             avg_time_sec_metric.set(avg_time)
+            success_rate_sec_metric.set(success_rate)
             print(f"Second Summary: Success: {success_count}, Failure: {failure_count}, Success Rate: {success_rate:.2f}%, Avg Time: {avg_time:.2f}s")
 
 if __name__ == "__main__":
