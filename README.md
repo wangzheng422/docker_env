@@ -1,10 +1,13 @@
 [![github pages](https://github.com/wangzheng422/docker_env/actions/workflows/gh-pages.yml/badge.svg)](https://github.com/wangzheng422/docker_env/actions/workflows/gh-pages.yml)
-# 仓库说明
+# Repo Description
 
-本仓库是作者在日常系统操作中的技术笔记。作者平日有些机会进行很多系统操作，包括很多PoC，新系统验证，方案探索工作，所以会有很多系统实际操作的机会，涉及到操作系统安装，iaas, paas平台搭建，中间件系统验证，应用系统的开发和验证。很多操作步骤比较复杂，所以需要一个地方进行集中的笔记记录，方便自己整理，并第一时间在线分享。
+This repository is the author's technical notes from daily system operations. The author often has opportunities to perform various system operations, including many PoCs, new system validations, and solution explorations, which provide numerous chances for practical system operations involving operating system installations, IaaS and PaaS platform setups, middleware system validations, and application development and validation. Many operational steps are quite complex; therefore, a centralized place for note-taking is needed to facilitate personal organization and immediate online sharing.
 
-目前仓库中，有很多经验分享，其中的一些文章，比较有用：
-- 2024 之后
+Currently, there are many experience sharing articles in the warehouse, some of which are quite useful:
+- After 2024
+  - [2024.11 using gitops/aap to collect heap dump](redhat/ocp4/4.16/2024.10.acm.aap.collect.heap.dump.md)
+  - [2024.10 rhsso 7.1 performance issues troubleshooting](redhat/ocp4/4.15/2024.10.15.rhsso.7.1.memory.issue.md)
+    - [2024.10 rhbk-24 and rhsso 7.1 performance researching](redhat/ocp4/4.15/2024.10.keycloak.performance.md)
   - [2024.09 using keepalived as a sidecar to maintain VIP for pods](redhat/ocp4/4.16/2024.09.keepalived.sidecar.md)
   - [2024.08 apply settings belongs with worker profile](redhat/ocp4/4.15/2024.08.workerprofile.md)
   - [2024.08 redhat developer hub (1.2) based on a book](redhat/ocp4/4.15/2024.08.rhdh.book.md)
