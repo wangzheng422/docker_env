@@ -148,9 +148,9 @@ Currently, there are many experience sharing articles in the warehouse, some of 
 
 <!-- 作者正在写一本在线书[《OpenShift4 一步一脚印》](https://wangzheng422.github.io/openshift4-steps-book/introduction.html)。 -->
 
-最后，欢迎支持关注作者B站
+<!-- 最后，欢迎支持关注作者B站
 
-[<kbd><img src="imgs/2021-05-09-21-47-36.png" width="600"></kbd>](https://space.bilibili.com/19536819)
+[<kbd><img src="imgs/2021-05-09-21-47-36.png" width="600"></kbd>](https://space.bilibili.com/19536819) -->
 
 # 许可证
 项目中涉及代码采用GNU V3许可。
