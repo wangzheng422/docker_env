@@ -5,6 +5,7 @@ This repository is the author's technical notes from daily system operations. Th
 
 Currently, there are many experience sharing articles in the warehouse, some of which are quite useful:
 - After 2024
+  - [2024.12 openshift 4.16 integration with Azure SSO](redhat/ocp4/4.16/2024.12.azure.sso.md)
   - [2024.12 redhat developer hub integration with azure devops](redhat/ocp4/4.16/2024.12.rhdh.ado.md)
   - [2024.11 using gitops/aap to collect heap dump](redhat/ocp4/4.16/2024.10.acm.aap.collect.heap.dump.md)
   - [2024.10 rhsso 7.1 performance issues troubleshooting](redhat/ocp4/4.15/2024.10.15.rhsso.7.1.memory.issue.md)
