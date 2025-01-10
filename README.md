@@ -4,7 +4,10 @@
 This repository is the author's technical notes from daily system operations. The author often has opportunities to perform various system operations, including many PoCs, new system validations, and solution explorations, which provide numerous chances for practical system operations involving operating system installations, IaaS and PaaS platform setups, middleware system validations, and application development and validation. Many operational steps are quite complex; therefore, a centralized place for note-taking is needed to facilitate personal organization and immediate online sharing.
 
 Currently, there are many experience sharing articles in the warehouse, some of which are quite useful:
-- After 2024
+- 2025
+  - [2025.01 run llama factory on ocp ai](redhat/ocp4/4.16/2024.12.llama.factory.md)
+  - [2025.01 run mini llm on ocp ai](redhat/ocp4/4.16/2024.12.ocp.ai.mini.model.md)
+- 2024
   - [2024.12 openshift 4.16 integration with Azure SSO without group sync operator](redhat/ocp4/4.16/2024.12.azure.sso.without.group.sync.md)
   - [2024.12 openshift 4.16 integration with Azure SSO with group sync operator](redhat/ocp4/4.16/2024.12.azure.sso.md)
   - [2024.12 redhat developer hub integration with azure devops](redhat/ocp4/4.16/2024.12.rhdh.ado.md)
