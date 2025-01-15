@@ -158,8 +158,8 @@ Currently, there are many experience sharing articles in the warehouse, some of 
 
 [<kbd><img src="imgs/2021-05-09-21-47-36.png" width="600"></kbd>](https://space.bilibili.com/19536819) -->
 
-# 许可证
-项目中涉及代码采用GNU V3许可。
+# License
+The code involved in this project is licensed under the GNU V3 license.
 
-# 版权声明
-本项目遵循 **[CC-BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/)** 协议。**商业转载必须征求作者 wangzheng422 授权同意，转载请务必注明[出处](https://github.com/wangzheng422/docker_env)。** 作者保留最终解释权及法律追究权力。
+# Copyright Statement
+This project is licensed under the **[CC-BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/)** agreement. **Commercial reproduction must obtain authorization from the author wangzheng422; when reproducing, be sure to indicate the [source](https://github.com/wangzheng422/docker_env).** The author reserves the final interpretation rights and legal pursuit rights.
