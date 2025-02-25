@@ -6,11 +6,14 @@ footer: "Red Hat Developer Hub 1.4 - Conditional Policy Permission"
 style: |
   section {
     font-size: 28px;
+    padding-top: 30px;
   }
+
   h1 {
     font-size: 40px;
     color: #cc0000;
   }
+
   h2 {
     font-size: 36px;
     color: #820000;
@@ -18,9 +21,46 @@ style: |
   code {
     font-size: 20px;
   }
+
+    /* 内容页样式 */
+  section:not(.title) {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+  }
+  
+  /* 标题页专用样式 */
+  section.title {
+    display: grid;
+    place-items: center;
+    text-align: center;
+  }
+  section.title h1 {
+    margin-bottom: 40px;
+  }
 ---
 
+<!-- _class: title -->
+
+<style scoped>
+section {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  text-align: center;
+}
+ul {
+  font-size: 0.8em;
+  text-align: left;
+  margin: 0 auto;
+  width: fit-content;
+}
+</style>
+
 # RHDH 1.4 with Conditional Policy Permission
+
 
 - Red Hat Developer Hub (RHDH) 1.4 introduces GUI for permission management
 - Supports conditional policy for fine-grained access control
@@ -270,7 +310,7 @@ Custom policies include:
 
 Configure which resources users can access:
 
-![Permission Settings](../../../4.16/imgs/2025.02.rhdh.condition.permission.md/2025-02-25-12-42-18.png)
+![height:500](../../../4.16/imgs/2025.02.rhdh.condition.permission.md/2025-02-25-12-42-18.png)
 
 ---
 
@@ -278,7 +318,7 @@ Configure which resources users can access:
 
 Define conditions for resource access:
 
-![Conditional Rules](../../../4.16/imgs/2025.02.rhdh.condition.permission.md/2025-02-25-12-48-02.png)
+![height:500](../../../4.16/imgs/2025.02.rhdh.condition.permission.md/2025-02-25-12-48-02.png)
 
 ---
 
