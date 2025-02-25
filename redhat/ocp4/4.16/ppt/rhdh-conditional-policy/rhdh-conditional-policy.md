@@ -5,7 +5,7 @@ paginate: true
 # footer: "Red Hat Developer Hub 1.4 - Conditional Policy Permission"
 style: |
   section {
-    font-size: 28px;
+    font-size: 22px;
     padding-top: 30px;
   }
 
@@ -379,17 +379,20 @@ A Keycloak Service Account is essential for RHDH to interact with Keycloak:
 5. **Deploy and test** - Deploy the updated configuration and verify functionality
 
 </div>
+
 ---
 
 # Conditional Policy Workflow
 
 ![bg right fit](imgs/conditional-policy-workflow.svg)
 
+
 1. **Policy Creation** - Administrators define policies with specific conditions
 2. **User Authentication** - Users log in through configured identity providers
 3. **Permission Evaluation** - The system evaluates user permissions based on their identity and group memberships
 4. **Conditional Filtering** - Resources are filtered according to policy conditions
 5. **Resource Access** - Users can only access resources permitted by policies that match their context
+
 
 ---
 
