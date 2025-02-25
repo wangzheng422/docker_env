@@ -2,7 +2,7 @@
 marp: true
 theme: default
 paginate: true
-footer: "Red Hat Developer Hub 1.4 - Conditional Policy Permission"
+# footer: "Red Hat Developer Hub 1.4 - Conditional Policy Permission"
 style: |
   section {
     font-size: 28px;
@@ -326,23 +326,70 @@ Define conditions for resource access:
 
 ![bg right fit](imgs/permission-workflow.svg)
 
+RHDH conditional permission workflow:
+
+- User Authentication: Verifies user identity and group membership
+- Permission Policy Engine: Evaluates user's operation request
+- Condition Assessment: Checks if target resources meet defined conditions
+- Access Control: Access granted only when all conditions are satisfied
+
 ---
 
 # Service Account Setup
 
 ![bg right fit](imgs/service-account-setup.svg)
 
+A Keycloak Service Account is essential for RHDH to interact with Keycloak:
+
+- Configure a dedicated client in Keycloak with service account capability
+- Enable "Service Account Enabled" option in client settings
+- Assign appropriate client roles to access user and group information
+- Configure client authentication with client ID and secret credentials
+
 ---
 
 # RHDH Configuration Process
 
+<style>
+.current-page p, .current-page li {
+  font-size: 14px; /* 约等于10pt字体 */
+}
+</style>
+
+<div class="current-page">
+
 ![bg right fit](imgs/rhdh-config-process.svg)
 
+1. **Set up environment variables** - Define all necessary parameters for your RHDH deployment including cluster details, authentication credentials, and service endpoints
+
+2. **Create Kubernetes secrets** - Store sensitive information securely using Kubernetes secrets
+
+3. **Configure app-config YAML** - Define the core RHDH configuration including:
+   - Authentication settings
+   - Plugin enablement
+   - Catalog sources
+   - Permission settings
+
+4. **Apply Helm chart configuration** - Complete the setup by:
+   - Referencing your custom ConfigMaps
+   - Configuring dynamic plugins
+   - Setting environment variables from secrets
+   - Applying any additional runtime parameters
+
+5. **Deploy and test** - Deploy the updated configuration and verify functionality
+
+</div>
 ---
 
 # Conditional Policy Workflow
 
 ![bg right fit](imgs/conditional-policy-workflow.svg)
+
+1. **Policy Creation** - Administrators define policies with specific conditions
+2. **User Authentication** - Users log in through configured identity providers
+3. **Permission Evaluation** - The system evaluates user permissions based on their identity and group memberships
+4. **Conditional Filtering** - Resources are filtered according to policy conditions
+5. **Resource Access** - Users can only access resources permitted by policies that match their context
 
 ---
 
