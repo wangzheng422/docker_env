@@ -5,6 +5,8 @@ This repository is the author's technical notes from daily system operations. Th
 
 Currently, there are many experience sharing articles in the warehouse, some of which are quite useful:
 - 2025
+  - [2025.02 rhdh 1.4 permission with conditional policy](redhat/ocp4/4.16/2025.02.rhdh.condition.permission.md)
+    - [(AI generaeted) slides](redhat/ocp4/4.16/ppt/rhdh-conditional-policy/rhdh-conditional-policy.pdf)
   - [2025.01 run llama factory on ocp ai](redhat/ocp4/4.16/2024.12.llama.factory.md)
   - [2025.01 run mini llm on ocp ai](redhat/ocp4/4.16/2024.12.ocp.ai.mini.model.md)
 - 2024
