@@ -1,7 +1,22 @@
 """
-This module contains performance test scripts for Keycloak.
-It includes functions for simulating user authentication, token retrieval,
-and other common Keycloak operations to evaluate its performance under load.
+Performance test script for Keycloak authentication services.
+
+This module simulates high-volume authentication load against a Keycloak server
+by generating concurrent token requests from multiple simulated users. It measures
+key performance metrics including:
+- Success/failure rates
+- Average response times
+- Request throughput
+
+Features:
+- Multi-threaded request generation using ThreadPoolExecutor
+- Configurable number of simulated users and concurrent threads
+- Real-time metrics reporting (per-second and per-minute intervals)
+- Prometheus integration for metrics collection and visualization
+- Environment variable configuration for sensitive parameters (CLIENT_SECRET)
+
+The script is designed for performance testing, capacity planning, and
+identifying bottlenecks in Keycloak deployments under load conditions.
 """
 import os
 import time
