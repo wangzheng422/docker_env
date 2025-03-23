@@ -1,10 +1,20 @@
-import requests
+"""
+This module contains performance test scripts for Keycloak.
+It includes functions for simulating user authentication, token retrieval,
+and other common Keycloak operations to evaluate its performance under load.
+"""
+import os
 import time
 import threading
 from concurrent.futures import ThreadPoolExecutor
+import requests
 from prometheus_client import start_http_server, Counter, Gauge
 
-CLIENT_SECRET = "hiZJdnJCCu0WXDhCVDWoyLix5bcWuYxq"
+# CLIENT_SECRET = "hiZJdnJCCu0WXDhCVDWoyLix5bcWuYxq"
+
+# Attempt to retrieve CLIENT_SECRET from environment variables
+CLIENT_SECRET = os.environ.get("CLIENT_SECRET")
+
 TARGET_URL = "http://example-kc-service:8080/realms/performance/protocol/openid-connect/token"
 HEADERS = {"Content-Type": "application/x-www-form-urlencoded"}
 num_users = 50000
