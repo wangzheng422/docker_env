@@ -30,10 +30,12 @@ from prometheus_client import start_http_server, Counter, Gauge
 # Attempt to retrieve CLIENT_SECRET from environment variables
 CLIENT_SECRET = os.environ.get("CLIENT_SECRET")
 
+# Get configuration from environment variables with defaults
+num_users = int(os.environ.get("NUM_USERS", 50000))
+num_threads = int(os.environ.get("NUM_THREADS", 10))
+
 TARGET_URL = "http://example-kc-service:8080/realms/performance/protocol/openid-connect/token"
 HEADERS = {"Content-Type": "application/x-www-form-urlencoded"}
-num_users = 50000
-num_threads = 10
 
 success_count = 0
 failure_count = 0
