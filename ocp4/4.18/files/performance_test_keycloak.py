@@ -91,10 +91,18 @@ def print_summary():
             avg_time = total_time / total_requests if total_requests > 0 else 0
             avg_time_min_metric.set(avg_time)
             success_rate_min_metric.set(success_rate)
-            print(f"Summary (last minute): Success: {success_count}, Failure: {failure_count}, Success Rate: {success_rate:.2f}%, Avg Time: {avg_time:.2f}s")
+            
+            # Copy values for printing outside lock
+            print_success = success_count
+            print_failure = failure_count
+            print_success_rate = success_rate
+            print_avg_time = avg_time
+            
             success_count = 0
             failure_count = 0
             total_time = 0
+            
+        print(f"Summary (last minute): Success: {print_success}, Failure: {print_failure}, Success Rate: {print_success_rate:.2f}%, Avg Time: {print_avg_time:.2f}s")
 
 def print_secondly_summary():
     global success_count, failure_count, total_time
@@ -106,7 +114,7 @@ def print_secondly_summary():
             avg_time = total_time / total_requests if total_requests > 0 else 0
             avg_time_sec_metric.set(avg_time)
             success_rate_sec_metric.set(success_rate)
-            print(f"Second Summary: Success: {success_count}, Failure: {failure_count}, Success Rate: {success_rate:.2f}%, Avg Time: {avg_time:.2f}s")
+        print(f"Second Summary: Success: {success_count}, Failure: {failure_count}, Success Rate: {success_rate:.2f}%, Avg Time: {avg_time:.2f}s")
 
 if __name__ == "__main__":
     # Start Prometheus metrics server
