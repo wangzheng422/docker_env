@@ -520,7 +520,7 @@ Below is the detailed flow of certificate rotation from kube-apiserver to kubele
 ```mermaid
 flowchart TD
     A[CertRotationController starts in kube-apiserver-operator] --> B[Periodically check kubelet-client cert status]
-    B --> C{Certificate needs rotation? (e.g., past 15 days)}
+    B --> C{Certificate needs rotation? （e.g., past 15 days）}
     C -->|No| B
     C -->|Yes| D[Generate new kubelet-client cert/key]
     D --> E[Update Secret 'kubelet-client' in 'openshift-kube-apiserver' namespace via K8s API]
@@ -644,25 +644,25 @@ flowchart TD
         A[Periodically check KubeletClientCert] --> B{Needs Rotation?};
         B -- Yes --> C[EnsureTargetCertKeyPair];
         C --> D[Generate New Cert/Key];
-        D --> E[Update kubelet-client Secret (k8s API)];
+        D --> E[Update kubelet-client Secret（k8s API）];
     end
 
     subgraph InstallerController [InstallerController in Operator Pod]
         F[Monitor kubelet-client Secret] --> G{Secret Content Changed?};
         G -- Yes --> H[Create New Revision];
-        H --> I[Update /etc/kubernetes/manifests/kube-apiserver-pod.yaml on each Master Node (via Installer Pod)];
+        H --> I[Update /etc/kubernetes/manifests/kube-apiserver-pod.yaml on each Master Node （via Installer Pod）];
     end
 
     subgraph Kubelet [Kubelet on Master Node]
         J[Monitor /etc/kubernetes/manifests/ directory] --> K{kube-apiserver-pod.yaml Changed?};
         K -- Yes --> L[Read New Manifest];
         L --> M[Terminate Old kube-apiserver Pod];
-        M --> N[Start New kube-apiserver Pod (mounts new Secret)];
+        M --> N[Start New kube-apiserver Pod （mounts new Secret）];
     end
 
     E --> F;
     I --> J;
-    N --> A; // Loop back to periodic checks
+    N --> A; 
 
     style CertRotationController fill:#fff9c4,stroke:#333,stroke-width:2px;
     style InstallerController fill:#ccf,stroke:#333,stroke-width:2px;
