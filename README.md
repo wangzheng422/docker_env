@@ -4,7 +4,20 @@
 This repository is the author's technical notes from daily system operations. The author often has opportunities to perform various system operations, including many PoCs, new system validations, and solution explorations, which provide numerous chances for practical system operations involving operating system installations, IaaS and PaaS platform setups, middleware system validations, and application development and validation. Many operational steps are quite complex; therefore, a centralized place for note-taking is needed to facilitate personal organization and immediate online sharing.
 
 Currently, there are many experience sharing articles in the warehouse, some of which are quite useful:
-- After 2024
+- 2025
+  - [2025.04 Certificate Rotation Process and Monitoring Solution](redhat/ocp4/4.16/2025.04.Certificate_Rotation_Process_and_Monitoring_Solution.md)
+  - [2025.04 using AI tools to analyze opensource project](redhat/notes/2025/2025.04.ai.research.en.md)
+  - [2025.03 rhbk-26 performance testing](redhat/ocp4/4.18/2025.03.rhbk-26.performance.test.md)
+  - [2025.03 compliance operator](redhat/ocp4/4.16/2025.03.compliance.operator.md)
+  - [2025.02 rhdh 1.4 permission with conditional policy](redhat/ocp4/4.16/2025.02.rhdh.condition.permission.md)
+    - [(AI generaeted) slides](redhat/ocp4/4.16/ppt/rhdh-conditional-policy/rhdh-conditional-policy.pdf)
+  - [2025.01 run llama factory on ocp ai](redhat/ocp4/4.16/2024.12.llama.factory.md)
+  - [2025.01 run mini llm on ocp ai](redhat/ocp4/4.16/2024.12.ocp.ai.mini.model.md)
+- 2024
+  - [2024.12 openshift 4.16 integration with Azure SSO without group sync operator](redhat/ocp4/4.16/2024.12.azure.sso.without.group.sync.md)
+  - [2024.12 openshift 4.16 integration with Azure SSO with group sync operator](redhat/ocp4/4.16/2024.12.azure.sso.md)
+  - [2024.12 backup etcd with cronjob](redhat/ocp4/4.16/2024.12.etcd.backup.job.md)
+  - [2024.12 redhat developer hub integration with azure devops](redhat/ocp4/4.16/2024.12.rhdh.ado.md)
   - [2024.11 using gitops/aap to collect heap dump](redhat/ocp4/4.16/2024.10.acm.aap.collect.heap.dump.md)
   - [2024.10 rhsso 7.1 performance issues troubleshooting](redhat/ocp4/4.15/2024.10.15.rhsso.7.1.memory.issue.md)
     - [2024.10 rhbk-24 and rhsso 7.1 performance researching](redhat/ocp4/4.15/2024.10.keycloak.performance.md)
@@ -148,12 +161,12 @@ Currently, there are many experience sharing articles in the warehouse, some of 
 
 <!-- 作者正在写一本在线书[《OpenShift4 一步一脚印》](https://wangzheng422.github.io/openshift4-steps-book/introduction.html)。 -->
 
-最后，欢迎支持关注作者B站
+<!-- 最后，欢迎支持关注作者B站
 
-[<kbd><img src="imgs/2021-05-09-21-47-36.png" width="600"></kbd>](https://space.bilibili.com/19536819)
+[<kbd><img src="imgs/2021-05-09-21-47-36.png" width="600"></kbd>](https://space.bilibili.com/19536819) -->
 
-# 许可证
-项目中涉及代码采用GNU V3许可。
+# License
+The code involved in this project is licensed under the GNU V3 license.
 
-# 版权声明
-本项目遵循 **[CC-BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/)** 协议。**商业转载必须征求作者 wangzheng422 授权同意，转载请务必注明[出处](https://github.com/wangzheng422/docker_env)。** 作者保留最终解释权及法律追究权力。
+# Copyright Statement
+This project is licensed under the **[CC-BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/)** agreement. **Commercial reproduction must obtain authorization from the author wangzheng422; when reproducing, be sure to indicate the [source](https://github.com/wangzheng422/docker_env).** The author reserves the final interpretation rights and legal pursuit rights.
