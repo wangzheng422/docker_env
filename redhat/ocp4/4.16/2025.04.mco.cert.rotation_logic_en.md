@@ -1,6 +1,6 @@
 # OpenShift Machine Config Operator Certificate/Key Rotation Logic
 
-This document outlines the logic used by the Machine Config Operator (MCO) and its related components, such as the Machine Config Daemon (MCD), to handle the rotation and distribution of certificates, keys, and secrets to OpenShift nodes (based on analysis of the 4.16 codebase).
+This document outlines the logic used by the [Machine Config Operator (MCO)](https://github.com/openshift/machine-config-operator) and its related components, such as the Machine Config Daemon (MCD), to handle the rotation and distribution of certificates, keys, and secrets to OpenShift nodes (based on analysis of the 4.16 codebase).
 
 ## Overview
 
