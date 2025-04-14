@@ -5,6 +5,13 @@ This repository is the author's technical notes from daily system operations. Th
 
 Currently, there are many experience sharing articles in the warehouse, some of which are quite useful:
 - 2025
+  - 2025.04 Machine Config Operator Certificate/Key Rotation Logic Comparing between 4.12 and 4.16
+    - [2025.04 Machine Config Operator Certificate/Key Rotation Logic for 4.16](redhat/ocp4/4.16/2025.04.mco.cert.rotation_logic_en.md)
+      - [chinese version](redhat/ocp4/4.16/2025.04.mco.cert.rotation_logic_cn.md)
+    - [2025.04 Machine Config Operator Certificate/Key Rotation Logic for 4.12](redhat/ocp4/4.12/2025.04.mco.cert.rotation.en.md)
+      - [chinese version](redhat/ocp4/4.12/2025.04.mco.cert.rotation.cn.md)
+    - [2025.04 kube api server certificate rotation analysis report for 4.12](redhat/ocp4/4.12/2025.04.kube.api.cert.rotation.en.md)
+      - [chinese version](redhat/ocp4/4.12/2025.04.kube.api.cert.rotation.cn.md)
   - [2025.04 Etcd Operator Certificate Rotation Analysis Report](redhat/ocp4/4.16/2025.04.etcd_cert_rotation_report_en.md)
     - [chinese version](redhat/ocp4/4.16/2025.04.etcd_cert_rotation_report_cn.md)
   - [2025.04 Machine Config Operator Certificate/Key Rotation Logic](redhat/ocp4/4.16/2025.04.mco.cert.rotation_logic_en.md)
