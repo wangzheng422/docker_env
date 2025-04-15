@@ -177,24 +177,24 @@ sequenceDiagram
     participant ClusterKubeAPIServerOperator_NodeCon as Cluster Kube API Server Operator NodeController
     participant K8s_API as Kubernetes API
     participant MCO as Machine Config Operator
-    participant Kubelet_CP as Kubelet (Control Plane)
+    %% participant Kubelet_CP as Kubelet (Control Plane)
     participant APIServer_Pod as Kube-apiserver Pod
     participant MCD as Machine Config Daemon (Node)
     participant Kubelet_Node as Kubelet (Node)
 
-    Note over ClusterKubeAPIServerOperator_CertRot, APIServer_Pod: Scenario 1: Target Certificate Rotation (e.g., kubelet-client)
+    Note over ClusterKubeAPIServerOperator_CertRot, APIServer_Pod: Scenario 1: Target Certificate Rotation (e.g., kube-apiserver-to-kubelet-signer, kubelet-client)
 
     ClusterKubeAPIServerOperator_CertRot->>K8s_API: 1. Generate new cert/key, Update Target Secret (e.g., openshift-kube-apiserver/kubelet-client)
     ClusterKubeAPIServerOperator_RevCon->>K8s_API: 2. Watch Secret, detect change
     ClusterKubeAPIServerOperator_RevCon->>K8s_API: 3. Create new Versioned Secret (e.g., openshift-kube-apiserver/kubelet-client-5)
     ClusterKubeAPIServerOperator_RevCon->>K8s_API: 4. Update KubeAPIServer CR status.latestAvailableRevision = 5
     ClusterKubeAPIServerOperator_NodeCon->>K8s_API: 5. Watch KubeAPIServer CR, detect revision change
-    ClusterKubeAPIServerOperator_NodeCon->>Kubelet_CP: 6. Write updated manifest (/etc/kubernetes/manifests/kube-apiserver-pod.yaml) referencing revision 5 resources
-    Kubelet_CP->>Kubelet_CP: 7. Detect manifest file change
-    Kubelet_CP->>APIServer_Pod: 8. Stop old Pod (rev 4)
-    Kubelet_CP->>APIServer_Pod: 9. Start new Pod (rev 5) using new versioned Secret
+    ClusterKubeAPIServerOperator_NodeCon->>APIServer_Pod: 6. Write updated manifest (/etc/kubernetes/manifests/kube-apiserver-pod.yaml) referencing revision 5 resources
+    APIServer_Pod->>APIServer_Pod: 7. Detect key/cert file change and reload
+    %% Kubelet_CP->>APIServer_Pod: 8. Stop old Pod (rev 4)
+    %% Kubelet_CP->>APIServer_Pod: 9. Start new Pod (rev 5) using new versioned Secret
 
-    Note over ClusterKubeAPIServerOperator_CertRot, Kubelet_Node: Scenario 2: Signer Certificate Rotation (e.g., kube-apiserver-to-kubelet-signer)
+    Note over ClusterKubeAPIServerOperator_CertRot, Kubelet_Node: Scenario 2: Signer Certificate Rotation (e.g., kubelet-ca.crt)
 
     ClusterKubeAPIServerOperator_CertRot->>K8s_API: 1a. Rotate signer cert/key, Update Signer Secret (e.g., openshift-kube-apiserver-operator/kube-apiserver-to-kubelet-signer)
     ClusterKubeAPIServerOperator_CertRot->>K8s_API: 1b. Update CA Bundle ConfigMap (e.g., openshift-kube-apiserver-operator/kube-apiserver-to-kubelet-client-ca)
