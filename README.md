@@ -5,6 +5,7 @@ This repository is the author's technical notes from daily system operations. Th
 
 Currently, there are many experience sharing articles in the warehouse, some of which are quite useful:
 - 2025
+  - [2025.05 openshift pipeline without github webhook & using new image tag](redhat/ocp4/4.18/2025.05.rhdh.github.md)
   - [2025.04 Machine Config Operator Certificate/Key Rotation Logic Comparing between 4.12 and 4.16](redhat/ocp4/4.16/files/[public]_Machine_Config_Operator_Certificate_Key_Rotation_Logic_Comparing_between_4.12_and_4.16.pdf)
     <!-- - [2025.04 Machine Config Operator Certificate/Key Rotation Logic for 4.16](redhat/ocp4/4.16/2025.04.apiserver.mco.cert.rotation.en.md)
       - [chinese version](redhat/ocp4/4.16/2025.04.apiserver.mco.cert.rotation.cn.md)
