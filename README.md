@@ -5,8 +5,21 @@ This repository is the author's technical notes from daily system operations. Th
 
 Currently, there are many experience sharing articles in the warehouse, some of which are quite useful:
 - 2025
-  - [2025.04 Certificate Rotation Process and Monitoring Solution](redhat/ocp4/4.16/2025.04.Certificate_Rotation_Process_and_Monitoring_Solution.md)
+  - [2025.05 openshift pipeline without github webhook & using new image tag](redhat/ocp4/4.18/2025.05.rhdh.github.md)
+  - [2025.04 Machine Config Operator Certificate/Key Rotation Logic Comparing between 4.12 and 4.16](redhat/ocp4/4.16/files/[public]_Machine_Config_Operator_Certificate_Key_Rotation_Logic_Comparing_between_4.12_and_4.16.pdf)
+    <!-- - [2025.04 Machine Config Operator Certificate/Key Rotation Logic for 4.16](redhat/ocp4/4.16/2025.04.apiserver.mco.cert.rotation.en.md)
+      - [chinese version](redhat/ocp4/4.16/2025.04.apiserver.mco.cert.rotation.cn.md)
+    - [2025.04 Machine Config Operator Certificate/Key Rotation Logic for 4.12](redhat/ocp4/4.12/2025.04.mco.cert.rotation.en.md)
+      - [chinese version](redhat/ocp4/4.12/2025.04.mco.cert.rotation.cn.md)
+    - [2025.04 kube api server certificate rotation analysis report for 4.12](redhat/ocp4/4.12/2025.04.kube.api.cert.rotation.en.md)
+      - [chinese version](redhat/ocp4/4.12/2025.04.kube.api.cert.rotation.cn.md)
+    - [2025.04 Etcd Operator Certificate Rotation Analysis Report](redhat/ocp4/4.16/2025.04.etcd_cert_rotation_report_en.md)
+      - [chinese version](redhat/ocp4/4.16/2025.04.etcd_cert_rotation_report_cn.md)
+    - [2025.04 Machine Config Operator Certificate/Key Rotation Logic](redhat/ocp4/4.16/2025.04.mco.cert.rotation_logic_en.md)
+      - [chinese version](redhat/ocp4/4.16/2025.04.mco.cert.rotation_logic_cn.md)
+    - [2025.04 kube-api-server Certificate Rotation Process and Monitoring Solution](redhat/ocp4/4.16/2025.04.Certificate_Rotation_Process_and_Monitoring_Solution.md) -->
   - [2025.04 using AI tools to analyze opensource project](redhat/notes/2025/2025.04.ai.research.en.md)
+    - [chinese version](redhat/notes/2025/2025.04.ai.research.cn.md)
   - [2025.03 rhbk-26 performance testing](redhat/ocp4/4.18/2025.03.rhbk-26.performance.test.md)
   - [2025.03 compliance operator](redhat/ocp4/4.16/2025.03.compliance.operator.md)
   - [2025.02 rhdh 1.4 permission with conditional policy](redhat/ocp4/4.16/2025.02.rhdh.condition.permission.md)
