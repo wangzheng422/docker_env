@@ -8,6 +8,7 @@ Currently, there are many experience sharing articles in the warehouse, some of 
   - [2025.06 ocp hcp over ocp-v](redhat/ocp4/4.18/2025.06.hcp.ocp.v.md)
   - [2025.05 ansible platform integrate with service.now](redhat/ocp4/4.18/2025.05.ansible.service.now.md)
     - [2025.06 aap integrate with service.now, webhook, eda, ai](redhat/ocp4/4.18/2025.05.ansible.eda.ai.md)
+    - [2025.07 get service.now cmdb data](redhat/ocp4/4.18/2025.07.service.now.cmdb.sync.md)
   - [2025.05 openshift pipeline without github webhook & using new image tag](redhat/ocp4/4.18/2025.05.rhdh.github.md)
   - [2025.04 Machine Config Operator Certificate/Key Rotation Logic Comparing between 4.12 and 4.16](redhat/ocp4/4.16/files/[public]_Machine_Config_Operator_Certificate_Key_Rotation_Logic_Comparing_between_4.12_and_4.16.pdf)
     <!-- - [2025.04 Machine Config Operator Certificate/Key Rotation Logic for 4.16](redhat/ocp4/4.16/2025.04.apiserver.mco.cert.rotation.en.md)
