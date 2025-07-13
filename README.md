@@ -5,6 +5,7 @@ This repository is the author's technical notes from daily system operations. Th
 
 Currently, there are many experience sharing articles in the warehouse, some of which are quite useful:
 - 2025
+  - [2025.07 kubelet client pem rotation analysis](redhat/ocp4/4.16/2025.07.cert.kubelet.client.md)
   - [2025.06 ocp hcp over ocp-v](redhat/ocp4/4.18/2025.06.hcp.ocp.v.md)
   - [2025.05 ansible platform integrate with service.now](redhat/ocp4/4.18/2025.05.ansible.service.now.md)
     - [2025.06 aap integrate with service.now, webhook, eda, ai](redhat/ocp4/4.18/2025.05.ansible.eda.ai.md)
