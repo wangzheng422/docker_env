@@ -6,7 +6,7 @@ This repository is the author's technical notes from daily system operations. Th
 Currently, there are many experience sharing articles in the warehouse, some of which are quite useful:
 - 2025
   - [2025.07 expose kube-api, router through metalLB on 2nd network](redhat/ocp4/4.18/2025.07.metallb.2nic.md)
-    - [2025.07 expose hosted cluster through metalLB in host control plan usecase](redhat/ocp4/4.18/2025.06.hcp.ocp.v.metallb.2nic.dev.md)
+    - [2025.07 expose hosted cluster through metalLB in host control plan usecase](redhat/ocp4/4.18/2025.06.hcp.ocp.v.metallb.2nic.md)
     - [2025.07 expose kube-api through route](redhat/ocp4/4.18/2025.07.expose.kubeapi.through.router.md)
   - [2025.07 kubelet client pem rotation analysis](redhat/ocp4/4.16/2025.07.cert.kubelet.client.md)
     - [2025.07 node-system-admin-client cert rotation analysis](redhat/ocp4/4.16/2025.07.cert.node-system-admin-client.md)
