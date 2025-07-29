@@ -5,6 +5,7 @@ This repository is the author's technical notes from daily system operations. Th
 
 Currently, there are many experience sharing articles in the warehouse, some of which are quite useful:
 - 2025
+  - [2025.07 ocp-v DR with oadp based on storage system directly](redhat/ocp4/4.18/2025.07.ocp-v.dr.nfs.md)
   - [2025.07 expose kube-api, router through metalLB on 2nd network](redhat/ocp4/4.18/2025.07.metallb.2nic.md)
     - [2025.07 expose hosted cluster through metalLB in host control plan use case](redhat/ocp4/4.18/2025.06.hcp.ocp.v.metallb.2nic.md)
     - [2025.07 expose kube-api through route](redhat/ocp4/4.18/2025.07.expose.kubeapi.through.router.md)
