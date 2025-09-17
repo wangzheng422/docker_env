@@ -5,6 +5,7 @@ This repository is the author's technical notes from daily system operations. Th
 
 Currently, there are many experience sharing articles in the warehouse, some of which are quite useful:
 - 2025
+  - [2025.09 vllm/rhaiis profiling](redhat/notes/2025/2025.09.vllm.gpu.profile.md)
   - [2025.09 layered rhcos to install rsyslog](redhat/ocp4/4.18/2025.09.layered.rhcos.md)
   - [2025.08 openshift workload partition](redhat/ocp4/4.18/2025.08.workload.partition.md)
   - [2025.07 nfs permission issue on ocp](redhat/ocp4/4.18/2025.07.nfs.fsgroup.md)
