@@ -5,6 +5,9 @@ This repository is the author's technical notes from daily system operations. Th
 
 Currently, there are many experience sharing articles in the warehouse, some of which are quite useful:
 - 2025
+  - [2025.10 analyze promethus pod restart when cert rotation](redhat/ocp4/4.18/2025.10.deploy.with.hash.md)
+  - [2025.10 get secrets which contains tls cert](redhat/ocp4/4.18/2025.10.get.cert.list.md)
+  - [2025.10 metax gpu onboarding](redhat/ocp4/4.18/2025.09.metax.onboarding.md)
   - [2025.09 vllm/rhaiis profiling](redhat/notes/2025/2025.09.vllm.gpu.profile.md)
   - [2025.09 layered rhcos to install rsyslog](redhat/ocp4/4.18/2025.09.layered.rhcos.md)
   - [2025.08 openshift workload partition](redhat/ocp4/4.18/2025.08.workload.partition.md)
