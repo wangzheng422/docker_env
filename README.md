@@ -5,6 +5,7 @@ This repository is the author's technical notes from daily system operations. Th
 
 Currently, there are many experience sharing articles in the warehouse, some of which are quite useful:
 - 2025
+  - [2025.11 ocp dr with oadp plugin](redhat/ocp4/4.18/2025.11.ocp-v.dr.oadp.plugin.md)
   - [2025.10 Mitigating etcd Pressure with API Server Throttling](redhat/ocp4/4.18/2025.10.api.server.throttling.md)
   - [2025.10 list pods which will restart when cert rotation](redhat/ocp4/4.18/2025.10.deploy.with.hash.md)
   - [2025.10 list all pods needs tls cert](redhat/ocp4/4.18/2025.10.pod.needs.secret.md)
