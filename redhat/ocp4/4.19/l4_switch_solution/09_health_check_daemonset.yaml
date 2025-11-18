@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: router-health-check
+  namespace: l4-switch-demo
+  labels:
+    app: router-health-check
+spec:
+  selector:
+    matchLabels:
+      app: router-health-check
+  template:
+    metadata:
+      labels:
+        app: router-health-check
+    spec:
+      # Ensure this pod runs on the same nodes as the OpenShift router
+      nodeSelector:
+        node-role.kubernetes.io/worker: "" # Adjust if your routers run on master/infra nodes
+      hostNetwork: true
+      tolerations:
+      # Add tolerations if your routers run on master/infra nodes
+      - key: "node-role.kubernetes.io/master"
+        operator: "Exists"
+        effect: "NoSchedule"
+      - key: "node-role.kubernetes.io/infra"
+        operator: "Exists"
+        effect: "NoSchedule"
+      containers:
+      - name: health-checker
+        image: registry.redhat.io/ubi8/python-39:latest
+        command: ["/usr/bin/python3", "/scripts/check.py"]
+        volumeMounts:
+        - name: script-volume
+          mountPath: /scripts
+        securityContext:
+          # Required for host network access on some OpenShift versions
+          privileged: true
+      volumes:
+      - name: script-volume
+        configMap:
+          name: health-check-script
+          defaultMode: 0755 # Make the script executable
