@@ -185,6 +185,19 @@ Currently, there are many experience sharing articles in the warehouse, some of 
 - OSX使用技巧
   - [如何录制系统声音](redhat/osx/osx.record.system.audio.md)
 
+Redhat Blog:
+- [Profiling vLLM Inference Server with GPU acceleration on RHEL](https://developers.redhat.com/articles/2025/10/16/profiling-vllm-inference-server-gpu-acceleration-rhel?source=sso)
+- [Analysis of OpenShift node-system-admin-client lifespan](https://developers.redhat.com/articles/2025/09/29/analysis-openshift-node-system-admin-client-lifespan#)
+- [Integrate Azure DevOps into Red Hat Developer Hub workflows](https://developers.redhat.com/articles/2025/08/22/integrate-azure-devops-red-hat-developer-hub-workflows?auHash=zOCf_cTYpPQFhZTVBGFTOOLmBY18NWTUbLz12kXJsCo#)
+
+Redhat learning:
+- Customizing RHCOS with CoreOS Layering to Add the rsyslog Package
+  - https://redhatquickcourses.github.io/customise-rhcos-layer-rsyslog/modules/index.html
+  - https://github.com/RedHatQuickCourses/customise-rhcos-layer-rsyslog/tree/main
+- OpenShift Workload Partitioning Deep Dive
+  - https://redhatquickcourses.github.io/ocp4-workload-partition/modules/index.html
+  - https://github.com/RedHatQuickCourses/ocp4-workload-partition
+
 <!-- 作者还做了一个[chrome extension](https://chromewebstore.google.com/detail/bing-image-new-tab/hahpccmdkmgmaoebhfnkpcnndnklfbpj)，用来在new tab上展示bing.com的美图，简单美观，欢迎使用。
 
 [<kbd><img src="imgs/2021-01-17-17-29-10.png" width="600"></kbd>](https://chrome.google.com/webstore/detail/bing-image-new-tab/hahpccmdkmgmaoebhfnkpcnndnklfbpj/) -->
