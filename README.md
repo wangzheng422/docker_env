@@ -5,6 +5,8 @@ This repository is the author's technical notes from daily system operations. Th
 
 Currently, there are many experience sharing articles in the warehouse, some of which are quite useful:
 - 2025
+  - [2025.12 MCCL IB Debug Slides](redhat/notes/2025/2025.12.mccl_slides.md)
+    - [2025.12 MCCL IB Debug ](redhat/notes/2025/2025.12.metax.mccl.perf.debug.md)
   - [2025.11 Implementing Layer 4 Switch as Ingress Gateway for OpenShift: Challenges and Solutions](redhat/ocp4/4.19/2025.11.l4.switch.md)
   - [2025.11 Deploying Dify on OpenShift 4.18 with Helm](redhat/ocp4/4.18/2025.11.dify.helm.md)
   - [2025.11 ocp dr with oadp plugin](redhat/ocp4/4.18/2025.11.ocp-v.dr.oadp.plugin.md)
