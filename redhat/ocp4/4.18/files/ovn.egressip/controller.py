@@ -1,0 +1,421 @@
+#!/usr/bin/env python3
+"""
+OVN Egress IP Controller with Integrated OVN Patching
+
+This controller performs two main functions:
+1. Synchronizes AdminPolicyBasedExternalRoute with gateway pod IPs
+2. Automatically applies OVN patches (ACLs and Port Security) when pods are created/deleted
+
+Features:
+- Watches gateway pods and updates APB routes
+- Watches business pods and applies OVN configurations
+- Cleans up OVN settings when pods are deleted
+- Idempotent operations to prevent unnecessary updates
+"""
+
+import os
+import time
+import threading
+import subprocess
+from kubernetes import client, config, watch
+
+# ============================================================================
+# Configuration Constants
+# ============================================================================
+
+# Gateway Configuration
+GATEWAY_NAMESPACE = "ns-egress-infra"
+GATEWAY_LABEL = "app=ns-blue-gateway"
+
+# Business Pod Configuration
+BUSINESS_NAMESPACE = "ns-blue"
+BUSINESS_LABEL = "app=business-app"
+
+# APB Configuration
+APB_NAME = "ns-blue-route"
+GROUP = "k8s.ovn.org"
+VERSION = "v1"
+PLURAL = "adminpolicybasedexternalroutes"
+
+# OVN Configuration
+OVN_NAMESPACE = "openshift-ovn-kubernetes"
+OVN_POD_LABEL = "app=ovnkube-node"
+OVN_CONTAINER = "ovn-controller"
+
+# OVN ACL Priority (custom priority to avoid conflicts)
+OVN_ACL_PRIORITY = 31821
+
+
+# ============================================================================
+# OVN Command Execution Helper
+# ============================================================================
+
+def execute_ovn_command(node_name, command):
+    """
+    Execute OVN command on the specific ovnkube-node pod running on the given node.
+    
+    Args:
+        node_name: The node where the target pod is running
+        command: The OVN command to execute
+        
+    Returns:
+        tuple: (success: bool, output: str)
+    """
+    try:
+        # Find the ovnkube-node pod on the specific node
+        cmd = [
+            "oc", "get", "pods",
+            "-n", OVN_NAMESPACE,
+            "--field-selector", f"spec.nodeName={node_name}",
+            "-l", OVN_POD_LABEL,
+            "-o", "jsonpath={.items[0].metadata.name}"
+        ]
+        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        ovn_pod = result.stdout.strip()
+        
+        if not ovn_pod:
+            print(f"  [ERROR] No OVN pod found on node {node_name}")
+            return False, ""
+        
+        print(f"  [Exec] Node: {node_name} (Pod: {ovn_pod})")
+        
+        # Execute the command in the ovn-controller container
+        exec_cmd = [
+            "oc", "exec",
+            "-n", OVN_NAMESPACE,
+            ovn_pod,
+            "-c", OVN_CONTAINER,
+            "--",
+            "bash", "-c", command
+        ]
+        result = subprocess.run(exec_cmd, capture_output=True, text=True, check=True)
+        return True, result.stdout
+        
+    except subprocess.CalledProcessError as e:
+        print(f"  [ERROR] Command failed: {e}")
+        print(f"  [ERROR] stderr: {e.stderr}")
+        return False, e.stderr
+    except Exception as e:
+        print(f"  [ERROR] Unexpected error: {e}")
+        return False, str(e)
+
+
+# ============================================================================
+# OVN Pod Configuration Functions
+# ============================================================================
+
+def get_pod_details(namespace, label):
+    """
+    Get pod details including name, node, and LSP name.
+    
+    Returns:
+        dict: {'pod_name': str, 'node_name': str, 'lsp_name': str} or None
+    """
+    try:
+        v1 = client.CoreV1Api()
+        pods = v1.list_namespaced_pod(namespace, label_selector=label)
+        
+        if not pods.items:
+            print(f"  [WARN] No pods found with label {label} in namespace {namespace}")
+            return None
+        
+        pod = pods.items[0]
+        if pod.status.phase != "Running":
+            print(f"  [WARN] Pod {pod.metadata.name} is not Running (status: {pod.status.phase})")
+            return None
+        
+        pod_name = pod.metadata.name
+        node_name = pod.spec.node_name
+        lsp_name = f"{namespace}_{pod_name}"
+        
+        return {
+            'pod_name': pod_name,
+            'node_name': node_name,
+            'lsp_name': lsp_name
+        }
+    except Exception as e:
+        print(f"  [ERROR] Failed to get pod details: {e}")
+        return None
+
+
+def clean_ovn_pod(namespace, label):
+    """
+    Clean OVN settings for a specific pod.
+    Removes all ACLs with priority 31821 associated with the pod.
+    
+    Args:
+        namespace: Pod namespace
+        label: Pod label selector
+    """
+    print("=" * 60)
+    print(f"Cleaning Pod [{label}] in Namespace [{namespace}]")
+    
+    details = get_pod_details(namespace, label)
+    if not details:
+        print("  [SKIP] Pod not found or not ready")
+        return
+    
+    pod_name = details['pod_name']
+    node_name = details['node_name']
+    lsp_name = details['lsp_name']
+    
+    print(f"  Target: Pod={pod_name} | Node={node_name} | LSP={lsp_name}")
+    
+    # Clean up ACLs with priority 31821 for this specific LSP
+    print(f"  >> Cleaning up ACLs (Priority {OVN_ACL_PRIORITY}) for {lsp_name}...")
+    cmd_clean = f"""
+for u in $(ovn-nbctl --format=csv --no-heading --columns=_uuid,match find ACL priority={OVN_ACL_PRIORITY} | grep "{lsp_name}" | awk -F, '{{print $1}}'); do
+    echo "    Removing ACL $u"
+    ovn-nbctl remove Logical_Switch {node_name} acls $u
+done
+"""
+    execute_ovn_command(node_name, cmd_clean)
+    
+    # Clean up all ACLs with priority 31821 on this node (global cleanup)
+    print(f"  >> Cleaning up ALL ACLs with Priority {OVN_ACL_PRIORITY} on node {node_name}...")
+    cmd_clean_all = f"""
+for u in $(ovn-nbctl --format=csv --no-heading --columns=_uuid find ACL priority={OVN_ACL_PRIORITY} | awk -F, '{{print $1}}'); do
+    echo "    Removing ACL $u"
+    ovn-nbctl remove Logical_Switch {node_name} acls $u
+done
+"""
+    execute_ovn_command(node_name, cmd_clean_all)
+    
+    print("  Clean Done.")
+
+
+def patch_ovn_pod(namespace, label, port_security_mode="keep_port_security"):
+    """
+    Apply OVN patches for a specific pod.
+    
+    Args:
+        namespace: Pod namespace
+        label: Pod label selector
+        port_security_mode: "clear_port_security" or "keep_port_security"
+            - Gateway Pod: use "clear_port_security" (needs to forward traffic)
+            - Business Pod: use "keep_port_security" (only sends own traffic)
+    """
+    print("=" * 60)
+    print(f"Configuring Pod [{label}] in Namespace [{namespace}]")
+    print(f"  Port Security Mode: {port_security_mode}")
+    
+    details = get_pod_details(namespace, label)
+    if not details:
+        print("  [SKIP] Pod not found or not ready")
+        return
+    
+    pod_name = details['pod_name']
+    node_name = details['node_name']
+    lsp_name = details['lsp_name']
+    
+    print(f"  Target: Pod={pod_name} | Node={node_name} | LSP={lsp_name}")
+    
+    # Step 1: Clear Port Security (conditional)
+    if port_security_mode == "clear_port_security":
+        print("  >> Clearing Port Security (Gateway mode - allows forwarding)...")
+        cmd_clear = f"ovn-nbctl clear Logical_Switch_Port {lsp_name} port_security"
+        execute_ovn_command(node_name, cmd_clear)
+    else:
+        print("  >> Keeping Port Security (Business Pod mode - enhanced security)")
+    
+    # Step 2: Add Stateless ACLs for ALL traffic
+    # CRITICAL: All traffic (TCP and UDP) uses stateless processing
+    # This is necessary because return traffic from external IPs would be
+    # blocked by stateful ACLs that check source IP
+    
+    # from-lport: Allow ALL Egress (Pod -> Switch)
+    print(f"  >> Adding 'from-lport' stateless allow rule (Priority {OVN_ACL_PRIORITY})...")
+    cmd_acl_from = f'ovn-nbctl --type=switch acl-add {node_name} from-lport {OVN_ACL_PRIORITY} "inport == \\"{lsp_name}\\"" allow-stateless'
+    execute_ovn_command(node_name, cmd_acl_from)
+    
+    # to-lport: Allow ALL Ingress (Switch -> Pod)
+    print(f"  >> Adding 'to-lport' stateless allow rule (Priority {OVN_ACL_PRIORITY})...")
+    cmd_acl_to = f'ovn-nbctl --type=switch acl-add {node_name} to-lport {OVN_ACL_PRIORITY} "outport == \\"{lsp_name}\\"" allow-stateless'
+    execute_ovn_command(node_name, cmd_acl_to)
+    
+    print("  Done.")
+
+
+# ============================================================================
+# APB Reconciliation Functions
+# ============================================================================
+
+def get_current_gateway_ips(v1):
+    """
+    Get current gateway pod IPs in Running state.
+    
+    Returns:
+        list: Sorted list of IP addresses
+    """
+    try:
+        pods = v1.list_namespaced_pod(GATEWAY_NAMESPACE, label_selector=GATEWAY_LABEL)
+        return sorted([p.status.pod_ip for p in pods.items if p.status.phase == "Running" and p.status.pod_ip])
+    except Exception as e:
+        print(f"Error listing gateway pods: {e}")
+        return []
+
+
+def reconcile_apb():
+    """
+    Core reconciliation logic: Compare and synchronize APB with gateway pod IPs.
+    """
+    v1 = client.CoreV1Api()
+    api = client.CustomObjectsApi()
+    
+    # 1. Get current gateway pod IPs (desired state)
+    desired_ips = get_current_gateway_ips(v1)
+    if not desired_ips:
+        print("No running gateway pods found. Skipping APB sync.")
+        return
+    
+    desired_formatted = [{"ip": ip} for ip in desired_ips]
+    
+    try:
+        # 2. Read current APB resource state
+        current_apb = api.get_cluster_custom_object(GROUP, VERSION, PLURAL, APB_NAME)
+        current_static_hops = current_apb.get("spec", {}).get("nextHops", {}).get("static", [])
+        
+        # 3. Idempotency check: Compare desired IPs with actual IPs
+        current_ips_str = sorted([hop["ip"] for hop in current_static_hops if "ip" in hop])
+        
+        if current_ips_str == desired_ips:
+            # If identical, skip to prevent watch loop
+            return
+        
+        # 4. If different, apply correction
+        print(f"Detect deviation! Desired: {desired_ips}, Current in APB: {current_ips_str}. Correcting...")
+        body = {"spec": {"nextHops": {"static": desired_formatted}}}
+        api.patch_cluster_custom_object(GROUP, VERSION, PLURAL, APB_NAME, body)
+        print("APB Successfully enforced.")
+        
+    except Exception as e:
+        print(f"APB reconciliation failed: {e}")
+
+
+# ============================================================================
+# Pod Watch Functions
+# ============================================================================
+
+def watch_gateway_pods():
+    """
+    Watch gateway pods and reconcile APB when changes occur.
+    """
+    v1 = client.CoreV1Api()
+    w = watch.Watch()
+    print(f"Started watching Gateway Pods in {GATEWAY_NAMESPACE}...")
+    
+    for event in w.stream(v1.list_namespaced_pod, namespace=GATEWAY_NAMESPACE, label_selector=GATEWAY_LABEL):
+        event_type = event['type']
+        pod = event['object']
+        pod_name = pod.metadata.name
+        
+        print(f"[Gateway Event] {event_type}: {pod_name}")
+        
+        # Reconcile APB on any gateway pod change
+        reconcile_apb()
+        
+        # Apply OVN patches for gateway pods
+        if event_type == "ADDED" or event_type == "MODIFIED":
+            if pod.status.phase == "Running":
+                print(f"  >> Applying OVN patches to gateway pod {pod_name}...")
+                clean_ovn_pod(GATEWAY_NAMESPACE, GATEWAY_LABEL)
+                patch_ovn_pod(GATEWAY_NAMESPACE, GATEWAY_LABEL, "clear_port_security")
+        elif event_type == "DELETED":
+            print(f"  >> Gateway pod {pod_name} deleted, cleaning up...")
+            # Note: Pod is already deleted, cleanup happens automatically
+
+
+def watch_business_pods():
+    """
+    Watch business pods and apply OVN patches when they are created/deleted.
+    """
+    v1 = client.CoreV1Api()
+    w = watch.Watch()
+    print(f"Started watching Business Pods in {BUSINESS_NAMESPACE}...")
+    
+    for event in w.stream(v1.list_namespaced_pod, namespace=BUSINESS_NAMESPACE, label_selector=BUSINESS_LABEL):
+        event_type = event['type']
+        pod = event['object']
+        pod_name = pod.metadata.name
+        
+        print(f"[Business Event] {event_type}: {pod_name}")
+        
+        if event_type == "ADDED" or event_type == "MODIFIED":
+            if pod.status.phase == "Running":
+                print(f"  >> Applying OVN patches to business pod {pod_name}...")
+                # Wait a bit for pod to be fully ready
+                time.sleep(2)
+                clean_ovn_pod(BUSINESS_NAMESPACE, BUSINESS_LABEL)
+                patch_ovn_pod(BUSINESS_NAMESPACE, BUSINESS_LABEL, "keep_port_security")
+        elif event_type == "DELETED":
+            print(f"  >> Business pod {pod_name} deleted, cleaning up...")
+            # Note: Pod is already deleted, cleanup happens automatically
+
+
+def watch_apb():
+    """
+    Watch APB resource changes (prevent manual modifications).
+    """
+    api = client.CustomObjectsApi()
+    w = watch.Watch()
+    print("Started watching APB Resource...")
+    
+    for event in w.stream(api.list_cluster_custom_object, GROUP, VERSION, PLURAL):
+        resource = event.get('object', {})
+        if resource.get('metadata', {}).get('name') == APB_NAME:
+            # Reconcile on any APB change
+            # Internal comparison logic prevents infinite loops
+            reconcile_apb()
+
+
+# ============================================================================
+# Main Entry Point
+# ============================================================================
+
+if __name__ == "__main__":
+    print("=" * 60)
+    print("OVN Egress IP Controller Starting...")
+    print("=" * 60)
+    
+    # Load Kubernetes configuration
+    try:
+        config.load_incluster_config()
+        print("Loaded in-cluster configuration")
+    except:
+        config.load_kube_config()
+        print("Loaded kubeconfig configuration")
+    
+    # Initial reconciliation
+    print("\n[Initial Sync] Performing initial APB reconciliation...")
+    reconcile_apb()
+    
+    print("\n[Initial Sync] Applying OVN patches to existing pods...")
+    # Patch gateway pods
+    clean_ovn_pod(GATEWAY_NAMESPACE, GATEWAY_LABEL)
+    patch_ovn_pod(GATEWAY_NAMESPACE, GATEWAY_LABEL, "clear_port_security")
+    
+    # Patch business pods
+    clean_ovn_pod(BUSINESS_NAMESPACE, BUSINESS_LABEL)
+    patch_ovn_pod(BUSINESS_NAMESPACE, BUSINESS_LABEL, "keep_port_security")
+    
+    print("\n" + "=" * 60)
+    print("Starting watch threads...")
+    print("=" * 60 + "\n")
+    
+    # Start watch threads
+    threads = [
+        threading.Thread(target=watch_gateway_pods, name="GatewayWatcher"),
+        threading.Thread(target=watch_business_pods, name="BusinessWatcher"),
+        threading.Thread(target=watch_apb, name="APBWatcher")
+    ]
+    
+    for t in threads:
+        t.daemon = True
+        t.start()
+    
+    # Keep main thread alive
+    try:
+        for t in threads:
+            t.join()
+    except KeyboardInterrupt:
+        print("\nController shutting down...")
