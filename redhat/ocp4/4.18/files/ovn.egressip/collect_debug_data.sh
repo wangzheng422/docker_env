@@ -78,11 +78,14 @@ for NODE_KEY in "${NODES[@]}"; do
     run_in_pod "$NODE_POD" "$FULL_NODE_NAME" "ovn-nbctl --columns=name,port_security list Logical_Switch_Port" "OVN NB Port Security"
     run_in_pod "$NODE_POD" "$FULL_NODE_NAME" "ovn-nbctl list Logical_Router_Port" "OVN NB Router Ports"
     run_in_pod "$NODE_POD" "$FULL_NODE_NAME" "ovn-nbctl list Load_Balancer" "OVN NB Load Balancers"
+    run_in_pod "$NODE_POD" "$FULL_NODE_NAME" "ovn-nbctl list NAT" "OVN NB NAT Rules"
+    run_in_pod "$NODE_POD" "$FULL_NODE_NAME" "ovn-nbctl list Address_Set" "OVN NB Address Sets"
 
     # 2. Collect OVN Southbound Data (from this node's perspective)
     echo "  - Collecting OVN Southbound Data..."
     run_in_pod "$NODE_POD" "$FULL_NODE_NAME" "ovn-sbctl show" "OVN SB Show"
     run_in_pod "$NODE_POD" "$FULL_NODE_NAME" "ovn-sbctl --columns=logical_port,port_security list Port_Binding" "OVN SB Port Security"
+    run_in_pod "$NODE_POD" "$FULL_NODE_NAME" "ovn-sbctl list Chassis" "OVN SB Chassis"
     run_in_pod "$NODE_POD" "$FULL_NODE_NAME" "ovn-sbctl lflow-list" "OVN SB Logical Flows"
 
     # 3. Collect OVS/Network Data
@@ -90,7 +93,8 @@ for NODE_KEY in "${NODES[@]}"; do
     run_in_pod "$NODE_POD" "$FULL_NODE_NAME" "ovs-vsctl show" "OVS VSCTL Show"
     # run_in_pod "$NODE_POD" "$FULL_NODE_NAME" "ovs-ofctl -O OpenFlow13 dump-flows br-int" "OVS OpenFlow Dumps" # Skipped as per request/comment
     run_in_pod "$NODE_POD" "$FULL_NODE_NAME" "ip a" "IP Addresses"
-    run_in_pod "$NODE_POD" "$FULL_NODE_NAME" "ip route" "IP Routes"
+    run_in_pod "$NODE_POD" "$FULL_NODE_NAME" "ip rule" "IP Rules"
+    run_in_pod "$NODE_POD" "$FULL_NODE_NAME" "ip route show table all" "IP Routes (All Tables)"
 
 done
 
