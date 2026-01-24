@@ -31,46 +31,27 @@ log_section() {
     } >> "$LOG_FILE"
 }
 
-# 1. Get an OVN Pod
-echo "Finding an OVN pod..."
-OVN_POD=$(oc get pods -n "$NAMESPACE" -l "$OVN_LABEL" -o jsonpath='{.items[0].metadata.name}')
-echo "Using OVN Pod: $OVN_POD"
-
-# 2. Collect OVN Northbound
-echo "Collecting OVN Northbound Data..."
-run_nb() {
-    local cmd="$1"
-    local desc="$2"
-    local full_cmd="oc exec -n $NAMESPACE $OVN_POD -c ovn-controller -- $cmd"
+# Helper to run commands inside the pod
+run_in_pod() {
+    local pod="$1"
+    local node_name="$2"
+    local cmd="$3"
+    local desc="$4"
     
-    log_section "Cluster (via $OVN_POD)" "$desc" "$cmd"
-    eval "$full_cmd" >> "$LOG_FILE" 2>&1 || echo "Error running command" >> "$LOG_FILE"
+    local full_cmd="oc exec -n $NAMESPACE $pod -c ovn-controller -- $cmd"
+    
+    log_section "$node_name (via $pod)" "$desc" "$cmd"
+    # Use eval to handle complex command strings with pipes/quotes if necessary, though direct execution is safer. 
+    # Here we stick to the original pattern for consistency.
+    eval "$full_cmd" >> "$LOG_FILE" 2>&1 || echo "Error running command: $cmd" >> "$LOG_FILE"
 }
 
-run_nb "ovn-nbctl show" "OVN NB Show"
-run_nb "ovn-nbctl list ACL" "OVN NB ACL List"
-run_nb "ovn-nbctl list Logical_Router_Policy" "OVN NB Logical Router Policies"
-run_nb "ovn-nbctl list Logical_Switch_Port" "OVN NB Switch Ports"
-run_nb "ovn-nbctl list Logical_Router_Port" "OVN NB Router Ports"
-run_nb "ovn-nbctl list Load_Balancer" "OVN NB Load Balancers"
-
-# 2.1 Collect OVN Southbound
-echo "Collecting OVN Southbound Data..."
-run_sb() {
-    local cmd="$1"
-    local desc="$2"
-    local full_cmd="oc exec -n $NAMESPACE $OVN_POD -c ovn-controller -- $cmd"
-    
-    log_section "Cluster (via $OVN_POD)" "$desc" "$cmd"
-    eval "$full_cmd" >> "$LOG_FILE" 2>&1 || echo "Error running command" >> "$LOG_FILE"
-}
-
-run_sb "ovn-sbctl show" "OVN SB Show"
-run_sb "ovn-sbctl lflow-list" "OVN SB Logical Flows"
-
-# 3. Collect OVS Data
+# Main Loop: Process each node
 for NODE_KEY in "${NODES[@]}"; do
+    echo "================================================================================"
     echo "Processing Node matching: $NODE_KEY"
+    
+    # Identify full node name
     FULL_NODE_NAME=$(oc get nodes -o name | grep "$NODE_KEY" | head -n 1 | cut -d/ -f2)
     
     if [ -z "$FULL_NODE_NAME" ]; then
@@ -78,28 +59,37 @@ for NODE_KEY in "${NODES[@]}"; do
         continue
     fi
     
+    # Identify OVN Pod on this node
     NODE_POD=$(oc get pods -n "$NAMESPACE" -l "$OVN_LABEL" --field-selector spec.nodeName="$FULL_NODE_NAME" -o jsonpath='{.items[0].metadata.name}')
     
     if [ -z "$NODE_POD" ]; then
         echo "WARNING: No ovnkube-node pod found on $FULL_NODE_NAME. Skipping."
         continue
     fi
-    
-    run_ovs() {
-        local cmd="$1"
-        local desc="$2"
-        # Fix: use ovn-controller container as it has ovs-vsctl and ip commands available
-        local full_cmd="oc exec -n $NAMESPACE $NODE_POD -c ovn-controller -- $cmd"
-        
-        log_section "$FULL_NODE_NAME (via $NODE_POD)" "$desc" "$cmd"
-        eval "$full_cmd" >> "$LOG_FILE" 2>&1 || echo "Error running command" >> "$LOG_FILE"
-    }
 
-    echo "  - Collecting OVS/Network data for $FULL_NODE_NAME..."
-    run_ovs "ovs-vsctl show" "OVS VSCTL Show"
-    # run_ovs "ovs-ofctl -O OpenFlow13 dump-flows br-int" "OVS OpenFlow Dumps" # Skipped
-    run_ovs "ip a" "IP Addresses"
-    run_ovs "ip route" "IP Routes"
+    echo "  Target Pod: $NODE_POD"
+
+    # 1. Collect OVN Northbound Data (from this node's perspective)
+    echo "  - Collecting OVN Northbound Data..."
+    run_in_pod "$NODE_POD" "$FULL_NODE_NAME" "ovn-nbctl show" "OVN NB Show"
+    run_in_pod "$NODE_POD" "$FULL_NODE_NAME" "ovn-nbctl list ACL" "OVN NB ACL List"
+    run_in_pod "$NODE_POD" "$FULL_NODE_NAME" "ovn-nbctl list Logical_Router_Policy" "OVN NB Logical Router Policies"
+    run_in_pod "$NODE_POD" "$FULL_NODE_NAME" "ovn-nbctl list Logical_Switch_Port" "OVN NB Switch Ports"
+    run_in_pod "$NODE_POD" "$FULL_NODE_NAME" "ovn-nbctl list Logical_Router_Port" "OVN NB Router Ports"
+    run_in_pod "$NODE_POD" "$FULL_NODE_NAME" "ovn-nbctl list Load_Balancer" "OVN NB Load Balancers"
+
+    # 2. Collect OVN Southbound Data (from this node's perspective)
+    echo "  - Collecting OVN Southbound Data..."
+    run_in_pod "$NODE_POD" "$FULL_NODE_NAME" "ovn-sbctl show" "OVN SB Show"
+    run_in_pod "$NODE_POD" "$FULL_NODE_NAME" "ovn-sbctl lflow-list" "OVN SB Logical Flows"
+
+    # 3. Collect OVS/Network Data
+    echo "  - Collecting OVS & Network Data..."
+    run_in_pod "$NODE_POD" "$FULL_NODE_NAME" "ovs-vsctl show" "OVS VSCTL Show"
+    # run_in_pod "$NODE_POD" "$FULL_NODE_NAME" "ovs-ofctl -O OpenFlow13 dump-flows br-int" "OVS OpenFlow Dumps" # Skipped as per request/comment
+    run_in_pod "$NODE_POD" "$FULL_NODE_NAME" "ip a" "IP Addresses"
+    run_in_pod "$NODE_POD" "$FULL_NODE_NAME" "ip route" "IP Routes"
+
 done
 
 echo "Done. All data in $LOG_FILE"
