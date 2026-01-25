@@ -4,6 +4,8 @@
 This repository is the author's technical notes from daily system operations. The author often has opportunities to perform various system operations, including many PoCs, new system validations, and solution explorations, which provide numerous chances for practical system operations involving operating system installations, IaaS and PaaS platform setups, middleware system validations, and application development and validation. Many operational steps are quite complex; therefore, a centralized place for note-taking is needed to facilitate personal organization and immediate online sharing.
 
 Currently, there are many experience sharing articles in the warehouse, some of which are quite useful:
+- 2026
+  - [2026.01 OVN EgressIP](redhat/ocp4/4.18/2026.01.ovn.egressip.md)
 - 2025
   - [2025.12 MCCL IB Debug Slides](redhat/notes/2025/2025.12.mccl_slides.md)
     - [2025.12 MCCL IB Debug ](redhat/notes/2025/2025.12.metax.mccl.perf.debug.md)
