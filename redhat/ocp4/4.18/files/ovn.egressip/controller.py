@@ -20,30 +20,30 @@ import subprocess
 from kubernetes import client, config, watch
 
 # ============================================================================
-# Configuration Constants
+# Configuration from Environment Variables
 # ============================================================================
 
 # Gateway Configuration
-GATEWAY_NAMESPACE = "ns-egress-infra"
-GATEWAY_LABEL = "app=ns-blue-gateway"
+GATEWAY_NAMESPACE = os.getenv("GATEWAY_NAMESPACE", "ns-egress-infra")
+GATEWAY_LABEL = os.getenv("GATEWAY_LABEL", "app=ns-blue-gateway")
 
 # Business Pod Configuration
-BUSINESS_NAMESPACE = "ns-blue"
-BUSINESS_LABEL = "app=business-app"
+BUSINESS_NAMESPACE = os.getenv("BUSINESS_NAMESPACE", "ns-blue")
+BUSINESS_LABEL = os.getenv("BUSINESS_LABEL", "app=business-app")
 
 # APB Configuration
-APB_NAME = "ns-blue-route"
+APB_NAME = os.getenv("APB_NAME", "ns-blue-route")
 GROUP = "k8s.ovn.org"
 VERSION = "v1"
 PLURAL = "adminpolicybasedexternalroutes"
 
 # OVN Configuration
-OVN_NAMESPACE = "openshift-ovn-kubernetes"
-OVN_POD_LABEL = "app=ovnkube-node"
-OVN_CONTAINER = "ovn-controller"
+OVN_NAMESPACE = os.getenv("OVN_NAMESPACE", "openshift-ovn-kubernetes")
+OVN_POD_LABEL = os.getenv("OVN_POD_LABEL", "app=ovnkube-node")
+OVN_CONTAINER = os.getenv("OVN_CONTAINER", "ovn-controller")
 
 # OVN ACL Priority (custom priority to avoid conflicts)
-OVN_ACL_PRIORITY = 31821
+OVN_ACL_PRIORITY = int(os.getenv("OVN_ACL_PRIORITY", "31821"))
 
 
 # ============================================================================
@@ -480,6 +480,17 @@ if __name__ == "__main__":
     print("=" * 60)
     print("OVN Egress IP Controller Starting...")
     print("=" * 60)
+    
+    # Print configuration
+    print("\n[Configuration]")
+    print(f"  Gateway Namespace:  {GATEWAY_NAMESPACE}")
+    print(f"  Gateway Label:      {GATEWAY_LABEL}")
+    print(f"  Business Namespace: {BUSINESS_NAMESPACE}")
+    print(f"  Business Label:     {BUSINESS_LABEL}")
+    print(f"  APB Name:           {APB_NAME}")
+    print(f"  OVN Namespace:      {OVN_NAMESPACE}")
+    print(f"  OVN ACL Priority:   {OVN_ACL_PRIORITY}")
+    print()
     
     # Load Kubernetes configuration
     try:
