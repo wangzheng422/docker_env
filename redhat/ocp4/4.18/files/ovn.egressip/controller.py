@@ -334,79 +334,142 @@ def reconcile_apb():
 
 
 # ============================================================================
-# Pod Watch Functions
+# Pod Watch Functions with Auto-Restart
 # ============================================================================
 
 def watch_gateway_pods():
     """
     Watch gateway pods and reconcile APB when changes occur.
+    Automatically restarts on errors with exponential backoff.
     """
-    v1 = client.CoreV1Api()
-    w = watch.Watch()
-    print(f"Started watching Gateway Pods in {GATEWAY_NAMESPACE}...")
+    retry_delay = 5  # Initial retry delay in seconds
+    max_retry_delay = 300  # Maximum retry delay (5 minutes)
     
-    for event in w.stream(v1.list_namespaced_pod, namespace=GATEWAY_NAMESPACE, label_selector=GATEWAY_LABEL):
-        event_type = event['type']
-        pod = event['object']
-        pod_name = pod.metadata.name
-        
-        print(f"[Gateway Event] {event_type}: {pod_name}")
-        
-        # Reconcile APB on any gateway pod change
-        reconcile_apb()
-        
-        # Apply OVN patches for gateway pods
-        if event_type == "ADDED" or event_type == "MODIFIED":
-            if pod.status.phase == "Running":
-                print(f"  >> Applying OVN patches to gateway pod {pod_name}...")
-                clean_ovn_pod(GATEWAY_NAMESPACE, GATEWAY_LABEL)
-                patch_ovn_pod(GATEWAY_NAMESPACE, GATEWAY_LABEL, "clear_port_security")
-        elif event_type == "DELETED":
-            print(f"  >> Gateway pod {pod_name} deleted, cleaning up...")
-            # Note: Pod is already deleted, cleanup happens automatically
+    while True:
+        try:
+            v1 = client.CoreV1Api()
+            w = watch.Watch()
+            print(f"Started watching Gateway Pods in {GATEWAY_NAMESPACE}...")
+            
+            # Reset retry delay on successful connection
+            retry_delay = 5
+            
+            for event in w.stream(v1.list_namespaced_pod, namespace=GATEWAY_NAMESPACE, label_selector=GATEWAY_LABEL, timeout_seconds=0):
+                try:
+                    event_type = event['type']
+                    pod = event['object']
+                    pod_name = pod.metadata.name
+                    
+                    print(f"[Gateway Event] {event_type}: {pod_name}")
+                    
+                    # Reconcile APB on any gateway pod change
+                    reconcile_apb()
+                    
+                    # Apply OVN patches for gateway pods
+                    if event_type == "ADDED" or event_type == "MODIFIED":
+                        if pod.status.phase == "Running":
+                            print(f"  >> Applying OVN patches to gateway pod {pod_name}...")
+                            clean_ovn_pod(GATEWAY_NAMESPACE, GATEWAY_LABEL)
+                            patch_ovn_pod(GATEWAY_NAMESPACE, GATEWAY_LABEL, "clear_port_security")
+                    elif event_type == "DELETED":
+                        print(f"  >> Gateway pod {pod_name} deleted, cleaning up...")
+                        # Note: Pod is already deleted, cleanup happens automatically
+                except Exception as e:
+                    print(f"[Gateway Watcher] Error processing event: {e}")
+                    # Continue watching despite event processing errors
+                    continue
+                    
+        except Exception as e:
+            print(f"[Gateway Watcher] Watch stream failed: {e}")
+            print(f"[Gateway Watcher] Restarting in {retry_delay} seconds...")
+            time.sleep(retry_delay)
+            # Exponential backoff
+            retry_delay = min(retry_delay * 2, max_retry_delay)
 
 
 def watch_business_pods():
     """
     Watch business pods and apply OVN patches when they are created/deleted.
+    Automatically restarts on errors with exponential backoff.
     """
-    v1 = client.CoreV1Api()
-    w = watch.Watch()
-    print(f"Started watching Business Pods in {BUSINESS_NAMESPACE}...")
+    retry_delay = 5  # Initial retry delay in seconds
+    max_retry_delay = 300  # Maximum retry delay (5 minutes)
     
-    for event in w.stream(v1.list_namespaced_pod, namespace=BUSINESS_NAMESPACE, label_selector=BUSINESS_LABEL):
-        event_type = event['type']
-        pod = event['object']
-        pod_name = pod.metadata.name
-        
-        print(f"[Business Event] {event_type}: {pod_name}")
-        
-        if event_type == "ADDED" or event_type == "MODIFIED":
-            if pod.status.phase == "Running":
-                print(f"  >> Applying OVN patches to business pod {pod_name}...")
-                # Wait a bit for pod to be fully ready
-                time.sleep(2)
-                clean_ovn_pod(BUSINESS_NAMESPACE, BUSINESS_LABEL)
-                patch_ovn_pod(BUSINESS_NAMESPACE, BUSINESS_LABEL, "keep_port_security")
-        elif event_type == "DELETED":
-            print(f"  >> Business pod {pod_name} deleted, cleaning up...")
-            # Note: Pod is already deleted, cleanup happens automatically
+    while True:
+        try:
+            v1 = client.CoreV1Api()
+            w = watch.Watch()
+            print(f"Started watching Business Pods in {BUSINESS_NAMESPACE}...")
+            
+            # Reset retry delay on successful connection
+            retry_delay = 5
+            
+            for event in w.stream(v1.list_namespaced_pod, namespace=BUSINESS_NAMESPACE, label_selector=BUSINESS_LABEL, timeout_seconds=0):
+                try:
+                    event_type = event['type']
+                    pod = event['object']
+                    pod_name = pod.metadata.name
+                    
+                    print(f"[Business Event] {event_type}: {pod_name}")
+                    
+                    if event_type == "ADDED" or event_type == "MODIFIED":
+                        if pod.status.phase == "Running":
+                            print(f"  >> Applying OVN patches to business pod {pod_name}...")
+                            # Wait a bit for pod to be fully ready
+                            time.sleep(2)
+                            clean_ovn_pod(BUSINESS_NAMESPACE, BUSINESS_LABEL)
+                            patch_ovn_pod(BUSINESS_NAMESPACE, BUSINESS_LABEL, "keep_port_security")
+                    elif event_type == "DELETED":
+                        print(f"  >> Business pod {pod_name} deleted, cleaning up...")
+                        # Note: Pod is already deleted, cleanup happens automatically
+                except Exception as e:
+                    print(f"[Business Watcher] Error processing event: {e}")
+                    # Continue watching despite event processing errors
+                    continue
+                    
+        except Exception as e:
+            print(f"[Business Watcher] Watch stream failed: {e}")
+            print(f"[Business Watcher] Restarting in {retry_delay} seconds...")
+            time.sleep(retry_delay)
+            # Exponential backoff
+            retry_delay = min(retry_delay * 2, max_retry_delay)
 
 
 def watch_apb():
     """
     Watch APB resource changes (prevent manual modifications).
+    Automatically restarts on errors with exponential backoff.
     """
-    api = client.CustomObjectsApi()
-    w = watch.Watch()
-    print("Started watching APB Resource...")
+    retry_delay = 5  # Initial retry delay in seconds
+    max_retry_delay = 300  # Maximum retry delay (5 minutes)
     
-    for event in w.stream(api.list_cluster_custom_object, GROUP, VERSION, PLURAL):
-        resource = event.get('object', {})
-        if resource.get('metadata', {}).get('name') == APB_NAME:
-            # Reconcile on any APB change
-            # Internal comparison logic prevents infinite loops
-            reconcile_apb()
+    while True:
+        try:
+            api = client.CustomObjectsApi()
+            w = watch.Watch()
+            print("Started watching APB Resource...")
+            
+            # Reset retry delay on successful connection
+            retry_delay = 5
+            
+            for event in w.stream(api.list_cluster_custom_object, GROUP, VERSION, PLURAL, timeout_seconds=0):
+                try:
+                    resource = event.get('object', {})
+                    if resource.get('metadata', {}).get('name') == APB_NAME:
+                        # Reconcile on any APB change
+                        # Internal comparison logic prevents infinite loops
+                        reconcile_apb()
+                except Exception as e:
+                    print(f"[APB Watcher] Error processing event: {e}")
+                    # Continue watching despite event processing errors
+                    continue
+                    
+        except Exception as e:
+            print(f"[APB Watcher] Watch stream failed: {e}")
+            print(f"[APB Watcher] Restarting in {retry_delay} seconds...")
+            time.sleep(retry_delay)
+            # Exponential backoff
+            retry_delay = min(retry_delay * 2, max_retry_delay)
 
 
 # ============================================================================
