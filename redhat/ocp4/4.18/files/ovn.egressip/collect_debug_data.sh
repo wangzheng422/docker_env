@@ -5,7 +5,7 @@ set -e
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 OUTPUT_DIR="ovn_debug_$TIMESTAMP"
 LOG_FILE="$OUTPUT_DIR/combined_debug_data.txt"
-NODES=("worker-01-demo" "worker-02-demo") 
+NODES=("master-01-demo" "master-02-demo" "master-03-demo" "worker-01-demo" "worker-02-demo") 
 NAMESPACE="openshift-ovn-kubernetes"
 OVN_LABEL="app=ovnkube-node"
 

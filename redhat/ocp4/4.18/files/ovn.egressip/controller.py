@@ -138,9 +138,10 @@ def get_pod_details(namespace, label):
         return None
 
 
+
 def clean_ovn_pod(namespace, label):
     """
-    Clean OVN settings for a specific pod.
+    Clean OVN settings for all pods matching the label.
     Intelligently removes only ACLs that reference non-existent pods.
     
     Args:
@@ -148,86 +149,91 @@ def clean_ovn_pod(namespace, label):
         label: Pod label selector
     """
     print("=" * 60)
-    print(f"Cleaning Pod [{label}] in Namespace [{namespace}]")
+    print(f"Cleaning Pods [{label}] in Namespace [{namespace}]")
     
-    details = get_pod_details(namespace, label)
-    if not details:
-        print("  [SKIP] Pod not found or not ready")
-        return
-    
-    pod_name = details['pod_name']
-    node_name = details['node_name']
-    lsp_name = details['lsp_name']
-    
-    print(f"  Target: Pod={pod_name} | Node={node_name} | LSP={lsp_name}")
-    
-    # Step 1: Get all existing pods in the namespace
-    print(f"  >> Getting all existing pods in namespace {namespace}...")
     try:
         v1 = client.CoreV1Api()
+        pods = v1.list_namespaced_pod(namespace, label_selector=label)
+        
+        if not pods.items:
+            print("  [SKIP] No pods found")
+            return
+        
+        # Get all existing pods in the namespace for orphan detection
         all_pods = v1.list_namespaced_pod(namespace)
         existing_lsp_names = set()
         for pod in all_pods.items:
             existing_lsp_names.add(f"{namespace}_{pod.metadata.name}")
-        print(f"  >> Found {len(existing_lsp_names)} existing pods in namespace {namespace}")
-    except Exception as e:
-        print(f"  [ERROR] Failed to list pods: {e}")
-        existing_lsp_names = set()
-    
-    # Step 2: Get all ACLs with priority 31821 on this node
-    print(f"  >> Checking ACLs (Priority {OVN_ACL_PRIORITY}) on node {node_name}...")
-    cmd_list_acls = f"""
+        
+        print(f"  >> Found {len(pods.items)} pod(s) to clean, {len(existing_lsp_names)} total pods in namespace")
+        
+        # Process each matching pod
+        for pod in pods.items:
+            if pod.status.phase != "Running":
+                print(f"  [SKIP] Pod {pod.metadata.name} is not Running (status: {pod.status.phase})")
+                continue
+            
+            pod_name = pod.metadata.name
+            node_name = pod.spec.node_name
+            lsp_name = f"{namespace}_{pod_name}"
+            
+            print(f"  Target: Pod={pod_name} | Node={node_name} | LSP={lsp_name}")
+            
+            # Check ACLs on this node
+            print(f"    >> Checking ACLs (Priority {OVN_ACL_PRIORITY}) on node {node_name}...")
+            cmd_list_acls = f"""
 ovn-nbctl --format=csv --no-heading --columns=_uuid,match find ACL priority={OVN_ACL_PRIORITY}
 """
-    success, output = execute_ovn_command(node_name, cmd_list_acls)
-    
-    if not success or not output.strip():
-        print(f"  >> No ACLs with priority {OVN_ACL_PRIORITY} found")
-        print("  Clean Done.")
-        return
-    
-    # Step 3: Parse ACL output and identify orphaned ACLs
-    orphaned_acls = []
-    for line in output.strip().split('\n'):
-        if not line.strip():
-            continue
-        parts = line.split(',', 1)
-        if len(parts) < 2:
-            continue
-        acl_uuid = parts[0].strip()
-        acl_match = parts[1].strip()
-        
-        # Extract LSP name from match clause
-        # Match format: "inport == \"ns-blue_business-app-xxx\"" or "outport == \"ns-blue_business-app-xxx\""
-        import re
-        lsp_pattern = rf'{namespace}_[a-zA-Z0-9-]+'
-        match_result = re.search(lsp_pattern, acl_match)
-        
-        if match_result:
-            referenced_lsp = match_result.group(0)
-            # Check if this LSP still exists
-            if referenced_lsp not in existing_lsp_names:
-                print(f"  >> Found orphaned ACL: {acl_uuid} (references non-existent pod: {referenced_lsp})")
-                orphaned_acls.append(acl_uuid)
-    
-    # Step 4: Remove orphaned ACLs
-    if orphaned_acls:
-        print(f"  >> Removing {len(orphaned_acls)} orphaned ACL(s)...")
-        for acl_uuid in orphaned_acls:
-            cmd_remove = f"""
-echo "    Removing ACL {acl_uuid}"
+            success, output = execute_ovn_command(node_name, cmd_list_acls)
+            
+            if not success or not output.strip():
+                print(f"    >> No ACLs with priority {OVN_ACL_PRIORITY} found")
+                continue
+            
+            # Parse ACL output and identify orphaned ACLs
+            orphaned_acls = []
+            for line in output.strip().split('\n'):
+                if not line.strip():
+                    continue
+                parts = line.split(',', 1)
+                if len(parts) < 2:
+                    continue
+                acl_uuid = parts[0].strip()
+                acl_match = parts[1].strip()
+                
+                # Extract LSP name from match clause
+                import re
+                lsp_pattern = rf'{namespace}_[a-zA-Z0-9-]+'
+                match_result = re.search(lsp_pattern, acl_match)
+                
+                if match_result:
+                    referenced_lsp = match_result.group(0)
+                    # Check if this LSP still exists
+                    if referenced_lsp not in existing_lsp_names:
+                        print(f"    >> Found orphaned ACL: {acl_uuid} (references non-existent pod: {referenced_lsp})")
+                        orphaned_acls.append(acl_uuid)
+            
+            # Remove orphaned ACLs
+            if orphaned_acls:
+                print(f"    >> Removing {len(orphaned_acls)} orphaned ACL(s)...")
+                for acl_uuid in orphaned_acls:
+                    cmd_remove = f"""
+echo "      Removing ACL {acl_uuid}"
 ovn-nbctl remove Logical_Switch {node_name} acls {acl_uuid}
 """
-            execute_ovn_command(node_name, cmd_remove)
-    else:
-        print(f"  >> No orphaned ACLs found (all ACLs reference existing pods)")
-    
-    print("  Clean Done.")
+                    execute_ovn_command(node_name, cmd_remove)
+            else:
+                print(f"    >> No orphaned ACLs found")
+        
+        print("  Clean Done.")
+        
+    except Exception as e:
+        print(f"  [ERROR] Failed to clean pods: {e}")
 
 
 def patch_ovn_pod(namespace, label, port_security_mode="keep_port_security"):
     """
-    Apply OVN patches for a specific pod.
+    Apply OVN patches for all pods matching the label.
     
     Args:
         namespace: Pod namespace
@@ -237,44 +243,59 @@ def patch_ovn_pod(namespace, label, port_security_mode="keep_port_security"):
             - Business Pod: use "keep_port_security" (only sends own traffic)
     """
     print("=" * 60)
-    print(f"Configuring Pod [{label}] in Namespace [{namespace}]")
+    print(f"Configuring Pods [{label}] in Namespace [{namespace}]")
     print(f"  Port Security Mode: {port_security_mode}")
     
-    details = get_pod_details(namespace, label)
-    if not details:
-        print("  [SKIP] Pod not found or not ready")
-        return
-    
-    pod_name = details['pod_name']
-    node_name = details['node_name']
-    lsp_name = details['lsp_name']
-    
-    print(f"  Target: Pod={pod_name} | Node={node_name} | LSP={lsp_name}")
-    
-    # Step 1: Clear Port Security (conditional)
-    if port_security_mode == "clear_port_security":
-        print("  >> Clearing Port Security (Gateway mode - allows forwarding)...")
-        cmd_clear = f"ovn-nbctl clear Logical_Switch_Port {lsp_name} port_security"
-        execute_ovn_command(node_name, cmd_clear)
-    else:
-        print("  >> Keeping Port Security (Business Pod mode - enhanced security)")
-    
-    # Step 2: Add Stateless ACLs for ALL traffic
-    # CRITICAL: All traffic (TCP and UDP) uses stateless processing
-    # This is necessary because return traffic from external IPs would be
-    # blocked by stateful ACLs that check source IP
-    
-    # from-lport: Allow ALL Egress (Pod -> Switch)
-    print(f"  >> Adding 'from-lport' stateless allow rule (Priority {OVN_ACL_PRIORITY})...")
-    cmd_acl_from = f'ovn-nbctl --type=switch acl-add {node_name} from-lport {OVN_ACL_PRIORITY} "inport == \\"{lsp_name}\\"" allow-stateless'
-    execute_ovn_command(node_name, cmd_acl_from)
-    
-    # to-lport: Allow ALL Ingress (Switch -> Pod)
-    print(f"  >> Adding 'to-lport' stateless allow rule (Priority {OVN_ACL_PRIORITY})...")
-    cmd_acl_to = f'ovn-nbctl --type=switch acl-add {node_name} to-lport {OVN_ACL_PRIORITY} "outport == \\"{lsp_name}\\"" allow-stateless'
-    execute_ovn_command(node_name, cmd_acl_to)
-    
-    print("  Done.")
+    try:
+        v1 = client.CoreV1Api()
+        pods = v1.list_namespaced_pod(namespace, label_selector=label)
+        
+        if not pods.items:
+            print("  [SKIP] No pods found")
+            return
+        
+        print(f"  >> Found {len(pods.items)} pod(s) to configure")
+        
+        # Process each matching pod
+        for pod in pods.items:
+            if pod.status.phase != "Running":
+                print(f"  [SKIP] Pod {pod.metadata.name} is not Running (status: {pod.status.phase})")
+                continue
+            
+            pod_name = pod.metadata.name
+            node_name = pod.spec.node_name
+            lsp_name = f"{namespace}_{pod_name}"
+            
+            print(f"  Target: Pod={pod_name} | Node={node_name} | LSP={lsp_name}")
+            
+            # Step 1: Clear Port Security (conditional)
+            if port_security_mode == "clear_port_security":
+                print("    >> Clearing Port Security (Gateway mode - allows forwarding)...")
+                cmd_clear = f"ovn-nbctl clear Logical_Switch_Port {lsp_name} port_security"
+                execute_ovn_command(node_name, cmd_clear)
+            else:
+                print("    >> Keeping Port Security (Business Pod mode - enhanced security)")
+            
+            # Step 2: Add Stateless ACLs for ALL traffic
+            # from-lport: Allow ALL Egress (Pod -> Switch)
+            print(f"    >> Adding 'from-lport' stateless allow rule (Priority {OVN_ACL_PRIORITY})...")
+            cmd_acl_from = f'ovn-nbctl --type=switch acl-add {node_name} from-lport {OVN_ACL_PRIORITY} "inport == \\"{lsp_name}\\"" allow-stateless'
+            success, output = execute_ovn_command(node_name, cmd_acl_from)
+            if not success and "Same ACL already existed" not in output:
+                print(f"    [WARN] Failed to add from-lport ACL: {output}")
+            
+            # to-lport: Allow ALL Ingress (Switch -> Pod)
+            print(f"    >> Adding 'to-lport' stateless allow rule (Priority {OVN_ACL_PRIORITY})...")
+            cmd_acl_to = f'ovn-nbctl --type=switch acl-add {node_name} to-lport {OVN_ACL_PRIORITY} "outport == \\"{lsp_name}\\"" allow-stateless'
+            success, output = execute_ovn_command(node_name, cmd_acl_to)
+            if not success and "Same ACL already existed" not in output:
+                print(f"    [WARN] Failed to add to-lport ACL: {output}")
+        
+        print("  Done.")
+        
+    except Exception as e:
+        print(f"  [ERROR] Failed to patch pods: {e}")
+
 
 
 # ============================================================================
