@@ -5,7 +5,7 @@ This repository is the author's technical notes from daily system operations. Th
 
 Currently, there are many experience sharing articles in the warehouse, some of which are quite useful:
 - 2026
-  - [2026.01 OVN EgressIP](redhat/ocp4/4.18/2026.01.ovn.egressip.md)
+  - [2026.01 OVN EgressIP Limitation Workaround](redhat/ocp4/4.18/2026.01.ovn.egressip.md)
 - 2025
   - [2025.12 MCCL IB Debug Slides](redhat/notes/2025/2025.12.mccl_slides.md)
     - [2025.12 MCCL IB Debug ](redhat/notes/2025/2025.12.metax.mccl.perf.debug.md)
