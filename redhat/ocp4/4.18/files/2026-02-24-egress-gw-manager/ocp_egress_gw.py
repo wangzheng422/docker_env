@@ -105,10 +105,10 @@ def add_tenant(args):
         run_cmd(f"ip link set macvlan-{args.name} up")
         
         # 4. Add Mangle Rule for packet marking (identifying source next-hop)
-        run_cmd(f"iptables -t mangle -I PREROUTING -i macvlan-{args.name} -j MARK --set-mark {args.mark}")
+        run_cmd(f"iptables -t mangle -I PREROUTING -i macvlan-{args.name} -j MARK --set-mark 0x{args.mark:x}")
         
         # 5. Add NAT Rule for SNAT (outgoing on out_dev)
-        run_cmd(f"iptables -t nat -I POSTROUTING -o {args.out_dev} -m mark --mark {args.mark} -j SNAT --to-source {args.egress_ip}")
+        run_cmd(f"iptables -t nat -I POSTROUTING -o {args.out_dev} -m mark --mark 0x{args.mark:x} -j SNAT --to-source {args.egress_ip}")
         
         logger.info(f"Successfully configured tenant {args.name} with Gateway IP {args.gw_ip} mapping to Egress IP {args.egress_ip} out via {args.out_dev}")
     except Exception as e:
@@ -121,13 +121,13 @@ def remove_tenant(args):
     logger.info(f"Removing tenant: {args.name}")
     try:
         # Remove rules first
-        run_cmd(f"iptables -t mangle -D PREROUTING -i macvlan-{args.name} -j MARK --set-mark {args.mark}", ignore_errors=True)
+        run_cmd(f"iptables -t mangle -D PREROUTING -i macvlan-{args.name} -j MARK --set-mark 0x{args.mark:x}", ignore_errors=True)
         # Note: In production you might want to dynamically find the exact rule or flush by mark, but this is simple enough.
         # SNAT rule deletion requires the exact parameters used during creation:
         egress_ip = args.egress_ip
         out_dev = getattr(args, 'out_dev', 'eth1') # Default to eth1 if not specified for removal
         if egress_ip:
-            run_cmd(f"iptables -t nat -D POSTROUTING -o {out_dev} -m mark --mark {args.mark} -j SNAT --to-source {egress_ip}", ignore_errors=True)
+            run_cmd(f"iptables -t nat -D POSTROUTING -o {out_dev} -m mark --mark 0x{args.mark:x} -j SNAT --to-source {egress_ip}", ignore_errors=True)
             
         # Remove link
         run_cmd(f"ip link set macvlan-{args.name} down", ignore_errors=True)
@@ -144,10 +144,10 @@ def show_status(args):
     print(run_cmd("ip route show | grep via", ignore_errors=True))
     
     print("\n--- Mangle Rules (Packet Marking) ---")
-    print(run_cmd("iptables -t mangle -nL PREROUTING | grep MARK", ignore_errors=True))
+    print(run_cmd("iptables -t mangle -v -nL PREROUTING | grep MARK", ignore_errors=True))
     
     print("\n--- NAT Rules (SNAT) ---")
-    print(run_cmd("iptables -t nat -nL POSTROUTING | grep SNAT", ignore_errors=True))
+    print(run_cmd("iptables -t nat -v -nL POSTROUTING | grep SNAT", ignore_errors=True))
 
 def main():
     parser = argparse.ArgumentParser(description="OCP Egress IP Gateway Manager")
@@ -164,7 +164,7 @@ def main():
     parser_add.add_argument("--name", required=True, help="Tenant name (e.g., ns-blue)")
     parser_add.add_argument("--gw-ip", required=True, help="Gateway IP for this tenant inside OCP network")
     parser_add.add_argument("--egress-ip", required=True, help="Target external Egress IP to SNAT to")
-    parser_add.add_argument("--mark", required=True, type=int, help="Unique iptables mark (e.g., 10)")
+    parser_add.add_argument("--mark", required=True, type=lambda x: int(x, 0), help="Unique iptables mark (e.g., 10 or 0x14)")
     parser_add.add_argument("--dev", default="eth0", help="Internal network device (default: eth0)")
     parser_add.add_argument("--out-dev", default="eth1", help="External network device for SNAT (default: eth1)")
     parser_add.set_defaults(func=add_tenant)
@@ -172,7 +172,7 @@ def main():
     # Remove tenant command
     parser_remove = subparsers.add_parser("remove-tenant", help="Remove a tenant configuration")
     parser_remove.add_argument("--name", required=True, help="Tenant name (e.g., ns-blue)")
-    parser_remove.add_argument("--mark", required=True, type=int, help="Unique iptables mark to remove")
+    parser_remove.add_argument("--mark", required=True, type=lambda x: int(x, 0), help="Unique iptables mark to remove (e.g., 10 or 0x14)")
     parser_remove.add_argument("--egress-ip", required=True, help="Egress IP that was configured (for exact rule deletion)")
     parser_remove.add_argument("--out-dev", default="eth1", help="External network device that was used (default: eth1)")
     parser_remove.set_defaults(func=remove_tenant)
