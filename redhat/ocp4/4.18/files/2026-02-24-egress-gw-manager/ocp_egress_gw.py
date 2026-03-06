@@ -160,6 +160,13 @@ def add_tenant(args):
         # 5. Add NAT Rule for SNAT (outgoing on out_dev)
         run_cmd(f"iptables -t nat -I POSTROUTING -o {args.out_dev} -m mark --mark 0x{args.mark:x} -j SNAT --to-source {args.egress_ip}")
         
+        # 6. Add Egress IP to external interface so it can answer ARPs
+        run_cmd(f"ip addr add {args.egress_ip}/32 dev {args.out_dev}", ignore_errors=True)
+        
+        # 7. Announce the Egress IP to the external switch immediately
+        ext_prefix = ".".join(args.egress_ip.split(".")[:3])
+        run_cmd(f"ping -I {args.out_dev} -c 1 -w 2 {ext_prefix}.1", ignore_errors=True)
+        
         logger.info(f"Successfully configured tenant {args.name} with Gateway IP {args.gw_ip} mapping to Egress IP {args.egress_ip} out via {args.out_dev}")
     except Exception as e:
         logger.error("Failed to add tenant. It might already exist or require root privileges.")
@@ -178,6 +185,7 @@ def remove_tenant(args):
         out_dev = getattr(args, 'out_dev', 'eth1') # Default to eth1 if not specified for removal
         if egress_ip:
             run_cmd(f"iptables -t nat -D POSTROUTING -o {out_dev} -m mark --mark 0x{args.mark:x} -j SNAT --to-source {egress_ip}", ignore_errors=True)
+            run_cmd(f"ip addr del {egress_ip}/32 dev {out_dev}", ignore_errors=True)
             
         # Remove link
         run_cmd(f"ip link set macvlan-{args.name} down", ignore_errors=True)
