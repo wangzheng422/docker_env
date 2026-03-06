@@ -3,6 +3,7 @@ import logging
 import subprocess
 import sys
 import time
+import json
 
 from kubernetes import client, config, watch
 from kubernetes.client.rest import ApiException
@@ -89,6 +90,18 @@ def process_node_event(event_type: str, node, dev: str):
         logger.debug(f"Node {node_name}: 'pod_cidr' not found, trying 'pod_cidrs' list.")
         pod_cidr = node.spec.pod_cidrs[0]
         
+    # If still no CIDR, try OpenShift OVN annotations
+    if not pod_cidr and node.metadata and node.metadata.annotations:
+        ovn_subnets = node.metadata.annotations.get("k8s.ovn.org/node-subnets")
+        if ovn_subnets:
+            try:
+                subnets_dict = json.loads(ovn_subnets)
+                if "default" in subnets_dict and len(subnets_dict["default"]) > 0:
+                    pod_cidr = subnets_dict["default"][0]
+                    logger.debug(f"Node {node_name}: Extracted CIDR {pod_cidr} from OVN annotation.")
+            except Exception as e:
+                logger.warning(f"Node {node_name}: Failed to parse OVN subnets annotation: {e}")
+                
     node_ip = None
     if node.status and node.status.addresses:
         for addr in node.status.addresses:
@@ -121,6 +134,25 @@ def add_tenant(args):
         
         # 3. Bring up interface
         run_cmd(f"ip link set macvlan-{args.name} up")
+        
+        # 3.5. Enforce strict ARP processing on the main interface to prevent ARP flux
+        run_cmd("sysctl -w net.ipv4.conf.all.arp_ignore=1")
+        run_cmd("sysctl -w net.ipv4.conf.all.arp_announce=2")
+        run_cmd(f"sysctl -w net.ipv4.conf.{args.dev}.arp_ignore=1")
+        run_cmd(f"sysctl -w net.ipv4.conf.{args.dev}.arp_announce=2")
+        
+        # 3.6. Enable IP Forwarding and Disable Reverse Path Filter (rp_filter)
+        # Required for asymmetric routing through macvlans and SNAT forwarding.
+        run_cmd("sysctl -w net.ipv4.ip_forward=1")
+        run_cmd("sysctl -w net.ipv4.conf.all.rp_filter=0")
+        run_cmd("sysctl -w net.ipv4.conf.default.rp_filter=0")
+        run_cmd(f"sysctl -w net.ipv4.conf.{args.dev}.rp_filter=0")
+        run_cmd(f"sysctl -w net.ipv4.conf.macvlan-{args.name}.rp_filter=0")
+        
+        # 3.6. Send a gratuitous ARP (ping) from the macvlan IP to the local network to update peers' ARP cache
+        # We ping the .1 address on the same subnet just to force a packet out with the new MAC
+        net_prefix = ".".join(args.gw_ip.split(".")[:3])
+        run_cmd(f"ping -I macvlan-{args.name} -c 1 -w 2 {net_prefix}.1", ignore_errors=True)
         
         # 4. Add Mangle Rule for packet marking (identifying source next-hop)
         run_cmd(f"iptables -t mangle -I PREROUTING -i macvlan-{args.name} -j MARK --set-mark 0x{args.mark:x}")
