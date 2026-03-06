@@ -57,11 +57,22 @@ def watch_nodes(dev: str = "eth0"):
     
     # Process existing nodes first
     try:
+        logger.info("Fetching existing nodes from API to initialize routing table...")
         nodes = v1.list_node()
+        logger.info(f"Successfully retrieved {len(nodes.items)} nodes from API.")
+        if not nodes.items:
+            logger.warning("The API returned 0 nodes! Please check cluster permissions or connectivity.")
+            
         for node in nodes.items:
+            node_name = node.metadata.name if node.metadata else "Unknown"
+            logger.debug(f"Pre-processing existing node: {node_name}")
             process_node_event("ADDED", node, dev)
+            
+        logger.info("Finished processing existing nodes. Now establishing watch stream...")
     except ApiException as e:
         logger.error(f"Exception when calling CoreV1Api->list_node: {e}")
+    except Exception as e:
+        logger.error(f"Unexpected error when fetching initial nodes: {e}")
 
     try:
         for event in w.stream(v1.list_node):
@@ -70,18 +81,25 @@ def watch_nodes(dev: str = "eth0"):
         logger.error(f"Watch stream error: {e}")
 
 def process_node_event(event_type: str, node, dev: str):
-    node_name = node.metadata.name
-    pod_cidr = node.spec.pod_cidr
+    node_name = node.metadata.name if node.metadata else "Unknown"
     
+    # Safely extract Pod CIDR
+    pod_cidr = getattr(node.spec, "pod_cidr", None)
+    if not pod_cidr and hasattr(node.spec, "pod_cidrs") and node.spec.pod_cidrs:
+        logger.debug(f"Node {node_name}: 'pod_cidr' not found, trying 'pod_cidrs' list.")
+        pod_cidr = node.spec.pod_cidrs[0]
+        
     node_ip = None
-    if node.status.addresses:
+    if node.status and node.status.addresses:
         for addr in node.status.addresses:
-            if addr.type == "InternalIP":
-                node_ip = addr.address
+            if getattr(addr, "type", "") == "InternalIP":
+                node_ip = getattr(addr, "address", None)
                 break
                 
+    logger.debug(f"Event: {event_type} | Node: {node_name} | CIDR: {pod_cidr} | IP: {node_ip}")
+                
     if not pod_cidr or not node_ip:
-        logger.debug(f"Node {node_name} missing pod_cidr or InternalIP. pod_cidr={pod_cidr}, IP={node_ip}")
+        logger.warning(f"Skipping Event '{event_type}' for Node '{node_name}': Missing pod_cidr ({pod_cidr}) or InternalIP ({node_ip})")
         return
 
     if event_type in ["ADDED", "MODIFIED"]:
@@ -98,8 +116,8 @@ def add_tenant(args):
         # 1. Create macvlan link
         run_cmd(f"ip link add link {args.dev} name macvlan-{args.name} type macvlan mode bridge")
         
-        # 2. Add IP address
-        run_cmd(f"ip addr add {args.gw_ip}/24 dev macvlan-{args.name}")
+        # 2. Add IP address (use /32 to avoid creating a conflicting connected route in the main table)
+        run_cmd(f"ip addr add {args.gw_ip}/32 dev macvlan-{args.name}")
         
         # 3. Bring up interface
         run_cmd(f"ip link set macvlan-{args.name} up")
