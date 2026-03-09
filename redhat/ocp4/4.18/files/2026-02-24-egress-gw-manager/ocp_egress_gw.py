@@ -168,6 +168,15 @@ def add_tenant(args):
         run_cmd(f"ping -I {args.out_dev} -c 1 -w 2 {ext_prefix}.1", ignore_errors=True)
         
         
+        # 8. Add Safety Net to drop un-SNATed traffic from bypassing MACVLANs
+        # (This drops traffic that hit the physical internal interface enp1s0 instead of macvlan-ns-xxx due to ARP flux)
+        if getattr(args, 'pod_cidr', None):
+            reject_rule = f"FORWARD -i {args.dev} -o {args.out_dev} -s {args.pod_cidr} -m mark --mark 0 -j REJECT --reject-with icmp-port-unreachable"
+            try:
+                run_cmd(f"iptables -C {reject_rule}")
+            except Exception:
+                run_cmd(f"iptables -I {reject_rule}", ignore_errors=True)
+
         logger.info(f"Successfully configured tenant {args.name} with Gateway IP {args.gw_ip} mapping to Egress IP {args.egress_ip} out via {args.out_dev}")
     except Exception as e:
         logger.error("Failed to add tenant. It might already exist or require root privileges.")
@@ -226,6 +235,7 @@ def main():
     parser_add.add_argument("--mark", required=True, type=lambda x: int(x, 0), help="Unique iptables mark (e.g., 10 or 0x14)")
     parser_add.add_argument("--dev", default="eth0", help="Internal network device (default: eth0)")
     parser_add.add_argument("--out-dev", default="eth1", help="External network device for SNAT (default: eth1)")
+    parser_add.add_argument("--pod-cidr", help="Optional internal Pod CIDR (e.g., 10.128.0.0/14) for leakage protection")
     parser_add.set_defaults(func=add_tenant)
 
     # Remove tenant command
