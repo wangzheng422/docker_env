@@ -6,7 +6,7 @@ This repository is the author's technical notes from daily system operations. Th
 Currently, there are many experience sharing articles in the warehouse, some of which are quite useful:
 - 2026
   - [2026.03 Add API VIP for OpenShift 4.19](redhat/ocp4/4.19/2026.02.add.api.vip.md)
-  - [2026.03 BGP-Based Ingress Service in OpenShift 4.19 with OVN-Kubernetes and MetalLB](redhat/ocp4/4.19/2026.02.bgp.metallb.md)
+  - [2026.03 BGP-Based **Ingress** Service in OpenShift 4.19 with OVN-Kubernetes and MetalLB](redhat/ocp4/4.19/2026.02.bgp.metallb.md)
   - [2026.03 BGP-Based Egress Service in OpenShift 4.19 with OVN-Kubernetes](redhat/ocp4/4.19/2026.02.bgp.egress.service.md)
   - [2026.03 BGP-Based Egress Service in OpenShift 4.19 with OVN-Kubernetes and MetalLB](redhat/ocp4/4.19/2026.02.bgp.egress.metallb.md)
   - [2026.03 BGP-Based Egress IP in OpenShift 4.19 with OVN-Kubernetes](redhat/ocp4/4.19/2026.02.bgp.egress.ip.md)
