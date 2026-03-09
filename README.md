@@ -10,7 +10,8 @@ Currently, there are many experience sharing articles in the warehouse, some of 
   - [2026.03 BGP-Based Egress Service in OpenShift 4.19 with OVN-Kubernetes](redhat/ocp4/4.19/2026.02.bgp.egress.service.md)
   - [2026.03 BGP-Based Egress Service in OpenShift 4.19 with OVN-Kubernetes and MetalLB](redhat/ocp4/4.19/2026.02.bgp.egress.metallb.md)
   - [2026.03 BGP-Based Egress IP in OpenShift 4.19 with OVN-Kubernetes](redhat/ocp4/4.19/2026.02.bgp.egress.ip.md)
-  - [2026.01 OVN EgressIP Limitation Workaround](redhat/ocp4/4.18/2026.01.ovn.egressip.md)
+  - [2026.01 OVN EgressIP Limitation Workaround (internal gateway pod)](redhat/ocp4/4.18/2026.01.ovn.egressip.md)
+  - [2026.01 OVN EgressIP Limitation Workaround (external gateway vm)](redhat/ocp4/4.18/2026.01.ovn.egressip.vm.md)
 
 - 2025
   - [2025.12 MCCL IB Debug Slides](redhat/notes/2025/2025.12.mccl_slides.md)
