@@ -167,11 +167,6 @@ def add_tenant(args):
         ext_prefix = ".".join(args.egress_ip.split(".")[:3])
         run_cmd(f"ping -I {args.out_dev} -c 1 -w 2 {ext_prefix}.1", ignore_errors=True)
         
-        # 8. Add Safety Net to drop un-SNATed traffic from bypassing MACVLANs
-        # (This drops traffic that hit the physical internal interface enp1s0 instead of macvlan-ns-xxx due to ARP flux)
-        reject_rule = f"FORWARD -i {args.dev} -o {args.out_dev} -j REJECT --reject-with icmp-port-unreachable"
-        if run_cmd(f"iptables -C {reject_rule}", ignore_errors=True).startswith("Error"):
-            run_cmd(f"iptables -I {reject_rule}", ignore_errors=True)
         
         logger.info(f"Successfully configured tenant {args.name} with Gateway IP {args.gw_ip} mapping to Egress IP {args.egress_ip} out via {args.out_dev}")
     except Exception as e:
