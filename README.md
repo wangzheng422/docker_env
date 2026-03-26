@@ -208,6 +208,8 @@ Redhat learning:
 - OpenShift Workload Partitioning Deep Dive
   - https://redhatquickcourses.github.io/ocp4-workload-partition/modules/index.html
   - https://github.com/RedHatQuickCourses/ocp4-workload-partition
+- Red Hat OpenShift Virtualization disaster recovery
+  - https://developers.redhat.com/learn/openshift/red-hat-openshift-virtualization-disaster-recovery
 
 <!-- 作者还做了一个[chrome extension](https://chromewebstore.google.com/detail/bing-image-new-tab/hahpccmdkmgmaoebhfnkpcnndnklfbpj)，用来在new tab上展示bing.com的美图，简单美观，欢迎使用。
 
