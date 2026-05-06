@@ -5,6 +5,7 @@ This repository is the author's technical notes from daily system operations. Th
 
 Currently, there are many experience sharing articles in the warehouse, some of which are quite useful:
 - 2026
+  - [2026.05 ROSA custom metrics from aws infra](redhat/ocp4/4.20/2026.05.rosa.infra.monitor.en.md)
   - [2026.04 ocp network observ and ovn egress firewall](redhat/ocp4/4.20/2026.04.net.observ.md)
   - [2026.04 quay passthrough cache for ocp 4.20](redhat/ocp4/4.20/2022.12.quay.cache.init.md)
   - [2026.03 RHBK+AD+Guacamole auto-login with LDAP](redhat/notes/2026/2026.03.rhbk.ad.demo.deploy.en.md)
