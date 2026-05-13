@@ -10,6 +10,8 @@
 
 [<img src="imgs/steps.md/2026-05-13-10-10-41.png" width="1024">](https://youtu.be/Mc1U2CKeIJA)
 
+[<img src="imgs/steps.md/2026-05-13-12-17-39.png" width="1024">](https://youtu.be/geSF-IY8hjA)
+
 ---
 
 ## 环境信息
