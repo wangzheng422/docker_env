@@ -20,7 +20,7 @@
 |------|---------|
 | ROSA 集群 | `rosa-fhmhp`, Hosted CP, OCP 4.20.21, K8s v1.33.10 |
 | Worker 节点 | 2x m6a.xlarge, us-east-2a |
-| Bastion | bastion.fhmhp.sandbox3326.opentlc.com |
+| Bastion | bastion.<cluster>.<sandbox>.opentlc.com |
 | AWS Region | us-east-2 (Ohio) |
 | Serverless Operator | v1.37.1 (Knative 1.17) |
 | Serverless Logic Operator | v1.37.2 (GA, stable channel) |
@@ -33,10 +33,10 @@
 ### 1.1 登录 Bastion 并连接 ROSA 集群
 
 ```bash
-ssh rosa@bastion.fhmhp.sandbox3326.opentlc.com
+ssh rosa@bastion.<cluster>.<sandbox>.opentlc.com
 
 oc login https://api.rosa-fhmhp.r63a.p3.openshiftapps.com:443 \
-  -u cluster-admin -p 'PYJYG-BpVI7-MrWyQ-HFnhn' \
+  -u cluster-admin -p '<REDACTED>' \
   --insecure-skip-tls-verify
 ```
 
@@ -66,9 +66,9 @@ $ rosa version
 
 $ aws sts get-caller-identity
 {
-    "UserId": "AIDAWN26JN4JL2QRLCRLZ",
-    "Account": "442042511122",
-    "Arn": "arn:aws:iam::442042511122:user/zhengwan@redhat.com-fhmhp"
+    "UserId": "AIDA*********************",
+    "Account": "XXXXXXXXXXXX",
+    "Arn": "arn:aws:iam::XXXXXXXXXXXX:user/user@redhat.com-xxxxx"
 }
 
 $ rosa list clusters
@@ -183,7 +183,7 @@ $ aws iam create-role \
 {
     "Role": {
         "RoleName": "serverless-demo-lambda-role",
-        "Arn": "arn:aws:iam::442042511122:role/serverless-demo-lambda-role",
+        "Arn": "arn:aws:iam::XXXXXXXXXXXX:role/serverless-demo-lambda-role",
         ...
     }
 }
@@ -214,7 +214,7 @@ $ aws lambda create-function \
   --region us-east-2
 {
     "FunctionName": "serverless-demo-hello",
-    "FunctionArn": "arn:aws:lambda:us-east-2:442042511122:function:serverless-demo-hello",
+    "FunctionArn": "arn:aws:lambda:us-east-2:XXXXXXXXXXXX:function:serverless-demo-hello",
     "Runtime": "python3.12",
     "State": "Pending",
     ...
@@ -1462,7 +1462,7 @@ $ aws iam create-role \
 {
     "Role": {
         "RoleName": "serverless-demo-sfn-role",
-        "Arn": "arn:aws:iam::442042511122:role/serverless-demo-sfn-role"
+        "Arn": "arn:aws:iam::XXXXXXXXXXXX:role/serverless-demo-sfn-role"
     }
 }
 
@@ -1564,7 +1564,7 @@ $ aws stepfunctions create-state-machine \
   --type EXPRESS \
   --region us-east-2
 {
-    "stateMachineArn": "arn:aws:states:us-east-2:442042511122:stateMachine:order-processing-workflow",
+    "stateMachineArn": "arn:aws:states:us-east-2:XXXXXXXXXXXX:stateMachine:order-processing-workflow",
     "creationDate": "2026-05-12T11:43:09.280000+00:00"
 }
 ```
@@ -1572,7 +1572,7 @@ $ aws stepfunctions create-state-machine \
 ### 5.6 测试 AWS Step Functions 工作流
 
 ```bash
-$ SFN_ARN="arn:aws:states:us-east-2:442042511122:stateMachine:order-processing-workflow"
+$ SFN_ARN="arn:aws:states:us-east-2:XXXXXXXXXXXX:stateMachine:order-processing-workflow"
 
 $ time aws stepfunctions start-sync-execution \
   --state-machine-arn "$SFN_ARN" \
