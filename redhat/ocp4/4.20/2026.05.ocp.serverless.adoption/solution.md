@@ -1,8 +1,8 @@
-# Cathay — OpenShift Serverless Adoption Guide
+# OpenShift Serverless Adoption Guide
 
 ## Executive Summary
 
-Cathay 目前在 AWS 上运行大量 Lambda 函数，每个云厂商都需要单独的 CI/CD 流程。这带来了巨大的运维开销和厂商锁定风险。通过采用 **Red Hat OpenShift Serverless**（基于 Knative），Cathay 可以将所有 serverless 工作负载统一到一个平台，使用**一套 CI/CD 流程**，可移植地部署到 AWS（ROSA）、Azure（ARO）、阿里云和 GCP —— 同时利用 **scale-to-zero** 和专用机器池来最大化成本节约。
+客户目前在 AWS 上运行大量 Lambda 函数，每个云厂商都需要单独的 CI/CD 流程。这带来了巨大的运维开销和厂商锁定风险。通过采用 **Red Hat OpenShift Serverless**（基于 Knative），客户可以将所有 serverless 工作负载统一到一个平台，使用**一套 CI/CD 流程**，可移植地部署到 AWS（ROSA）、Azure（ARO）、阿里云和 GCP —— 同时利用 **scale-to-zero** 和专用机器池来最大化成本节约。
 
 ### 实测验证摘要
 
@@ -674,8 +674,8 @@ Service 'hello-func' created to latest revision 'hello-func-00001' is available 
 https://hello-func-serverless-demo.apps.rosa.rosa-fhmhp.r63a.p3.openshiftapps.com
 
 # 验证（性能与 S2I 版完全一致）
-$ time curl -sk "$FUNC_URL?name=Cathay"
-{"message": "Hello, Cathay!", "platform": "OpenShift Serverless Function (Dockerfile)",
+$ time curl -sk "$FUNC_URL?name=Demo"
+{"message": "Hello, Demo!", "platform": "OpenShift Serverless Function (Dockerfile)",
  "cold_start": true, "processing_time_ms": 0.01,
  "pod_name": "hello-func-00001-deployment-5cf64484f9-vxbl8"}
 real    0m0.031s
@@ -751,8 +751,8 @@ $ oc get ksvc hello-func -n serverless-demo -o jsonpath='{.metadata.labels}' | j
 FUNC_URL="https://hello-func-serverless-demo.apps.rosa.rosa-fhmhp.r63a.p3.openshiftapps.com"
 
 # GET 请求
-$ time curl -sk "$FUNC_URL?name=Cathay"
-{"message": "Hello, Cathay!", "platform": "OpenShift Serverless Function (kn func)",
+$ time curl -sk "$FUNC_URL?name=Demo"
+{"message": "Hello, Demo!", "platform": "OpenShift Serverless Function (kn func)",
  "cold_start": true, "processing_time_ms": 0.01,
  "pod_name": "hello-func-00001-deployment-5c4c9b46c9-5s4mc"}
 real    0m0.038s
@@ -850,7 +850,7 @@ spec:
       type: string
     - name: image-registry
       type: string
-      default: quay.io/cathay
+      default: quay.io/my-org
     - name: target-namespace
       type: string
       default: serverless-demo
@@ -1172,7 +1172,7 @@ spec:
     spec:
       containers:
         - name: user-container
-          image: cathayacr.azurecr.io/serverless/FUNCTION_NAME:TAG
+          image: myregistry.azurecr.io/serverless/FUNCTION_NAME:TAG
 
 # 其他所有配置（tolerations, nodeSelector, autoscaling,
 # env vars, resource limits）保持完全相同。
@@ -1182,7 +1182,7 @@ spec:
 
 ### Phase 8: Serverless Logic — 工作流编排（第 7-9 周）
 
-> **客户关注重点**: Cathay 在 2024 年已看过基础 Knative demo，其核心诉求是 **Serverless Logic (SonataFlow)** — 用于构建**多步骤工作流**（不仅仅是单个函数调用），替代 **AWS Step Functions**。
+> **客户关注重点**: 客户在 2024 年已看过基础 Knative demo，其核心诉求是 **Serverless Logic (SonataFlow)** — 用于构建**多步骤工作流**（不仅仅是单个函数调用），替代 **AWS Step Functions**。
 
 #### Step 8.1: SonataFlow 与 AWS Step Functions 概念映射
 
@@ -1379,7 +1379,7 @@ SONATA_URL="https://order-processing-serverless-demo.apps.rosa.rosa-fhmhp.r63a.p
 
 $ time curl -sk -X POST "$SONATA_URL" \
   -H "Content-Type: application/json" \
-  -d '{"workflowdata":{"order":{"orderId":"ORD-001","customerEmail":"cathay@example.com",
+  -d '{"workflowdata":{"order":{"orderId":"ORD-001","customerEmail":"user@example.com",
        "paymentMethod":"credit_card","totalAmount":199.99,
        "items":[{"id":"ITEM-1","name":"Laptop Stand","qty":1},
                 {"id":"ITEM-2","name":"USB-C Hub","qty":2}]}}}'
@@ -1389,7 +1389,7 @@ real    0m0.288s    ← 首次请求
 # 热请求
 $ time curl -sk -X POST "$SONATA_URL" \
   -H "Content-Type: application/json" \
-  -d '{"workflowdata":{"order":{"orderId":"ORD-002","customerEmail":"test@cathay.com",
+  -d '{"workflowdata":{"order":{"orderId":"ORD-002","customerEmail":"test@example.com",
        "paymentMethod":"debit","totalAmount":50.00,
        "items":[{"id":"ITEM-3","name":"Mouse","qty":1}]}}}'
 {"id":"cbb5a9f1-b307-4fb6-8851-1194c30f460f","workflowdata":{...}}
@@ -1461,7 +1461,7 @@ DevUI:     https://order-processing-serverless-demo.apps.rosa.rosa-fhmhp.r63a.p3
 SwaggerUI: https://order-processing-serverless-demo.apps.rosa.rosa-fhmhp.r63a.p3.openshiftapps.com/q/swagger-ui/
 ```
 
-**对 Cathay 的建议：**
+**建议：**
 
 1. **开发阶段** — 安装 VS Code 扩展 `KIE Serverless Workflow Editor`（代码 + 图表并排，支持自动补全、验证、SVG 导出）
 2. **调试/监控** — 使用 DevUI (`/q/dev-ui`)（查看工作流实例和执行状态）

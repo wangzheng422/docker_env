@@ -927,8 +927,8 @@ hello-func   https://hello-func-serverless-demo.apps.rosa.rosa-fhmhp.r63a.p3.ope
 FUNC_URL="https://hello-func-serverless-demo.apps.rosa.rosa-fhmhp.r63a.p3.openshiftapps.com"
 
 # GET 请求（带参数）
-$ time curl -sk "$FUNC_URL?name=Cathay"
-{"message": "Hello, Cathay!", "platform": "OpenShift Serverless Function (kn func)",
+$ time curl -sk "$FUNC_URL?name=Demo"
+{"message": "Hello, Demo!", "platform": "OpenShift Serverless Function (kn func)",
  "cold_start": true, "processing_time_ms": 0.01,
  "pod_name": "hello-func-00001-deployment-5c4c9b46c9-5s4mc"}
 real    0m0.038s
@@ -1164,7 +1164,7 @@ ApiServerSrc──▶       ──Trigger(type=k8s)──▶   Service C
 - 没有消息持久化需求
 - 没有多消费者扇出需求
 
-**Cathay 生产环境建议引入 KafkaChannel/KafkaSource 的场景：**
+**生产环境建议引入 KafkaChannel/KafkaSource 的场景：**
 
 | 场景 | 为什么需要 Kafka |
 |------|-----------------|
@@ -1215,7 +1215,7 @@ ApiServerSrc──▶       ──Trigger(type=k8s)──▶   Service C
 
 ## Phase 5: SonataFlow (Serverless Logic) vs AWS Step Functions — 工作流对比
 
-> 客户反馈：Cathay 在 2024 年已经看过 Knative 基础 demo，其真正关注点是 **Serverless Logic (SonataFlow)** — 用于构建**工作流**（不仅仅是单个函数调用），与 **AWS Step Functions (Lambda Workflow)** 对标。
+> 客户反馈：客户在 2024 年已经看过 Knative 基础 demo，其真正关注点是 **Serverless Logic (SonataFlow)** — 用于构建**工作流**（不仅仅是单个函数调用），与 **AWS Step Functions (Lambda Workflow)** 对标。
 
 ### 5.1 安装 OpenShift Serverless Logic Operator
 
@@ -1397,21 +1397,21 @@ SONATA_URL="https://order-processing-serverless-demo.apps.rosa.rosa-fhmhp.r63a.p
 # 首次请求
 $ time curl -sk -X POST "$SONATA_URL" \
   -H "Content-Type: application/json" \
-  -d '{"workflowdata":{"order":{"orderId":"ORD-001","customerEmail":"cathay@example.com","paymentMethod":"credit_card","totalAmount":199.99,"items":[{"id":"ITEM-1","name":"Laptop Stand","qty":1},{"id":"ITEM-2","name":"USB-C Hub","qty":2}]}}}'
-{"id":"3d2f9ddc-60b2-433c-95a6-c2ce1afc750c","workflowdata":{"order":{"orderId":"ORD-001","customerEmail":"cathay@example.com","paymentMethod":"credit_card","totalAmount":199.99,"items":[{"id":"ITEM-1","name":"Laptop Stand","qty":1},{"id":"ITEM-2","name":"USB-C Hub","qty":2}]}}}
+  -d '{"workflowdata":{"order":{"orderId":"ORD-001","customerEmail":"user@example.com","paymentMethod":"credit_card","totalAmount":199.99,"items":[{"id":"ITEM-1","name":"Laptop Stand","qty":1},{"id":"ITEM-2","name":"USB-C Hub","qty":2}]}}}'
+{"id":"3d2f9ddc-60b2-433c-95a6-c2ce1afc750c","workflowdata":{"order":{"orderId":"ORD-001","customerEmail":"user@example.com","paymentMethod":"credit_card","totalAmount":199.99,"items":[{"id":"ITEM-1","name":"Laptop Stand","qty":1},{"id":"ITEM-2","name":"USB-C Hub","qty":2}]}}}
 real    0m0.288s
 
 # 热请求
 $ time curl -sk -X POST "$SONATA_URL" \
   -H "Content-Type: application/json" \
-  -d '{"workflowdata":{"order":{"orderId":"ORD-002","customerEmail":"test@cathay.com","paymentMethod":"debit","totalAmount":50.00,"items":[{"id":"ITEM-3","name":"Mouse","qty":1}]}}}'
-{"id":"cbb5a9f1-b307-4fb6-8851-1194c30f460f","workflowdata":{"order":{"orderId":"ORD-002","customerEmail":"test@cathay.com","paymentMethod":"debit","totalAmount":50.0,"items":[{"id":"ITEM-3","name":"Mouse","qty":1}]}}}
+  -d '{"workflowdata":{"order":{"orderId":"ORD-002","customerEmail":"test@example.com","paymentMethod":"debit","totalAmount":50.00,"items":[{"id":"ITEM-3","name":"Mouse","qty":1}]}}}'
+{"id":"cbb5a9f1-b307-4fb6-8851-1194c30f460f","workflowdata":{"order":{"orderId":"ORD-002","customerEmail":"test@example.com","paymentMethod":"debit","totalAmount":50.0,"items":[{"id":"ITEM-3","name":"Mouse","qty":1}]}}}
 real    0m0.110s
 
 $ time curl -sk -X POST "$SONATA_URL" \
   -H "Content-Type: application/json" \
-  -d '{"workflowdata":{"order":{"orderId":"ORD-003","customerEmail":"demo@cathay.com","paymentMethod":"paypal","totalAmount":99.00,"items":[{"id":"ITEM-4","name":"Keyboard","qty":1}]}}}'
-{"id":"3e5ea55b-c593-4887-8892-651bea2ac8f4","workflowdata":{"order":{"orderId":"ORD-003","customerEmail":"demo@cathay.com","paymentMethod":"paypal","totalAmount":99.0,"items":[{"id":"ITEM-4","name":"Keyboard","qty":1}]}}}
+  -d '{"workflowdata":{"order":{"orderId":"ORD-003","customerEmail":"demo@example.com","paymentMethod":"paypal","totalAmount":99.00,"items":[{"id":"ITEM-4","name":"Keyboard","qty":1}]}}}'
+{"id":"3e5ea55b-c593-4887-8892-651bea2ac8f4","workflowdata":{"order":{"orderId":"ORD-003","customerEmail":"demo@example.com","paymentMethod":"paypal","totalAmount":99.0,"items":[{"id":"ITEM-4","name":"Keyboard","qty":1}]}}}
 real    0m0.110s
 ```
 
@@ -1574,7 +1574,7 @@ $ SFN_ARN="arn:aws:states:us-east-2:442042511122:stateMachine:order-processing-w
 
 $ time aws stepfunctions start-sync-execution \
   --state-machine-arn "$SFN_ARN" \
-  --input '{"order":{"orderId":"ORD-001","customerEmail":"cathay@example.com","paymentMethod":"credit_card","totalAmount":199.99,"items":[{"id":"ITEM-1","name":"Laptop Stand","qty":1},{"id":"ITEM-2","name":"USB-C Hub","qty":2}]}}' \
+  --input '{"order":{"orderId":"ORD-001","customerEmail":"user@example.com","paymentMethod":"credit_card","totalAmount":199.99,"items":[{"id":"ITEM-1","name":"Laptop Stand","qty":1},{"id":"ITEM-2","name":"USB-C Hub","qty":2}]}}' \
   --region us-east-2 | jq '{status, startDate, stopDate, output: (.output | fromjson)}'
 {
   "status": "SUCCEEDED",
@@ -1586,7 +1586,7 @@ $ time aws stepfunctions start-sync-execution \
       "channel": "email",
       "status": "sent",
       "message": "Your order has been shipped!",
-      "recipient": "cathay@example.com"
+      "recipient": "user@example.com"
     },
     "shipment": {
       "shipmentId": "SHIP-GENERATED",
@@ -1609,7 +1609,7 @@ $ time aws stepfunctions start-sync-execution \
     },
     "order": {
       "orderId": "ORD-001",
-      "customerEmail": "cathay@example.com",
+      "customerEmail": "user@example.com",
       "paymentMethod": "credit_card",
       "totalAmount": 199.99,
       "items": [
@@ -1730,7 +1730,7 @@ DevUI 的 Extensions 页面包含以下卡片：
 
 #### 5.9.6 弥补可视化差距的推荐方案
 
-**对于 Cathay 的建议：**
+**建议：**
 
 1. **开发阶段** — 安装 VS Code 扩展 `KIE Serverless Workflow Editor`
    - 提供代码编辑器 + 工作流图表并排显示
@@ -1752,7 +1752,7 @@ DevUI 的 Extensions 页面包含以下卡片：
 >
 > 但这是设计理念的差异：**AWS 侧重 Console-first（图形界面优先）**，**SonataFlow 侧重 Code-first（代码优先 + GitOps）**。
 >
-> 对于大型金融企业（如 Cathay）的 GitOps 工作流，Code-first 模式反而更符合生产环境的最佳实践。
+> 对于大型金融企业的 GitOps 工作流，Code-first 模式反而更符合生产环境的最佳实践。
 
 ---
 
