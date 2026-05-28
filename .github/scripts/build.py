@@ -153,11 +153,13 @@ ASSET_EXTS = {
     ".pdf", ".mp4", ".mov", ".webm",
     ".zip", ".tar", ".gz",
     ".yaml", ".yml", ".json", ".sh", ".conf",
+    ".html",   # standalone HTML pages (e.g. slide viewers)
 }
 
 def copy_assets():
     """全量复制仓库内所有静态资源到 _site/，保持原目录结构。
-    跳过 .md / .html / .py 等源码文件，也跳过 .git / node_modules 等目录。
+    包括图片、视频、配置文件以及独立 HTML 页面（如幻灯片查看器）。
+    跳过 .git / node_modules / _site / .github 等目录。
     """
     skip_dirs = {".git", "node_modules", "_site", ".github", "__pycache__"}
     copied = 0
