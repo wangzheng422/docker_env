@@ -947,6 +947,37 @@ kuadrant-<hash>-cname-echo.kuadrant.wzhlab.top
 heritage=external-dns,external-dns/group=demo-01,external-dns/owner=2omrld2x,external-dns/version=1
 ```
 
+```bash
+dig @192.168.99.230 TXT kuadrant-228crxc1-cname-echo.kuadrant.wzhlab.top
+```
+
+```txt
+; <<>> DiG 9.16.23-RH <<>> @192.168.99.230 TXT kuadrant-228crxc1-cname-echo.kuadrant.wzhlab.top
+; (1 server found)
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 14516
+;; flags: qr aa rd; QUERY: 1, ANSWER: 1, AUTHORITY: 1, ADDITIONAL: 1
+;; WARNING: recursion requested but not available
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 4096
+; COOKIE: 80acabd52c11246e (echoed)
+;; QUESTION SECTION:
+;kuadrant-228crxc1-cname-echo.kuadrant.wzhlab.top. IN TXT
+
+;; ANSWER SECTION:
+kuadrant-228crxc1-cname-echo.kuadrant.wzhlab.top. 0 IN TXT "\"heritage=external-dns,external-dns/group=demo-02,external-dns/owner=12urzgc7,external-dns/targets=klb.echo.kuadrant.wzhlab.top,external-dns/version=1\""
+
+;; AUTHORITY SECTION:
+kuadrant.wzhlab.top.    60      IN      NS      ns1.kuadrant.wzhlab.top.
+
+;; Query time: 11 msec
+;; SERVER: 192.168.99.230#53(192.168.99.230)
+;; WHEN: Thu May 28 15:08:34 UTC 2026
+;; MSG SIZE  rcvd: 357
+```
+
 ##### Purpose of TXT Ownership Records
 
 These TXT records are not for application clients. They are ownership markers used by the provider to prevent different controllers or clusters from overwriting each other.
