@@ -571,6 +571,59 @@ kuadrant.wzhlab.top.     600 IN NS ns2.kuadrant.wzhlab.top.
 kuadrant.wzhlab.top.     600 IN NS ns1.kuadrant.wzhlab.top.
 ```
 
+
+```text
+ns1.kuadrant.wzhlab.top. 600    IN      A       192.168.99.210
+
+ns2.kuadrant.wzhlab.top. 600    IN      A       192.168.99.230
+
+; <<>> DiG 9.16.23-RH <<>> +trace echo.kuadrant.wzhlab.top A
+;; global options: +cmd
+.                       4       IN      NS      j.root-servers.net.
+.                       4       IN      NS      k.root-servers.net.
+.                       4       IN      NS      l.root-servers.net.
+.                       4       IN      NS      m.root-servers.net.
+.                       4       IN      NS      a.root-servers.net.
+.                       4       IN      NS      b.root-servers.net.
+.                       4       IN      NS      c.root-servers.net.
+.                       4       IN      NS      d.root-servers.net.
+.                       4       IN      NS      e.root-servers.net.
+.                       4       IN      NS      f.root-servers.net.
+.                       4       IN      NS      g.root-servers.net.
+.                       4       IN      NS      h.root-servers.net.
+.                       4       IN      NS      i.root-servers.net.
+;; Received 239 bytes from 172.31.0.2#53(172.31.0.2) in 1 ms
+
+top.                    172800  IN      NS      a.zdnscloud.cn.
+top.                    172800  IN      NS      b.zdnscloud.cn.
+top.                    172800  IN      NS      c.zdnscloud.com.
+top.                    172800  IN      NS      d.zdnscloud.com.
+top.                    172800  IN      NS      e.zdnscloud.cn.
+top.                    172800  IN      NS      f.zdnscloud.cn.
+top.                    172800  IN      NS      i.zdnscloud.cn.
+top.                    172800  IN      NS      j.zdnscloud.com.
+top.                    86400   IN      DS      26780 8 2 5D6E7869EE8E3B536A617DE89482DDD1DCB9DB9DBB1AC33D6ED351E2 CA095B1B
+top.                    86400   IN      RRSIG   DS 8 1 86400 20260607170000 20260525160000 54393 . g7ZmD4sixrCkwLmZGbMIj8SqxpMrYNCd+cMP1engbiAVMT04698WOreU WWPznnrCTKzh41PtkKzP1o6I/hf64KZ+0pvMFzd9lY58Q1Mnro0hWphd yPQeYIGPM0BV+XvY7VZKHybM/8MaWDSsOk5o6GG7UDoTX4AuUUtwzqLV eIggfIy37dhLQVp3H+yFQLjObccv52pWwbWhPWxFuu5Krhrobb0dSYbC WZSr8w9yaIcn8EM/5Rz4nM0tzgIaSROV2OYFuugjteUWLgzHVtp2RMOk gwlWVNqj/0SWelPQpl+26xURPpWWEro41h+kfO3iMIiKlQXHS312Ivs8 p7r7Ww==
+;; Received 721 bytes from 192.5.5.241#53(f.root-servers.net) in 4 ms
+
+wzhlab.top.             3600    IN      NS      dns21.hichina.com.
+wzhlab.top.             3600    IN      NS      dns22.hichina.com.
+9opav7qq6nidbfpe7gjq6uvlq27tfvu7.top. 3600 IN NSEC3 1 0 0 - 9OPAVPH9T9OIH6ARTF6I7M2QI7PAFBJ7 NS
+9opav7qq6nidbfpe7gjq6uvlq27tfvu7.top. 3600 IN RRSIG NSEC3 8 2 3600 20260604001447 20260520224447 60925 top. ng+EJk7r6EEXiYvbK9PfCczXNz+TG8lfTz1L0ImFVdmOcHRLvqqitugf y6Uy7H3/jaB7pyK6YCHDOqQuLm8fwmNC4yFHNL5CkPle5o0QD1X5UhUQ SJEN9RWbBtZth5tcJiTMo0RdsZ/M0M5pi1dH3rc2QoXmdXbV/PvwZ+2i S3c=
+;; Received 341 bytes from 203.119.82.1#53(e.zdnscloud.cn) in 27 ms
+
+kuadrant.wzhlab.top.    600     IN      NS      ns1.kuadrant.wzhlab.top.
+kuadrant.wzhlab.top.    600     IN      NS      ns2.kuadrant.wzhlab.top.
+;; Received 159 bytes from 120.76.107.60#53(dns21.hichina.com) in 183 ms
+
+echo.kuadrant.wzhlab.top. 300   IN      CNAME   klb.echo.kuadrant.wzhlab.top.
+klb.echo.kuadrant.wzhlab.top. 300 IN    CNAME   geo-na.klb.echo.kuadrant.wzhlab.top.
+geo-na.klb.echo.kuadrant.wzhlab.top. 60 IN CNAME 2ad421-1twd8u.klb.echo.kuadrant.wzhlab.top.
+2ad421-1twd8u.klb.echo.kuadrant.wzhlab.top. 60 IN A 192.168.99.211
+kuadrant.wzhlab.top.    60      IN      NS      ns1.kuadrant.wzhlab.top.
+;; Received 413 bytes from 192.168.99.210#53(ns1.kuadrant.wzhlab.top) in 5 ms
+```
+
 ### 6.6 Gateway, HTTPRoute, Demo Application, and DNSPolicy
 
 demo-01 and demo-02 use the same structure. The only functional content difference is the `echo-content` text.

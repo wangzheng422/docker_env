@@ -6,7 +6,7 @@ This repository is the author's technical notes from daily system operations. Th
 Currently, there are many experience sharing articles in the warehouse, some of which are quite useful:
 - 2026
   - [2026.05 connectivity link multi-cluster dns glb PoC](redhat/ocp4/4.20/2026.05.connct.link.dns/solution-2026.05.25.14.09-me-en.md) 
-    - [📊 Slides](https://wangzheng422.github.io/docker_env/redhat/ocp4/4.20/2026.05.connct.link.dns/slides.html)
+    - [📊 Slides](https://wangzheng422.github.io/docker_env/redhat/ocp4/4.20/2026.05.connct.link.dns/slides02.html)
   - [2026.05 ocp-4.20 apply kpatch](redhat/ocp4/4.20/2026.05.coreos.patch/solution-2026.05.20.21.30.en.md)
     - [2026.05 ocp-4.16 apply kpatch](redhat/ocp4/4.20/2026.05.coreos.patch/solution-ocp416-2026.05.21.en.md)
   - [2026.05 ocp serverless adoption](redhat/ocp4/4.20/2026.05.ocp.serverless.adoption/solution.md)
