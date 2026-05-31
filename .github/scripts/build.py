@@ -47,7 +47,25 @@ def ensure_blank_lines(content: str) -> str:
     """确保 ATX 标题和列表块前后有空行，防止 pandoc 把列表/标题当成段落文本"""
     lines = content.split("\n")
     result = []
+    in_fence = False
+    fence_marker = ""
     for i, line in enumerate(lines):
+        fence_match = re.match(r"^\s*(```+|~~~+)", line)
+        if fence_match:
+            marker = fence_match.group(1)[0]
+            if not in_fence:
+                in_fence = True
+                fence_marker = marker
+            elif marker == fence_marker:
+                in_fence = False
+                fence_marker = ""
+            result.append(line)
+            continue
+
+        if in_fence:
+            result.append(line)
+            continue
+
         is_heading = bool(re.match(r"^#{1,6} ", line))
         # 列表起始：顶层 "- " 或 "* " 或 "1. " 等，前一行不是列表行且不是空行
         prev = result[-1] if result else ""
