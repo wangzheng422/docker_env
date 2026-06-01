@@ -214,13 +214,13 @@ Redhat Blog:
 
 Redhat learning:
 - Customizing RHCOS with CoreOS Layering to Add the rsyslog Package
-  - https://redhatquickcourses.github.io/customise-rhcos-layer-rsyslog/modules/index.html
-  - https://github.com/RedHatQuickCourses/customise-rhcos-layer-rsyslog/tree/main
+  - [Customizing RHCOS with CoreOS Layering to Add the rsyslog Package - course](https://redhatquickcourses.github.io/customise-rhcos-layer-rsyslog/modules/index.html)
+  - [Customizing RHCOS with CoreOS Layering to Add the rsyslog Package - source](https://github.com/RedHatQuickCourses/customise-rhcos-layer-rsyslog/tree/main)
 - OpenShift Workload Partitioning Deep Dive
-  - https://redhatquickcourses.github.io/ocp4-workload-partition/modules/index.html
-  - https://github.com/RedHatQuickCourses/ocp4-workload-partition
+  - [OpenShift Workload Partitioning Deep Dive - course](https://redhatquickcourses.github.io/ocp4-workload-partition/modules/index.html)
+  - [OpenShift Workload Partitioning Deep Dive - source](https://github.com/RedHatQuickCourses/ocp4-workload-partition)
 - Red Hat OpenShift Virtualization disaster recovery
-  - https://developers.redhat.com/learn/openshift/red-hat-openshift-virtualization-disaster-recovery
+  - [Red Hat OpenShift Virtualization disaster recovery - learning path](https://developers.redhat.com/learn/openshift/red-hat-openshift-virtualization-disaster-recovery)
 
 <!-- 作者还做了一个[chrome extension](https://chromewebstore.google.com/detail/bing-image-new-tab/hahpccmdkmgmaoebhfnkpcnndnklfbpj)，用来在new tab上展示bing.com的美图，简单美观，欢迎使用。
 

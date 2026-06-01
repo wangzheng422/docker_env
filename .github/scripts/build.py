@@ -94,6 +94,15 @@ def extract_title(content: str, fallback: str) -> str:
     m = re.search(r"^# (.+)$", content, re.MULTILINE)
     return m.group(1).strip() if m else fallback
 
+def filter_index_content(content: str) -> str:
+    """Filter README-only links that should not appear in the published homepage."""
+    lines = []
+    for line in content.splitlines():
+        if "github.com/RedHatQuickCourses" in line:
+            continue
+        lines.append(line)
+    return "\n".join(lines)
+
 def convert_md(rel_md: str, page_type: str = "article"):
     """转换单个 md 文件为 HTML"""
     src = REPO_ROOT / rel_md
@@ -108,6 +117,8 @@ def convert_md(rel_md: str, page_type: str = "article"):
     root_prefix = rel_to_root(rel_html)
     content     = src.read_text(encoding="utf-8", errors="replace")
     title       = extract_title(content, src.stem)
+    if page_type == "index":
+        content = filter_index_content(content)
     modified    = replace_md_links(content)
     modified    = ensure_blank_lines(modified)
 
@@ -127,17 +138,21 @@ def convert_md(rel_md: str, page_type: str = "article"):
         "--standalone",
         "--table-of-contents",
         "--toc-depth=3",
-        "--highlight-style=pygments",
+        "--highlight-style=zenburn",
         f"-V", f"title={title}",
         f"-V", f"css-root={root_prefix}",
         f"-V", f"root={root_prefix}",
         f"-V", "lang=zh",
         f"-V", "dir=ltr",
+        f"-V", f"page-type={page_type}",
         "--output", str(out_file),
         tmp_path,
     ]
     if page_type != "index":
         cmd += ["-V", "back-link=true"]
+        cmd += ["-V", "article-page=true"]
+    else:
+        cmd += ["-V", "index-page=true"]
 
     try:
         result = subprocess.run(cmd, capture_output=True, text=True)
