@@ -127,7 +127,7 @@ def convert_md(rel_md: str, page_type: str = "article"):
         "--standalone",
         "--table-of-contents",
         "--toc-depth=3",
-        "--syntax-highlighting=pygments",
+        "--highlight-style=pygments",
         f"-V", f"title={title}",
         f"-V", f"css-root={root_prefix}",
         f"-V", f"root={root_prefix}",
