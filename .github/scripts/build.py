@@ -6,6 +6,7 @@ build.py — 将 README.md 及引用的 .md 文件转换为响应式 HTML blog
 
 import os
 import re
+import hashlib
 import shutil
 import subprocess
 import sys
@@ -18,6 +19,7 @@ REPO_ROOT   = SCRIPT_DIR.parent.parent
 TEMPLATE    = REPO_ROOT / ".github/templates/template.html"
 STYLE_SRC   = REPO_ROOT / ".github/templates/style.css"
 OUT         = REPO_ROOT / "_site"
+BUILD_ID    = "dev"
 
 # ── 工具函数 ────────────────────────────────────────────────
 def rel_to_root(rel_html: str) -> str:
@@ -145,6 +147,8 @@ def convert_md(rel_md: str, page_type: str = "article"):
         f"-V", "lang=zh",
         f"-V", "dir=ltr",
         f"-V", f"page-type={page_type}",
+        f"-V", f"build-id={BUILD_ID}",
+        f"-V", f"asset-version={BUILD_ID}",
         "--output", str(out_file),
         tmp_path,
     ]
@@ -179,6 +183,29 @@ def extract_md_links(readme_path: Path) -> list:
             seen.add(l)
             result.append(l)
     return result
+
+def compute_build_id() -> str:
+    """Compute a short content hash for cache-busting generated pages and assets."""
+    hasher = hashlib.sha256()
+    paths = [
+        REPO_ROOT / "README.md",
+        TEMPLATE,
+        STYLE_SRC,
+        Path(__file__),
+    ]
+    paths.extend(REPO_ROOT / md for md in extract_md_links(REPO_ROOT / "README.md"))
+
+    seen = set()
+    for path in sorted(paths, key=lambda p: str(p.relative_to(REPO_ROOT))):
+        if path in seen or not path.exists():
+            continue
+        seen.add(path)
+        hasher.update(str(path.relative_to(REPO_ROOT)).encode("utf-8"))
+        hasher.update(b"\0")
+        hasher.update(path.read_bytes())
+        hasher.update(b"\0")
+
+    return hasher.hexdigest()[:12]
 
 # 需要复制的静态资源扩展名
 ASSET_EXTS = {
@@ -217,6 +244,10 @@ def copy_assets():
 
 # ── 主流程 ──────────────────────────────────────────────────
 def main():
+    global BUILD_ID
+    BUILD_ID = compute_build_id()
+    print(f">>> 构建版本: {BUILD_ID}")
+
     print(f">>> 清理并创建输出目录: {OUT}")
     if OUT.exists():
         shutil.rmtree(OUT)
