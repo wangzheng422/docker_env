@@ -7,7 +7,7 @@ Currently, there are many experience sharing articles in the warehouse, some of 
 - 2026
   - [2026.06 rhai 3.4 (vllm 0.18) serving Qwen/Qwen3.6-27B-FP8](redhat/ocp4/4.20/2026.06.rhai.qwen3.6/final-integrated-report-portable.md)
   - [2026.06 rhai 3.4 (vllm 0.18) serving RedHatAI/Qwen3.5-122B-A10B-FP8-dynamic](redhat/ocp4/4.20/2026.06.ocpai.qwen3.5/README.md)
-  - [2026.06 nvidia dgx spark nvfp4 inferecing report](redhat/notes/2026/2026.06.spark-qwen3.6-nvfp4-inference-report/spark-qwen3.6-nvfp4-inference-report-2026.06.01-r6.md)
+  - [2026.06 nvidia dgx spark nvfp4 inferecing report](redhat/notes/2026/2026.06.spark-qwen3.6-nvfp4-inference-report/spark-qwen3.6-nvfp4-inference-report-2026.06.01-r6-en.md)
   - [2026.05 connectivity link multi-cluster dns glb PoC](redhat/ocp4/4.20/2026.05.connct.link.dns/solution-2026.05.25.14.09-me-en.md) 
     - [📊 Slides](https://wangzheng422.github.io/docker_env/redhat/ocp4/4.20/2026.05.connct.link.dns/slides02.html)
   - [2026.05 ocp-4.20 apply kpatch](redhat/ocp4/4.20/2026.05.coreos.patch/solution-2026.05.20.21.30.en.md)
