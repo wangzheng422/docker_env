@@ -1,6 +1,6 @@
-# Pi Summary Agent
+# Summary Agent
 
-Pi Summary Agent is a lightweight long-document summarization tool for OpenAI-compatible chat-completions endpoints, such as vLLM or an OpenAI-compatible gateway.
+Summary Agent is a lightweight long-document summarization tool for OpenAI-compatible chat-completions endpoints, such as vLLM or an OpenAI-compatible gateway.
 
 It uses a simple map/reduce flow:
 

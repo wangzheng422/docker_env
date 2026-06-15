@@ -5,6 +5,7 @@ This repository is the author's technical notes from daily system operations. Th
 
 Currently, there are many experience sharing articles in the warehouse, some of which are quite useful:
 - 2026
+  - [2026.06 summary agent implementation demo](redhat/notes/2026/2026.06.agent-summary/README.md)
   - [2026.06 summary agent vs direct llm call](redhat/notes/2026/pi-summary-comparison-2026.06.11/README.md)
   - [2026.06 rhai 3.4 (vllm 0.18) serving Qwen/Qwen3.6-27B-FP8](redhat/ocp4/4.20/2026.06.rhai.qwen3.6/final-integrated-report-portable.md)
     - [2026.06 rhai 3.4 (vllm 0.18) serving RedHatAI/Qwen3.5-122B-A10B-FP8-dynamic - 1M context](redhat/ocp4/4.20/2026.06.rhai.qwen3.6/final-qwen35-122b-rhai341-report/final-qwen35-122b-rhai341-report.md)
