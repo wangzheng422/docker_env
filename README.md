@@ -5,6 +5,8 @@ This repository is the author's technical notes from daily system operations. Th
 
 Currently, there are many experience sharing articles in the warehouse, some of which are quite useful:
 - 2026
+  - [2026.06 connectivity link 3-cluster 2 domains dns glb PoC](redhat/ocp4/4.20/2026.05.connct.link.dns/solution-2026.06.18.20.20-rhcl-three-cluster-two-domain-e2e-report.md) 
+    - [📊 Slides](https://wangzheng422.github.io/docker_env/redhat/ocp4/4.20/2026.05.connct.link.dns/slides03.html)
   - [2026.06 summary agent implementation demo](redhat/notes/2026/2026.06.agent-summary/README.md)
   - [2026.06 summary agent vs direct llm call](redhat/notes/2026/pi-summary-comparison-2026.06.11/README.md)
   - [2026.06 rhai 3.4 (vllm 0.18) serving Qwen/Qwen3.6-27B-FP8](redhat/ocp4/4.20/2026.06.rhai.qwen3.6/final-integrated-report-portable.md)
