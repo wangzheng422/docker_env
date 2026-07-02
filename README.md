@@ -5,7 +5,7 @@ This repository is the author's technical notes from daily system operations. Th
 
 Currently, there are many experience sharing articles in the warehouse, some of which are quite useful:
 - 2026
-  - [2026.07 ocp sso for 3rd part app](redhat/ocp4/4.20/2026.07.ocp.sso.3rd/wzh-solution-2026.07.02.15.43.md)
+  - [2026.07 ocp sso for 3rd part app](redhat/ocp4/4.20/2026.07.ocp.sso.3rd/wzh-solution-2026.07.02.15.43.en.md)
     - [🎬 Youtube](https://youtu.be/9KKuUyHfbaQ)
   - [2026.06 connectivity link 3-cluster 2 domains dns glb PoC](redhat/ocp4/4.20/2026.05.connct.link.dns/solution-2026.06.18.20.20-rhcl-three-cluster-two-domain-e2e-report.md) 
     - [📊 Slides](https://wangzheng422.github.io/docker_env/redhat/ocp4/4.20/2026.05.connct.link.dns/slides03.html)

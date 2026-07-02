@@ -1,108 +1,108 @@
-# 第三方系統透過 Keycloak SSO 存取 OpenShift API — 解決方案
+# Third-Party System Accessing OpenShift API via Keycloak SSO — Solution Document
 
-| 欄位 | 值 |
+| Field | Value |
 |---|---|
-| 文件日期 | 2026-07-02 |
-| 環境 | ROSA / SNO (OCP 4.x) + Keycloak 26.2 |
-| 作者 | Red Hat Adoption Team |
-| 狀態 | PoC 已驗證通過 |
+| Document Date | 2026-07-02 |
+| Environment | ROSA / SNO (OCP 4.x) + Keycloak 26.2 |
+| Author | Red Hat Adoption Team |
+| Status | PoC Verified |
 
 ---
 
-## 1. 需求背景
+## 1. Background
 
-客戶場景：
+Customer scenario:
 
-- OpenShift (OCP) 叢集已整合外部 **Keycloak (Red Hat SSO)** 作為 OIDC 身分提供者 (IdP)
-- 存在一個**第三方系統**，同樣使用該 Keycloak 進行 SSO 登入
-- 第三方系統需要在使用者登入後，**以該使用者的身分與權限**呼叫 OCP API（例如：列出使用者有權限的 Projects）
-- 不允許使用高權限 ServiceAccount 代理操作，必須遵守使用者本身的 RBAC 權限
+- An OpenShift (OCP) cluster is integrated with an external **Keycloak (Red Hat SSO)** as its OIDC Identity Provider (IdP)
+- A **third-party system** also uses the same Keycloak for SSO login
+- After user login, the third-party system needs to **call OCP APIs on behalf of the user, respecting the user's RBAC permissions** (e.g., listing Projects the user has access to)
+- Using a high-privilege ServiceAccount to proxy operations is not acceptable; the user's own RBAC permissions must be enforced
 
-核心挑戰：**OCP OAuth Server 只接受自己簽發的 Token，不接受 Keycloak 直接簽發的 Token。** 因此第三方系統持有的 Keycloak Token 無法直接用於 OCP API 呼叫。
+Core challenge: **The OCP OAuth Server only accepts tokens it issues itself — it does not accept tokens issued directly by Keycloak.** Therefore, the Keycloak token held by the third-party system cannot be used directly for OCP API calls.
 
 ---
 
-## 2. 候選方案分析
+## 2. Candidate Approaches
 
-我們評估了三種技術路線：
+We evaluated three technical approaches:
 
-### 方案 A：直接使用 Keycloak Token 呼叫 OCP API
-
-```
-使用者 → 第三方 App → Keycloak 登入 → 取得 KC Token → 直接呼叫 OCP API
-```
-
-**結論：不可行 ❌**
-
-- OCP API Server 僅接受 OCP OAuth Server 簽發的 Bearer Token
-- Keycloak 簽發的 JWT Token 不在 OCP 的信任鏈中
-- 即使 OCP 使用 Keycloak 作為 IdP，OCP 仍然透過自己的 OAuth Server 簽發獨立的 Token
-- 沒有原生機制可以讓 OCP API Server 直接驗證外部 Keycloak Token
-
-### 方案 B：Keycloak Token Exchange + OCP OAuth 橋接（RFC 8693）
+### Approach A: Use Keycloak Token Directly for OCP API
 
 ```
-使用者 → 第三方 App → Keycloak 登入
+User → Third-Party App → Keycloak Login → Get KC Token → Call OCP API directly
+```
+
+**Conclusion: Not Feasible ❌**
+
+- OCP API Server only accepts Bearer Tokens issued by the OCP OAuth Server
+- Keycloak-issued JWT Tokens are not in OCP's trust chain
+- Even though OCP uses Keycloak as an IdP, OCP still issues its own independent tokens through its OAuth Server
+- There is no native mechanism to make OCP API Server validate external Keycloak tokens
+
+### Approach B: Keycloak Token Exchange + OCP OAuth Bridge (RFC 8693)
+
+```
+User → Third-Party App → Keycloak Login
                        │
                   Token Exchange (RFC 8693)
                   third-party-app → ocp-oauth
                        │
-                  OCP OAuth（透過 Keycloak SSO Session 自動完成）
+                  OCP OAuth (auto-completed via Keycloak SSO Session)
                        │
-                  取得 OCP Token → 呼叫 OCP API
+                  Get OCP Token → Call OCP API
 ```
 
-**結論：可行 ✅ — 已實作為 PoC**
+**Conclusion: Feasible ✅ — Implemented as PoC**
 
-- 利用 Keycloak 26.x 內建的 Token Exchange 功能（RFC 8693），將第三方 Client 的 Token 換取為 OCP OAuth Client 受眾的 Token
-- 換取後的 Token 觸發 OCP OAuth 授權流程，因 Keycloak SSO Session 仍然有效，使用者**無需再次輸入密碼**
-- 最終取得的 OCP Token 是 OCP OAuth Server 簽發的，完全符合 OCP API 的驗證要求
-- 使用者的 RBAC 權限完整保留
+- Leverages Keycloak 26.x built-in Token Exchange (RFC 8693) to swap the third-party client's token for a token with the OCP OAuth client audience
+- The exchanged token triggers the OCP OAuth authorization flow; since the Keycloak SSO session is still active, the user **does not need to re-enter credentials**
+- The resulting OCP Token is issued by the OCP OAuth Server, fully compliant with OCP API validation requirements
+- The user's RBAC permissions are fully preserved
 
-### 方案 C：ServiceAccount 模擬（Impersonation）
+### Approach C: ServiceAccount Impersonation
 
 ```
-使用者 → 第三方 App → 取得使用者名稱
+User → Third-Party App → Get username
                        │
-                  使用高權限 SA Token
+                  Use high-privilege SA Token
                   + Impersonate-User: <username> Header
                        │
-                  呼叫 OCP API
+                  Call OCP API
 ```
 
-**結論：可行但不推薦 ⚠️**
+**Conclusion: Feasible but Not Recommended ⚠️**
 
-- 需要一個具有 `impersonate` 權限的高權限 ServiceAccount
-- 違反最小權限原則，該 SA 可以模擬任何使用者
-- 如果 SA Token 洩露，攻擊者可以冒充叢集中的任何使用者
-- 客戶明確拒絕此方案
+- Requires a high-privilege ServiceAccount with `impersonate` permissions
+- Violates the principle of least privilege — the SA can impersonate any user
+- If the SA token is leaked, an attacker can impersonate any user in the cluster
+- Customer explicitly rejected this approach
 
-### 方案比較表
+### Approach Comparison
 
-| 維度 | 方案 A | 方案 B（已實作） | 方案 C |
+| Dimension | Approach A | Approach B (Implemented) | Approach C |
 |---|---|---|---|
-| 技術可行性 | ❌ 不可行 | ✅ 可行 | ✅ 可行 |
-| 安全性 | N/A | ✅ 使用者自身權限 | ⚠️ 需高權限 SA |
-| 使用者體驗 | N/A | ✅ 無密碼 SSO | ✅ 透明 |
-| OCP 版本相容 | N/A | ✅ 4.x 全系列 | ✅ 4.x 全系列 |
-| Keycloak 要求 | N/A | 26.x + token-exchange feature | 無特殊要求 |
-| 合規性 | N/A | ✅ 符合最小權限 | ❌ 違反最小權限 |
-| 複雜度 | 低 | 中 | 低 |
+| Technical Feasibility | ❌ Not feasible | ✅ Feasible | ✅ Feasible |
+| Security | N/A | ✅ User's own permissions | ⚠️ Requires high-privilege SA |
+| User Experience | N/A | ✅ Passwordless SSO | ✅ Transparent |
+| OCP Version Compatibility | N/A | ✅ All 4.x versions | ✅ All 4.x versions |
+| Keycloak Requirements | N/A | 26.x + token-exchange feature | No special requirements |
+| Compliance | N/A | ✅ Least privilege | ❌ Violates least privilege |
+| Complexity | Low | Medium | Low |
 
 ---
 
-## 3. 已實作方案詳述（方案 B）
+## 3. Implemented Approach (Approach B) — Detailed Design
 
-### 3.1 整體架構
+### 3.1 Architecture Overview
 
 ```mermaid
 graph TB
-    subgraph "使用者瀏覽器"
-        Browser["🌐 瀏覽器"]
+    subgraph "User Browser"
+        Browser["🌐 Browser"]
     end
 
-    subgraph "第三方系統 (Flask App)"
-        App["🔧 第三方 Demo App<br/>http://bastion:9080"]
+    subgraph "Third-Party System (Flask App)"
+        App["🔧 Third-Party Demo App<br/>http://bastion:9080"]
     end
 
     subgraph "Keycloak 26.2"
@@ -110,98 +110,98 @@ graph TB
         KC_TE["Token Exchange<br/>(RFC 8693)"]
     end
 
-    subgraph "OpenShift 叢集"
+    subgraph "OpenShift Cluster"
         OCP_OAuth["OAuth Server<br/>oauth-openshift.apps..."]
         OCP_API["API Server<br/>api....:6443"]
     end
 
-    Browser -->|"1. 存取應用"| App
-    App -->|"2. OIDC 登入重導"| KC
-    KC -->|"3. 授權碼回傳"| App
+    Browser -->|"1. Access App"| App
+    App -->|"2. OIDC Login Redirect"| KC
+    KC -->|"3. Authorization Code"| App
     App -->|"4. Token Exchange"| KC_TE
-    App -->|"5. OAuth 授權重導"| OCP_OAuth
-    OCP_OAuth -->|"6. SSO 自動完成"| KC
+    App -->|"5. OAuth Redirect"| OCP_OAuth
+    OCP_OAuth -->|"6. SSO Auto-Complete"| KC
     OCP_OAuth -->|"7. OCP Token"| App
-    App -->|"8. API 呼叫"| OCP_API
+    App -->|"8. API Call"| OCP_API
 ```
 
-### 3.2 詳細流程
+### 3.2 Detailed Flow
 
 ```mermaid
 sequenceDiagram
-    participant U as 使用者瀏覽器
-    participant App as 第三方 App
+    participant U as User Browser
+    participant App as Third-Party App
     participant KC as Keycloak
     participant OCP_OAuth as OCP OAuth
     participant OCP_API as OCP API
 
-    Note over U,OCP_API: 步驟 1：Keycloak OIDC 登入
+    Note over U,OCP_API: Step 1: Keycloak OIDC Login
 
     U->>App: GET /login
     App->>U: 302 → Keycloak /auth
-    U->>KC: 登入頁面（輸入帳號密碼）
+    U->>KC: Login page (enter credentials)
     KC->>U: 302 → /callback/keycloak?code=xxx
     U->>App: GET /callback/keycloak?code=xxx
     App->>KC: POST /token (authorization_code)
     KC-->>App: KC Access Token (azp=third-party-app)
-    App->>U: 顯示登入成功頁面
+    App->>U: Display login success page
 
-    Note over U,OCP_API: 步驟 2：呼叫 OCP API（一鍵完成）
+    Note over U,OCP_API: Step 2: Call OCP API (single click)
 
     U->>App: GET /call-ocp-api
 
-    Note over App,KC: 步驟 2a：Token Exchange (RFC 8693)
+    Note over App,KC: Step 2a: Token Exchange (RFC 8693)
     App->>KC: POST /token (grant_type=token-exchange)<br/>subject_token=KC_token<br/>audience=ocp-oauth
-    KC-->>App: 新 Token (azp=ocp-oauth)
+    KC-->>App: New Token (azp=ocp-oauth)
 
-    Note over App,OCP_OAuth: 步驟 2b：OCP OAuth（SSO 自動完成）
+    Note over App,OCP_OAuth: Step 2b: OCP OAuth (SSO auto-completes)
     App->>U: 302 → OCP /oauth/authorize?idp=keycloak
     U->>OCP_OAuth: GET /oauth/authorize
     OCP_OAuth->>U: 302 → Keycloak /auth
-    Note over U,KC: Keycloak SSO Session 有效<br/>自動完成，無需輸入密碼
+    Note over U,KC: Keycloak SSO session is valid<br/>Auto-completes without password
     KC->>U: 302 → OCP /oauth2callback
-    U->>OCP_OAuth: 授權碼
+    U->>OCP_OAuth: Authorization code
     OCP_OAuth->>U: 302 → /callback/ocp?code=yyy
     U->>App: GET /callback/ocp?code=yyy
     App->>OCP_OAuth: POST /oauth/token (authorization_code)
     OCP_OAuth-->>App: OCP Access Token
 
-    Note over App,OCP_API: 步驟 2c：OCP API 呼叫
+    Note over App,OCP_API: Step 2c: OCP API Call
     App->>OCP_API: GET /apis/user.openshift.io/v1/users/~<br/>Authorization: Bearer OCP_Token
-    OCP_API-->>App: 使用者身分資訊
+    OCP_API-->>App: User identity info
     App->>OCP_API: GET /apis/project.openshift.io/v1/projects<br/>Authorization: Bearer OCP_Token
-    OCP_API-->>App: 使用者有權限的 Project 清單
-    App->>U: 顯示完整結果
+    OCP_API-->>App: List of projects user has access to
+    App->>U: Display complete results
 ```
 
-### 3.3 安全設計要點
+### 3.3 Security Design Highlights
 
-| 項目 | 設計 |
+| Item | Design |
 |---|---|
-| Token 生命週期 | KC Token 在 Token Exchange 後立即從 Session 清除 |
-| Session 大小 | 僅保留顯示用的摘要資訊（< 4KB），避免 Cookie 超限 |
-| OCP Token 儲存 | 僅保留前 40 字元用於顯示，完整 Token 用完即棄 |
-| CSRF 防護 | OAuth state 參數用於所有授權流程 |
-| TLS | Keycloak 使用自簽 HTTPS；生產環境應使用正式 CA 憑證 |
-| 權限範圍 | 嚴格遵循使用者 RBAC，不使用任何特權帳號 |
+| Token Lifecycle | KC Token is cleared from session immediately after Token Exchange |
+| Session Size | Only display-ready summaries are stored (< 4KB), avoiding cookie overflow |
+| OCP Token Storage | Only first 40 characters stored for display; full token is discarded after use |
+| CSRF Protection | OAuth state parameter used for all authorization flows |
+| TLS | Keycloak uses self-signed HTTPS; production should use proper CA certificates |
+| Permission Scope | Strictly follows user RBAC — no privileged accounts used |
 
 ---
 
-## 4. Keycloak 配置
+## 4. Keycloak Configuration
 
-### 4.1 環境資訊
+### 4.1 Environment Information
 
-| 項目 | 值 |
+| Item | Value |
 |---|---|
-| Keycloak 版本 | 26.2 |
-| 啟動參數 | `start-dev --https-port=8443 --features=token-exchange` |
+| Keycloak Version | 26.2 |
+| Startup Parameters | `start-dev --https-port=8443 --features=token-exchange` |
 | Realm | `demo` |
-| 位址 | `https://<bastion-ip>:18443` |
-| 管理帳號 | admin / admin-pass-2026 |
+| URL | `https://<bastion-ip>:18443` |
+| Admin Account | admin / admin-pass-2026 |
 
-> **重要：** 必須在啟動時啟用 `--features=token-exchange`，否則 Token Exchange 端點不可用。
+> **Important:** The `--features=token-exchange` flag must be enabled at startup, otherwise the Token Exchange endpoint is unavailable.
 
-### 4.2 Realm 設定
+### 4.2 Realm Configuration
 
 ```json
 {
@@ -214,9 +214,9 @@ sequenceDiagram
 }
 ```
 
-### 4.3 Client：ocp-oauth（OCP OAuth 使用）
+### 4.3 Client: ocp-oauth (Used by OCP OAuth)
 
-此 Client 是 OCP OAuth Server 用來與 Keycloak 進行 OIDC 通訊的 Client。
+This client is used by the OCP OAuth Server to communicate with Keycloak via OIDC.
 
 ```json
 {
@@ -240,15 +240,15 @@ sequenceDiagram
 }
 ```
 
-**關鍵配置：**
+**Key configuration points:**
 
-- `serviceAccountsEnabled: true` — Token Exchange 要求目標 Client 啟用 Service Account
-- `token.exchange.standard.enabled: true` — 啟用標準 Token Exchange（RFC 8693）
-- `redirectUris` — 必須包含 OCP OAuth 的回呼 URL，格式為 `https://oauth-openshift.apps.<domain>/oauth2callback/<idp-name>`
+- `serviceAccountsEnabled: true` — Token Exchange requires the target client to have Service Account enabled
+- `token.exchange.standard.enabled: true` — Enables standard Token Exchange (RFC 8693)
+- `redirectUris` — Must include the OCP OAuth callback URL, formatted as `https://oauth-openshift.apps.<domain>/oauth2callback/<idp-name>`
 
-### 4.4 Client：third-party-app（第三方應用使用）
+### 4.4 Client: third-party-app (Used by Third-Party Application)
 
-此 Client 是第三方 Demo App 用來進行 OIDC 登入和發起 Token Exchange 的 Client。
+This client is used by the third-party Demo App for OIDC login and initiating Token Exchange.
 
 ```json
 {
@@ -273,22 +273,22 @@ sequenceDiagram
 }
 ```
 
-**關鍵配置：**
+**Key configuration points:**
 
-- `token.exchange.standard.enabled: true` — 允許此 Client 發起 Token Exchange
-- `post.logout.redirect.uris` — Keycloak 26.x 使用此屬性控制登出後的重導 URI；多個 URI 使用 `##` 分隔
-- `directAccessGrantsEnabled: true` — 可選，方便除錯測試
+- `token.exchange.standard.enabled: true` — Allows this client to initiate Token Exchange
+- `post.logout.redirect.uris` — Keycloak 26.x uses this attribute to control post-logout redirect URIs; multiple URIs are separated with `##`
+- `directAccessGrantsEnabled: true` — Optional, useful for debugging and testing
 
-### 4.5 Token Exchange 設定要點
+### 4.5 Token Exchange Configuration Essentials
 
-Keycloak 26.x 的 Token Exchange 配置要點：
+Key points for configuring Token Exchange in Keycloak 26.x:
 
-1. **啟動參數**：`--features=token-exchange`
-2. **源 Client**（`third-party-app`）需設定 `token.exchange.standard.enabled: true`
-3. **目標 Client**（`ocp-oauth`）需設定：
+1. **Startup parameter**: `--features=token-exchange`
+2. **Source client** (`third-party-app`) must have `token.exchange.standard.enabled: true`
+3. **Target client** (`ocp-oauth`) must have:
    - `token.exchange.standard.enabled: true`
    - `serviceAccountsEnabled: true`
-4. **Token Exchange 請求格式**：
+4. **Token Exchange request format**:
 
 ```http
 POST /realms/demo/protocol/openid-connect/token
@@ -302,7 +302,7 @@ grant_type=urn:ietf:params:oauth:grant-type:token-exchange
 &client_secret=<ocp-oauth-secret>
 ```
 
-5. **回應**：
+5. **Response**:
 
 ```json
 {
@@ -313,23 +313,23 @@ grant_type=urn:ietf:params:oauth:grant-type:token-exchange
 }
 ```
 
-> 注意：Keycloak 26.x 中 Token Exchange 的授權模型已從舊版的 Fine-Grained Permissions 簡化為 Client 屬性旗標。如果使用較早版本的 Keycloak（< 25），需要在 Realm → Permissions 中手動設定 Token Exchange Policy。
+> Note: In Keycloak 26.x, the Token Exchange authorization model has been simplified from the legacy Fine-Grained Permissions to client attribute flags. For earlier versions of Keycloak (< 25), you need to manually configure Token Exchange Policies under Realm → Permissions.
 
-### 4.6 使用者帳號
+### 4.6 User Accounts
 
-| 使用者 | 密碼 | 說明 |
+| User | Password | Description |
 |---|---|---|
-| user-a | demo | Alice，可檢視 project-a、project-c |
-| user-b | demo | Bob，可編輯 project-b |
-| user-c | demo | Charlie，管理 project-c，檢視 project-a、project-b |
+| user-a | demo | Alice — can view project-a, project-c |
+| user-b | demo | Bob — can edit project-b |
+| user-c | demo | Charlie — admin on project-c, view on project-a, project-b |
 
 ---
 
-## 5. OCP 端配置
+## 5. OCP Configuration
 
-### 5.1 OAuth IdP 配置
+### 5.1 OAuth IdP Configuration
 
-OCP 需要設定 Keycloak 作為 OpenID Connect Identity Provider：
+OCP must be configured with Keycloak as an OpenID Connect Identity Provider:
 
 ```yaml
 apiVersion: config.openshift.io/v1
@@ -357,23 +357,23 @@ spec:
             - email
 ```
 
-**前置條件：**
+**Prerequisites:**
 
 ```bash
-# 建立 Client Secret
+# Create client secret
 oc create secret generic keycloak-client-secret \
   --from-literal=clientSecret=<ocp-oauth-secret> \
   -n openshift-config
 
-# 建立 CA ConfigMap（自簽憑證場景）
+# Create CA ConfigMap (self-signed certificate scenario)
 oc create configmap keycloak-ca \
   --from-file=ca.crt=certs/tls.crt \
   -n openshift-config
 ```
 
-### 5.2 OAuthClient（第三方應用註冊）
+### 5.2 OAuthClient (Third-Party Application Registration)
 
-第三方應用需要在 OCP 中註冊為 OAuthClient，才能透過 OCP OAuth 取得 Token：
+The third-party application must be registered as an OAuthClient in OCP to obtain tokens via OCP OAuth:
 
 ```yaml
 apiVersion: oauth.openshift.io/v1
@@ -387,15 +387,15 @@ redirectURIs:
   - http://localhost:8080/callback/ocp
 ```
 
-- `grantMethod: auto` — 自動核准授權，不顯示同意畫面
-- `redirectURIs` — 必須包含第三方應用的 OCP 回呼 URL
+- `grantMethod: auto` — Automatically approve authorization without showing a consent screen
+- `redirectURIs` — Must include the third-party application's OCP callback URL
 
-### 5.3 RBAC 設定
+### 5.3 RBAC Configuration
 
-為不同使用者分配不同 Project 的權限，用於驗證 API 呼叫結果是否正確反映使用者權限：
+Different users are assigned different Project permissions to verify that API call results correctly reflect user permissions:
 
 ```bash
-# 建立 Projects
+# Create Projects
 oc new-project project-a
 oc new-project project-b
 oc new-project project-c
@@ -413,9 +413,9 @@ oc adm policy add-role-to-user view  user-c -n project-a
 oc adm policy add-role-to-user view  user-c -n project-b
 ```
 
-**預期 API 呼叫結果：**
+**Expected API call results:**
 
-| 使用者 | 可見 Projects |
+| User | Visible Projects |
 |---|---|
 | user-a (Alice) | project-a, project-c |
 | user-b (Bob) | project-b |
@@ -423,53 +423,53 @@ oc adm policy add-role-to-user view  user-c -n project-b
 
 ---
 
-## 6. 第三方系統實作要點
+## 6. Third-Party System Implementation Details
 
-### 6.1 技術棧
+### 6.1 Technology Stack
 
-| 項目 | 技術 |
+| Item | Technology |
 |---|---|
-| 語言 / 框架 | Python 3.12 / Flask |
-| WSGI 伺服器 | Gunicorn (2 workers) |
-| 容器基底映像 | `registry.access.redhat.com/ubi9/python-312` |
-| Session 管理 | Flask client-side session (Cookie-based) |
+| Language / Framework | Python 3.12 / Flask |
+| WSGI Server | Gunicorn (2 workers) |
+| Container Base Image | `registry.access.redhat.com/ubi9/python-312` |
+| Session Management | Flask client-side session (Cookie-based) |
 | HTTP Client | requests |
 
-### 6.2 核心路由
+### 6.2 Core Routes
 
 ```
-GET  /                    → 首頁（根據登入狀態顯示不同內容）
-GET  /login               → 重導至 Keycloak OIDC 授權端點
-GET  /callback/keycloak   → Keycloak OIDC 回呼，交換 code 取得 KC Token
-GET  /call-ocp-api        → 一鍵觸發：Token Exchange → OCP OAuth → API 呼叫
-GET  /callback/ocp        → OCP OAuth 回呼，交換 code 取得 OCP Token + 呼叫 API
-GET  /logout              → 清除 Session + Keycloak 登出
-GET  /health              → 健康檢查端點
+GET  /                    → Home page (shows different content based on login state)
+GET  /login               → Redirect to Keycloak OIDC authorization endpoint
+GET  /callback/keycloak   → Keycloak OIDC callback, exchange code for KC Token
+GET  /call-ocp-api        → Single-click trigger: Token Exchange → OCP OAuth → API call
+GET  /callback/ocp        → OCP OAuth callback, exchange code for OCP Token + call API
+GET  /logout              → Clear session + Keycloak logout
+GET  /health              → Health check endpoint
 ```
 
-### 6.3 關鍵實作細節
+### 6.3 Key Implementation Details
 
-#### 6.3.1 Token Exchange 實作
+#### 6.3.1 Token Exchange Implementation
 
 ```python
-# 步驟 2a：Token Exchange (RFC 8693)
+# Step 2a: Token Exchange (RFC 8693)
 resp = requests.post(KC_TOKEN_URL, data={
     "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
-    "subject_token": kc_access_token,       # 使用者的 KC Token
+    "subject_token": kc_access_token,       # User's KC Token
     "subject_token_type": "urn:ietf:params:oauth:token-type:access_token",
     "requested_token_type": "urn:ietf:params:oauth:token-type:access_token",
-    "client_id": "ocp-oauth",               # 目標 Client ID
-    "client_secret": "<ocp-oauth-secret>",   # 目標 Client Secret
+    "client_id": "ocp-oauth",               # Target Client ID
+    "client_secret": "<ocp-oauth-secret>",   # Target Client Secret
 }, verify=TLS_VERIFY)
 ```
 
-#### 6.3.2 OCP OAuth 重導（跳過 IdP 選擇頁面）
+#### 6.3.2 OCP OAuth Redirect (Skip IdP Selection Page)
 
 ```python
-# 步驟 2b：重導至 OCP OAuth，指定使用 keycloak IdP
+# Step 2b: Redirect to OCP OAuth, specifying keycloak IdP
 params = {
     "client_id": "third-party-demo",
-    "idp": "keycloak",           # 關鍵：跳過 IdP 選擇頁面
+    "idp": "keycloak",           # Key: skip IdP selection page
     "response_type": "code",
     "redirect_uri": APP_URL + "/callback/ocp",
     "state": state,
@@ -477,27 +477,27 @@ params = {
 redirect(f"{OCP_OAUTH_URL}/oauth/authorize?{urlencode(params)}")
 ```
 
-> **重要：** 如果 OCP 配置了多個 IdP（例如 kube:admin + keycloak），不指定 `idp` 參數會顯示 IdP 選擇頁面，導致使用者需要手動選擇，破壞 SSO 體驗。
+> **Important:** If OCP has multiple IdPs configured (e.g., kube:admin + keycloak), not specifying the `idp` parameter will display the IdP selection page, requiring the user to manually choose — breaking the SSO experience.
 
-#### 6.3.3 Session Cookie 大小控制
+#### 6.3.3 Session Cookie Size Control
 
-Flask 的 client-side session 將資料儲存在 Cookie 中，大小限制約 4KB。JWT Token 通常超過 1KB，儲存多個 Token 容易超限。
+Flask's client-side session stores data in cookies with a ~4KB size limit. JWT Tokens typically exceed 1KB, and storing multiple tokens easily exceeds this limit.
 
-**解決方式：**
+**Solution:**
 
-1. Token Exchange 完成後立即清除原始 KC Token：
+1. Clear the original KC Token immediately after Token Exchange:
    ```python
    session.pop("kc_access_token", None)
    ```
 
-2. OCP Token 僅保留前 40 字元用於顯示：
+2. Store only the first 40 characters of the OCP Token for display:
    ```python
    session["ocp_token"] = ocp_token[:40]
    ```
 
-3. Token 解碼後僅保留必要欄位摘要（sub, aud, azp 等），不儲存完整 JWT
+3. After decoding tokens, store only essential field summaries (sub, aud, azp, etc.), not the full JWT
 
-#### 6.3.4 登出流程
+#### 6.3.4 Logout Flow
 
 ```python
 @app.route("/logout")
@@ -510,26 +510,26 @@ def logout():
     return redirect(f"{KC_LOGOUT_URL}?{urlencode(params)}")
 ```
 
-> **注意：** Keycloak 26.x 的 `post_logout_redirect_uri` 不再使用 Client 的 `redirectUris`，而是使用獨立的 `post.logout.redirect.uris` Client 屬性。如果未設定此屬性，登出後會顯示「Invalid redirect uri」錯誤。
+> **Note:** Keycloak 26.x's `post_logout_redirect_uri` no longer uses the client's `redirectUris`. Instead, it uses the separate `post.logout.redirect.uris` client attribute. If this attribute is not set, logout will display an "Invalid redirect uri" error.
 
-### 6.4 環境變數
+### 6.4 Environment Variables
 
-| 環境變數 | 說明 | 範例值 |
+| Variable | Description | Example Value |
 |---|---|---|
-| `KC_BASE_URL` | Keycloak 基底 URL | `https://bastion:18443` |
-| `KC_REALM` | Keycloak Realm 名稱 | `demo` |
-| `KC_CLIENT_ID` | 第三方 App Client ID | `third-party-app` |
-| `KC_CLIENT_SECRET` | 第三方 App Client Secret | `***` |
-| `KC_OCP_CLIENT_ID` | OCP OAuth Client ID（Token Exchange 目標） | `ocp-oauth` |
+| `KC_BASE_URL` | Keycloak base URL | `https://bastion:18443` |
+| `KC_REALM` | Keycloak Realm name | `demo` |
+| `KC_CLIENT_ID` | Third-party App Client ID | `third-party-app` |
+| `KC_CLIENT_SECRET` | Third-party App Client Secret | `***` |
+| `KC_OCP_CLIENT_ID` | OCP OAuth Client ID (Token Exchange target) | `ocp-oauth` |
 | `KC_OCP_CLIENT_SECRET` | OCP OAuth Client Secret | `***` |
 | `OCP_API_URL` | OCP API Server URL | `https://api.<domain>:6443` |
 | `OCP_OAUTH_URL` | OCP OAuth Server URL | `https://oauth-openshift.apps.<domain>` |
-| `OCP_OAUTH_CLIENT_ID` | OCP OAuthClient 名稱 | `third-party-demo` |
+| `OCP_OAUTH_CLIENT_ID` | OCP OAuthClient name | `third-party-demo` |
 | `OCP_OAUTH_CLIENT_SECRET` | OCP OAuthClient Secret | `***` |
-| `OCP_IDP_NAME` | OCP 上 Keycloak IdP 的名稱 | `keycloak` |
-| `APP_EXTERNAL_URL` | 應用程式外部可存取的 URL | `http://bastion:9080` |
-| `TLS_VERIFY` | 是否驗證 TLS 憑證 | `false`（PoC 用） |
-| `FLASK_SECRET_KEY` | Flask Session 加密金鑰 | 隨機生成 |
+| `OCP_IDP_NAME` | Name of Keycloak IdP on OCP | `keycloak` |
+| `APP_EXTERNAL_URL` | Application's externally accessible URL | `http://bastion:9080` |
+| `TLS_VERIFY` | Whether to verify TLS certificates | `false` (PoC only) |
+| `FLASK_SECRET_KEY` | Flask session encryption key | Randomly generated |
 
 ### 6.5 Dockerfile
 
@@ -545,25 +545,25 @@ CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--workers", "2", "--timeout", "120",
 
 ---
 
-## 7. 部署流程
+## 7. Deployment Procedure
 
-使用 `deploy-all.sh` 腳本在 Bastion 主機上一鍵部署：
+Use the `deploy-all.sh` script to deploy everything on the bastion host:
 
 ```bash
 bash baremetal/deploy-all.sh all
 ```
 
-或逐步執行：
+Or execute step by step:
 
-| 步驟 | 指令 | 說明 |
+| Step | Command | Description |
 |---|---|---|
-| Step 1 | `bash deploy-all.sh step1` | 產生 TLS 自簽憑證，啟動 Keycloak 容器 |
-| Step 2 | `bash deploy-all.sh step2` | 設定 Keycloak Realm、Client、使用者帳號 |
-| Step 3 | `bash deploy-all.sh step3` | 設定 OCP OAuth IdP + OAuthClient |
-| Step 4 | `bash deploy-all.sh step4` | 建置並啟動第三方 Demo App 容器 |
-| Step 5 | `bash deploy-all.sh step5` | 設定 OCP RBAC（Project + RoleBinding） |
+| Step 1 | `bash deploy-all.sh step1` | Generate TLS self-signed certificates, start Keycloak container |
+| Step 2 | `bash deploy-all.sh step2` | Configure Keycloak Realm, Clients, user accounts |
+| Step 3 | `bash deploy-all.sh step3` | Configure OCP OAuth IdP + OAuthClient |
+| Step 4 | `bash deploy-all.sh step4` | Build and start third-party Demo App container |
+| Step 5 | `bash deploy-all.sh step5` | Configure OCP RBAC (Projects + RoleBindings) |
 
-部署完成後檢查狀態：
+Check status after deployment:
 
 ```bash
 bash deploy-all.sh status
@@ -571,50 +571,50 @@ bash deploy-all.sh status
 
 ---
 
-## 8. 驗證結果
+## 8. Verification Results
 
-### 8.1 驗證矩陣
+### 8.1 Verification Matrix
 
-| 使用者 | 登入 | Token Exchange | OCP Token | API 結果 | 預期 Projects |
+| User | Login | Token Exchange | OCP Token | API Result | Expected Projects |
 |---|---|---|---|---|---|
 | user-a (Alice) | ✅ | ✅ | ✅ | ✅ | project-a, project-c |
 | user-b (Bob) | ✅ | ✅ | ✅ | ✅ | project-b |
 | user-c (Charlie) | ✅ | ✅ | ✅ | ✅ | project-a, project-b, project-c |
 
-### 8.2 驗證步驟
+### 8.2 Verification Steps
 
-1. 開啟瀏覽器存取 `http://<bastion-ip>:9080`
-2. 點擊「透過 Keycloak SSO 登入」，使用 user-a / demo 登入
-3. 登入成功後，頁面顯示 Keycloak Token 資訊（azp=third-party-app）
-4. 點擊「呼叫 OCP API」按鈕
-5. 系統自動完成 3 個子步驟，頁面顯示：
-   - 步驟 2a：Token Exchange 結果（新 Token azp=ocp-oauth）
-   - 步驟 2b：OCP Token 與使用者身分資訊
-   - 步驟 2c：使用者有權限的 Project 清單
-6. 確認 Project 清單與預期 RBAC 設定一致
-7. 登出，使用其他使用者重複驗證
+1. Open browser and navigate to `http://<bastion-ip>:9080`
+2. Click "Login via Keycloak SSO", sign in with user-a / demo
+3. After successful login, the page displays Keycloak Token information (azp=third-party-app)
+4. Click the "Call OCP API" button
+5. The system automatically completes 3 sub-steps, displaying:
+   - Step 2a: Token Exchange result (new token azp=ocp-oauth)
+   - Step 2b: OCP Token and user identity information
+   - Step 2c: List of Projects the user has access to
+6. Verify the Project list matches expected RBAC configuration
+7. Logout and repeat verification with other users
 
 ---
 
-## 9. 生產環境注意事項
+## 9. Production Considerations
 
-| 項目 | PoC 現狀 | 生產建議 |
+| Item | PoC Status | Production Recommendation |
 |---|---|---|
-| TLS 憑證 | 自簽憑證 | 使用正式 CA 簽發的憑證 |
-| Keycloak 部署 | `start-dev` 模式 + H2 內建資料庫 | `start` 生產模式 + PostgreSQL |
-| Session 管理 | Flask client-side (Cookie) | 使用 Redis 等 server-side session |
-| Client Secret | 寫死在腳本中 | 使用 Vault 或 OCP Secret 管理 |
-| 高可用 | 單一容器 | Keycloak 叢集 + App 多副本部署在 OCP |
-| Token 生命週期 | 1800 秒 | 根據業務需求調整，並實作 Refresh Token 流程 |
-| 錯誤處理 | 基礎錯誤訊息 | 完善錯誤處理、重試機制、使用者友善提示 |
-| 日誌與監控 | Flask 標準日誌 | 整合 ELK / Loki + Prometheus metrics |
-| `sslRequired` | `none` | 設定為 `external` 或 `all` |
+| TLS Certificates | Self-signed | Use certificates from a proper CA |
+| Keycloak Deployment | `start-dev` mode + H2 embedded DB | `start` production mode + PostgreSQL |
+| Session Management | Flask client-side (Cookie) | Use server-side sessions (e.g., Redis) |
+| Client Secrets | Hardcoded in scripts | Use Vault or OCP Secret management |
+| High Availability | Single container | Keycloak cluster + multi-replica App on OCP |
+| Token Lifetime | 1800 seconds | Adjust per business needs; implement Refresh Token flow |
+| Error Handling | Basic error messages | Comprehensive error handling, retry mechanisms, user-friendly messages |
+| Logging & Monitoring | Flask standard logging | Integrate with ELK / Loki + Prometheus metrics |
+| `sslRequired` | `none` | Set to `external` or `all` |
 
 ---
 
-## 10. 原始碼清單
+## 10. Source Code Listing
 
-### 10.1 app.py（完整）
+### 10.1 app.py (Complete)
 
 ```python
 """
@@ -789,7 +789,7 @@ def call_ocp_api():
     """Single button: Token Exchange → OCP OAuth → API call."""
     kc_token = session.get("kc_access_token")
     if not kc_token:
-        session["error"] = "未登入，請先透過 Keycloak SSO 登入。"
+        session["error"] = "Not logged in. Please log in via Keycloak SSO first."
         return redirect(url_for("index"))
 
     # --- Sub-step a: Token Exchange (RFC 8693) ---
@@ -804,7 +804,7 @@ def call_ocp_api():
 
     if resp.status_code != 200:
         log.error("Token exchange failed: %s %s", resp.status_code, resp.text)
-        session["error"] = f"Token Exchange 失敗 ({resp.status_code}): {resp.text}"
+        session["error"] = f"Token Exchange failed ({resp.status_code}): {resp.text}"
         return redirect(url_for("index"))
 
     exchanged = resp.json()
@@ -884,9 +884,9 @@ def callback_ocp():
     session["ocp_api_called"] = {
         "method": "GET",
         "url": f"{OCP_API_URL}/apis/project.openshift.io/v1/projects",
-        "description": "列出目前使用者有權限的 OpenShift Projects",
+        "description": "List OpenShift Projects the current user has access to",
         "user_api_url": f"{OCP_API_URL}/apis/user.openshift.io/v1/users/~",
-        "user_api_description": "取得目前 OCP 使用者身分資訊",
+        "user_api_description": "Get current OCP user identity",
     }
 
     # Clear large tokens to keep session cookie under 4KB
@@ -974,51 +974,51 @@ if __name__ == "__main__":
     app.run(host="0.0.0.0", port=port, debug=True)
 ```
 
-### 10.2 deploy-all.sh（完整）
+### 10.2 deploy-all.sh (Complete)
 
-完整部署腳本請參閱專案目錄 `baremetal/deploy-all.sh`，包含 5 個步驟的自動化部署（TLS 憑證、Keycloak 設定、OCP OAuth、Demo App 建置、RBAC 配置），以及 `status` 和 `clean` 管理指令。
+The complete deployment script is available at `baremetal/deploy-all.sh` in the project directory. It includes 5-step automated deployment (TLS certificates, Keycloak configuration, OCP OAuth, Demo App build, RBAC configuration), plus `status` and `clean` management commands.
 
-### 10.3 index.html（完整）
+### 10.3 index.html (Complete)
 
-前端頁面為單一 HTML 模板（Jinja2），使用 Traditional Chinese (Taiwan) 介面。包含：
-- 未登入狀態：歡迎頁面 + 架構說明圖
-- 已登入未呼叫 API：Keycloak Token 資訊 + 呼叫 OCP API 按鈕
-- 完整結果：3 個子步驟結果 + Project 清單
+The frontend is a single HTML template (Jinja2) with a Traditional Chinese (Taiwan) interface. It includes:
+- Not logged in: Welcome page + architecture diagram
+- Logged in, API not called: Keycloak Token information + Call OCP API button
+- Complete results: 3 sub-step results + Project list
 
-完整內容請參閱專案目錄 `demo-app/templates/index.html`。
+The complete content is available at `demo-app/templates/index.html` in the project directory.
 
 ---
 
-## 11. 常見問題與除錯
+## 11. Troubleshooting FAQ
 
-### Q1：Token Exchange 回傳 403 或 400
+### Q1: Token Exchange returns 403 or 400
 
-**原因：**
-- Keycloak 未啟用 `--features=token-exchange`
-- 目標 Client（ocp-oauth）未設定 `token.exchange.standard.enabled: true`
-- 目標 Client 未啟用 `serviceAccountsEnabled`
+**Causes:**
+- Keycloak was not started with `--features=token-exchange`
+- Target client (ocp-oauth) does not have `token.exchange.standard.enabled: true`
+- Target client does not have `serviceAccountsEnabled` enabled
 
-**排查：**
+**Troubleshooting:**
 ```bash
-# 確認 Keycloak 啟動參數包含 --features=token-exchange
+# Verify Keycloak startup parameters include --features=token-exchange
 podman inspect keycloak | jq '.[0].Config.Cmd'
 
-# 確認 Client 屬性
+# Verify client attributes
 curl -sk -H "Authorization: Bearer $TOKEN" \
   "$KC_URL/admin/realms/demo/clients?clientId=ocp-oauth" | jq '.[0].attributes'
 ```
 
-### Q2：OCP OAuth 顯示 IdP 選擇頁面
+### Q2: OCP OAuth shows IdP selection page
 
-**原因：** OCP 配置了多個 IdP（如 kube:admin + keycloak），未指定 `idp` 參數。
+**Cause:** OCP has multiple IdPs configured (e.g., kube:admin + keycloak) and the `idp` parameter was not specified.
 
-**解決：** 在 OCP OAuth 授權請求中加入 `idp=keycloak` 參數。
+**Solution:** Add `idp=keycloak` to the OCP OAuth authorization request.
 
-### Q3：登出後顯示「Invalid redirect uri」
+### Q3: Logout shows "Invalid redirect uri"
 
-**原因：** Keycloak 26.x 的 `post_logout_redirect_uri` 需要在 Client 的 `post.logout.redirect.uris` 屬性中明確設定。
+**Cause:** Keycloak 26.x requires `post_logout_redirect_uri` to be explicitly set in the client's `post.logout.redirect.uris` attribute.
 
-**解決：** 在 Keycloak Admin API 或 Console 中設定 Client 屬性：
+**Solution:** Set the client attribute via Keycloak Admin API or Console:
 ```json
 {
   "attributes": {
@@ -1026,26 +1026,26 @@ curl -sk -H "Authorization: Bearer $TOKEN" \
   }
 }
 ```
-> 多個 URI 使用 `##` 分隔。
+> Multiple URIs are separated with `##`.
 
-### Q4：Session Cookie 超過 4KB 導致資料遺失
+### Q4: Session cookie exceeds 4KB causing data loss
 
-**原因：** Flask client-side session 將所有資料序列化後儲存在 Cookie 中，JWT Token 過大。
+**Cause:** Flask client-side session serializes all data into cookies. JWT Tokens are too large.
 
-**解決：** Token 用完後立即從 session 清除，僅保留顯示用的摘要。生產環境建議改用 server-side session（如 Redis）。
+**Solution:** Clear tokens from session immediately after use; store only display summaries. For production, switch to server-side sessions (e.g., Redis).
 
 ---
 
-## 12. 參考資料
+## 12. References
 
-| 資源 | 連結 |
+| Resource | Link |
 |---|---|
 | RFC 8693 - OAuth Token Exchange | https://datatracker.ietf.org/doc/html/rfc8693 |
-| Keycloak Token Exchange 文件 | https://www.keycloak.org/docs/latest/securing_apps/#_token-exchange |
-| OCP OAuth Server 文件 | https://docs.openshift.com/container-platform/latest/authentication/configuring-internal-oauth.html |
-| OCP OIDC IdP 設定 | https://docs.openshift.com/container-platform/latest/authentication/identity_providers/configuring-oidc-identity-provider.html |
-| OCP OAuthClient 文件 | https://docs.openshift.com/container-platform/latest/authentication/configuring-oauth-clients.html |
+| Keycloak Token Exchange Documentation | https://www.keycloak.org/docs/latest/securing_apps/#_token-exchange |
+| OCP OAuth Server Documentation | https://docs.openshift.com/container-platform/latest/authentication/configuring-internal-oauth.html |
+| OCP OIDC IdP Configuration | https://docs.openshift.com/container-platform/latest/authentication/identity_providers/configuring-oidc-identity-provider.html |
+| OCP OAuthClient Documentation | https://docs.openshift.com/container-platform/latest/authentication/configuring-oauth-clients.html |
 
 ---
 
-*文件結束*
+*End of Document*
