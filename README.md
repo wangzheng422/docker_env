@@ -5,6 +5,7 @@ This repository is the author's technical notes from daily system operations. Th
 
 Currently, there are many experience sharing articles in the warehouse, some of which are quite useful:
 - 2026
+  - [gb300 benchmark](redhat/notes/2026/2026.07.hp-gb300-comprehensive-device-test-report-en.md)
   - ocp ai 3.4 integration with 3rd part app
     - [🎬 model registry](https://youtu.be/5c1rfEJczYA)
     - [🎬 model deploy](https://youtu.be/JjTDuT2BxEk)
