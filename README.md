@@ -7,6 +7,7 @@ Currently, there are many experience sharing articles in the warehouse, some of 
 - 2026
   - cluster obser overview
     - [🎬 Youtube](https://youtu.be/dgXypxn7zmc)
+    - [🎬 with lightspeed](https://youtu.be/l4c86PKoh2A)
   - [gb300 benchmark](redhat/notes/2026/2026.07.hp-gb300-comprehensive-device-test-report-en.md)
   - ocp ai 3.4 integration with 3rd part app
     - [🎬 model registry](https://youtu.be/5c1rfEJczYA)
