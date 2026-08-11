@@ -1,0 +1,954 @@
+<!DOCTYPE html>
+<html lang="zh" dir="ltr">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="generator" content="pandoc" />
+  <meta name="site-build-id" content="fbe91b569ae8" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <title>MetalLB BGP mode on openshift 4.8 | wandering.star notes</title>
+  <meta name="description"
+    content="Wandering field notes on OpenShift, RHEL, AI infrastructure, and platform operations." />
+  <!-- Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-E3FRMDB7L2"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-E3FRMDB7L2');
+  </script>
+  <style>
+  html {
+    color: #1a1a1a;
+    background-color: #fdfdfd;
+  }
+  body {
+    margin: 0 auto;
+    max-width: 36em;
+    padding-left: 50px;
+    padding-right: 50px;
+    padding-top: 50px;
+    padding-bottom: 50px;
+    hyphens: auto;
+    overflow-wrap: break-word;
+    text-rendering: optimizeLegibility;
+    font-kerning: normal;
+  }
+  @media (max-width: 600px) {
+    body {
+      font-size: 0.9em;
+      padding: 12px;
+    }
+    h1 {
+      font-size: 1.8em;
+    }
+  }
+  @media print {
+    html {
+      background-color: white;
+    }
+    body {
+      background-color: transparent;
+      color: black;
+      font-size: 12pt;
+    }
+    p, h2, h3 {
+      orphans: 3;
+      widows: 3;
+    }
+    h2, h3, h4 {
+      page-break-after: avoid;
+    }
+  }
+  p {
+    margin: 1em 0;
+  }
+  a {
+    color: #1a1a1a;
+  }
+  a:visited {
+    color: #1a1a1a;
+  }
+  img {
+    max-width: 100%;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.4em;
+  }
+  h5, h6 {
+    font-size: 1em;
+    font-style: italic;
+  }
+  h6 {
+    font-weight: normal;
+  }
+  ol, ul {
+    padding-left: 1.7em;
+    margin-top: 1em;
+  }
+  li > ol, li > ul {
+    margin-top: 0;
+  }
+  blockquote {
+    margin: 1em 0 1em 1.7em;
+    padding-left: 1em;
+    border-left: 2px solid #e6e6e6;
+    color: #606060;
+  }
+  code {
+    font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+    font-size: 85%;
+    margin: 0;
+    hyphens: manual;
+  }
+  pre {
+    margin: 1em 0;
+    overflow: auto;
+  }
+  pre code {
+    padding: 0;
+    overflow: visible;
+    overflow-wrap: normal;
+  }
+  .sourceCode {
+   background-color: transparent;
+   overflow: visible;
+  }
+  hr {
+    background-color: #1a1a1a;
+    border: none;
+    height: 1px;
+    margin: 1em 0;
+  }
+  table {
+    margin: 1em 0;
+    border-collapse: collapse;
+    width: 100%;
+    overflow-x: auto;
+    display: block;
+    font-variant-numeric: lining-nums tabular-nums;
+  }
+  table caption {
+    margin-bottom: 0.75em;
+  }
+  tbody {
+    margin-top: 0.5em;
+    border-top: 1px solid #1a1a1a;
+    border-bottom: 1px solid #1a1a1a;
+  }
+  th {
+    border-top: 1px solid #1a1a1a;
+    padding: 0.25em 0.5em 0.25em 0.5em;
+  }
+  td {
+    padding: 0.125em 0.5em 0.25em 0.5em;
+  }
+  header {
+    margin-bottom: 4em;
+    text-align: center;
+  }
+  #TOC li {
+    list-style: none;
+  }
+  #TOC ul {
+    padding-left: 1.3em;
+  }
+  #TOC > ul {
+    padding-left: 0;
+  }
+  #TOC a:not(:hover) {
+    text-decoration: none;
+  }
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  div.columns{display: flex; gap: min(4vw, 1.5em);}
+  div.column{flex: auto; overflow-x: auto;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  /* The extra [class] is a hack that increases specificity enough to
+     override a similar rule in reveal.js */
+  ul.task-list[class]{list-style: none;}
+  ul.task-list li input[type="checkbox"] {
+    font-size: inherit;
+    width: 0.8em;
+    margin: 0 0.8em 0.2em -1.6em;
+    vertical-align: middle;
+  }
+  .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  /* CSS for syntax highlighting */
+  pre > code.sourceCode { white-space: pre; position: relative; }
+  pre > code.sourceCode > span { line-height: 1.25; }
+  pre > code.sourceCode > span:empty { height: 1.2em; }
+  .sourceCode { overflow: visible; }
+  code.sourceCode > span { color: inherit; text-decoration: inherit; }
+  div.sourceCode { margin: 1em 0; }
+  pre.sourceCode { margin: 0; }
+  @media screen {
+  div.sourceCode { overflow: auto; }
+  }
+  @media print {
+  pre > code.sourceCode { white-space: pre-wrap; }
+  pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+  }
+  pre.numberSource code
+    { counter-reset: source-line 0; }
+  pre.numberSource code > span
+    { position: relative; left: -4em; counter-increment: source-line; }
+  pre.numberSource code > span > a:first-child::before
+    { content: counter(source-line);
+      position: relative; left: -1em; text-align: right; vertical-align: baseline;
+      border: none; display: inline-block;
+      -webkit-touch-callout: none; -webkit-user-select: none;
+      -khtml-user-select: none; -moz-user-select: none;
+      -ms-user-select: none; user-select: none;
+      padding: 0 4px; width: 4em;
+    }
+  pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+  div.sourceCode
+    { color: #cccccc; background-color: #303030; }
+  @media screen {
+  pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+  }
+  code span.al { color: #ffcfaf; } /* Alert */
+  code span.an { color: #7f9f7f; font-weight: bold; } /* Annotation */
+  code span.at { } /* Attribute */
+  code span.bn { color: #dca3a3; } /* BaseN */
+  code span.bu { } /* BuiltIn */
+  code span.cf { color: #f0dfaf; } /* ControlFlow */
+  code span.ch { color: #dca3a3; } /* Char */
+  code span.cn { color: #dca3a3; font-weight: bold; } /* Constant */
+  code span.co { color: #7f9f7f; } /* Comment */
+  code span.cv { color: #7f9f7f; font-weight: bold; } /* CommentVar */
+  code span.do { color: #7f9f7f; } /* Documentation */
+  code span.dt { color: #dfdfbf; } /* DataType */
+  code span.dv { color: #dcdccc; } /* DecVal */
+  code span.er { color: #c3bf9f; } /* Error */
+  code span.ex { } /* Extension */
+  code span.fl { color: #c0bed1; } /* Float */
+  code span.fu { color: #efef8f; } /* Function */
+  code span.im { } /* Import */
+  code span.in { color: #7f9f7f; font-weight: bold; } /* Information */
+  code span.kw { color: #f0dfaf; } /* Keyword */
+  code span.op { color: #f0efd0; } /* Operator */
+  code span.ot { color: #efef8f; } /* Other */
+  code span.pp { color: #ffcfaf; font-weight: bold; } /* Preprocessor */
+  code span.sc { color: #dca3a3; } /* SpecialChar */
+  code span.ss { color: #cc9393; } /* SpecialString */
+  code span.st { color: #cc9393; } /* String */
+  code span.va { } /* Variable */
+  code span.vs { color: #cc9393; } /* VerbatimString */
+  code span.wa { color: #7f9f7f; font-weight: bold; } /* Warning */
+  </style>
+  <link rel="stylesheet" href="../../../style.css?v=fbe91b569ae8" />
+  </head>
+
+<body class="page-article">
+  <div class="reading-progress" aria-hidden="true"></div>
+  <div class="console-backdrop" aria-hidden="true"></div>
+  <nav class="site-nav">
+    <div class="nav-inner">
+      <a class="nav-brand" href="../../../index.html">wandering.star<span>notes</span></a>
+      <div class="nav-links">
+        <a href="https://github.com/wangzheng422/docker_env" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://www.youtube.com/@wangzheng422" target="_blank" rel="noopener">YouTube</a>
+      </div>
+    </div>
+  </nav>
+
+  <main>
+            <a class="back-link" href="../../../index.html">← Back to Index</a>
+        <div class="article-layout">
+            <aside class="toc-panel">
+        <div class="toc-title">ON THIS PAGE</div>
+        <ul>
+        <li><a href="#metallb-bgp-mode-on-openshift-4.8"
+        id="toc-metallb-bgp-mode-on-openshift-4.8">MetalLB BGP mode on
+        openshift 4.8</a></li>
+        <li><a href="#安装-metallb" id="toc-安装-metallb">安装
+        MetalLB</a></li>
+        <li><a href="#创建路由器"
+        id="toc-创建路由器">创建路由器</a></li>
+        <li><a href="#配置-metallb-和-bgp-router-进行配对"
+        id="toc-配置-metallb-和-bgp-router-进行配对">配置 MetalLB 和
+        bgp-router 进行配对</a></li>
+        <li><a href="#回到-bgp-router-看看路由情况"
+        id="toc-回到-bgp-router-看看路由情况">回到 bgp-router
+        看看路由情况</a></li>
+        <li><a href="#创建测试应用"
+        id="toc-创建测试应用">创建测试应用</a></li>
+        <li><a href="#回到-bgp-router-看看路由更新情况"
+        id="toc-回到-bgp-router-看看路由更新情况">回到 bgp-router
+        看看路由更新情况</a></li>
+        <li><a href="#到worker-0上看看-nft-规则"
+        id="toc-到worker-0上看看-nft-规则">到worker-0上，看看 nft
+        规则</a></li>
+        </ul>
+      </aside>
+            <article class="markdown-body article-shell">
+        <h1 id="metallb-bgp-mode-on-openshift-4.8">MetalLB BGP mode on
+        openshift 4.8</h1>
+        <p>openshift对外提供服务，默认是router的方式，里面是一个haproxy，但是默认只是支持http/https，定制一下，可以支持tcp。这种配置方法不是很直观，特别是tcp的支持也很鸡肋。我们希望的方式，是k8s
+        service直接暴露一个对外服务ip，并且通过bgp广播出去。今天，我们就看看metalLB项目如何帮助我们达到这个目的。</p>
+        <p>本次实验部署架构图： <img
+        src="./dia/4.8.metal.drawio.svg" /></p>
+        <p>视频讲解:</p>
+        <p><a
+        href="https://www.bilibili.com/video/BV1Sf4y1N7eE/"><kbd><img src="imgs/2021-08-30-22-40-36.png" width="600"></kbd></a></p>
+        <ul>
+        <li><a
+        href="https://www.bilibili.com/video/BV1Sf4y1N7eE/">bilibili</a></li>
+        <li><a href="https://youtu.be/a5Icpvy-vyw">youtube</a></li>
+        </ul>
+        <h1 id="安装-metallb">安装 MetalLB</h1>
+        <p>安装MetalLB非常简单</p>
+        <p>https://metallb.universe.tf/installation/clouds/#metallb-on-openshift-ocp</p>
+        <div class="sourceCode" id="cb1"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">mkdir</span> <span class="at">-p</span> /data/install/metallb</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> /data/install/metallb</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="fu">wget</span> https://raw.githubusercontent.com/metallb/metallb/v0.10.2/manifests/namespace.yaml</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="fu">wget</span> https://raw.githubusercontent.com/metallb/metallb/v0.10.2/manifests/metallb.yaml</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="fu">sed</span> <span class="at">-i</span> <span class="st">&#39;/runAsUser: 65534/d&#39;</span> ./metallb.yaml</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> create <span class="at">-f</span> namespace.yaml</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> adm policy add-scc-to-user privileged <span class="at">-n</span> metallb-system <span class="at">-z</span> speaker</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> create <span class="at">-f</span> metallb.yaml</span></code></pre></div>
+        <h1 id="创建路由器">创建路由器</h1>
+        <p>我们用一个 kvm 来模拟 bgp 路由器</p>
+        <ul>
+        <li>https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html/configuring_and_managing_networking/setting-your-routing-protocols_configuring-and-managing-networking#intro-to-frr_setting-your-routing-protocols</li>
+        <li>https://www.cisco.com/c/en/us/td/docs/ios-xml/ios/iproute_bgp/configuration/xe-16/irg-xe-16-book/bgp-dynamic-neighbors.html</li>
+        <li>https://ipbgp.com/2018/02/07/quagga/</li>
+        <li>https://docs.frrouting.org/en/latest/bgp.html</li>
+        </ul>
+        <div class="sourceCode" id="cb2"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># to setup a router vm for testing</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="co"># go to kvm host</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> /data/kvm</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="fu">wget</span> https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/4.8/scripts/helper-ks-rocky.cfg</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="fu">sed</span> <span class="at">-i</span> <span class="st">&#39;0,/^network.*/s/^network.*/network  --bootproto=static --device=enp1s0 --gateway=172.21.6.254 --ip=172.21.6.10  --netmask=255.255.255.0 --nameserver=172.21.1.1  --ipv6=auto --activate/&#39;</span> helper-ks-rocky.cfg</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="fu">sed</span> <span class="at">-i</span> <span class="st">&#39;0,/^network  --hostname.*/s/^network  --hostname.*/network  --hostname=bgp-router/&#39;</span> helper-ks-rocky.cfg</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="ex">virt-install</span> <span class="at">--name</span><span class="op">=</span><span class="st">&quot;bgp-router&quot;</span> <span class="at">--vcpus</span><span class="op">=</span>2 <span class="at">--ram</span><span class="op">=</span>2048 <span class="dt">\</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>--cpu=host-model <span class="dt">\</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>--disk path=/data/nvme/bgp-router.qcow2,bus=virtio,size=30 <span class="dt">\</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>--os-variant rhel8.4 <span class="at">--network</span> bridge=baremetal,model=virtio <span class="dt">\</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>--graphics vnc,port=49000 <span class="dt">\</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>--boot menu=on <span class="at">--location</span> /data/kvm/Rocky-8.4-x86_64-minimal.iso <span class="dt">\</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>--initrd-inject helper-ks-rocky.cfg <span class="at">--extra-args</span> <span class="st">&quot;inst.ks=file:/helper-ks-rocky.cfg&quot;</span> </span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a><span class="co"># in the bgp-router vm</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a><span class="ex">nmcli</span> con mod enp1s0 +ipv4.addresses <span class="st">&quot;192.168.7.10/24&quot;</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a><span class="ex">nmcli</span> con up enp1s0</span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a><span class="ex">systemctl</span> disable <span class="at">--now</span> firewalld</span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a><span class="ex">dnf</span> install <span class="at">-y</span> frr</span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a><span class="fu">sed</span> <span class="at">-i</span> <span class="st">&#39;s/bgpd=no/bgpd=yes/g&#39;</span> /etc/frr/daemons</span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a><span class="ex">systemctl</span> enable <span class="at">--now</span> frr</span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a><span class="co"># 进入路由器配置界面</span></span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a><span class="ex">vtysh</span></span>
+<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a><span class="co"># 以下是 bgp 路由器配置</span></span>
+<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a><span class="ex">router</span> bgp 64512</span>
+<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a> <span class="ex">neighbor</span> metallb peer-group</span>
+<span id="cb2-35"><a href="#cb2-35" aria-hidden="true" tabindex="-1"></a> <span class="ex">neighbor</span> metallb remote-as 64512</span>
+<span id="cb2-36"><a href="#cb2-36" aria-hidden="true" tabindex="-1"></a> <span class="ex">bgp</span> listen limit 200</span>
+<span id="cb2-37"><a href="#cb2-37" aria-hidden="true" tabindex="-1"></a> <span class="ex">bgp</span> listen range 192.168.7.0/24 peer-group metallb</span></code></pre></div>
+        <h1 id="配置-metallb-和-bgp-router-进行配对">配置 MetalLB 和
+        bgp-router 进行配对</h1>
+        <div class="sourceCode" id="cb3"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># on helper</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> <span class="op">&lt;&lt; EOF</span> <span class="op">&gt;</span> /data/install/metal-bgp.yaml</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="st">apiVersion: v1</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="st">kind: ConfigMap</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="st">metadata:</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="st">  namespace: metallb-system</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="st">  name: config</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="st">data:</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="st">  config: |</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="st">    peers:</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a><span class="st">    - my-asn: 64512</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a><span class="st">      peer-asn: 64512</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a><span class="st">      peer-address: 192.168.7.10</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a><span class="st">    address-pools:</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a><span class="st">    - name: my-ip-space</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a><span class="st">      protocol: bgp</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a><span class="st">      avoid-buggy-ips: true</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a><span class="st">      addresses:</span></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a><span class="st">      - 198.51.100.0/24</span></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a><span class="op">EOF</span></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> create <span class="at">-f</span> /data/install/metal-bgp.yaml</span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a><span class="co"># to restore</span></span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> delete <span class="at">-f</span> /data/install/metal-bgp.yaml</span></code></pre></div>
+        <h1 id="回到-bgp-router-看看路由情况">回到 bgp-router
+        看看路由情况</h1>
+        <pre><code># back to bgp-router vm
+vtysh
+
+bgp-router# show ip bgp summary
+
+IPv4 Unicast Summary:
+BGP router identifier 192.168.7.10, local AS number 64512 vrf-id 0
+BGP table version 0
+RIB entries 0, using 0 bytes of memory
+Peers 2, using 43 KiB of memory
+Peer groups 1, using 64 bytes of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt
+*192.168.7.13   4      64512         2         2        0    0    0 00:00:25            0        0
+*192.168.7.16   4      64512         2         2        0    0    0 00:00:25            0        0
+
+Total number of neighbors 2
+* - dynamic neighbor
+2 dynamic neighbor(s), limit 200</code></pre>
+        <p>我们看到，集群里面的2个node，分别和路由器建立的peer关系。</p>
+        <h1 id="创建测试应用">创建测试应用</h1>
+        <div class="sourceCode" id="cb5"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># back to helper vm</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> <span class="op">&lt;&lt; EOF</span> <span class="op">&gt;</span> /data/install/demo.yaml</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="st">---</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="st">apiVersion: v1</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="st">kind: Pod</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="st">metadata:</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="st">  name: test-0</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a><span class="st">  labels:</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a><span class="st">    env: test</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a><span class="st">spec:</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a><span class="st">  restartPolicy: OnFailure</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a><span class="st">  nodeSelector:</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a><span class="st">    kubernetes.io/hostname: &#39;master-0&#39;</span></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a><span class="st">  containers:</span></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a><span class="st">  - name: php</span></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a><span class="st">    image: &quot;quay.io/wangzheng422/php:demo.02&quot;</span></span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a><span class="st">---</span></span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a><span class="st">apiVersion: v1</span></span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a><span class="st">kind: Pod</span></span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a><span class="st">metadata:</span></span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a><span class="st">  name: test-1</span></span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a><span class="st">  labels:</span></span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a><span class="st">    env: test</span></span>
+<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a><span class="st">spec:</span></span>
+<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a><span class="st">  restartPolicy: OnFailure</span></span>
+<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a><span class="st">  nodeSelector:</span></span>
+<span id="cb5-28"><a href="#cb5-28" aria-hidden="true" tabindex="-1"></a><span class="st">    kubernetes.io/hostname: &#39;worker-0&#39;</span></span>
+<span id="cb5-29"><a href="#cb5-29" aria-hidden="true" tabindex="-1"></a><span class="st">  containers:</span></span>
+<span id="cb5-30"><a href="#cb5-30" aria-hidden="true" tabindex="-1"></a><span class="st">  - name: php</span></span>
+<span id="cb5-31"><a href="#cb5-31" aria-hidden="true" tabindex="-1"></a><span class="st">    image: &quot;quay.io/wangzheng422/php:demo.02&quot;</span></span>
+<span id="cb5-32"><a href="#cb5-32" aria-hidden="true" tabindex="-1"></a><span class="st">---</span></span>
+<span id="cb5-33"><a href="#cb5-33" aria-hidden="true" tabindex="-1"></a><span class="st">kind: Service</span></span>
+<span id="cb5-34"><a href="#cb5-34" aria-hidden="true" tabindex="-1"></a><span class="st">apiVersion: v1</span></span>
+<span id="cb5-35"><a href="#cb5-35" aria-hidden="true" tabindex="-1"></a><span class="st">metadata:</span></span>
+<span id="cb5-36"><a href="#cb5-36" aria-hidden="true" tabindex="-1"></a><span class="st">  name: demo</span></span>
+<span id="cb5-37"><a href="#cb5-37" aria-hidden="true" tabindex="-1"></a><span class="st">spec:</span></span>
+<span id="cb5-38"><a href="#cb5-38" aria-hidden="true" tabindex="-1"></a><span class="st">  type: LoadBalancer</span></span>
+<span id="cb5-39"><a href="#cb5-39" aria-hidden="true" tabindex="-1"></a><span class="st">  ports:</span></span>
+<span id="cb5-40"><a href="#cb5-40" aria-hidden="true" tabindex="-1"></a><span class="st">    - name: &quot;http&quot;</span></span>
+<span id="cb5-41"><a href="#cb5-41" aria-hidden="true" tabindex="-1"></a><span class="st">      protocol: TCP</span></span>
+<span id="cb5-42"><a href="#cb5-42" aria-hidden="true" tabindex="-1"></a><span class="st">      port: 80</span></span>
+<span id="cb5-43"><a href="#cb5-43" aria-hidden="true" tabindex="-1"></a><span class="st">      targetPort: 80</span></span>
+<span id="cb5-44"><a href="#cb5-44" aria-hidden="true" tabindex="-1"></a><span class="st">  selector:</span></span>
+<span id="cb5-45"><a href="#cb5-45" aria-hidden="true" tabindex="-1"></a><span class="st">    env: test</span></span>
+<span id="cb5-46"><a href="#cb5-46" aria-hidden="true" tabindex="-1"></a><span class="op">EOF</span></span>
+<span id="cb5-47"><a href="#cb5-47" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> create <span class="at">-f</span> /data/install/demo.yaml</span>
+<span id="cb5-48"><a href="#cb5-48" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-49"><a href="#cb5-49" aria-hidden="true" tabindex="-1"></a><span class="co"># to restore</span></span>
+<span id="cb5-50"><a href="#cb5-50" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> delete <span class="at">-f</span> /data/install/demo.yaml</span>
+<span id="cb5-51"><a href="#cb5-51" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-52"><a href="#cb5-52" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> get all</span>
+<span id="cb5-53"><a href="#cb5-53" aria-hidden="true" tabindex="-1"></a><span class="co"># NAME                         READY   STATUS    RESTARTS   AGE</span></span>
+<span id="cb5-54"><a href="#cb5-54" aria-hidden="true" tabindex="-1"></a><span class="co"># pod/mypod-787d79b456-4f4xr   1/1     Running   3          3d23h</span></span>
+<span id="cb5-55"><a href="#cb5-55" aria-hidden="true" tabindex="-1"></a><span class="co"># pod/test-0                   1/1     Running   0          2m28s</span></span>
+<span id="cb5-56"><a href="#cb5-56" aria-hidden="true" tabindex="-1"></a><span class="co"># pod/test-1                   1/1     Running   0          2m28s</span></span>
+<span id="cb5-57"><a href="#cb5-57" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-58"><a href="#cb5-58" aria-hidden="true" tabindex="-1"></a><span class="co"># NAME                 TYPE           CLUSTER-IP     EXTERNAL-IP                            PORT(S)        AGE</span></span>
+<span id="cb5-59"><a href="#cb5-59" aria-hidden="true" tabindex="-1"></a><span class="co"># service/demo         LoadBalancer   172.30.82.87   198.51.100.1                           80:32203/TCP   2m28s</span></span>
+<span id="cb5-60"><a href="#cb5-60" aria-hidden="true" tabindex="-1"></a><span class="co"># service/kubernetes   ClusterIP      172.30.0.1     &lt;none&gt;                                 443/TCP        4d22h</span></span>
+<span id="cb5-61"><a href="#cb5-61" aria-hidden="true" tabindex="-1"></a><span class="co"># service/openshift    ExternalName   &lt;none&gt;         kubernetes.default.svc.cluster.local   &lt;none&gt;         4d22h</span></span>
+<span id="cb5-62"><a href="#cb5-62" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-63"><a href="#cb5-63" aria-hidden="true" tabindex="-1"></a><span class="co"># NAME                    READY   UP-TO-DATE   AVAILABLE   AGE</span></span>
+<span id="cb5-64"><a href="#cb5-64" aria-hidden="true" tabindex="-1"></a><span class="co"># deployment.apps/mypod   1/1     1            1           3d23h</span></span>
+<span id="cb5-65"><a href="#cb5-65" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-66"><a href="#cb5-66" aria-hidden="true" tabindex="-1"></a><span class="co"># NAME                               DESIRED   CURRENT   READY   AGE</span></span>
+<span id="cb5-67"><a href="#cb5-67" aria-hidden="true" tabindex="-1"></a><span class="co"># replicaset.apps/mypod-787d79b456   1         1         1       3d23h</span></span>
+<span id="cb5-68"><a href="#cb5-68" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-69"><a href="#cb5-69" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> get pod <span class="at">-o</span> wide</span>
+<span id="cb5-70"><a href="#cb5-70" aria-hidden="true" tabindex="-1"></a><span class="co"># NAME                     READY   STATUS    RESTARTS   AGE     IP             NODE       NOMINATED NODE   READINESS GATES</span></span>
+<span id="cb5-71"><a href="#cb5-71" aria-hidden="true" tabindex="-1"></a><span class="co"># mypod-787d79b456-4f4xr   1/1     Running   3          4d      10.254.1.2     worker-0   &lt;none&gt;           &lt;none&gt;</span></span>
+<span id="cb5-72"><a href="#cb5-72" aria-hidden="true" tabindex="-1"></a><span class="co"># test-0                   1/1     Running   0          8m38s   10.254.0.66    master-0   &lt;none&gt;           &lt;none&gt;</span></span>
+<span id="cb5-73"><a href="#cb5-73" aria-hidden="true" tabindex="-1"></a><span class="co"># test-1                   1/1     Running   0          8m38s   10.254.1.230   worker-0   &lt;none&gt;           &lt;none&gt;</span></span>
+<span id="cb5-74"><a href="#cb5-74" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-75"><a href="#cb5-75" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> get svc/demo <span class="at">-o</span> yaml</span>
+<span id="cb5-76"><a href="#cb5-76" aria-hidden="true" tabindex="-1"></a><span class="co"># apiVersion: v1</span></span>
+<span id="cb5-77"><a href="#cb5-77" aria-hidden="true" tabindex="-1"></a><span class="co"># kind: Service</span></span>
+<span id="cb5-78"><a href="#cb5-78" aria-hidden="true" tabindex="-1"></a><span class="co"># metadata:</span></span>
+<span id="cb5-79"><a href="#cb5-79" aria-hidden="true" tabindex="-1"></a><span class="co">#   creationTimestamp: &quot;2021-08-30T12:42:21Z&quot;</span></span>
+<span id="cb5-80"><a href="#cb5-80" aria-hidden="true" tabindex="-1"></a><span class="co">#   name: demo</span></span>
+<span id="cb5-81"><a href="#cb5-81" aria-hidden="true" tabindex="-1"></a><span class="co">#   namespace: default</span></span>
+<span id="cb5-82"><a href="#cb5-82" aria-hidden="true" tabindex="-1"></a><span class="co">#   resourceVersion: &quot;2046159&quot;</span></span>
+<span id="cb5-83"><a href="#cb5-83" aria-hidden="true" tabindex="-1"></a><span class="co">#   uid: 1af07435-5234-4062-994d-4715453118c6</span></span>
+<span id="cb5-84"><a href="#cb5-84" aria-hidden="true" tabindex="-1"></a><span class="co"># spec:</span></span>
+<span id="cb5-85"><a href="#cb5-85" aria-hidden="true" tabindex="-1"></a><span class="co">#   clusterIP: 172.30.82.87</span></span>
+<span id="cb5-86"><a href="#cb5-86" aria-hidden="true" tabindex="-1"></a><span class="co">#   clusterIPs:</span></span>
+<span id="cb5-87"><a href="#cb5-87" aria-hidden="true" tabindex="-1"></a><span class="co">#   - 172.30.82.87</span></span>
+<span id="cb5-88"><a href="#cb5-88" aria-hidden="true" tabindex="-1"></a><span class="co">#   externalTrafficPolicy: Cluster</span></span>
+<span id="cb5-89"><a href="#cb5-89" aria-hidden="true" tabindex="-1"></a><span class="co">#   ipFamilies:</span></span>
+<span id="cb5-90"><a href="#cb5-90" aria-hidden="true" tabindex="-1"></a><span class="co">#   - IPv4</span></span>
+<span id="cb5-91"><a href="#cb5-91" aria-hidden="true" tabindex="-1"></a><span class="co">#   ipFamilyPolicy: SingleStack</span></span>
+<span id="cb5-92"><a href="#cb5-92" aria-hidden="true" tabindex="-1"></a><span class="co">#   ports:</span></span>
+<span id="cb5-93"><a href="#cb5-93" aria-hidden="true" tabindex="-1"></a><span class="co">#   - name: http</span></span>
+<span id="cb5-94"><a href="#cb5-94" aria-hidden="true" tabindex="-1"></a><span class="co">#     nodePort: 32203</span></span>
+<span id="cb5-95"><a href="#cb5-95" aria-hidden="true" tabindex="-1"></a><span class="co">#     port: 80</span></span>
+<span id="cb5-96"><a href="#cb5-96" aria-hidden="true" tabindex="-1"></a><span class="co">#     protocol: TCP</span></span>
+<span id="cb5-97"><a href="#cb5-97" aria-hidden="true" tabindex="-1"></a><span class="co">#     targetPort: 80</span></span>
+<span id="cb5-98"><a href="#cb5-98" aria-hidden="true" tabindex="-1"></a><span class="co">#   selector:</span></span>
+<span id="cb5-99"><a href="#cb5-99" aria-hidden="true" tabindex="-1"></a><span class="co">#     env: test</span></span>
+<span id="cb5-100"><a href="#cb5-100" aria-hidden="true" tabindex="-1"></a><span class="co">#   sessionAffinity: None</span></span>
+<span id="cb5-101"><a href="#cb5-101" aria-hidden="true" tabindex="-1"></a><span class="co">#   type: LoadBalancer</span></span>
+<span id="cb5-102"><a href="#cb5-102" aria-hidden="true" tabindex="-1"></a><span class="co"># status:</span></span>
+<span id="cb5-103"><a href="#cb5-103" aria-hidden="true" tabindex="-1"></a><span class="co">#   loadBalancer:</span></span>
+<span id="cb5-104"><a href="#cb5-104" aria-hidden="true" tabindex="-1"></a><span class="co">#     ingress:</span></span>
+<span id="cb5-105"><a href="#cb5-105" aria-hidden="true" tabindex="-1"></a><span class="co">#     - ip: 198.51.100.1</span></span></code></pre></div>
+        <h1 id="回到-bgp-router-看看路由更新情况">回到 bgp-router
+        看看路由更新情况</h1>
+        <pre><code># back to bgp-router
+
+bgp-router# show ip bgp summary
+
+IPv4 Unicast Summary:
+BGP router identifier 192.168.7.10, local AS number 64512 vrf-id 0
+BGP table version 1
+RIB entries 1, using 192 bytes of memory
+Peers 2, using 43 KiB of memory
+Peer groups 1, using 64 bytes of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt
+*192.168.7.13   4      64512        73        72        0    0    0 00:35:16            1        0
+*192.168.7.16   4      64512        73        72        0    0    0 00:35:16            1        0
+
+Total number of neighbors 2
+* - dynamic neighbor
+2 dynamic neighbor(s), limit 200
+
+bgp-router# show ip bgp neighbors 192.168.7.13 routes
+BGP table version is 1, local router ID is 192.168.7.10, vrf id 0
+Default local pref 100, local AS 64512
+Status codes:  s suppressed, d damped, h history, * valid, &gt; best, = multipath,
+               i internal, r RIB-failure, S Stale, R Removed
+Nexthop codes: @NNN nexthop&#39;s vrf id, &lt; announce-nh-self
+Origin codes:  i - IGP, e - EGP, ? - incomplete
+
+   Network          Next Hop            Metric LocPrf Weight Path
+*&gt;i198.51.100.1/32  192.168.7.13                    0      0 ?
+
+Displayed  1 routes and 2 total paths
+bgp-router#
+bgp-router# show ip bgp neighbors 192.168.7.16 routes
+BGP table version is 1, local router ID is 192.168.7.10, vrf id 0
+Default local pref 100, local AS 64512
+Status codes:  s suppressed, d damped, h history, * valid, &gt; best, = multipath,
+               i internal, r RIB-failure, S Stale, R Removed
+Nexthop codes: @NNN nexthop&#39;s vrf id, &lt; announce-nh-self
+Origin codes:  i - IGP, e - EGP, ? - incomplete
+
+   Network          Next Hop            Metric LocPrf Weight Path
+*=i198.51.100.1/32  192.168.7.16                    0      0 ?
+
+Displayed  1 routes and 2 total paths</code></pre>
+        <p>在路由器的shell界面上看看</p>
+        <div class="sourceCode" id="cb7"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ip</span> r</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="co"># default via 172.21.6.254 dev enp1s0 proto static metric 100</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="co"># 172.21.6.0/24 dev enp1s0 proto kernel scope link src 172.21.6.10 metric 100</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a><span class="co"># 192.168.7.0/24 dev enp1s0 proto kernel scope link src 192.168.7.10 metric 100</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="co"># 198.51.100.1 proto bgp metric 20</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a><span class="co">#         nexthop via 192.168.7.13 dev enp1s0 weight 1</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a><span class="co">#         nexthop via 192.168.7.16 dev enp1s0 weight 1</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a><span class="ex">[root@bgp-router</span> ~]# curl 198.51.100.1 <span class="kw">&amp;&amp;</span> <span class="bu">echo</span></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a><span class="ex">Hello!</span><span class="op">&lt;</span>br<span class="op">&gt;</span>Welcome to RedHat Developer<span class="op">&lt;</span>br<span class="op">&gt;</span>Enjoy all of the ad-free articles<span class="op">&lt;</span>br<span class="op">&gt;</span>10.254.0.66</span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a><span class="ex">[root@bgp-router</span> ~]# curl 198.51.100.1 <span class="kw">&amp;&amp;</span> <span class="bu">echo</span></span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a><span class="ex">Hello!</span><span class="op">&lt;</span>br<span class="op">&gt;</span>Welcome to RedHat Developer<span class="op">&lt;</span>br<span class="op">&gt;</span>Enjoy all of the ad-free articles<span class="op">&lt;</span>br<span class="op">&gt;</span>10.254.0.66</span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a><span class="ex">[root@bgp-router</span> ~]# curl 198.51.100.1 <span class="kw">&amp;&amp;</span> <span class="bu">echo</span></span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a><span class="ex">Hello!</span><span class="op">&lt;</span>br<span class="op">&gt;</span>Welcome to RedHat Developer<span class="op">&lt;</span>br<span class="op">&gt;</span>Enjoy all of the ad-free articles<span class="op">&lt;</span>br<span class="op">&gt;</span>10.254.0.66</span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a><span class="ex">[root@bgp-router</span> ~]# curl 198.51.100.1 <span class="kw">&amp;&amp;</span> <span class="bu">echo</span></span>
+<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a><span class="ex">Hello!</span><span class="op">&lt;</span>br<span class="op">&gt;</span>Welcome to RedHat Developer<span class="op">&lt;</span>br<span class="op">&gt;</span>Enjoy all of the ad-free articles<span class="op">&lt;</span>br<span class="op">&gt;</span>10.254.0.66</span>
+<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a><span class="ex">[root@bgp-router</span> ~]# curl 198.51.100.1 <span class="kw">&amp;&amp;</span> <span class="bu">echo</span></span>
+<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a><span class="ex">Hello!</span><span class="op">&lt;</span>br<span class="op">&gt;</span>Welcome to RedHat Developer<span class="op">&lt;</span>br<span class="op">&gt;</span>Enjoy all of the ad-free articles<span class="op">&lt;</span>br<span class="op">&gt;</span>10.254.1.230</span>
+<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a><span class="ex">[root@bgp-router</span> ~]# curl 198.51.100.1 <span class="kw">&amp;&amp;</span> <span class="bu">echo</span></span>
+<span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a><span class="ex">Hello!</span><span class="op">&lt;</span>br<span class="op">&gt;</span>Welcome to RedHat Developer<span class="op">&lt;</span>br<span class="op">&gt;</span>Enjoy all of the ad-free articles<span class="op">&lt;</span>br<span class="op">&gt;</span>10.254.0.66</span>
+<span id="cb7-21"><a href="#cb7-21" aria-hidden="true" tabindex="-1"></a><span class="ex">[root@bgp-router</span> ~]# curl 198.51.100.1 <span class="kw">&amp;&amp;</span> <span class="bu">echo</span></span>
+<span id="cb7-22"><a href="#cb7-22" aria-hidden="true" tabindex="-1"></a><span class="ex">Hello!</span><span class="op">&lt;</span>br<span class="op">&gt;</span>Welcome to RedHat Developer<span class="op">&lt;</span>br<span class="op">&gt;</span>Enjoy all of the ad-free articles<span class="op">&lt;</span>br<span class="op">&gt;</span>10.254.0.66</span>
+<span id="cb7-23"><a href="#cb7-23" aria-hidden="true" tabindex="-1"></a><span class="ex">[root@bgp-router</span> ~]# curl 198.51.100.1 <span class="kw">&amp;&amp;</span> <span class="bu">echo</span></span>
+<span id="cb7-24"><a href="#cb7-24" aria-hidden="true" tabindex="-1"></a><span class="ex">Hello!</span><span class="op">&lt;</span>br<span class="op">&gt;</span>Welcome to RedHat Developer<span class="op">&lt;</span>br<span class="op">&gt;</span>Enjoy all of the ad-free articles<span class="op">&lt;</span>br<span class="op">&gt;</span>10.254.0.66</span>
+<span id="cb7-25"><a href="#cb7-25" aria-hidden="true" tabindex="-1"></a><span class="ex">[root@bgp-router</span> ~]# curl 198.51.100.1 <span class="kw">&amp;&amp;</span> <span class="bu">echo</span></span>
+<span id="cb7-26"><a href="#cb7-26" aria-hidden="true" tabindex="-1"></a><span class="ex">Hello!</span><span class="op">&lt;</span>br<span class="op">&gt;</span>Welcome to RedHat Developer<span class="op">&lt;</span>br<span class="op">&gt;</span>Enjoy all of the ad-free articles<span class="op">&lt;</span>br<span class="op">&gt;</span>10.254.1.230</span>
+<span id="cb7-27"><a href="#cb7-27" aria-hidden="true" tabindex="-1"></a><span class="ex">[root@bgp-router</span> ~]# curl 198.51.100.1 <span class="kw">&amp;&amp;</span> <span class="bu">echo</span></span>
+<span id="cb7-28"><a href="#cb7-28" aria-hidden="true" tabindex="-1"></a><span class="ex">Hello!</span><span class="op">&lt;</span>br<span class="op">&gt;</span>Welcome to RedHat Developer<span class="op">&lt;</span>br<span class="op">&gt;</span>Enjoy all of the ad-free articles<span class="op">&lt;</span>br<span class="op">&gt;</span>10.254.0.66</span></code></pre></div>
+        <h1 id="到worker-0上看看-nft-规则">到worker-0上，看看 nft
+        规则</h1>
+        <div class="sourceCode" id="cb8"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co"># go to worker-0 to analyze the nat rules</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="ex">nft</span> list ruleset <span class="kw">|</span> <span class="fu">grep</span> 198.51</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>                <span class="co"># meta l4proto tcp ip daddr 198.51.100.1  tcp dport 80 counter packets 0 bytes 0 jump KUBE-FW-CTBMGJDNUDRWEDVR</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="ex">nft</span> list ruleset <span class="kw">|</span> <span class="fu">grep</span> KUBE-FW-CTBMGJDNUDRWEDVR <span class="at">-A</span> 5</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a><span class="co">#                 meta l4proto tcp ip daddr 198.51.100.1  tcp dport 80 counter packets 0 bytes 0 jump KUBE-FW-CTBMGJDNUDRWEDVR</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a><span class="co">#                 meta l4proto tcp @nh,96,16 != 2814 ip daddr 172.30.145.124  tcp dport 443 counter packets 0 bytes 0 jump KUBE-MARK-MASQ</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a><span class="co">#                 meta l4proto tcp ip daddr 172.30.145.124  tcp dport 443 counter packets 0 bytes 0 jump KUBE-SVC-L54HVQEJKTL2PXFK</span></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a><span class="co">#                 meta l4proto tcp @nh,96,16 != 2814 ip daddr 172.30.16.253  tcp dport 8443 counter packets 0 bytes 0 jump KUBE-MARK-MASQ</span></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a><span class="co">#                 meta l4proto tcp ip daddr 172.30.16.253  tcp dport 8443 counter packets 0 bytes 0 jump KUBE-SVC-YVQ2VVJT4ABSS56R</span></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a><span class="co">#                 meta l4proto tcp @nh,96,16 != 2814 ip daddr 172.30.185.119  tcp dport 9091 counter packets 0 bytes 0 jump KUBE-MARK-MASQ</span></span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a><span class="co"># --</span></span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a><span class="co">#         chain KUBE-FW-CTBMGJDNUDRWEDVR {</span></span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a><span class="co">#                  counter packets 0 bytes 0 jump KUBE-MARK-MASQ</span></span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a><span class="co">#                  counter packets 0 bytes 0 jump KUBE-SVC-CTBMGJDNUDRWEDVR</span></span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a><span class="co">#                  counter packets 0 bytes 0 jump KUBE-MARK-DROP</span></span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a><span class="co">#         }</span></span>
+<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-20"><a href="#cb8-20" aria-hidden="true" tabindex="-1"></a><span class="ex">nft</span> list ruleset <span class="kw">|</span> <span class="fu">grep</span> KUBE-SVC-CTBMGJDNUDRWEDVR <span class="at">-A</span> 3</span>
+<span id="cb8-21"><a href="#cb8-21" aria-hidden="true" tabindex="-1"></a><span class="co">#                 meta l4proto tcp ip daddr 172.30.82.87  tcp dport 80 counter packets 0 bytes 0 jump KUBE-SVC-CTBMGJDNUDRWEDVR</span></span>
+<span id="cb8-22"><a href="#cb8-22" aria-hidden="true" tabindex="-1"></a><span class="co">#                 meta l4proto tcp ip daddr 198.51.100.1  tcp dport 80 counter packets 11 bytes 660 jump KUBE-FW-CTBMGJDNUDRWEDVR</span></span>
+<span id="cb8-23"><a href="#cb8-23" aria-hidden="true" tabindex="-1"></a><span class="co">#                 meta l4proto tcp @nh,96,16 != 2814 ip daddr 172.30.145.124  tcp dport 443 counter packets 0 bytes 0 jump KUBE-MARK-MASQ</span></span>
+<span id="cb8-24"><a href="#cb8-24" aria-hidden="true" tabindex="-1"></a><span class="co">#                 meta l4proto tcp ip daddr 172.30.145.124  tcp dport 443 counter packets 0 bytes 0 jump KUBE-SVC-L54HVQEJKTL2PXFK</span></span>
+<span id="cb8-25"><a href="#cb8-25" aria-hidden="true" tabindex="-1"></a><span class="co"># --</span></span>
+<span id="cb8-26"><a href="#cb8-26" aria-hidden="true" tabindex="-1"></a><span class="co">#                 meta l4proto tcp  tcp dport 32203 counter packets 0 bytes 0 jump KUBE-SVC-CTBMGJDNUDRWEDVR</span></span>
+<span id="cb8-27"><a href="#cb8-27" aria-hidden="true" tabindex="-1"></a><span class="co">#         }</span></span>
+<span id="cb8-28"><a href="#cb8-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-29"><a href="#cb8-29" aria-hidden="true" tabindex="-1"></a><span class="co">#         chain KUBE-SVC-DCLNKYLNAMROIJRV {</span></span>
+<span id="cb8-30"><a href="#cb8-30" aria-hidden="true" tabindex="-1"></a><span class="co"># --</span></span>
+<span id="cb8-31"><a href="#cb8-31" aria-hidden="true" tabindex="-1"></a><span class="co">#         chain KUBE-SVC-CTBMGJDNUDRWEDVR {</span></span>
+<span id="cb8-32"><a href="#cb8-32" aria-hidden="true" tabindex="-1"></a><span class="co">#                   counter packets 9 bytes 540 jump KUBE-SEP-BKD3LMWAJNKW5GNU</span></span>
+<span id="cb8-33"><a href="#cb8-33" aria-hidden="true" tabindex="-1"></a><span class="co">#                  counter packets 2 bytes 120 jump KUBE-SEP-M5WVBCWAFJ2J2M2U</span></span>
+<span id="cb8-34"><a href="#cb8-34" aria-hidden="true" tabindex="-1"></a><span class="co">#         }</span></span>
+<span id="cb8-35"><a href="#cb8-35" aria-hidden="true" tabindex="-1"></a><span class="co"># --</span></span>
+<span id="cb8-36"><a href="#cb8-36" aria-hidden="true" tabindex="-1"></a><span class="co">#                  counter packets 11 bytes 660 jump KUBE-SVC-CTBMGJDNUDRWEDVR</span></span>
+<span id="cb8-37"><a href="#cb8-37" aria-hidden="true" tabindex="-1"></a><span class="co">#                  counter packets 0 bytes 0 jump KUBE-MARK-DROP</span></span>
+<span id="cb8-38"><a href="#cb8-38" aria-hidden="true" tabindex="-1"></a><span class="co">#         }</span></span>
+<span id="cb8-39"><a href="#cb8-39" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-40"><a href="#cb8-40" aria-hidden="true" tabindex="-1"></a><span class="ex">nft</span> list ruleset <span class="kw">|</span> <span class="fu">grep</span> KUBE-SEP-BKD3LMWAJNKW5GNU <span class="at">-A</span> 3</span>
+<span id="cb8-41"><a href="#cb8-41" aria-hidden="true" tabindex="-1"></a><span class="co">#                   counter packets 9 bytes 540 jump KUBE-SEP-BKD3LMWAJNKW5GNU</span></span>
+<span id="cb8-42"><a href="#cb8-42" aria-hidden="true" tabindex="-1"></a><span class="co">#                  counter packets 2 bytes 120 jump KUBE-SEP-M5WVBCWAFJ2J2M2U</span></span>
+<span id="cb8-43"><a href="#cb8-43" aria-hidden="true" tabindex="-1"></a><span class="co">#         }</span></span>
+<span id="cb8-44"><a href="#cb8-44" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-45"><a href="#cb8-45" aria-hidden="true" tabindex="-1"></a><span class="co"># --</span></span>
+<span id="cb8-46"><a href="#cb8-46" aria-hidden="true" tabindex="-1"></a><span class="co">#         chain KUBE-SEP-BKD3LMWAJNKW5GNU {</span></span>
+<span id="cb8-47"><a href="#cb8-47" aria-hidden="true" tabindex="-1"></a><span class="co">#                 ip saddr 10.254.0.66  counter packets 0 bytes 0 jump KUBE-MARK-MASQ</span></span>
+<span id="cb8-48"><a href="#cb8-48" aria-hidden="true" tabindex="-1"></a><span class="co">#                 meta l4proto tcp   counter packets 9 bytes 540 dnat to 10.254.0.66:80</span></span>
+<span id="cb8-49"><a href="#cb8-49" aria-hidden="true" tabindex="-1"></a><span class="co">#         }</span></span>
+<span id="cb8-50"><a href="#cb8-50" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-51"><a href="#cb8-51" aria-hidden="true" tabindex="-1"></a><span class="ex">nft</span> list ruleset <span class="kw">|</span> <span class="fu">grep</span> KUBE-SEP-M5WVBCWAFJ2J2M2U <span class="at">-A</span> 3</span>
+<span id="cb8-52"><a href="#cb8-52" aria-hidden="true" tabindex="-1"></a><span class="co">#                  counter packets 2 bytes 120 jump KUBE-SEP-M5WVBCWAFJ2J2M2U</span></span>
+<span id="cb8-53"><a href="#cb8-53" aria-hidden="true" tabindex="-1"></a><span class="co">#         }</span></span>
+<span id="cb8-54"><a href="#cb8-54" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-55"><a href="#cb8-55" aria-hidden="true" tabindex="-1"></a><span class="co">#         chain KUBE-FW-CTBMGJDNUDRWEDVR {</span></span>
+<span id="cb8-56"><a href="#cb8-56" aria-hidden="true" tabindex="-1"></a><span class="co"># --</span></span>
+<span id="cb8-57"><a href="#cb8-57" aria-hidden="true" tabindex="-1"></a><span class="co">#         chain KUBE-SEP-M5WVBCWAFJ2J2M2U {</span></span>
+<span id="cb8-58"><a href="#cb8-58" aria-hidden="true" tabindex="-1"></a><span class="co">#                 ip saddr 10.254.1.230  counter packets 0 bytes 0 jump KUBE-MARK-MASQ</span></span>
+<span id="cb8-59"><a href="#cb8-59" aria-hidden="true" tabindex="-1"></a><span class="co">#                 meta l4proto tcp   counter packets 2 bytes 120 dnat to 10.254.1.230:80</span></span>
+<span id="cb8-60"><a href="#cb8-60" aria-hidden="true" tabindex="-1"></a><span class="co">#         }</span></span></code></pre></div>
+      </article>
+    </div>
+      </main>
+
+  <footer>
+    <p>
+      Licensed under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank"
+        rel="noopener">CC-BY-NC-SA 4.0</a>
+      &nbsp;·&nbsp;
+      <a href="https://github.com/wangzheng422/docker_env" target="_blank" rel="noopener">wangzheng422/docker_env</a>
+    </p>
+  </footer>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: false, theme: 'dark' });
+
+    const SITE_BUILD_ID = 'fbe91b569ae8';
+    const SITE_HOME_URL = '../../../index.html';
+
+    const getBuildIdFromHtml = (html) => {
+      const match = String(html).match(/<meta[^>]+name=["']site-build-id["'][^>]+content=["']([^"']+)["']/i)
+        || String(html).match(/<meta[^>]+content=["']([^"']+)["'][^>]+name=["']site-build-id["']/i);
+      return match ? match[1] : '';
+    };
+
+    const checkForSiteUpdate = async () => {
+      if (!SITE_BUILD_ID || window.location.protocol === 'file:') return;
+      try {
+        const probeUrl = new URL(SITE_HOME_URL || './index.html', window.location.href);
+        probeUrl.searchParams.set('site_cache_probe', Date.now().toString());
+        const response = await fetch(probeUrl.toString(), { cache: 'no-store' });
+        if (!response.ok) return;
+        const latestBuildId = getBuildIdFromHtml(await response.text());
+        if (!latestBuildId || latestBuildId === SITE_BUILD_ID) return;
+        if (sessionStorage.getItem('site-build-refresh') === latestBuildId) return;
+        sessionStorage.setItem('site-build-refresh', latestBuildId);
+        const freshUrl = new URL(window.location.href);
+        freshUrl.searchParams.set('v', latestBuildId);
+        window.location.replace(freshUrl.toString());
+      } catch (error) {
+        // Network errors should not block reading the current page.
+      }
+    };
+
+    const versionedLocalUrl = (rawUrl) => {
+      if (!rawUrl || /^(https?:)?\/\//i.test(rawUrl) || /^(data|blob|mailto):/i.test(rawUrl)) return rawUrl;
+      const url = new URL(rawUrl, window.location.href);
+      if (url.searchParams.has('v')) return rawUrl;
+      url.searchParams.set('v', SITE_BUILD_ID);
+      return url.toString();
+    };
+
+    const cacheBustPageAssets = () => {
+      document.querySelectorAll('img[src], video[src], audio[src], source[src]').forEach((node) => {
+        const src = node.getAttribute('src');
+        const versioned = versionedLocalUrl(src);
+        if (versioned !== src) node.setAttribute('src', versioned);
+      });
+    };
+
+    const updateReadingProgress = () => {
+      const progress = document.querySelector('.reading-progress');
+      if (!progress) return;
+      const scrollable = document.documentElement.scrollHeight - window.innerHeight;
+      const ratio = scrollable > 0 ? window.scrollY / scrollable : 0;
+      progress.style.transform = 'scaleX(' + Math.min(1, Math.max(0, ratio)) + ')';
+    };
+
+    const topicFor = (text, href) => {
+      const haystack = (text + ' ' + href).toLowerCase();
+      if (/developers\.redhat\.com|redhatquickcourses|github\.com\/redhatquickcourses/.test(haystack)) return 'Red Hat';
+      if (/ai|llm|gpu|vllm|llama|model|rhaiis/.test(haystack)) return 'AI';
+      if (/network|ovn|bgp|dns|egress|ingress|metallb|nic|route/.test(haystack)) return 'Network';
+      if (/cert|tls|sso|keycloak|rhbk|security|compliance/.test(haystack)) return 'Security';
+      if (/perf|profile|throttling|heap|debug/.test(haystack)) return 'Performance';
+      if (/install|ipi|upi|sno|disconnected|bootstrap/.test(haystack)) return 'Install';
+      if (/rhel|coreos|rhcos|kernel|rpm|ostree/.test(haystack)) return 'RHEL';
+      if (/backup|storage|nfs|odf|ocs|ceph|dr/.test(haystack)) return 'Storage';
+      if (/pipeline|gitops|ansible|aap|rhdh|devops/.test(haystack)) return 'DevOps';
+      return 'OpenShift';
+    };
+
+    const yearFor = (text, href) => {
+      const match = (text + ' ' + href).match(/20\d{2}/);
+      return match ? match[0] : 'Notes';
+    };
+
+    const importantExternal = (href) =>
+      /developers\.redhat\.com|redhatquickcourses\.github\.io/i.test(href);
+
+    const titleForLink = (link) => {
+      const href = link.getAttribute('href') || '';
+      const directText = link.textContent.trim().replace(/\s+/g, ' ');
+      if (!/^https?:\/\//.test(directText)) return directText;
+      const parentItem = link.closest('ul')?.parentElement;
+      if (parentItem) {
+        const clone = parentItem.cloneNode(true);
+        clone.querySelectorAll('ul').forEach((nested) => nested.remove());
+        const parentText = clone.textContent.trim().replace(/\s+/g, ' ');
+        if (parentText) {
+          return parentText;
+        }
+      }
+      return directText;
+    };
+
+    const escapeHtml = (value) => String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+
+    const enhanceHome = () => {
+      if (!document.body.classList.contains('page-index')) return;
+      const source = document.querySelector('.home-source');
+      const grid = document.getElementById('note-grid');
+      const stats = document.getElementById('console-stats');
+      const externalPanel = document.getElementById('external-panel');
+      const topicStrip = document.getElementById('topic-strip');
+      const search = document.getElementById('console-search');
+      if (!source || !grid || !stats || !externalPanel || !topicStrip || !search) return;
+
+      const seen = new Set();
+      const links = Array.from(source.querySelectorAll('a[href]'))
+        .map((link) => {
+          const href = link.getAttribute('href') || '';
+          const text = titleForLink(link);
+          return { text, href, topic: topicFor(text, href), year: yearFor(text, href) };
+        });
+      const notes = links
+        .filter((note) => note.text && !note.href.startsWith('http') && !seen.has(note.href) && seen.add(note.href));
+      const externalLinks = links
+        .filter((note) => note.text && importantExternal(note.href));
+
+      const topics = ['All', ...Array.from(new Set(notes.map((note) => note.topic))).sort()];
+      let activeTopic = 'All';
+
+      const renderStats = () => {
+        const years = notes.map((note) => note.year).filter((year) => year.length === 4 && /^\d{4}/.test(year));
+        const latest = years.length ? Math.max(...years.map(Number)) : 'N/A';
+        const oldest = years.length ? Math.min(...years.map(Number)) : 'N/A';
+        stats.innerHTML = [
+          ['Notes', notes.length],
+          ['Resources', externalLinks.length],
+          ['Topics', topics.length - 1],
+          ['Latest', latest],
+        ].map(([label, value]) => '<div class="stat-tile"><span>' + label + '</span><strong>' + value + '</strong></div>').join('');
+        const signal = document.getElementById('signal-count');
+        if (signal) signal.textContent = notes.length + ' links indexed';
+      };
+
+      const renderExternal = () => {
+        externalPanel.innerHTML =
+          '<div class="section-heading"><span>Published / Learning</span><strong>Red Hat resources</strong></div>' +
+          '<div class="external-grid">' +
+          externalLinks.map((note) =>
+            '<a class="resource-card" href="' + escapeHtml(note.href) + '" target="_blank" rel="noopener">' +
+            '<span class="note-meta"><span>' + escapeHtml(note.year) + '</span><span>' + escapeHtml(note.topic) + '</span></span>' +
+            '<strong>' + escapeHtml(note.text) + '</strong>' +
+            '<small>' + escapeHtml(note.href) + '</small>' +
+            '</a>'
+          ).join('') +
+          '</div>';
+      };
+
+      const renderTopics = () => {
+        topicStrip.innerHTML = topics.map((topic) => '<button class="topic-chip' + (topic === activeTopic ? ' active' : '') + '" type="button" data-topic="' + escapeHtml(topic) + '">' + escapeHtml(topic) + '</button>').join('');
+        topicStrip.querySelectorAll('button').forEach((button) => {
+          button.addEventListener('click', () => {
+            activeTopic = button.dataset.topic || 'All';
+            renderTopics();
+            renderCards();
+          });
+        });
+      };
+
+      const renderCards = () => {
+        const query = search.value.trim().toLowerCase();
+        const filtered = notes.filter((note) => {
+          const topicMatch = activeTopic === 'All' || note.topic === activeTopic;
+          const queryMatch = !query || (note.text + ' ' + note.href + ' ' + note.topic + ' ' + note.year).toLowerCase().includes(query);
+          return topicMatch && queryMatch;
+        });
+        grid.innerHTML = filtered.map((note) =>
+          '<a class="note-card" href="' + escapeHtml(note.href) + '">' +
+          '<span class="note-meta"><span>' + escapeHtml(note.year) + '</span><span>' + escapeHtml(note.topic) + '</span></span>' +
+          '<strong>' + escapeHtml(note.text) + '</strong>' +
+          '<small>' + escapeHtml(note.href) + '</small>' +
+          '</a>'
+        ).join('') || '<p class="empty-state">No matching notes.</p>';
+      };
+
+      const drawMap = () => {
+        const canvas = document.getElementById('knowledge-canvas');
+        if (!(canvas instanceof HTMLCanvasElement)) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        const width = canvas.width;
+        const height = canvas.height;
+        const nodes = notes.slice(0, 44).map((note, index) => {
+          const angle = (index / 44) * Math.PI * 2;
+          const ring = 90 + (index % 5) * 22;
+          return {
+            x: width / 2 + Math.cos(angle) * ring,
+            y: height / 2 + Math.sin(angle) * ring * 0.72,
+            topic: note.topic,
+          };
+        });
+        ctx.clearRect(0, 0, width, height);
+        ctx.strokeStyle = 'rgba(88, 166, 255, 0.14)';
+        ctx.lineWidth = 1;
+        nodes.forEach((node, index) => {
+          const next = nodes[(index + 7) % nodes.length];
+          ctx.beginPath();
+          ctx.moveTo(node.x, node.y);
+          ctx.lineTo(next.x, next.y);
+          ctx.stroke();
+        });
+        const palette = {
+          AI: '#a371f7',
+          Network: '#39d0d8',
+          Security: '#ff7b72',
+          Performance: '#f2cc60',
+          Install: '#7ee787',
+          RHEL: '#ff7b72',
+          Storage: '#d2a8ff',
+          DevOps: '#ffa657',
+          OpenShift: '#58a6ff',
+        };
+        nodes.forEach((node) => {
+          ctx.fillStyle = palette[node.topic] || '#58a6ff';
+          ctx.beginPath();
+          ctx.arc(node.x, node.y, 3.4, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      };
+
+      search.addEventListener('input', renderCards);
+      renderStats();
+      renderExternal();
+      renderTopics();
+      renderCards();
+      drawMap();
+      document.body.classList.add('home-enhanced');
+    };
+
+    const enhanceCodeBlocks = () => {
+      document.querySelectorAll('pre').forEach((pre) => {
+        if (pre.classList.contains('mermaid') || pre.querySelector('.copy-code')) return;
+        const button = document.createElement('button');
+        button.className = 'copy-code';
+        button.type = 'button';
+        button.textContent = 'Copy';
+        button.addEventListener('click', async () => {
+          await navigator.clipboard.writeText(pre.textContent || '');
+          button.textContent = 'Copied';
+          setTimeout(() => { button.textContent = 'Copy'; }, 1200);
+        });
+        pre.appendChild(button);
+      });
+    };
+
+    window.addEventListener('scroll', updateReadingProgress, { passive: true });
+    window.addEventListener('pageshow', (event) => {
+      if (event.persisted) checkForSiteUpdate();
+    });
+    document.addEventListener('DOMContentLoaded', async () => {
+      checkForSiteUpdate();
+      cacheBustPageAssets();
+      updateReadingProgress();
+      enhanceHome();
+      enhanceCodeBlocks();
+      // pandoc 输出 mermaid 为 <pre class="mermaid"><code>...</code></pre>
+      // 需要转成 <div class="mermaid">...</div> 供 mermaid.js 渲染
+      document.querySelectorAll('pre.mermaid').forEach(pre => {
+        const div = document.createElement('div');
+        div.classList.add('mermaid');
+        div.textContent = pre.textContent;
+        pre.replaceWith(div);
+      });
+      // 也处理 <pre><code class="language-mermaid"> 形式（备用）
+      document.querySelectorAll('pre code.language-mermaid').forEach(code => {
+        const div = document.createElement('div');
+        div.classList.add('mermaid');
+        div.textContent = code.textContent;
+        code.closest('pre').replaceWith(div);
+      });
+      await mermaid.run();
+    });
+  </script>
+</body>
+
+</html>

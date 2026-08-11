@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="zh" dir="ltr">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="generator" content="pandoc" />
+  <meta name="site-build-id" content="fbe91b569ae8" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <title>OpenShift 4.16 中 Kube-apiserver 证书轮换分析 | wandering.star notes</title>
+  <meta name="description"
+    content="Wandering field notes on OpenShift, RHEL, AI infrastructure, and platform operations." />
+  <!-- Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-E3FRMDB7L2"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-E3FRMDB7L2');
+  </script>
+  <style>
+  html {
+    color: #1a1a1a;
+    background-color: #fdfdfd;
+  }
+  body {
+    margin: 0 auto;
+    max-width: 36em;
+    padding-left: 50px;
+    padding-right: 50px;
+    padding-top: 50px;
+    padding-bottom: 50px;
+    hyphens: auto;
+    overflow-wrap: break-word;
+    text-rendering: optimizeLegibility;
+    font-kerning: normal;
+  }
+  @media (max-width: 600px) {
+    body {
+      font-size: 0.9em;
+      padding: 12px;
+    }
+    h1 {
+      font-size: 1.8em;
+    }
+  }
+  @media print {
+    html {
+      background-color: white;
+    }
+    body {
+      background-color: transparent;
+      color: black;
+      font-size: 12pt;
+    }
+    p, h2, h3 {
+      orphans: 3;
+      widows: 3;
+    }
+    h2, h3, h4 {
+      page-break-after: avoid;
+    }
+  }
+  p {
+    margin: 1em 0;
+  }
+  a {
+    color: #1a1a1a;
+  }
+  a:visited {
+    color: #1a1a1a;
+  }
+  img {
+    max-width: 100%;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.4em;
+  }
+  h5, h6 {
+    font-size: 1em;
+    font-style: italic;
+  }
+  h6 {
+    font-weight: normal;
+  }
+  ol, ul {
+    padding-left: 1.7em;
+    margin-top: 1em;
+  }
+  li > ol, li > ul {
+    margin-top: 0;
+  }
+  blockquote {
+    margin: 1em 0 1em 1.7em;
+    padding-left: 1em;
+    border-left: 2px solid #e6e6e6;
+    color: #606060;
+  }
+  code {
+    font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+    font-size: 85%;
+    margin: 0;
+    hyphens: manual;
+  }
+  pre {
+    margin: 1em 0;
+    overflow: auto;
+  }
+  pre code {
+    padding: 0;
+    overflow: visible;
+    overflow-wrap: normal;
+  }
+  .sourceCode {
+   background-color: transparent;
+   overflow: visible;
+  }
+  hr {
+    background-color: #1a1a1a;
+    border: none;
+    height: 1px;
+    margin: 1em 0;
+  }
+  table {
+    margin: 1em 0;
+    border-collapse: collapse;
+    width: 100%;
+    overflow-x: auto;
+    display: block;
+    font-variant-numeric: lining-nums tabular-nums;
+  }
+  table caption {
+    margin-bottom: 0.75em;
+  }
+  tbody {
+    margin-top: 0.5em;
+    border-top: 1px solid #1a1a1a;
+    border-bottom: 1px solid #1a1a1a;
+  }
+  th {
+    border-top: 1px solid #1a1a1a;
+    padding: 0.25em 0.5em 0.25em 0.5em;
+  }
+  td {
+    padding: 0.125em 0.5em 0.25em 0.5em;
+  }
+  header {
+    margin-bottom: 4em;
+    text-align: center;
+  }
+  #TOC li {
+    list-style: none;
+  }
+  #TOC ul {
+    padding-left: 1.3em;
+  }
+  #TOC > ul {
+    padding-left: 0;
+  }
+  #TOC a:not(:hover) {
+    text-decoration: none;
+  }
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  div.columns{display: flex; gap: min(4vw, 1.5em);}
+  div.column{flex: auto; overflow-x: auto;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  /* The extra [class] is a hack that increases specificity enough to
+     override a similar rule in reveal.js */
+  ul.task-list[class]{list-style: none;}
+  ul.task-list li input[type="checkbox"] {
+    font-size: inherit;
+    width: 0.8em;
+    margin: 0 0.8em 0.2em -1.6em;
+    vertical-align: middle;
+  }
+  .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  /* CSS for syntax highlighting */
+  pre > code.sourceCode { white-space: pre; position: relative; }
+  pre > code.sourceCode > span { line-height: 1.25; }
+  pre > code.sourceCode > span:empty { height: 1.2em; }
+  .sourceCode { overflow: visible; }
+  code.sourceCode > span { color: inherit; text-decoration: inherit; }
+  div.sourceCode { margin: 1em 0; }
+  pre.sourceCode { margin: 0; }
+  @media screen {
+  div.sourceCode { overflow: auto; }
+  }
+  @media print {
+  pre > code.sourceCode { white-space: pre-wrap; }
+  pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+  }
+  pre.numberSource code
+    { counter-reset: source-line 0; }
+  pre.numberSource code > span
+    { position: relative; left: -4em; counter-increment: source-line; }
+  pre.numberSource code > span > a:first-child::before
+    { content: counter(source-line);
+      position: relative; left: -1em; text-align: right; vertical-align: baseline;
+      border: none; display: inline-block;
+      -webkit-touch-callout: none; -webkit-user-select: none;
+      -khtml-user-select: none; -moz-user-select: none;
+      -ms-user-select: none; user-select: none;
+      padding: 0 4px; width: 4em;
+    }
+  pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+  div.sourceCode
+    { color: #cccccc; background-color: #303030; }
+  @media screen {
+  pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+  }
+  code span.al { color: #ffcfaf; } /* Alert */
+  code span.an { color: #7f9f7f; font-weight: bold; } /* Annotation */
+  code span.at { } /* Attribute */
+  code span.bn { color: #dca3a3; } /* BaseN */
+  code span.bu { } /* BuiltIn */
+  code span.cf { color: #f0dfaf; } /* ControlFlow */
+  code span.ch { color: #dca3a3; } /* Char */
+  code span.cn { color: #dca3a3; font-weight: bold; } /* Constant */
+  code span.co { color: #7f9f7f; } /* Comment */
+  code span.cv { color: #7f9f7f; font-weight: bold; } /* CommentVar */
+  code span.do { color: #7f9f7f; } /* Documentation */
+  code span.dt { color: #dfdfbf; } /* DataType */
+  code span.dv { color: #dcdccc; } /* DecVal */
+  code span.er { color: #c3bf9f; } /* Error */
+  code span.ex { } /* Extension */
+  code span.fl { color: #c0bed1; } /* Float */
+  code span.fu { color: #efef8f; } /* Function */
+  code span.im { } /* Import */
+  code span.in { color: #7f9f7f; font-weight: bold; } /* Information */
+  code span.kw { color: #f0dfaf; } /* Keyword */
+  code span.op { color: #f0efd0; } /* Operator */
+  code span.ot { color: #efef8f; } /* Other */
+  code span.pp { color: #ffcfaf; font-weight: bold; } /* Preprocessor */
+  code span.sc { color: #dca3a3; } /* SpecialChar */
+  code span.ss { color: #cc9393; } /* SpecialString */
+  code span.st { color: #cc9393; } /* String */
+  code span.va { } /* Variable */
+  code span.vs { color: #cc9393; } /* VerbatimString */
+  code span.wa { color: #7f9f7f; font-weight: bold; } /* Warning */
+  </style>
+  <link rel="stylesheet" href="../../../style.css?v=fbe91b569ae8" />
+  </head>
+
+<body class="page-article">
+  <div class="reading-progress" aria-hidden="true"></div>
+  <div class="console-backdrop" aria-hidden="true"></div>
+  <nav class="site-nav">
+    <div class="nav-inner">
+      <a class="nav-brand" href="../../../index.html">wandering.star<span>notes</span></a>
+      <div class="nav-links">
+        <a href="https://github.com/wangzheng422/docker_env" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://www.youtube.com/@wangzheng422" target="_blank" rel="noopener">YouTube</a>
+      </div>
+    </div>
+  </nav>
+
+  <main>
+            <a class="back-link" href="../../../index.html">← Back to Index</a>
+        <div class="article-layout">
+            <aside class="toc-panel">
+        <div class="toc-title">ON THIS PAGE</div>
+        <ul>
+        <li><a href="#openshift-4.16-中-kube-apiserver-证书轮换分析"
+        id="toc-openshift-4.16-中-kube-apiserver-证书轮换分析">OpenShift
+        4.16 中 Kube-apiserver 证书轮换分析</a>
+        <ul>
+        <li><a href="#概述" id="toc-概述">概述</a></li>
+        <li><a
+        href="#证书轮换触发器和流程-cluster-kube-api-server-operator"
+        id="toc-证书轮换触发器和流程-cluster-kube-api-server-operator">证书轮换触发器和流程
+        (Cluster Kube API Server Operator)</a></li>
+        <li><a
+        href="#kube-apiserver-重启流程-cluster-kube-api-server-operator"
+        id="toc-kube-apiserver-重启流程-cluster-kube-api-server-operator">Kube-apiserver
+        重启流程 (Cluster Kube API Server Operator)</a></li>
+        <li><a href="#ca-包分发-mcomcd" id="toc-ca-包分发-mcomcd">CA
+        包分发 (MCO/MCD)</a></li>
+        <li><a href="#kubelet-与-ca-包更新"
+        id="toc-kubelet-与-ca-包更新">Kubelet 与 CA 包更新</a></li>
+        <li><a href="#时序图" id="toc-时序图">时序图</a></li>
+        <li><a href="#总结" id="toc-总结">总结</a></li>
+        </ul></li>
+        </ul>
+      </aside>
+            <article class="markdown-body article-shell">
+        <h1 id="openshift-4.16-中-kube-apiserver-证书轮换分析">OpenShift
+        4.16 中 Kube-apiserver 证书轮换分析</h1>
+        <p>本文档分析了 OpenShift 4.16 集群中与 <a
+        href="https://github.com/openshift/cluster-kube-apiserver-operator/tree/release-4.16">Kubernetes
+        API 服务器 (<code>kube-apiserver</code>)</a>
+        相关的证书轮换时触发的流程。详细说明了涉及的组件、存储位置、<a
+        href="https://github.com/openshift/machine-config-operator/tree/release-4.16">Machine
+        Config Operator (MCO)</a> 的作用，以及
+        <code>kube-apiserver</code> 和 <code>kubelet</code>
+        的更新证书行为。</p>
+        <h2 id="概述">概述</h2>
+        <p><code>kube-apiserver</code> 的证书轮换涉及几个关键的 Operator
+        和 Controller：</p>
+        <ol type="1">
+        <li><strong>Cluster Kube API Server Operator:</strong> 管理
+        <code>kube-apiserver</code> 静态 Pod
+        及其关联证书（服务证书、客户端证书如
+        kubelet-client、aggregator-client 等）。它利用
+        <code>library-go/operator/certrotation</code>
+        库进行基于时间的轮换。</li>
+        <li><strong>RevisionController (位于 Cluster Kube API Server
+        Operator/library-go 内):</strong> 监控
+        <code>kube-apiserver</code> 静态 Pod 使用的 ConfigMap 和
+        Secret。当这些资源因证书轮换或配置更新而更改时，它会创建一个新版本
+        (revision) 并更新 <code>KubeAPIServer</code> 自定义资源 (CR)
+        的状态。</li>
+        <li><strong>Static Pod Controllers (位于 Cluster Kube API Server
+        Operator/library-go 内):</strong> 检测
+        <code>KubeAPIServer</code> CR 状态中的版本变化
+        (<code>status.latestAvailableRevision</code>)。当版本变化时，它们负责将引用新版本资源的更新后的静态
+        Pod 清单 (manifest) 写入控制平面节点的
+        <code>/etc/kubernetes/manifests/kube-apiserver-pod.yaml</code>
+        文件。Kubelet 监控此文件，并在检测到更改时<strong>重启</strong>
+        <code>kube-apiserver</code> 静态
+        Pod。不过，我们研究的场景，只是证书轮替，会更新<code>etc/kubernetes/static-pod-resources</code>下的对应证书文件，<code>kube-apiserver</code>会检测到证书文件更新，进而重新在应用层面加载证书，所以不会涉及kubelet重启<code>kube-apiserver</code>静态pod.</li>
+        <li><strong>Machine Config Operator (MCO):</strong>
+        监控集群范围的配置，包括由 Kubelet 用于验证
+        <code>kube-apiserver</code> 的 CA 包
+        (<code>kube-apiserver-to-kubelet-client-ca</code>)。当 CA
+        包更新时，MCO 会更新其内部的 <code>ControllerConfig</code>
+        自定义资源，并基于此生成新的 <code>MachineConfig</code>
+        对象，定义节点的目标状态。</li>
+        <li><strong>Machine Config Daemon (MCD):</strong>
+        在每个节点上运行，应用 <code>MachineConfig</code>
+        更改。当检测到包含更新 CA 包的 <code>MachineConfig</code>
+        时，MCD 的 <code>certificate_writer</code> 会将新的 CA
+        数据写入节点文件系统（例如
+        <code>/etc/kubernetes/kubelet-ca.crt</code>）。虽然应用
+        <code>MachineConfig</code> 的标准流程<strong>通常涉及节点驱逐
+        (draining) 和重启
+        (rebooting)</strong>，以确保更改一致生效，这会间接导致 Kubelet
+        重启，但是对于文件<code>/etc/kubernetes/kubelet-ca.crt</code>的更新，<code>MachineConfig</code>直接将新的
+        CA
+        数据写入节点文件系统，kubelet能够检测到证书更新，并重新在应用层面加载新的
+        CA 包，而不需要节点驱逐或重启。</li>
+        </ol>
+        <h2
+        id="证书轮换触发器和流程-cluster-kube-api-server-operator">证书轮换触发器和流程
+        (Cluster Kube API Server Operator)</h2>
+        <p>Cluster Kube API Server Operator 管理
+        <code>kube-apiserver</code> 所需的各种证书的生命周期。</p>
+        <ul>
+        <li><p><strong>触发器:</strong> 轮换主要是基于时间的，在 Cluster
+        Kube API Server Operator 的 <code>certrotationcontroller</code>
+        中配置。每种证书类型（签名者或目标证书）都有定义的
+        <code>Validity</code> (有效期) 和 <code>Refresh</code> (刷新)
+        周期。当证书的年龄超过其 <code>Refresh</code>
+        持续时间时，轮换过程开始。</p>
+        <div class="sourceCode" id="cb1"><pre
+        class="sourceCode go"><code class="sourceCode go"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">// pkg/operator/certrotationcontroller/certrotationcontroller.go</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="co">// KubeAPIServerToKubeletClientCert 目标证书示例:</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>certrotation<span class="op">.</span>RotatedSelfSignedCertKeySecret<span class="op">{</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    Namespace<span class="op">:</span> operatorclient<span class="op">.</span>TargetNamespace<span class="op">,</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    Name<span class="op">:</span>      <span class="st">&quot;kubelet-client&quot;</span><span class="op">,</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... 其他字段 ...</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    Validity<span class="op">:</span>               <span class="dv">30</span> <span class="op">*</span> rotationDay<span class="op">,</span> <span class="co">// 例如 30 天</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    Refresh<span class="op">:</span>                <span class="dv">15</span> <span class="op">*</span> rotationDay<span class="op">,</span> <span class="co">// 例如 15 天</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    RefreshOnlyWhenExpired<span class="op">:</span> refreshOnlyWhenExpired<span class="op">,</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    CertCreator<span class="op">:</span> <span class="op">&amp;</span>certrotation<span class="op">.</span>ClientRotation<span class="op">{</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>        UserInfo<span class="op">:</span> <span class="op">&amp;</span>user<span class="op">.</span>DefaultInfo<span class="op">{</span>Name<span class="op">:</span> <span class="st">&quot;system:kube-apiserver&quot;</span><span class="op">,</span> Groups<span class="op">:</span> <span class="op">[]</span><span class="dt">string</span><span class="op">{</span><span class="st">&quot;kube-master&quot;</span><span class="op">}},</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    <span class="op">},</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... informer/client 配置 ...</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="op">},</span></span></code></pre></div></li>
+        <li><p><strong>流程:</strong>
+        <code>library-go/pkg/operator/certrotation</code>
+        逻辑处理实际的轮换：</p>
+        <ol type="1">
+        <li>根据证书的颁发日期和配置的 <code>Refresh</code>
+        周期，检查当前目标证书是否需要刷新。</li>
+        <li>如果需要刷新，确保证书对应的 <em>签名者</em> 证书（在
+        <code>RotatedSigningCASecret</code> 中定义）有效并已加载。</li>
+        <li>根据 <code>CertCreator</code>, 使用签名者证书和密钥签署
+        CSR，创建新的目标证书。</li>
+        <li>将新的密钥和证书保存到目标 Secret 中（例如
+        <code>openshift-kube-apiserver</code> 命名空间中的
+        <code>kubelet-client</code>）。</li>
+        <li>如果 <em>签名者</em> 证书本身被轮换，则相应的 CA 包
+        ConfigMap（例如 <code>openshift-kube-apiserver-operator</code>
+        中的
+        <code>kube-apiserver-to-kubelet-client-ca</code>）会被更新以包含新的
+        CA 证书。</li>
+        </ol></li>
+        <li><p><strong>存储:</strong></p>
+        <ul>
+        <li><strong>签名者证书/密钥:</strong> 存储在 Cluster Kube API
+        Server Operator 的命名空间
+        (<code>openshift-kube-apiserver-operator</code>) 内的 Secret
+        中，例如 <code>kube-apiserver-to-kubelet-signer</code>。</li>
+        <li><strong>目标证书/密钥:</strong> 存储在操作数 (operand)
+        的命名空间 (<code>openshift-kube-apiserver</code>) 内的 Secret
+        中，例如 <code>kubelet-client</code>,
+        <code>localhost-serving-cert-certkey</code>。</li>
+        <li><strong>CA 包:</strong> 存储在 ConfigMap 中，通常在 Cluster
+        Kube API Server Operator 的命名空间 (`openshift</li>
+        <li><strong>目标证书/密钥:</strong> 存储在操作数 (operand)
+        的命名空间 (<code>openshift-kube-apiserver</code>) 内的 Secret
+        中，例如 <code>kubelet-client</code>,
+        <code>localhost-serving-cert-certkey</code>。</li>
+        <li><strong>CA 包:</strong> 存储在 ConfigMap 中，通常在 Cluster
+        Kube API Server Operator 的命名空间
+        (<code>openshift-kube-apiserver-operator</code>) 或
+        <code>openshift-config-managed</code> 中，例如
+        <code>kube-apiserver-to-kubelet-client-ca</code>,
+        <code>kube-apiserver-aggregator-client-ca</code>。</li>
+        </ul></li>
+        </ul>
+        <h2
+        id="kube-apiserver-重启流程-cluster-kube-api-server-operator">Kube-apiserver
+        重启流程 (Cluster Kube API Server Operator)</h2>
+        <p>当 <code>kube-apiserver</code> 静态 Pod
+        直接使用的证书被轮换（在其 Secret
+        中更新）时，<code>RevisionController</code> 会触发重启。</p>
+        <ul>
+        <li><p><strong>触发器:</strong> <code>RevisionController</code>
+        监控的任何 ConfigMap 或 Secret
+        中检测到更改。这包括包含已轮换证书的 Secret，如
+        <code>kubelet-client</code>,
+        <code>localhost-serving-cert-certkey</code>,
+        <code>aggregator-client</code> 等。</p></li>
+        <li><p><strong>流程:</strong></p>
+        <ol type="1">
+        <li><code>RevisionController.sync</code> 循环调用
+        <code>isLatestRevisionCurrent</code>。</li>
+        <li><code>isLatestRevisionCurrent</code> 将基础
+        Secrets/ConfigMaps 中的数据（例如
+        <code>secrets/kubelet-client</code>）与最新版本化副本中的数据（例如
+        <code>secrets/kubelet-client-3</code>）进行比较。如果证书轮换更新了基础
+        Secret，则会检测到差异。</li>
+        <li>调用 <code>createRevisionIfNeeded</code>，确定一个新的版本号
+        (<code>nextRevision = latestAvailableRevision + 1</code>)。</li>
+        <li><code>createNewRevision</code> 将基础 Secrets/ConfigMaps 的
+        <em>当前</em> 内容复制到带有 <code>nextRevision</code> 后缀的新
+        Secrets/ConfigMaps 中（例如
+        <code>secrets/kubelet-client-4</code>）。</li>
+        <li>关键步骤：<code>createRevisionIfNeeded</code> 通过
+        <code>operatorClient.UpdateLatestRevisionOperatorStatus</code>
+        调用更新 <code>KubeAPIServer</code> CR 中的
+        <code>status.latestAvailableRevision</code> 字段。</li>
+        <li>Cluster Kube API Server Operator 中的其他控制器（静态 Pod
+        管理框架的一部分，如 <code>InstallerController</code>,
+        <code>NodeController</code>）监控 <code>KubeAPIServer</code>
+        CR。它们检测到 <code>status.latestAvailableRevision</code>
+        的变化。</li>
+        <li><code>InstallerController</code>（很可能）生成一个新的
+        <code>kube-apiserver</code> 静态 Pod 清单
+        (<code>pod.yaml</code>)，该清单引用
+        <code>nextRevision</code>。此清单以及其他版本化资源被放入特定于版本的
+        ConfigMap 中（例如 <code>kube-apiserver-pod-4</code>）。</li>
+        <li><code>NodeController</code> 确保此 ConfigMap
+        被挂载到每个控制平面节点上的正确目录
+        (<code>/etc/kubernetes/static-pod-resources/kube-apiserver-pod-&lt;revision&gt;</code>)，并更新静态
+        Pod 清单文件
+        (<code>/etc/kubernetes/manifests/kube-apiserver-pod.yaml</code>)
+        以指向新版本的清单。</li>
+        <li>控制平面节点上的 Kubelet 监视
+        <code>/etc/kubernetes/manifests</code> 目录。检测到
+        <code>kube-apiserver-pod.yaml</code>
+        的更改后，它会优雅地停止旧的 <code>kube-apiserver</code> 静态
+        Pod，并根据更新后的清单启动一个新的
+        Pod，该清单使用包含已轮换证书的新版本化
+        Secrets/ConfigMaps。</li>
+        </ol></li>
+        <li><p><strong>代码片段 (版本触发器):</strong></p>
+        <div class="sourceCode" id="cb2"><pre
+        class="sourceCode go"><code class="sourceCode go"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">// vendor/github.com/openshift/library-go/pkg/operator/revisioncontroller/revision_controller.go</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="co">// isLatestRevisionCurrent 比较基础资源与最新版本化副本。</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="kw">func</span> <span class="op">(</span>c RevisionController<span class="op">)</span> isLatestRevisionCurrent<span class="op">(</span>ctx context<span class="op">.</span>Context<span class="op">,</span> revision <span class="dt">int32</span><span class="op">)</span> <span class="op">(</span><span class="dt">bool</span><span class="op">,</span> <span class="dt">bool</span><span class="op">,</span> <span class="dt">string</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... configmap 和 secret 的比较逻辑 ...</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="op">!</span>equality<span class="op">.</span>Semantic<span class="op">.</span>DeepEqual<span class="op">(</span>existingData<span class="op">,</span> requiredData<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>        <span class="co">// 检测到差异</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="ot">false</span><span class="op">,</span> <span class="ot">false</span><span class="op">,</span> <span class="st">&quot;resource changed&quot;</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ...</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="ot">true</span><span class="op">,</span> <span class="ot">false</span><span class="op">,</span> <span class="st">&quot;&quot;</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="co">// createRevisionIfNeeded 如果检测到更改，则创建新版本。</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a><span class="kw">func</span> <span class="op">(</span>c RevisionController<span class="op">)</span> createRevisionIfNeeded<span class="op">(</span>ctx context<span class="op">.</span>Context<span class="op">,</span> recorder events<span class="op">.</span>Recorder<span class="op">,</span> latestAvailableRevision <span class="dt">int32</span><span class="op">,</span> resourceVersion <span class="dt">string</span><span class="op">)</span> <span class="op">(</span><span class="dt">bool</span><span class="op">,</span> <span class="dt">error</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>    isLatestRevisionCurrent<span class="op">,</span> requiredIsNotFound<span class="op">,</span> reason <span class="op">:=</span> c<span class="op">.</span>isLatestRevisionCurrent<span class="op">(</span>ctx<span class="op">,</span> latestAvailableRevision<span class="op">)</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> isLatestRevisionCurrent <span class="op">{</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="ot">false</span><span class="op">,</span> <span class="ot">nil</span> <span class="co">// 没有变化</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>    nextRevision <span class="op">:=</span> latestAvailableRevision <span class="op">+</span> <span class="dv">1</span></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... 检查所需资源 ...</span></span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>    <span class="co">// 创建新的版本化资源副本</span></span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>    createdNewRevision<span class="op">,</span> err <span class="op">:=</span> c<span class="op">.</span>createNewRevision<span class="op">(</span>ctx<span class="op">,</span> recorder<span class="op">,</span> nextRevision<span class="op">,</span> reason<span class="op">)</span></span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... 错误处理 ...</span></span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="op">!</span>createdNewRevision <span class="op">{</span> <span class="cf">return</span> <span class="ot">false</span><span class="op">,</span> <span class="ot">nil</span> <span class="op">}</span></span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a>    <span class="co">// *** 关键步骤：使用新的版本号更新 Operator 状态 ***</span></span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a>    cond <span class="op">:=</span> operatorv1<span class="op">.</span>OperatorCondition<span class="op">{</span> <span class="co">/* ... */</span> <span class="op">}</span></span>
+<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> _<span class="op">,</span> updated<span class="op">,</span> updateError <span class="op">:=</span> c<span class="op">.</span>operatorClient<span class="op">.</span>UpdateLatestRevisionOperatorStatus<span class="op">(</span>ctx<span class="op">,</span> nextRevision<span class="op">,</span> v1helpers<span class="op">.</span>UpdateConditionFn<span class="op">(</span>cond<span class="op">));</span> updateError <span class="op">!=</span> <span class="ot">nil</span> <span class="op">{</span></span>
+<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="ot">true</span><span class="op">,</span> updateError</span>
+<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span> <span class="cf">else</span> <span class="cf">if</span> updated <span class="op">{</span></span>
+<span id="cb2-35"><a href="#cb2-35" aria-hidden="true" tabindex="-1"></a>        recorder<span class="op">.</span>Eventf<span class="op">(</span><span class="st">&quot;RevisionCreate&quot;</span><span class="op">,</span> <span class="st">&quot;Revision %d created because %s&quot;</span><span class="op">,</span> nextRevision<span class="op">,</span> reason<span class="op">)</span></span>
+<span id="cb2-36"><a href="#cb2-36" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-37"><a href="#cb2-37" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="ot">false</span><span class="op">,</span> <span class="ot">nil</span></span>
+<span id="cb2-38"><a href="#cb2-38" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div></li>
+        </ul>
+        <h2 id="ca-包分发-mcomcd">CA 包分发 (MCO/MCD)</h2>
+        <p>当静态 Pod 外部组件（如 Kubelet）使用的 CA 包更新时，MCO 和
+        MCD 处理其到节点的分发。主要示例是 Kubelet 用于验证
+        <code>kube-apiserver</code> 服务证书的 CA 包。</p>
+        <ul>
+        <li><p><strong>触发器:</strong> 当相应的 <em>签名者</em>
+        证书轮换时，Cluster Kube API Server Operator 的
+        <code>CertRotationController</code> 更新 CA 包 ConfigMap（例如
+        <code>openshift-kube-apiserver-operator</code> 中的
+        <code>kube-apiserver-to-kubelet-client-ca</code>）。</p></li>
+        <li><p><strong>组件:</strong> MCO Controller, MCD (Machine
+        Config Daemon)。</p></li>
+        <li><p><strong>流程:</strong></p>
+        <ol type="1">
+        <li>MCO 控制器 (<code>pkg/operator/sync.go</code>) 监视相关的
+        ConfigMap，包括
+        <code>kube-apiserver-to-kubelet-client-ca</code>。</li>
+        <li>检测到更改后，它会读取更新后的 CA 包数据
+        (<code>ca-bundle.crt</code>)。</li>
+        <li>此数据 (<code>kubeAPIServerServingCABytes</code>) 存储在 MCO
+        内部的 <code>ControllerConfig</code> CR 规范
+        (<code>spec.KubeAPIServerServingCAData</code>) 中。</li>
+        <li>MCO 为相关池（例如 <code>master</code>,
+        <code>worker</code>）渲染新的 <code>MachineConfig</code>
+        对象。这些 <code>MachineConfig</code>
+        定义了节点上文件的所需状态，包括 Kubelet CA 包的目标路径，并使用
+        <code>spec.KubeAPIServerServingCAData</code> 中的数据填充。</li>
+        <li>在每个节点上运行的 MCD 检测到有新的
+        <code>MachineConfig</code> 可用。</li>
+        <li>MCD 的 <code>certificate_writer.go</code> 专门处理将应用的
+        <code>ControllerConfig</code> 的
+        <code>Spec.KubeAPIServerServingCAData</code> 中的 CA
+        数据写入节点文件系统上的指定路径。</li>
+        </ol></li>
+        <li><p><strong>存储:</strong> CA 包由 MCD
+        写入节点文件系统。Kubelet 的 <code>--client-ca-file</code>
+        参数（或相应的 KubeletConfiguration 字段
+        <code>clientCAFile</code>）使用的典型路径是
+        <code>/etc/kubernetes/kubelet-ca.crt</code>。</p></li>
+        <li><p><strong>代码片段:</strong></p>
+        <div class="sourceCode" id="cb3"><pre
+        class="sourceCode go"><code class="sourceCode go"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co">// pkg/operator/sync.go - MCO 读取 CA 包 ConfigMap</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">func</span> <span class="op">(</span>optr <span class="op">*</span>Operator<span class="op">)</span> syncRenderConfig<span class="op">(</span>_ <span class="op">*</span>renderConfig<span class="op">)</span> <span class="dt">error</span> <span class="op">{</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... 其他逻辑 ...</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">var</span> kubeAPIServerServingCABytes <span class="op">[]</span><span class="dt">byte</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... 根据认证模式确定读取哪个 CM 的逻辑 ...</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    kubeAPIServerServingCABytes<span class="op">,</span> err <span class="op">=</span> optr<span class="op">.</span>getCAsFromConfigMap<span class="op">(</span><span class="st">&quot;openshift-kube-apiserver-operator&quot;</span><span class="op">,</span> <span class="st">&quot;kube-apiserver-to-kubelet-client-ca&quot;</span><span class="op">,</span> <span class="st">&quot;ca-bundle.crt&quot;</span><span class="op">)</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... 错误处理和合并逻辑 ...</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    <span class="co">// 存储在 ControllerConfig 规范中</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    spec<span class="op">.</span>KubeAPIServerServingCAData <span class="op">=</span> kubeAPIServerServingCABytes</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... 使用此数据渲染 MachineConfigs ...</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a><span class="co">// pkg/daemon/certificate_writer.go - MCD 将 CA 包写入节点</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a><span class="kw">func</span> <span class="op">(</span>cw <span class="op">*</span>CertificateWriter<span class="op">)</span> writeCertificatesToDisk<span class="op">()</span> <span class="dt">error</span> <span class="op">{</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... 获取 controllerConfig ...</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>    kubeAPIServerServingCABytes <span class="op">:=</span> controllerConfig<span class="op">.</span>Spec<span class="op">.</span>KubeAPIServerServingCAData</span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... 其他 CA ...</span></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>    pathToData <span class="op">:=</span> <span class="bu">make</span><span class="op">(</span><span class="kw">map</span><span class="op">[</span><span class="dt">string</span><span class="op">][]</span><span class="dt">byte</span><span class="op">)</span></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>    <span class="co">// 假设 caBundleFilePath 解析为 /etc/kubernetes/kubelet-ca.crt 或类似路径</span></span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>    pathToData<span class="op">[</span>caBundleFilePath<span class="op">]</span> <span class="op">=</span> kubeAPIServerServingCABytes</span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... 将其他 CA 添加到 pathToData ...</span></span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a>    <span class="co">// 写入 pathToData 中定义的文件</span></span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> err <span class="op">:=</span> cw<span class="op">.</span>writeFiles<span class="op">(</span>pathToData<span class="op">);</span> err <span class="op">!=</span> <span class="ot">nil</span> <span class="op">{</span></span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> fmt<span class="op">.</span>Errorf<span class="op">(</span><span class="st">&quot;error writing certificate files: %w&quot;</span><span class="op">,</span> err<span class="op">)</span></span>
+<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... 可能重启服务 ...</span></span>
+<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="ot">nil</span></span>
+<span id="cb3-31"><a href="#cb3-31" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div></li>
+        </ul>
+        <h2 id="kubelet-与-ca-包更新">Kubelet 与 CA 包更新</h2>
+        <p>当 <code>kube-apiserver-to-kubelet-client-ca</code> CA
+        包更新时，Kubelet 的行为需要区分 Kubelet 进程本身的能力和
+        MCO/MCD 的标准操作流程。</p>
+        <ul>
+        <li><p><strong>触发器:</strong> MCD 将包含更新后 CA 包数据的新
+        <code>MachineConfig</code> 应用到节点。MCD 的
+        <code>certificate_writer</code> 将新的 CA 包内容写入 Kubelet
+        配置指定的文件路径（例如
+        <code>/etc/kubernetes/kubelet-ca.crt</code>）。</p></li>
+        <li><p><strong>流程与行为:</strong></p>
+        <ol type="1">
+        <li><strong>Kubelet 文件监控:</strong> Kubelet
+        进程本身设计为可以监控其使用的证书文件（包括由
+        <code>--client-ca-file</code>
+        指定的文件）的变化。理论上，当文件内容更新时，Kubelet
+        <em>可以</em> 重新加载此 CA 包而无需重启其服务进程。</li>
+        <li><strong>MCO/MCD 标准操作:</strong> 然而，在 OpenShift
+        中，此类 CA 包的更新是通过 MCO 和 MCD 进行管理的。MCO 生成
+        <code>MachineConfig</code>，MCD 负责应用它。应用
+        <code>MachineConfig</code>（尤其是涉及核心系统文件或配置的更改）的标准、默认且最安全的方法是执行协调的节点更新，这<strong>通常包括驱逐
+        (drain) 节点然后重启 (reboot) 节点</strong>。</li>
+        <li><strong>CA特例处理:</strong> 在
+        <code>certificate_writer.go</code>
+        中有针对<code>kubelet-ca.crt</code>的特殊处理，专门处理证书文件的写入，这样就能跳过
+        MCO/MCD
+        更新流程，进而跳过重启或者<code>systemd</code>更新的步骤。</li>
+        </ol></li>
+        <li><p><strong>关于 Kubelet 更新的结论:</strong> Kubelet
+        服务不会重启，由 CA
+        包文件在磁盘上的更新<strong>触发</strong>重新加载证书。Kubelet
+        进程本身具备重新加载文件的能力。但是，分发CA更新由 MCO/MCD
+        机制负责。</p></li>
+        </ul>
+        <h2 id="时序图">时序图</h2>
+        <pre class="mermaid"><code>sequenceDiagram
+    participant ClusterKubeAPIServerOperator_CertRot as Cluster Kube API Server Operator CertRotationController
+    participant ClusterKubeAPIServerOperator_RevCon as Cluster Kube API Server Operator RevisionController
+    participant ClusterKubeAPIServerOperator_NodeCon as Cluster Kube API Server Operator NodeController
+    participant K8s_API as Kubernetes API
+    participant MCO as Machine Config Operator
+    %% participant Kubelet_CP as Kubelet (Control Plane)
+    participant APIServer_Pod as Kube-apiserver Pod
+    participant MCD as Machine Config Daemon (Node)
+    participant Kubelet_Node as Kubelet (Node)
+
+    Note over ClusterKubeAPIServerOperator_CertRot, APIServer_Pod: Scenario 1: Target Certificate Rotation (e.g., kube-apiserver-to-kubelet-signer, kubelet-client)
+
+    ClusterKubeAPIServerOperator_CertRot-&gt;&gt;K8s_API: 1. Generate new cert/key, Update Target Secret (e.g., openshift-kube-apiserver/kubelet-client)
+    ClusterKubeAPIServerOperator_RevCon-&gt;&gt;K8s_API: 2. Watch Secret, detect change
+    ClusterKubeAPIServerOperator_RevCon-&gt;&gt;K8s_API: 3. Create new Versioned Secret (e.g., openshift-kube-apiserver/kubelet-client-5)
+    ClusterKubeAPIServerOperator_RevCon-&gt;&gt;K8s_API: 4. Update KubeAPIServer CR status.latestAvailableRevision = 5
+    ClusterKubeAPIServerOperator_NodeCon-&gt;&gt;K8s_API: 5. Watch KubeAPIServer CR, detect revision change
+    ClusterKubeAPIServerOperator_NodeCon-&gt;&gt;APIServer_Pod: 6. Write updated manifest (/etc/kubernetes/manifests/kube-apiserver-pod.yaml) referencing revision 5 resources
+    APIServer_Pod-&gt;&gt;APIServer_Pod: 7. Detect key/cert file change and reload
+    %% Kubelet_CP-&gt;&gt;APIServer_Pod: 8. Stop old Pod (rev 4)
+    %% Kubelet_CP-&gt;&gt;APIServer_Pod: 9. Start new Pod (rev 5) using new versioned Secret
+
+    Note over ClusterKubeAPIServerOperator_CertRot, Kubelet_Node: Scenario 2: Signer Certificate Rotation (e.g., kubelet-ca.crt)
+
+    ClusterKubeAPIServerOperator_CertRot-&gt;&gt;K8s_API: 1a. Rotate signer cert/key, Update Signer Secret (e.g., openshift-kube-apiserver-operator/kube-apiserver-to-kubelet-signer)
+    ClusterKubeAPIServerOperator_CertRot-&gt;&gt;K8s_API: 1b. Update CA Bundle ConfigMap (e.g., openshift-kube-apiserver-operator/kube-apiserver-to-kubelet-client-ca)
+    MCO-&gt;&gt;K8s_API: 2. Watch CA Bundle CM, detect change
+    MCO-&gt;&gt;K8s_API: 3. Update ControllerConfig CR spec.kubeAPIServerServingCAData
+    MCO-&gt;&gt;K8s_API: 4. Render &amp; Apply new MachineConfig for relevant pool (master/worker)
+    MCD-&gt;&gt;K8s_API: 5. Watch MachineConfig, detect new config for its node
+    MCD-&gt;&gt;MCD: 6. Read CA data from ControllerConfig (via K8s API)
+    MCD-&gt;&gt;MCD: 7. Write updated CA file to node disk (e.g., /etc/kubernetes/kubelet-ca.crt) (Bypasses standard node update)
+    Kubelet_Node-&gt;&gt;Kubelet_Node: 8. Detect CA file change (/etc/kubernetes/kubelet-ca.crt)
+    Kubelet_Node-&gt;&gt;Kubelet_Node: 9. Reload CA bundle dynamically (No Kubelet Restart)
+</code></pre>
+        <h2 id="总结">总结</h2>
+        <ul>
+        <li><strong>证书轮换触发器:</strong> Cluster Kube API Server
+        Operator 中配置的基于时间的刷新间隔。</li>
+        <li><strong>组件:</strong> Cluster Kube API Server Operator
+        (<code>CertRotationController</code>,
+        <code>RevisionController</code>, Static Pod Controllers), MCO,
+        MCD, Kubelet。</li>
+        <li><strong>证书存储:</strong>
+        <code>openshift-kube-apiserver-operator</code> 和
+        <code>openshift-kube-apiserver</code> 命名空间中的 Secret 和
+        ConfigMap。CA 包也由 MCD 写入节点的
+        <code>/etc/kubernetes/kubelet-ca.crt</code>。</li>
+        <li><strong>Kube-apiserver 重启:</strong>
+        <strong>会发生重启</strong>。由 Cluster Kube API Server Operator
+        的 <code>RevisionController</code> 检测到其依赖的
+        Secrets/ConfigMaps（例如轮换的目标证书
+        <code>kubelet-client</code>）发生更改而触发。Cluster Kube API
+        Server Operator 更新 <code>KubeAPIServer</code> CR 状态
+        (<code>status.latestAvailableRevision</code>)，<code>Static Pod Controller</code>
+        (如 <code>NodeController</code>)
+        检测到此变化，更新控制平面节点上的静态 Pod 清单
+        (<code>/etc/kubernetes/manifests/kube-apiserver-pod.yaml</code>)
+        以引用新的版本化资源。Kubelet
+        监控此清单文件的变化并<strong>重启</strong>
+        <code>kube-apiserver</code> Pod。（注意：文档概述部分提到
+        apiserver
+        可能仅重新加载证书，但详细的重启流程描述了基于版本变更的重启机制，此处遵循详细流程的描述）。</li>
+        <li><strong>Kubelet 重启:</strong> <strong>不会重启</strong>。当
+        CA 包 (<code>kube-apiserver-to-kubelet-client-ca</code>)
+        更新时，MCO 检测到变化并生成新的 <code>MachineConfig</code>。MCD
+        将新的 CA 文件写入节点
+        (<code>/etc/kubernetes/kubelet-ca.crt</code>)。由于 MCD
+        中存在针对此 CA 文件的特殊处理逻辑
+        (<code>certificate_writer</code>)，它直接写入文件而<strong>不触发标准的节点驱逐和重启流程</strong>。Kubelet
+        监控该 CA 文件的变化并动态<strong>重新加载</strong> CA
+        包，服务进程本身不重启。</li>
+        </ul>
+      </article>
+    </div>
+      </main>
+
+  <footer>
+    <p>
+      Licensed under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank"
+        rel="noopener">CC-BY-NC-SA 4.0</a>
+      &nbsp;·&nbsp;
+      <a href="https://github.com/wangzheng422/docker_env" target="_blank" rel="noopener">wangzheng422/docker_env</a>
+    </p>
+  </footer>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: false, theme: 'dark' });
+
+    const SITE_BUILD_ID = 'fbe91b569ae8';
+    const SITE_HOME_URL = '../../../index.html';
+
+    const getBuildIdFromHtml = (html) => {
+      const match = String(html).match(/<meta[^>]+name=["']site-build-id["'][^>]+content=["']([^"']+)["']/i)
+        || String(html).match(/<meta[^>]+content=["']([^"']+)["'][^>]+name=["']site-build-id["']/i);
+      return match ? match[1] : '';
+    };
+
+    const checkForSiteUpdate = async () => {
+      if (!SITE_BUILD_ID || window.location.protocol === 'file:') return;
+      try {
+        const probeUrl = new URL(SITE_HOME_URL || './index.html', window.location.href);
+        probeUrl.searchParams.set('site_cache_probe', Date.now().toString());
+        const response = await fetch(probeUrl.toString(), { cache: 'no-store' });
+        if (!response.ok) return;
+        const latestBuildId = getBuildIdFromHtml(await response.text());
+        if (!latestBuildId || latestBuildId === SITE_BUILD_ID) return;
+        if (sessionStorage.getItem('site-build-refresh') === latestBuildId) return;
+        sessionStorage.setItem('site-build-refresh', latestBuildId);
+        const freshUrl = new URL(window.location.href);
+        freshUrl.searchParams.set('v', latestBuildId);
+        window.location.replace(freshUrl.toString());
+      } catch (error) {
+        // Network errors should not block reading the current page.
+      }
+    };
+
+    const versionedLocalUrl = (rawUrl) => {
+      if (!rawUrl || /^(https?:)?\/\//i.test(rawUrl) || /^(data|blob|mailto):/i.test(rawUrl)) return rawUrl;
+      const url = new URL(rawUrl, window.location.href);
+      if (url.searchParams.has('v')) return rawUrl;
+      url.searchParams.set('v', SITE_BUILD_ID);
+      return url.toString();
+    };
+
+    const cacheBustPageAssets = () => {
+      document.querySelectorAll('img[src], video[src], audio[src], source[src]').forEach((node) => {
+        const src = node.getAttribute('src');
+        const versioned = versionedLocalUrl(src);
+        if (versioned !== src) node.setAttribute('src', versioned);
+      });
+    };
+
+    const updateReadingProgress = () => {
+      const progress = document.querySelector('.reading-progress');
+      if (!progress) return;
+      const scrollable = document.documentElement.scrollHeight - window.innerHeight;
+      const ratio = scrollable > 0 ? window.scrollY / scrollable : 0;
+      progress.style.transform = 'scaleX(' + Math.min(1, Math.max(0, ratio)) + ')';
+    };
+
+    const topicFor = (text, href) => {
+      const haystack = (text + ' ' + href).toLowerCase();
+      if (/developers\.redhat\.com|redhatquickcourses|github\.com\/redhatquickcourses/.test(haystack)) return 'Red Hat';
+      if (/ai|llm|gpu|vllm|llama|model|rhaiis/.test(haystack)) return 'AI';
+      if (/network|ovn|bgp|dns|egress|ingress|metallb|nic|route/.test(haystack)) return 'Network';
+      if (/cert|tls|sso|keycloak|rhbk|security|compliance/.test(haystack)) return 'Security';
+      if (/perf|profile|throttling|heap|debug/.test(haystack)) return 'Performance';
+      if (/install|ipi|upi|sno|disconnected|bootstrap/.test(haystack)) return 'Install';
+      if (/rhel|coreos|rhcos|kernel|rpm|ostree/.test(haystack)) return 'RHEL';
+      if (/backup|storage|nfs|odf|ocs|ceph|dr/.test(haystack)) return 'Storage';
+      if (/pipeline|gitops|ansible|aap|rhdh|devops/.test(haystack)) return 'DevOps';
+      return 'OpenShift';
+    };
+
+    const yearFor = (text, href) => {
+      const match = (text + ' ' + href).match(/20\d{2}/);
+      return match ? match[0] : 'Notes';
+    };
+
+    const importantExternal = (href) =>
+      /developers\.redhat\.com|redhatquickcourses\.github\.io/i.test(href);
+
+    const titleForLink = (link) => {
+      const href = link.getAttribute('href') || '';
+      const directText = link.textContent.trim().replace(/\s+/g, ' ');
+      if (!/^https?:\/\//.test(directText)) return directText;
+      const parentItem = link.closest('ul')?.parentElement;
+      if (parentItem) {
+        const clone = parentItem.cloneNode(true);
+        clone.querySelectorAll('ul').forEach((nested) => nested.remove());
+        const parentText = clone.textContent.trim().replace(/\s+/g, ' ');
+        if (parentText) {
+          return parentText;
+        }
+      }
+      return directText;
+    };
+
+    const escapeHtml = (value) => String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+
+    const enhanceHome = () => {
+      if (!document.body.classList.contains('page-index')) return;
+      const source = document.querySelector('.home-source');
+      const grid = document.getElementById('note-grid');
+      const stats = document.getElementById('console-stats');
+      const externalPanel = document.getElementById('external-panel');
+      const topicStrip = document.getElementById('topic-strip');
+      const search = document.getElementById('console-search');
+      if (!source || !grid || !stats || !externalPanel || !topicStrip || !search) return;
+
+      const seen = new Set();
+      const links = Array.from(source.querySelectorAll('a[href]'))
+        .map((link) => {
+          const href = link.getAttribute('href') || '';
+          const text = titleForLink(link);
+          return { text, href, topic: topicFor(text, href), year: yearFor(text, href) };
+        });
+      const notes = links
+        .filter((note) => note.text && !note.href.startsWith('http') && !seen.has(note.href) && seen.add(note.href));
+      const externalLinks = links
+        .filter((note) => note.text && importantExternal(note.href));
+
+      const topics = ['All', ...Array.from(new Set(notes.map((note) => note.topic))).sort()];
+      let activeTopic = 'All';
+
+      const renderStats = () => {
+        const years = notes.map((note) => note.year).filter((year) => year.length === 4 && /^\d{4}/.test(year));
+        const latest = years.length ? Math.max(...years.map(Number)) : 'N/A';
+        const oldest = years.length ? Math.min(...years.map(Number)) : 'N/A';
+        stats.innerHTML = [
+          ['Notes', notes.length],
+          ['Resources', externalLinks.length],
+          ['Topics', topics.length - 1],
+          ['Latest', latest],
+        ].map(([label, value]) => '<div class="stat-tile"><span>' + label + '</span><strong>' + value + '</strong></div>').join('');
+        const signal = document.getElementById('signal-count');
+        if (signal) signal.textContent = notes.length + ' links indexed';
+      };
+
+      const renderExternal = () => {
+        externalPanel.innerHTML =
+          '<div class="section-heading"><span>Published / Learning</span><strong>Red Hat resources</strong></div>' +
+          '<div class="external-grid">' +
+          externalLinks.map((note) =>
+            '<a class="resource-card" href="' + escapeHtml(note.href) + '" target="_blank" rel="noopener">' +
+            '<span class="note-meta"><span>' + escapeHtml(note.year) + '</span><span>' + escapeHtml(note.topic) + '</span></span>' +
+            '<strong>' + escapeHtml(note.text) + '</strong>' +
+            '<small>' + escapeHtml(note.href) + '</small>' +
+            '</a>'
+          ).join('') +
+          '</div>';
+      };
+
+      const renderTopics = () => {
+        topicStrip.innerHTML = topics.map((topic) => '<button class="topic-chip' + (topic === activeTopic ? ' active' : '') + '" type="button" data-topic="' + escapeHtml(topic) + '">' + escapeHtml(topic) + '</button>').join('');
+        topicStrip.querySelectorAll('button').forEach((button) => {
+          button.addEventListener('click', () => {
+            activeTopic = button.dataset.topic || 'All';
+            renderTopics();
+            renderCards();
+          });
+        });
+      };
+
+      const renderCards = () => {
+        const query = search.value.trim().toLowerCase();
+        const filtered = notes.filter((note) => {
+          const topicMatch = activeTopic === 'All' || note.topic === activeTopic;
+          const queryMatch = !query || (note.text + ' ' + note.href + ' ' + note.topic + ' ' + note.year).toLowerCase().includes(query);
+          return topicMatch && queryMatch;
+        });
+        grid.innerHTML = filtered.map((note) =>
+          '<a class="note-card" href="' + escapeHtml(note.href) + '">' +
+          '<span class="note-meta"><span>' + escapeHtml(note.year) + '</span><span>' + escapeHtml(note.topic) + '</span></span>' +
+          '<strong>' + escapeHtml(note.text) + '</strong>' +
+          '<small>' + escapeHtml(note.href) + '</small>' +
+          '</a>'
+        ).join('') || '<p class="empty-state">No matching notes.</p>';
+      };
+
+      const drawMap = () => {
+        const canvas = document.getElementById('knowledge-canvas');
+        if (!(canvas instanceof HTMLCanvasElement)) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        const width = canvas.width;
+        const height = canvas.height;
+        const nodes = notes.slice(0, 44).map((note, index) => {
+          const angle = (index / 44) * Math.PI * 2;
+          const ring = 90 + (index % 5) * 22;
+          return {
+            x: width / 2 + Math.cos(angle) * ring,
+            y: height / 2 + Math.sin(angle) * ring * 0.72,
+            topic: note.topic,
+          };
+        });
+        ctx.clearRect(0, 0, width, height);
+        ctx.strokeStyle = 'rgba(88, 166, 255, 0.14)';
+        ctx.lineWidth = 1;
+        nodes.forEach((node, index) => {
+          const next = nodes[(index + 7) % nodes.length];
+          ctx.beginPath();
+          ctx.moveTo(node.x, node.y);
+          ctx.lineTo(next.x, next.y);
+          ctx.stroke();
+        });
+        const palette = {
+          AI: '#a371f7',
+          Network: '#39d0d8',
+          Security: '#ff7b72',
+          Performance: '#f2cc60',
+          Install: '#7ee787',
+          RHEL: '#ff7b72',
+          Storage: '#d2a8ff',
+          DevOps: '#ffa657',
+          OpenShift: '#58a6ff',
+        };
+        nodes.forEach((node) => {
+          ctx.fillStyle = palette[node.topic] || '#58a6ff';
+          ctx.beginPath();
+          ctx.arc(node.x, node.y, 3.4, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      };
+
+      search.addEventListener('input', renderCards);
+      renderStats();
+      renderExternal();
+      renderTopics();
+      renderCards();
+      drawMap();
+      document.body.classList.add('home-enhanced');
+    };
+
+    const enhanceCodeBlocks = () => {
+      document.querySelectorAll('pre').forEach((pre) => {
+        if (pre.classList.contains('mermaid') || pre.querySelector('.copy-code')) return;
+        const button = document.createElement('button');
+        button.className = 'copy-code';
+        button.type = 'button';
+        button.textContent = 'Copy';
+        button.addEventListener('click', async () => {
+          await navigator.clipboard.writeText(pre.textContent || '');
+          button.textContent = 'Copied';
+          setTimeout(() => { button.textContent = 'Copy'; }, 1200);
+        });
+        pre.appendChild(button);
+      });
+    };
+
+    window.addEventListener('scroll', updateReadingProgress, { passive: true });
+    window.addEventListener('pageshow', (event) => {
+      if (event.persisted) checkForSiteUpdate();
+    });
+    document.addEventListener('DOMContentLoaded', async () => {
+      checkForSiteUpdate();
+      cacheBustPageAssets();
+      updateReadingProgress();
+      enhanceHome();
+      enhanceCodeBlocks();
+      // pandoc 输出 mermaid 为 <pre class="mermaid"><code>...</code></pre>
+      // 需要转成 <div class="mermaid">...</div> 供 mermaid.js 渲染
+      document.querySelectorAll('pre.mermaid').forEach(pre => {
+        const div = document.createElement('div');
+        div.classList.add('mermaid');
+        div.textContent = pre.textContent;
+        pre.replaceWith(div);
+      });
+      // 也处理 <pre><code class="language-mermaid"> 形式（备用）
+      document.querySelectorAll('pre code.language-mermaid').forEach(code => {
+        const div = document.createElement('div');
+        div.classList.add('mermaid');
+        div.textContent = code.textContent;
+        code.closest('pre').replaceWith(div);
+      });
+      await mermaid.run();
+    });
+  </script>
+</body>
+
+</html>

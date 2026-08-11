@@ -1,0 +1,1096 @@
+<!DOCTYPE html>
+<html lang="zh" dir="ltr">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="generator" content="pandoc" />
+  <meta name="site-build-id" content="fbe91b569ae8" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <title>OVN EgressIP External Gateway VM: Dynamic Routing & SNAT Solution | wandering.star notes</title>
+  <meta name="description"
+    content="Wandering field notes on OpenShift, RHEL, AI infrastructure, and platform operations." />
+  <!-- Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-E3FRMDB7L2"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-E3FRMDB7L2');
+  </script>
+  <style>
+  html {
+    color: #1a1a1a;
+    background-color: #fdfdfd;
+  }
+  body {
+    margin: 0 auto;
+    max-width: 36em;
+    padding-left: 50px;
+    padding-right: 50px;
+    padding-top: 50px;
+    padding-bottom: 50px;
+    hyphens: auto;
+    overflow-wrap: break-word;
+    text-rendering: optimizeLegibility;
+    font-kerning: normal;
+  }
+  @media (max-width: 600px) {
+    body {
+      font-size: 0.9em;
+      padding: 12px;
+    }
+    h1 {
+      font-size: 1.8em;
+    }
+  }
+  @media print {
+    html {
+      background-color: white;
+    }
+    body {
+      background-color: transparent;
+      color: black;
+      font-size: 12pt;
+    }
+    p, h2, h3 {
+      orphans: 3;
+      widows: 3;
+    }
+    h2, h3, h4 {
+      page-break-after: avoid;
+    }
+  }
+  p {
+    margin: 1em 0;
+  }
+  a {
+    color: #1a1a1a;
+  }
+  a:visited {
+    color: #1a1a1a;
+  }
+  img {
+    max-width: 100%;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.4em;
+  }
+  h5, h6 {
+    font-size: 1em;
+    font-style: italic;
+  }
+  h6 {
+    font-weight: normal;
+  }
+  ol, ul {
+    padding-left: 1.7em;
+    margin-top: 1em;
+  }
+  li > ol, li > ul {
+    margin-top: 0;
+  }
+  blockquote {
+    margin: 1em 0 1em 1.7em;
+    padding-left: 1em;
+    border-left: 2px solid #e6e6e6;
+    color: #606060;
+  }
+  code {
+    font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+    font-size: 85%;
+    margin: 0;
+    hyphens: manual;
+  }
+  pre {
+    margin: 1em 0;
+    overflow: auto;
+  }
+  pre code {
+    padding: 0;
+    overflow: visible;
+    overflow-wrap: normal;
+  }
+  .sourceCode {
+   background-color: transparent;
+   overflow: visible;
+  }
+  hr {
+    background-color: #1a1a1a;
+    border: none;
+    height: 1px;
+    margin: 1em 0;
+  }
+  table {
+    margin: 1em 0;
+    border-collapse: collapse;
+    width: 100%;
+    overflow-x: auto;
+    display: block;
+    font-variant-numeric: lining-nums tabular-nums;
+  }
+  table caption {
+    margin-bottom: 0.75em;
+  }
+  tbody {
+    margin-top: 0.5em;
+    border-top: 1px solid #1a1a1a;
+    border-bottom: 1px solid #1a1a1a;
+  }
+  th {
+    border-top: 1px solid #1a1a1a;
+    padding: 0.25em 0.5em 0.25em 0.5em;
+  }
+  td {
+    padding: 0.125em 0.5em 0.25em 0.5em;
+  }
+  header {
+    margin-bottom: 4em;
+    text-align: center;
+  }
+  #TOC li {
+    list-style: none;
+  }
+  #TOC ul {
+    padding-left: 1.3em;
+  }
+  #TOC > ul {
+    padding-left: 0;
+  }
+  #TOC a:not(:hover) {
+    text-decoration: none;
+  }
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  div.columns{display: flex; gap: min(4vw, 1.5em);}
+  div.column{flex: auto; overflow-x: auto;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  /* The extra [class] is a hack that increases specificity enough to
+     override a similar rule in reveal.js */
+  ul.task-list[class]{list-style: none;}
+  ul.task-list li input[type="checkbox"] {
+    font-size: inherit;
+    width: 0.8em;
+    margin: 0 0.8em 0.2em -1.6em;
+    vertical-align: middle;
+  }
+  .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  /* CSS for syntax highlighting */
+  pre > code.sourceCode { white-space: pre; position: relative; }
+  pre > code.sourceCode > span { line-height: 1.25; }
+  pre > code.sourceCode > span:empty { height: 1.2em; }
+  .sourceCode { overflow: visible; }
+  code.sourceCode > span { color: inherit; text-decoration: inherit; }
+  div.sourceCode { margin: 1em 0; }
+  pre.sourceCode { margin: 0; }
+  @media screen {
+  div.sourceCode { overflow: auto; }
+  }
+  @media print {
+  pre > code.sourceCode { white-space: pre-wrap; }
+  pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+  }
+  pre.numberSource code
+    { counter-reset: source-line 0; }
+  pre.numberSource code > span
+    { position: relative; left: -4em; counter-increment: source-line; }
+  pre.numberSource code > span > a:first-child::before
+    { content: counter(source-line);
+      position: relative; left: -1em; text-align: right; vertical-align: baseline;
+      border: none; display: inline-block;
+      -webkit-touch-callout: none; -webkit-user-select: none;
+      -khtml-user-select: none; -moz-user-select: none;
+      -ms-user-select: none; user-select: none;
+      padding: 0 4px; width: 4em;
+    }
+  pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+  div.sourceCode
+    { color: #cccccc; background-color: #303030; }
+  @media screen {
+  pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+  }
+  code span.al { color: #ffcfaf; } /* Alert */
+  code span.an { color: #7f9f7f; font-weight: bold; } /* Annotation */
+  code span.at { } /* Attribute */
+  code span.bn { color: #dca3a3; } /* BaseN */
+  code span.bu { } /* BuiltIn */
+  code span.cf { color: #f0dfaf; } /* ControlFlow */
+  code span.ch { color: #dca3a3; } /* Char */
+  code span.cn { color: #dca3a3; font-weight: bold; } /* Constant */
+  code span.co { color: #7f9f7f; } /* Comment */
+  code span.cv { color: #7f9f7f; font-weight: bold; } /* CommentVar */
+  code span.do { color: #7f9f7f; } /* Documentation */
+  code span.dt { color: #dfdfbf; } /* DataType */
+  code span.dv { color: #dcdccc; } /* DecVal */
+  code span.er { color: #c3bf9f; } /* Error */
+  code span.ex { } /* Extension */
+  code span.fl { color: #c0bed1; } /* Float */
+  code span.fu { color: #efef8f; } /* Function */
+  code span.im { } /* Import */
+  code span.in { color: #7f9f7f; font-weight: bold; } /* Information */
+  code span.kw { color: #f0dfaf; } /* Keyword */
+  code span.op { color: #f0efd0; } /* Operator */
+  code span.ot { color: #efef8f; } /* Other */
+  code span.pp { color: #ffcfaf; font-weight: bold; } /* Preprocessor */
+  code span.sc { color: #dca3a3; } /* SpecialChar */
+  code span.ss { color: #cc9393; } /* SpecialString */
+  code span.st { color: #cc9393; } /* String */
+  code span.va { } /* Variable */
+  code span.vs { color: #cc9393; } /* VerbatimString */
+  code span.wa { color: #7f9f7f; font-weight: bold; } /* Warning */
+  </style>
+  <link rel="stylesheet" href="../../../style.css?v=fbe91b569ae8" />
+  </head>
+
+<body class="page-article">
+  <div class="reading-progress" aria-hidden="true"></div>
+  <div class="console-backdrop" aria-hidden="true"></div>
+  <nav class="site-nav">
+    <div class="nav-inner">
+      <a class="nav-brand" href="../../../index.html">wandering.star<span>notes</span></a>
+      <div class="nav-links">
+        <a href="https://github.com/wangzheng422/docker_env" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://www.youtube.com/@wangzheng422" target="_blank" rel="noopener">YouTube</a>
+      </div>
+    </div>
+  </nav>
+
+  <main>
+            <a class="back-link" href="../../../index.html">← Back to Index</a>
+        <div class="article-layout">
+            <aside class="toc-panel">
+        <div class="toc-title">ON THIS PAGE</div>
+        <ul>
+        <li><a
+        href="#ovn-egressip-external-gateway-vm-dynamic-routing-snat-solution"
+        id="toc-ovn-egressip-external-gateway-vm-dynamic-routing-snat-solution">OVN
+        EgressIP External Gateway VM: Dynamic Routing &amp; SNAT
+        Solution</a>
+        <ul>
+        <li><a href="#background-and-pain-points"
+        id="toc-background-and-pain-points">Background and Pain
+        Points</a></li>
+        <li><a href="#solution-overview"
+        id="toc-solution-overview">Solution Overview</a></li>
+        <li><a href="#architecture-diagram"
+        id="toc-architecture-diagram">Architecture Diagram</a></li>
+        <li><a href="#detailed-configuration-steps"
+        id="toc-detailed-configuration-steps">Detailed Configuration
+        Steps</a>
+        <ul>
+        <li><a href="#external-gateway-vm-management-script"
+        id="toc-external-gateway-vm-management-script">1. External
+        Gateway VM Management Script</a></li>
+        <li><a
+        href="#ocp-cluster-side-configuration-adminpolicybasedexternalroute"
+        id="toc-ocp-cluster-side-configuration-adminpolicybasedexternalroute">2.
+        OCP Cluster-Side Configuration
+        (AdminPolicyBasedExternalRoute)</a></li>
+        <li><a href="#gateway-vm-service-configuration-and-execution"
+        id="toc-gateway-vm-service-configuration-and-execution">3.
+        Gateway VM Service Configuration and Execution</a></li>
+        </ul></li>
+        <li><a href="#technical-insights-and-advanced-considerations"
+        id="toc-technical-insights-and-advanced-considerations">Technical
+        Insights and Advanced Considerations</a>
+        <ul>
+        <li><a href="#node-availability-and-dynamic-monitoring"
+        id="toc-node-availability-and-dynamic-monitoring">Node
+        Availability and Dynamic Monitoring</a></li>
+        <li><a href="#avoiding-route-flapping-and-frr-instability"
+        id="toc-avoiding-route-flapping-and-frr-instability">Avoiding
+        Route Flapping and FRR Instability</a></li>
+        <li><a href="#resolving-arp-flux-for-prerouting-integrity"
+        id="toc-resolving-arp-flux-for-prerouting-integrity">Resolving
+        ARP Flux for PREROUTING Integrity</a></li>
+        </ul></li>
+        <li><a
+        href="#limitations-arp-cache-latency-and-pod-ip-leakage-prevention"
+        id="toc-limitations-arp-cache-latency-and-pod-ip-leakage-prevention">Limitations:
+        ARP Cache Latency and Pod IP Leakage Prevention</a>
+        <ul>
+        <li><a href="#the-problem-arp-convergence-delay"
+        id="toc-the-problem-arp-convergence-delay">The Problem: ARP
+        Convergence Delay</a></li>
+        <li><a href="#the-impact-conntrack-lock-in"
+        id="toc-the-impact-conntrack-lock-in">The Impact: Conntrack
+        “Lock-in”</a></li>
+        <li><a href="#mitigation-the-fail-closed-forward-rule"
+        id="toc-mitigation-the-fail-closed-forward-rule">Mitigation: The
+        “Fail-Closed” FORWARD Rule</a></li>
+        </ul></li>
+        </ul></li>
+        </ul>
+      </aside>
+            <article class="markdown-body article-shell">
+        <h1
+        id="ovn-egressip-external-gateway-vm-dynamic-routing-snat-solution">OVN
+        EgressIP External Gateway VM: Dynamic Routing &amp; SNAT
+        Solution</h1>
+        <h2 id="background-and-pain-points">Background and Pain
+        Points</h2>
+        <p>When deploying OpenShift Container Platform (OCP) 4.18 on
+        certain infrastructure platforms (such as restricted third-party
+        OpenStack environments), underlying network limitations often
+        pose significant challenges. For instance, each node may only be
+        allowed to bind a limited number of Floating IPs/Elastic IPs.
+        However, business security requirements often demand independent
+        Egress IPs for a large number of namespaces (e.g., 40+
+        namespaces).</p>
+        <p>The native OVN-Kubernetes EgressIP feature currently lacks
+        the granularity to assign specific IP resource pools to specific
+        physical nodes via <code>nodeSelectors</code> effectively. It
+        also struggles to handle scenarios where single-node IP quotas
+        are highly constrained.</p>
+        <h2 id="solution-overview">Solution Overview</h2>
+        <p>To support independent Egress IPs for various
+        tenants/namespaces without exceeding the underlying cloud
+        platform’s node IP quotas, we implement an <strong>External
+        Gateway VM</strong> model to decouple Egress IP allocation from
+        the OCP nodes:</p>
+        <ol type="1">
+        <li><p><strong>Unified Egress Gateway</strong>: A dedicated
+        Gateway VM is configured outside the OCP cluster. This VM
+        utilizes a dual-NIC architecture: an internal interface
+        (<code>enp1s0</code>) connecting to the OCP cluster and an
+        external interface (<code>enp7s0</code>) connecting to the
+        public network. This setup bypasses the Egress IP quantity
+        limitations imposed on individual host nodes.</p></li>
+        <li><p><strong>OCP-Side Traffic Routing</strong>: Within OCP,
+        the <code>AdminPolicyBasedExternalRoute</code> (APB) feature is
+        leveraged to direct outbound traffic from different tenant
+        namespaces to specific <strong>internal gateway IPs</strong>
+        hosted on the Gateway VM.</p></li>
+        <li><p><strong>Traffic Isolation via MACVLAN</strong>: To allow
+        the Gateway VM to distinguish which APB policy (and thus which
+        tenant) the incoming traffic belongs to, multiple virtual
+        interfaces are created on the <strong>internal NIC</strong>
+        using <code>macvlan</code> technology. Each tenant is assigned a
+        unique internal gateway IP and a corresponding MAC address. &gt;
+        [!IMPORTANT] &gt; To prevent routing conflicts with the host’s
+        primary network (e.g., <code>192.168.99.0/24</code>) and protect
+        core network components like FRR, these Macvlan interfaces MUST
+        be configured with a <code>/32</code> subnet mask.</p></li>
+        <li><p><strong>Source NAT (SNAT)</strong>: When traffic reaches
+        a tenant-specific virtual interface on the Gateway VM, it is
+        tagged using the <code>iptables</code> Mangle table. In the
+        <code>POSTROUTING</code> stage, the tag is matched to perform
+        the corresponding SNAT, translating the source address to the
+        tenant’s dedicated <strong>Egress IP</strong> before egressing
+        through the <strong>external NIC</strong>.</p></li>
+        <li><p><strong>Dynamic Return Route Monitoring</strong>: Since
+        traffic routed via APB retains the internal <strong>Pod
+        IP</strong> as the source, the Gateway VM requires return routes
+        pointing back to the respective OCP nodes. To handle OCP Worker
+        node lifecycle events (joins, leaves, or scaling), a
+        Python-based daemon runs on the Gateway VM. This daemon
+        interfaces with the OCP API Server to automatically discover
+        node PodCIDR ranges (e.g.,
+        <code>10.132.0.0/24 via 192.168.99.21</code>) and dynamically
+        manages IP routes on the Gateway VM.</p></li>
+        </ol>
+        <hr />
+        <h2 id="architecture-diagram">Architecture Diagram</h2>
+        <pre class="mermaid"><code>graph TD
+    subgraph OCP_Cluster [OCP Cluster]
+        Node1[Node 1&lt;br/&gt;Pod CIDR: 10.132.0.0/24&lt;br/&gt;Node IP: 192.168.99.21]
+        Node2[Node 2&lt;br/&gt;Pod CIDR: 10.132.1.0/24&lt;br/&gt;Node IP: 192.168.99.22]
+        
+        subgraph ns_blue [Namespace ns-blue]
+            BP_B[Business Pods&lt;br/&gt;Source IP: 10.132.x.x]
+        end
+        
+        subgraph ns_red [Namespace ns-red]
+            BP_R[Business Pods&lt;br/&gt;Source IP: 10.132.x.y]
+        end
+        
+        Router[OVN PBR Routes]
+    end
+    
+    subgraph External_Infrastructure [Gateway VM]
+        K8sDaemon[Python K8s Watcher Daemon&lt;br/&gt;Auto-manages Return Routes&lt;br/&gt;Auto-provisions Egress IPs &amp; ARP Isolation&lt;br/&gt;Enables IP Forwarding &amp; Cross-NIC Routing]
+        
+        subgraph Internal_Interface [Internal NIC enp1s0 : 192.168.99.12/24]
+            MAC_B[macvlan-blue&lt;br/&gt;Gateway IP: 192.168.99.13/32&lt;br/&gt;MAC: xx:xx:xx:01]
+            MAC_R[macvlan-red&lt;br/&gt;Gateway IP: 192.168.99.14/32&lt;br/&gt;MAC: xx:xx:xx:02]
+        end
+        
+        IPTables[IPTables: PREROUTING Marking &amp; POSTROUTING SNAT]
+        
+        subgraph External_Interface [External NIC enp7s0 : 192.168.55.12/24]
+            EIP_B[Egress IP blue&lt;br/&gt;192.168.55.113/32]
+            EIP_R[Egress IP red&lt;br/&gt;192.168.55.114/32]
+        end
+        
+        MAC_B -- &quot;Mark 0xa&quot; --&gt; IPTables
+        MAC_R -- &quot;Mark 0x14&quot; --&gt; IPTables
+        IPTables -- &quot;Routed via&quot; --&gt; External_Interface
+    end
+    
+    EXT[Internet]
+    
+    %% Traffic Flow
+    BP_B -- &quot;APB Route -&gt; NextHop .13&quot; --&gt; Router
+    BP_R -- &quot;APB Route -&gt; NextHop .14&quot; --&gt; Router
+    
+    Router -- &quot;L2 Forward to MAC xx:01&lt;br/&gt;(Avoids ARP Flux)&quot; --&gt; MAC_B
+    Router -- &quot;L2 Forward to MAC xx:02&lt;br/&gt;(Avoids ARP Flux)&quot; --&gt; MAC_R
+    
+    EIP_B -- &quot;SNAT to 192.168.55.113&quot; --&gt; EXT
+    EIP_R -- &quot;SNAT to 192.168.55.114&quot; --&gt; EXT
+    
+    Node1 -. &quot;API events&quot; .-&gt; K8sDaemon
+    K8sDaemon -. &quot;ip route update&quot; .-&gt; Internal_Interface
+    K8sDaemon -. &quot;ip addr setup&quot; .-&gt; External_Interface
+    
+    %% Styling
+    style BP_B fill:#e1f5fe,stroke:#01579b
+    style BP_R fill:#ffebee,stroke:#b71c1c
+    style External_Infrastructure fill:#e8f5e9,stroke:#2e7d32</code></pre>
+        <hr />
+        <h2 id="detailed-configuration-steps">Detailed Configuration
+        Steps</h2>
+        <h3 id="external-gateway-vm-management-script">1. External
+        Gateway VM Management Script</h3>
+        <p>To automate the configuration of multi-tenant isolation and
+        dynamic routing at the Gateway VM level, we utilize a Python
+        script located in the <code>2026-02-24-egress-gw-manager</code>
+        directory.</p>
+        <p><strong>Prerequisites:</strong> Install the Kubernetes Python
+        client to monitor node events.</p>
+        <div class="sourceCode" id="cb2"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">pip3</span> install <span class="at">-r</span> /Users/zhengwan/Desktop/dev/docker_env/redhat/ocp4/4.18/files/2026-02-24-egress-gw-manager/requirements.txt</span></code></pre></div>
+        <p>Additionally, the script requires credentials to interact
+        with the Kubernetes API, typically provided via a
+        <code>kubeconfig</code> file (e.g., copied to
+        <code>~/.kube/config</code> on the Gateway VM).</p>
+        <h3
+        id="ocp-cluster-side-configuration-adminpolicybasedexternalroute">2.
+        OCP Cluster-Side Configuration
+        (AdminPolicyBasedExternalRoute)</h3>
+        <p>Redirect traffic from different tenants or namespaces to the
+        gateway IPs hosted on the Gateway VM. In this example, we set
+        the Next Hop for the Blue tenant to <code>192.168.99.13</code>
+        and for the Red tenant to <code>192.168.99.14</code>.</p>
+        <div class="sourceCode" id="cb3"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> create ns ns-blue</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> create ns ns-red</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> <span class="op">&lt;&lt;EOF</span> <span class="kw">|</span> <span class="ex">oc</span> apply <span class="at">-f</span> <span class="at">-</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="st">apiVersion: apps/v1</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="st">kind: Deployment</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="st">metadata:</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="st">  name: business-app</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="st">  namespace: ns-red</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="st">spec:</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a><span class="st">  replicas: 2</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a><span class="st">  selector:</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a><span class="st">    matchLabels:</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a><span class="st">      app: business-app</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a><span class="st">  template:</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a><span class="st">    metadata:</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a><span class="st">      labels:</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a><span class="st">        app: business-app</span></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a><span class="st">    spec:</span></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a><span class="st">      affinity:</span></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a><span class="st">        podAntiAffinity:</span></span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a><span class="st">          preferredDuringSchedulingIgnoredDuringExecution:</span></span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a><span class="st">          - weight: 100</span></span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a><span class="st">            podAffinityTerm:</span></span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a><span class="st">              labelSelector:</span></span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a><span class="st">                matchExpressions:</span></span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a><span class="st">                - key: app</span></span>
+<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a><span class="st">                  operator: In</span></span>
+<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a><span class="st">                  values:</span></span>
+<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a><span class="st">                  - business-app</span></span>
+<span id="cb3-31"><a href="#cb3-31" aria-hidden="true" tabindex="-1"></a><span class="st">              topologyKey: kubernetes.io/hostname</span></span>
+<span id="cb3-32"><a href="#cb3-32" aria-hidden="true" tabindex="-1"></a><span class="st">      containers:</span></span>
+<span id="cb3-33"><a href="#cb3-33" aria-hidden="true" tabindex="-1"></a><span class="st">      - name: app</span></span>
+<span id="cb3-34"><a href="#cb3-34" aria-hidden="true" tabindex="-1"></a><span class="st">        image: quay.io/wangzheng422/qimgs:centos9-test-2025.12.18.v01</span></span>
+<span id="cb3-35"><a href="#cb3-35" aria-hidden="true" tabindex="-1"></a><span class="st">        command: [&quot;/bin/sh&quot;, &quot;-c&quot;, &quot;sleep infinity&quot;]</span></span>
+<span id="cb3-36"><a href="#cb3-36" aria-hidden="true" tabindex="-1"></a><span class="op">EOF</span></span>
+<span id="cb3-37"><a href="#cb3-37" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-38"><a href="#cb3-38" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> <span class="op">&lt;&lt;EOF</span> <span class="kw">|</span> <span class="ex">oc</span> apply <span class="at">-f</span> <span class="at">-</span></span>
+<span id="cb3-39"><a href="#cb3-39" aria-hidden="true" tabindex="-1"></a><span class="st">apiVersion: apps/v1</span></span>
+<span id="cb3-40"><a href="#cb3-40" aria-hidden="true" tabindex="-1"></a><span class="st">kind: Deployment</span></span>
+<span id="cb3-41"><a href="#cb3-41" aria-hidden="true" tabindex="-1"></a><span class="st">metadata:</span></span>
+<span id="cb3-42"><a href="#cb3-42" aria-hidden="true" tabindex="-1"></a><span class="st">  name: business-app</span></span>
+<span id="cb3-43"><a href="#cb3-43" aria-hidden="true" tabindex="-1"></a><span class="st">  namespace: ns-blue</span></span>
+<span id="cb3-44"><a href="#cb3-44" aria-hidden="true" tabindex="-1"></a><span class="st">spec:</span></span>
+<span id="cb3-45"><a href="#cb3-45" aria-hidden="true" tabindex="-1"></a><span class="st">  replicas: 2</span></span>
+<span id="cb3-46"><a href="#cb3-46" aria-hidden="true" tabindex="-1"></a><span class="st">  selector:</span></span>
+<span id="cb3-47"><a href="#cb3-47" aria-hidden="true" tabindex="-1"></a><span class="st">    matchLabels:</span></span>
+<span id="cb3-48"><a href="#cb3-48" aria-hidden="true" tabindex="-1"></a><span class="st">      app: business-app</span></span>
+<span id="cb3-49"><a href="#cb3-49" aria-hidden="true" tabindex="-1"></a><span class="st">  template:</span></span>
+<span id="cb3-50"><a href="#cb3-50" aria-hidden="true" tabindex="-1"></a><span class="st">    metadata:</span></span>
+<span id="cb3-51"><a href="#cb3-51" aria-hidden="true" tabindex="-1"></a><span class="st">      labels:</span></span>
+<span id="cb3-52"><a href="#cb3-52" aria-hidden="true" tabindex="-1"></a><span class="st">        app: business-app</span></span>
+<span id="cb3-53"><a href="#cb3-53" aria-hidden="true" tabindex="-1"></a><span class="st">    spec:</span></span>
+<span id="cb3-54"><a href="#cb3-54" aria-hidden="true" tabindex="-1"></a><span class="st">      affinity:</span></span>
+<span id="cb3-55"><a href="#cb3-55" aria-hidden="true" tabindex="-1"></a><span class="st">        podAntiAffinity:</span></span>
+<span id="cb3-56"><a href="#cb3-56" aria-hidden="true" tabindex="-1"></a><span class="st">          preferredDuringSchedulingIgnoredDuringExecution:</span></span>
+<span id="cb3-57"><a href="#cb3-57" aria-hidden="true" tabindex="-1"></a><span class="st">          - weight: 100</span></span>
+<span id="cb3-58"><a href="#cb3-58" aria-hidden="true" tabindex="-1"></a><span class="st">            podAffinityTerm:</span></span>
+<span id="cb3-59"><a href="#cb3-59" aria-hidden="true" tabindex="-1"></a><span class="st">              labelSelector:</span></span>
+<span id="cb3-60"><a href="#cb3-60" aria-hidden="true" tabindex="-1"></a><span class="st">                matchExpressions:</span></span>
+<span id="cb3-61"><a href="#cb3-61" aria-hidden="true" tabindex="-1"></a><span class="st">                - key: app</span></span>
+<span id="cb3-62"><a href="#cb3-62" aria-hidden="true" tabindex="-1"></a><span class="st">                  operator: In</span></span>
+<span id="cb3-63"><a href="#cb3-63" aria-hidden="true" tabindex="-1"></a><span class="st">                  values:</span></span>
+<span id="cb3-64"><a href="#cb3-64" aria-hidden="true" tabindex="-1"></a><span class="st">                  - business-app</span></span>
+<span id="cb3-65"><a href="#cb3-65" aria-hidden="true" tabindex="-1"></a><span class="st">              topologyKey: kubernetes.io/hostname</span></span>
+<span id="cb3-66"><a href="#cb3-66" aria-hidden="true" tabindex="-1"></a><span class="st">      containers:</span></span>
+<span id="cb3-67"><a href="#cb3-67" aria-hidden="true" tabindex="-1"></a><span class="st">      - name: app</span></span>
+<span id="cb3-68"><a href="#cb3-68" aria-hidden="true" tabindex="-1"></a><span class="st">        image: quay.io/wangzheng422/qimgs:centos9-test-2025.12.18.v01</span></span>
+<span id="cb3-69"><a href="#cb3-69" aria-hidden="true" tabindex="-1"></a><span class="st">        command: [&quot;/bin/sh&quot;, &quot;-c&quot;, &quot;sleep infinity&quot;]</span></span>
+<span id="cb3-70"><a href="#cb3-70" aria-hidden="true" tabindex="-1"></a><span class="op">EOF</span></span></code></pre></div>
+        <div class="sourceCode" id="cb4"><pre
+        class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># ns-blue-route.yaml</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="fu">apiVersion</span><span class="kw">:</span><span class="at"> k8s.ovn.org/v1</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="fu">kind</span><span class="kw">:</span><span class="at"> AdminPolicyBasedExternalRoute</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="fu">metadata</span><span class="kw">:</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">name</span><span class="kw">:</span><span class="at"> ns-blue-route</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="fu">spec</span><span class="kw">:</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">from</span><span class="kw">:</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">namespaceSelector</span><span class="kw">:</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">matchLabels</span><span class="kw">:</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">kubernetes.io/metadata.name</span><span class="kw">:</span><span class="at"> ns-blue</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">nextHops</span><span class="kw">:</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">static</span><span class="kw">:</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> </span><span class="fu">ip</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;192.168.99.13&quot;</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a><span class="pp">---</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a><span class="co"># ns-red-route.yaml</span></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a><span class="fu">apiVersion</span><span class="kw">:</span><span class="at"> k8s.ovn.org/v1</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a><span class="fu">kind</span><span class="kw">:</span><span class="at"> AdminPolicyBasedExternalRoute</span></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a><span class="fu">metadata</span><span class="kw">:</span></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">name</span><span class="kw">:</span><span class="at"> ns-red-route</span></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a><span class="fu">spec</span><span class="kw">:</span></span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">from</span><span class="kw">:</span></span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">namespaceSelector</span><span class="kw">:</span></span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">matchLabels</span><span class="kw">:</span></span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">kubernetes.io/metadata.name</span><span class="kw">:</span><span class="at"> ns-red</span></span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">nextHops</span><span class="kw">:</span></span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">static</span><span class="kw">:</span></span>
+<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> </span><span class="fu">ip</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;192.168.99.14&quot;</span></span></code></pre></div>
+        <p>Apply these configurations using
+        <code>oc apply -f &lt;filename&gt;</code>. All outbound traffic
+        from <code>ns-blue</code> will now be forwarded at Layer 2 to
+        the MAC address corresponding to <code>192.168.99.13</code>,
+        retaining the Pod IP as the source.</p>
+        <h3 id="gateway-vm-service-configuration-and-execution">3.
+        Gateway VM Service Configuration and Execution</h3>
+        <p>Using the provided <code>ocp_egress_gw.py</code> script, you
+        can manage tenant configurations and dynamic routing via the
+        CLI.</p>
+        <h4 id="step-a-start-the-dynamic-route-monitoring-daemon">Step
+        A: Start the Dynamic Route Monitoring Daemon</h4>
+        <p>Run the node event listener daemon in the background with
+        <code>root</code> privileges and a valid
+        <code>KUBECONFIG</code>. This daemon automatically queries all
+        nodes and configures return routes:
+        <code>ip route add &lt;pod_ip_cidr&gt; via &lt;node_ip&gt; dev &lt;internal_nic&gt;</code>.
+        It ensures routes are synchronized as nodes are added or
+        removed.</p>
+        <div class="sourceCode" id="cb5"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="bu">export</span> <span class="va">KUBECONFIG</span><span class="op">=</span>/root/.kube/config</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> ocp_egress_gw.py daemon <span class="at">--dev</span> enp1s0 <span class="kw">&amp;</span></span></code></pre></div>
+        <blockquote>
+        <p>[!NOTE] Ensure IP forwarding is enabled and Reverse Path
+        Filtering is disabled (<code>rp_filter = 0</code>) to handle
+        asymmetric routing scenarios. Also, verify that the Gateway VM’s
+        default route points to the external NIC
+        (<code>eth1</code>).</p>
+        </blockquote>
+        <h4
+        id="step-b-add-tenant-configurations-and-external-egress-ips">Step
+        B: Add Tenant Configurations and External Egress IPs</h4>
+        <p>Inject tenant settings into the Gateway VM CLI. This
+        automatically creates <code>macvlan</code> interfaces on the
+        internal NIC, assigns gateway IPs, and sets up Mark-based SNAT
+        rules on the external NIC via <code>iptables</code>.</p>
+        <div class="sourceCode" id="cb6"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ip</span> a</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="co"># 1: lo: &lt;LOOPBACK,UP,LOWER_UP&gt; mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="co">#     link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="co">#     inet 127.0.0.1/8 scope host lo</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="co">#        valid_lft forever preferred_lft forever</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="co">#     inet6 ::1/128 scope host</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a><span class="co">#        valid_lft forever preferred_lft forever</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a><span class="co"># 2: enp1s0: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu 1500 qdisc fq_codel state UP group default qlen 1000</span></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a><span class="co">#     link/ether 52:54:00:a4:4f:32 brd ff:ff:ff:ff:ff:ff</span></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a><span class="co">#     inet 192.168.99.12/24 brd 192.168.99.255 scope global noprefixroute enp1s0</span></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a><span class="co">#        valid_lft forever preferred_lft forever</span></span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a><span class="co">#     inet6 fe80::5054:ff:fea4:4f32/64 scope link noprefixroute</span></span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a><span class="co">#        valid_lft forever preferred_lft forever</span></span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a><span class="co"># 3: enp7s0: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu 1500 qdisc fq_codel state UP group default qlen 1000</span></span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a><span class="co">#     link/ether 52:54:00:73:38:f7 brd ff:ff:ff:ff:ff:ff</span></span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a><span class="co">#     inet 192.168.55.12/24 brd 192.168.55.255 scope global noprefixroute enp7s0</span></span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a><span class="co">#        valid_lft forever preferred_lft forever</span></span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a><span class="co">#     inet6 fe80::723:fe87:2520:b90d/64 scope link noprefixroute</span></span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a><span class="co">#        valid_lft forever preferred_lft forever</span></span>
+<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a><span class="co"># Add Blue Tenant: Internal GW IP 192.168.99.13, External Egress IP 192.168.55.113, Mark 10 (0xa)</span></span>
+<span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> ocp_egress_gw.py add-tenant <span class="at">--name</span> ns-blue <span class="dt">\</span></span>
+<span id="cb6-24"><a href="#cb6-24" aria-hidden="true" tabindex="-1"></a>    <span class="at">--gw-ip</span> 192.168.99.13 <span class="dt">\</span></span>
+<span id="cb6-25"><a href="#cb6-25" aria-hidden="true" tabindex="-1"></a>    <span class="at">--egress-ip</span> 192.168.55.113 <span class="dt">\</span></span>
+<span id="cb6-26"><a href="#cb6-26" aria-hidden="true" tabindex="-1"></a>    <span class="at">--mark</span> 10 <span class="at">--dev</span> enp1s0 <span class="at">--out-dev</span> enp7s0 <span class="at">--pod-cidr</span> 10.128.0.0/14</span>
+<span id="cb6-27"><a href="#cb6-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-28"><a href="#cb6-28" aria-hidden="true" tabindex="-1"></a><span class="co"># Add Red Tenant: Internal GW IP 192.168.99.14, External Egress IP 192.168.55.114, Mark 20 (0x14)</span></span>
+<span id="cb6-29"><a href="#cb6-29" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> ocp_egress_gw.py add-tenant <span class="at">--name</span> ns-red <span class="dt">\</span></span>
+<span id="cb6-30"><a href="#cb6-30" aria-hidden="true" tabindex="-1"></a>    <span class="at">--gw-ip</span> 192.168.99.14 <span class="dt">\</span></span>
+<span id="cb6-31"><a href="#cb6-31" aria-hidden="true" tabindex="-1"></a>    <span class="at">--egress-ip</span> 192.168.55.114 <span class="dt">\</span></span>
+<span id="cb6-32"><a href="#cb6-32" aria-hidden="true" tabindex="-1"></a>    <span class="at">--mark</span> 20 <span class="at">--dev</span> enp1s0 <span class="at">--out-dev</span> enp7s0 <span class="at">--pod-cidr</span> 10.128.0.0/14</span>
+<span id="cb6-33"><a href="#cb6-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-34"><a href="#cb6-34" aria-hidden="true" tabindex="-1"></a><span class="co"># Removal examples:</span></span>
+<span id="cb6-35"><a href="#cb6-35" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> ocp_egress_gw.py remove-tenant <span class="at">--name</span> ns-blue <span class="at">--mark</span> 10 <span class="at">--egress-ip</span> 192.168.55.113 <span class="at">--out-dev</span> enp7s0</span>
+<span id="cb6-36"><a href="#cb6-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-37"><a href="#cb6-37" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> ocp_egress_gw.py remove-tenant <span class="at">--name</span> ns-red <span class="at">--mark</span> 0x14 <span class="at">--egress-ip</span> 192.168.55.114 <span class="at">--out-dev</span> enp7s0</span></code></pre></div>
+        <h4 id="step-c-verify-configuration-status">Step C: Verify
+        Configuration Status</h4>
+        <p>Use the <code>status</code> command to inspect routing
+        tables, MacVLAN interfaces, and <code>iptables</code> rules:</p>
+        <div class="sourceCode" id="cb7"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> ocp_egress_gw.py status</span></code></pre></div>
+        <p><em>Example Expected Output:</em></p>
+        <div class="sourceCode" id="cb8"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="ex">---</span> MACVLAN Interfaces <span class="at">---</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="ex">macvlan-ns-blue@enp1s0</span> UP             ce:4a:63:57:b2:78 <span class="op">&lt;</span>BROADCAST,MULTICAST,UP,LOWER_UP<span class="op">&gt;</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a><span class="ex">macvlan-ns-red@enp1s0</span> UP             c2:aa:17:c5:35:84 <span class="op">&lt;</span>BROADCAST,MULTICAST,UP,LOWER_UP<span class="op">&gt;</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="ex">---</span> IP Routing Table <span class="er">(</span><span class="ex">Pod</span> CIDRs<span class="kw">)</span> <span class="ex">---</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a><span class="ex">default</span> via 192.168.99.1 dev enp1s0 proto static metric 100</span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a><span class="ex">---</span> Mangle Rules <span class="er">(</span><span class="ex">Packet</span> Marking<span class="kw">)</span> <span class="ex">---</span></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a><span class="ex">0</span>     0 MARK       all  <span class="at">--</span>  macvlan-ns-red <span class="pp">*</span>       0.0.0.0/0            0.0.0.0/0            MARK set 0x14</span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>  <span class="ex">236</span> 38239 MARK       all  <span class="at">--</span>  macvlan-ns-blue <span class="pp">*</span>       0.0.0.0/0            0.0.0.0/0            MARK set 0xa</span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a><span class="ex">---</span> NAT Rules <span class="er">(</span><span class="ex">SNAT</span><span class="kw">)</span> <span class="ex">---</span></span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a><span class="ex">0</span>     0 SNAT       all  <span class="at">--</span>  <span class="pp">*</span>      enp7s0  0.0.0.0/0            0.0.0.0/0            mark match 0x14 to:192.168.55.114</span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>    <span class="ex">0</span>     0 SNAT       all  <span class="at">--</span>  <span class="pp">*</span>      enp7s0  0.0.0.0/0            0.0.0.0/0            mark match 0xa to:192.168.55.113</span></code></pre></div>
+        <p>Verify egress connectivity using <code>curl</code> from
+        within the Pods:</p>
+        <div class="sourceCode" id="cb9"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Get the first Pod in ns-red and perform testing</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="va">POD_RED_1</span><span class="op">=</span><span class="va">$(</span><span class="ex">oc</span> get pod <span class="at">-n</span> ns-red <span class="at">--no-headers</span> <span class="kw">|</span> <span class="fu">awk</span> <span class="st">&#39;NR==1 {print $1}&#39;</span><span class="va">)</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> exec <span class="at">-it</span> <span class="va">$POD_RED_1</span> <span class="at">-n</span> ns-red <span class="at">--</span> curl <span class="at">-s</span> http://192.168.55.13:8080</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Get the second Pod in ns-red (adjust NR==2 to select)</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a><span class="va">POD_RED_2</span><span class="op">=</span><span class="va">$(</span><span class="ex">oc</span> get pod <span class="at">-n</span> ns-red <span class="at">--no-headers</span> <span class="kw">|</span> <span class="fu">awk</span> <span class="st">&#39;NR==2 {print $1}&#39;</span><span class="va">)</span></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> exec <span class="at">-it</span> <span class="va">$POD_RED_2</span> <span class="at">-n</span> ns-red <span class="at">--</span> curl <span class="at">-s</span> http://192.168.55.13:8080</span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Same for Blue Namespace</span></span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a><span class="va">POD_BLUE_1</span><span class="op">=</span><span class="va">$(</span><span class="ex">oc</span> get pod <span class="at">-n</span> ns-blue <span class="at">--no-headers</span> <span class="kw">|</span> <span class="fu">awk</span> <span class="st">&#39;NR==1 {print $1}&#39;</span><span class="va">)</span></span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> exec <span class="at">-it</span> <span class="va">$POD_BLUE_1</span> <span class="at">-n</span> ns-blue <span class="at">--</span> curl <span class="at">-s</span> http://192.168.55.13:8080</span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a><span class="va">POD_BLUE_2</span><span class="op">=</span><span class="va">$(</span><span class="ex">oc</span> get pod <span class="at">-n</span> ns-blue <span class="at">--no-headers</span> <span class="kw">|</span> <span class="fu">awk</span> <span class="st">&#39;NR==2 {print $1}&#39;</span><span class="va">)</span></span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> exec <span class="at">-it</span> <span class="va">$POD_BLUE_2</span> <span class="at">-n</span> ns-blue <span class="at">--</span> curl <span class="at">-s</span> http://192.168.55.13:8080</span></code></pre></div>
+        <p>On the destination web server, observe traffic arriving from
+        the respective external Egress IPs:</p>
+        <div class="sourceCode" id="cb10"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> <span class="at">-m</span> http.server 8080</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Serving HTTP on 0.0.0.0 port 8080 (http://0.0.0.0:8080/) ...</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="co"># 192.168.55.113 - - [06/Mar/2026 21:45:05] &quot;GET / HTTP/1.1&quot; 200 -</span></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a><span class="co"># 192.168.55.114 - - [06/Mar/2026 21:53:31] &quot;GET / HTTP/1.1&quot; 200 -</span></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a><span class="co"># 192.168.55.113 - - [06/Mar/2026 21:54:18] &quot;GET / HTTP/1.1&quot; 200 -</span></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a><span class="co"># 192.168.55.114 - - [06/Mar/2026 21:54:26] &quot;GET / HTTP/1.1&quot; 200 -</span></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a><span class="co"># 192.168.55.113 - - [06/Mar/2026 21:54:33] &quot;GET / HTTP/1.1&quot; 200 -</span></span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a><span class="co"># 192.168.55.114 - - [06/Mar/2026 21:54:39] &quot;GET / HTTP/1.1&quot; 200 -</span></span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a><span class="co"># 192.168.55.113 - - [06/Mar/2026 21:54:43] &quot;GET / HTTP/1.1&quot; 200 -</span></span></code></pre></div>
+        <hr />
+        <h2
+        id="technical-insights-and-advanced-considerations">Technical
+        Insights and Advanced Considerations</h2>
+        <h3 id="node-availability-and-dynamic-monitoring">Node
+        Availability and Dynamic Monitoring</h3>
+        <p>The Python daemon solves the “stale static route” problem
+        when OCP nodes go offline or scale. In an OVN environment,
+        return traffic for Pod source IPs must be explicitly routed via
+        the specific host node.</p>
+        <ol type="1">
+        <li>When node events (<code>ADDED</code>/<code>MODIFIED</code>)
+        are detected, the program updates the routing table based on the
+        latest Node <code>InternalIP</code>.</li>
+        <li>Even during Pod migration or node failure, as long as the
+        Pod obtains an IP within a valid PodCIDR on a healthy node, the
+        Gateway VM dynamically ensures return packets reach the correct
+        node via
+        <code>ip route &lt;PodCIDR&gt; via &lt;Node_IP&gt;</code>.</li>
+        </ol>
+        <h3 id="avoiding-route-flapping-and-frr-instability">Avoiding
+        Route Flapping and FRR Instability</h3>
+        <p>If the Gateway VM runs FRR (BGP/OSPF) or requires standard
+        gateway functionality, binding traditional <code>/24</code>
+        masks to <code>macvlan</code> interfaces can be catastrophic.
+        Linux would automatically generate direct routes
+        (<code>192.168.99.0/24 dev macvlan-ns-xxx</code>) in the main
+        table, hijacking traffic from the primary NIC
+        (<code>enp1s0</code>) and causing ARP Flux, asymmetric routing,
+        and FRR neighbor disconnects. The solution uses <code>/32</code>
+        masks (e.g.,
+        <code>ip addr add 192.168.99.13/32 dev macvlan-ns-blue</code>).
+        This allows the interface to respond to ARP requests for its
+        specific IP without polluting the routing table with overlapping
+        subnet routes.</p>
+        <h3 id="resolving-arp-flux-for-prerouting-integrity">Resolving
+        ARP Flux for PREROUTING Integrity</h3>
+        <p>When multiple MacVLANs share a physical interface, default
+        Linux ARP behavior might cause the primary interface
+        (<code>enp1s0</code>) to respond to ARP requests meant for the
+        MacVLAN IP. If traffic enters via <code>enp1s0</code> instead of
+        the specific <code>macvlan</code> interface, it bypasses the
+        <code>-i macvlan-XXX</code> <code>iptables</code> PREROUTING
+        marking rules, breaking the SNAT chain. Strict ARP isolation
+        parameters are applied:</p>
+        <div class="sourceCode" id="cb11"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="ex">sysctl</span> <span class="at">-w</span> net.ipv4.conf.all.arp_ignore=1</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="ex">sysctl</span> <span class="at">-w</span> net.ipv4.conf.all.arp_announce=2</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a><span class="ex">sysctl</span> <span class="at">-w</span> net.ipv4.conf.enp1s0.arp_ignore=1</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a><span class="ex">sysctl</span> <span class="at">-w</span> net.ipv4.conf.enp1s0.arp_announce=2</span></code></pre></div>
+        <p>This forces only the interface owning the IP to respond to
+        ARP requests, ensuring traffic enters through the correct
+        virtual NIC.</p>
+        <hr />
+        <h2
+        id="limitations-arp-cache-latency-and-pod-ip-leakage-prevention">Limitations:
+        ARP Cache Latency and Pod IP Leakage Prevention</h2>
+        <p>This solution relies heavily on Layer 2 MAC addresses for
+        tenant isolation. When OCP nodes forward traffic via APB, they
+        retain the original Pod IP at Layer 3 and use the target MAC
+        address at Layer 2 to steer traffic into the correct
+        <code>macvlan</code> interface.</p>
+        <h3 id="the-problem-arp-convergence-delay">The Problem: ARP
+        Convergence Delay</h3>
+        <p>When a tenant gateway IP is newly created or migrated, OCP
+        nodes may continue using the Gateway VM’s <strong>primary MAC
+        address (<code>enp1s0</code>)</strong> due to stale local ARP
+        caches, even if Gratuitous ARPs are sent. Traffic arriving at
+        <code>enp1s0</code> fails to match the
+        <code>macvlan</code>-specific <code>iptables</code> MARK rules.
+        Since it retains the Pod IP and matches the default gateway, it
+        is forwarded out of the external interface <strong>without
+        SNAT</strong>, resulting in <strong>Pod IP leakage</strong>.</p>
+        <h3 id="the-impact-conntrack-lock-in">The Impact: Conntrack
+        “Lock-in”</h3>
+        <p>Linux Connection Tracking (<code>conntrack</code>)
+        immediately records these un-NAT’ed flows. Even after the ARP
+        cache converges, subsequent packets for the same flow might be
+        correctly tagged, but the NAT engine may continue skipping
+        translation to maintain consistency with the existing
+        <code>conntrack</code> entry. This leads to persistent
+        communication failure until the connection times out.</p>
+        <h3 id="mitigation-the-fail-closed-forward-rule">Mitigation: The
+        “Fail-Closed” FORWARD Rule</h3>
+        <p>To prevent leakage without disrupting normal Gateway
+        management traffic (non-Pod traffic), a specific
+        <code>FORWARD</code> rejection rule is recommended.
+        <strong>Strategy</strong>: “If traffic originating from the
+        internal Pod CIDR enters via the internal NIC but has NOT been
+        tagged with a tenant MARK, REJECT it immediately.”</p>
+        <p>Example for a cluster Pod CIDR
+        <code>10.128.0.0/14</code>:</p>
+        <div class="sourceCode" id="cb12"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="ex">iptables</span> <span class="at">-I</span> FORWARD <span class="at">-i</span> enp1s0 <span class="at">-o</span> enp7s0 <span class="at">-s</span> 10.128.0.0/14 <span class="at">-m</span> mark <span class="at">--mark</span> 0 <span class="at">-j</span> REJECT <span class="at">--reject-with</span> icmp-port-unreachable</span></code></pre></div>
+        <p>This rule acts as a safety net. It blocks “leaking” traffic
+        and sends an ICMP unreachable message, which triggers the client
+        to reset the connection. By the time a reconnection is
+        attempted, ARP caches have typically synchronized, and the new
+        flow will correctly enter the MacVLAN interface and receive
+        proper SNAT. Normal management traffic from other VMs remains
+        unaffected as their source IPs fall outside the Pod CIDR
+        range.</p>
+      </article>
+    </div>
+      </main>
+
+  <footer>
+    <p>
+      Licensed under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank"
+        rel="noopener">CC-BY-NC-SA 4.0</a>
+      &nbsp;·&nbsp;
+      <a href="https://github.com/wangzheng422/docker_env" target="_blank" rel="noopener">wangzheng422/docker_env</a>
+    </p>
+  </footer>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: false, theme: 'dark' });
+
+    const SITE_BUILD_ID = 'fbe91b569ae8';
+    const SITE_HOME_URL = '../../../index.html';
+
+    const getBuildIdFromHtml = (html) => {
+      const match = String(html).match(/<meta[^>]+name=["']site-build-id["'][^>]+content=["']([^"']+)["']/i)
+        || String(html).match(/<meta[^>]+content=["']([^"']+)["'][^>]+name=["']site-build-id["']/i);
+      return match ? match[1] : '';
+    };
+
+    const checkForSiteUpdate = async () => {
+      if (!SITE_BUILD_ID || window.location.protocol === 'file:') return;
+      try {
+        const probeUrl = new URL(SITE_HOME_URL || './index.html', window.location.href);
+        probeUrl.searchParams.set('site_cache_probe', Date.now().toString());
+        const response = await fetch(probeUrl.toString(), { cache: 'no-store' });
+        if (!response.ok) return;
+        const latestBuildId = getBuildIdFromHtml(await response.text());
+        if (!latestBuildId || latestBuildId === SITE_BUILD_ID) return;
+        if (sessionStorage.getItem('site-build-refresh') === latestBuildId) return;
+        sessionStorage.setItem('site-build-refresh', latestBuildId);
+        const freshUrl = new URL(window.location.href);
+        freshUrl.searchParams.set('v', latestBuildId);
+        window.location.replace(freshUrl.toString());
+      } catch (error) {
+        // Network errors should not block reading the current page.
+      }
+    };
+
+    const versionedLocalUrl = (rawUrl) => {
+      if (!rawUrl || /^(https?:)?\/\//i.test(rawUrl) || /^(data|blob|mailto):/i.test(rawUrl)) return rawUrl;
+      const url = new URL(rawUrl, window.location.href);
+      if (url.searchParams.has('v')) return rawUrl;
+      url.searchParams.set('v', SITE_BUILD_ID);
+      return url.toString();
+    };
+
+    const cacheBustPageAssets = () => {
+      document.querySelectorAll('img[src], video[src], audio[src], source[src]').forEach((node) => {
+        const src = node.getAttribute('src');
+        const versioned = versionedLocalUrl(src);
+        if (versioned !== src) node.setAttribute('src', versioned);
+      });
+    };
+
+    const updateReadingProgress = () => {
+      const progress = document.querySelector('.reading-progress');
+      if (!progress) return;
+      const scrollable = document.documentElement.scrollHeight - window.innerHeight;
+      const ratio = scrollable > 0 ? window.scrollY / scrollable : 0;
+      progress.style.transform = 'scaleX(' + Math.min(1, Math.max(0, ratio)) + ')';
+    };
+
+    const topicFor = (text, href) => {
+      const haystack = (text + ' ' + href).toLowerCase();
+      if (/developers\.redhat\.com|redhatquickcourses|github\.com\/redhatquickcourses/.test(haystack)) return 'Red Hat';
+      if (/ai|llm|gpu|vllm|llama|model|rhaiis/.test(haystack)) return 'AI';
+      if (/network|ovn|bgp|dns|egress|ingress|metallb|nic|route/.test(haystack)) return 'Network';
+      if (/cert|tls|sso|keycloak|rhbk|security|compliance/.test(haystack)) return 'Security';
+      if (/perf|profile|throttling|heap|debug/.test(haystack)) return 'Performance';
+      if (/install|ipi|upi|sno|disconnected|bootstrap/.test(haystack)) return 'Install';
+      if (/rhel|coreos|rhcos|kernel|rpm|ostree/.test(haystack)) return 'RHEL';
+      if (/backup|storage|nfs|odf|ocs|ceph|dr/.test(haystack)) return 'Storage';
+      if (/pipeline|gitops|ansible|aap|rhdh|devops/.test(haystack)) return 'DevOps';
+      return 'OpenShift';
+    };
+
+    const yearFor = (text, href) => {
+      const match = (text + ' ' + href).match(/20\d{2}/);
+      return match ? match[0] : 'Notes';
+    };
+
+    const importantExternal = (href) =>
+      /developers\.redhat\.com|redhatquickcourses\.github\.io/i.test(href);
+
+    const titleForLink = (link) => {
+      const href = link.getAttribute('href') || '';
+      const directText = link.textContent.trim().replace(/\s+/g, ' ');
+      if (!/^https?:\/\//.test(directText)) return directText;
+      const parentItem = link.closest('ul')?.parentElement;
+      if (parentItem) {
+        const clone = parentItem.cloneNode(true);
+        clone.querySelectorAll('ul').forEach((nested) => nested.remove());
+        const parentText = clone.textContent.trim().replace(/\s+/g, ' ');
+        if (parentText) {
+          return parentText;
+        }
+      }
+      return directText;
+    };
+
+    const escapeHtml = (value) => String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+
+    const enhanceHome = () => {
+      if (!document.body.classList.contains('page-index')) return;
+      const source = document.querySelector('.home-source');
+      const grid = document.getElementById('note-grid');
+      const stats = document.getElementById('console-stats');
+      const externalPanel = document.getElementById('external-panel');
+      const topicStrip = document.getElementById('topic-strip');
+      const search = document.getElementById('console-search');
+      if (!source || !grid || !stats || !externalPanel || !topicStrip || !search) return;
+
+      const seen = new Set();
+      const links = Array.from(source.querySelectorAll('a[href]'))
+        .map((link) => {
+          const href = link.getAttribute('href') || '';
+          const text = titleForLink(link);
+          return { text, href, topic: topicFor(text, href), year: yearFor(text, href) };
+        });
+      const notes = links
+        .filter((note) => note.text && !note.href.startsWith('http') && !seen.has(note.href) && seen.add(note.href));
+      const externalLinks = links
+        .filter((note) => note.text && importantExternal(note.href));
+
+      const topics = ['All', ...Array.from(new Set(notes.map((note) => note.topic))).sort()];
+      let activeTopic = 'All';
+
+      const renderStats = () => {
+        const years = notes.map((note) => note.year).filter((year) => year.length === 4 && /^\d{4}/.test(year));
+        const latest = years.length ? Math.max(...years.map(Number)) : 'N/A';
+        const oldest = years.length ? Math.min(...years.map(Number)) : 'N/A';
+        stats.innerHTML = [
+          ['Notes', notes.length],
+          ['Resources', externalLinks.length],
+          ['Topics', topics.length - 1],
+          ['Latest', latest],
+        ].map(([label, value]) => '<div class="stat-tile"><span>' + label + '</span><strong>' + value + '</strong></div>').join('');
+        const signal = document.getElementById('signal-count');
+        if (signal) signal.textContent = notes.length + ' links indexed';
+      };
+
+      const renderExternal = () => {
+        externalPanel.innerHTML =
+          '<div class="section-heading"><span>Published / Learning</span><strong>Red Hat resources</strong></div>' +
+          '<div class="external-grid">' +
+          externalLinks.map((note) =>
+            '<a class="resource-card" href="' + escapeHtml(note.href) + '" target="_blank" rel="noopener">' +
+            '<span class="note-meta"><span>' + escapeHtml(note.year) + '</span><span>' + escapeHtml(note.topic) + '</span></span>' +
+            '<strong>' + escapeHtml(note.text) + '</strong>' +
+            '<small>' + escapeHtml(note.href) + '</small>' +
+            '</a>'
+          ).join('') +
+          '</div>';
+      };
+
+      const renderTopics = () => {
+        topicStrip.innerHTML = topics.map((topic) => '<button class="topic-chip' + (topic === activeTopic ? ' active' : '') + '" type="button" data-topic="' + escapeHtml(topic) + '">' + escapeHtml(topic) + '</button>').join('');
+        topicStrip.querySelectorAll('button').forEach((button) => {
+          button.addEventListener('click', () => {
+            activeTopic = button.dataset.topic || 'All';
+            renderTopics();
+            renderCards();
+          });
+        });
+      };
+
+      const renderCards = () => {
+        const query = search.value.trim().toLowerCase();
+        const filtered = notes.filter((note) => {
+          const topicMatch = activeTopic === 'All' || note.topic === activeTopic;
+          const queryMatch = !query || (note.text + ' ' + note.href + ' ' + note.topic + ' ' + note.year).toLowerCase().includes(query);
+          return topicMatch && queryMatch;
+        });
+        grid.innerHTML = filtered.map((note) =>
+          '<a class="note-card" href="' + escapeHtml(note.href) + '">' +
+          '<span class="note-meta"><span>' + escapeHtml(note.year) + '</span><span>' + escapeHtml(note.topic) + '</span></span>' +
+          '<strong>' + escapeHtml(note.text) + '</strong>' +
+          '<small>' + escapeHtml(note.href) + '</small>' +
+          '</a>'
+        ).join('') || '<p class="empty-state">No matching notes.</p>';
+      };
+
+      const drawMap = () => {
+        const canvas = document.getElementById('knowledge-canvas');
+        if (!(canvas instanceof HTMLCanvasElement)) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        const width = canvas.width;
+        const height = canvas.height;
+        const nodes = notes.slice(0, 44).map((note, index) => {
+          const angle = (index / 44) * Math.PI * 2;
+          const ring = 90 + (index % 5) * 22;
+          return {
+            x: width / 2 + Math.cos(angle) * ring,
+            y: height / 2 + Math.sin(angle) * ring * 0.72,
+            topic: note.topic,
+          };
+        });
+        ctx.clearRect(0, 0, width, height);
+        ctx.strokeStyle = 'rgba(88, 166, 255, 0.14)';
+        ctx.lineWidth = 1;
+        nodes.forEach((node, index) => {
+          const next = nodes[(index + 7) % nodes.length];
+          ctx.beginPath();
+          ctx.moveTo(node.x, node.y);
+          ctx.lineTo(next.x, next.y);
+          ctx.stroke();
+        });
+        const palette = {
+          AI: '#a371f7',
+          Network: '#39d0d8',
+          Security: '#ff7b72',
+          Performance: '#f2cc60',
+          Install: '#7ee787',
+          RHEL: '#ff7b72',
+          Storage: '#d2a8ff',
+          DevOps: '#ffa657',
+          OpenShift: '#58a6ff',
+        };
+        nodes.forEach((node) => {
+          ctx.fillStyle = palette[node.topic] || '#58a6ff';
+          ctx.beginPath();
+          ctx.arc(node.x, node.y, 3.4, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      };
+
+      search.addEventListener('input', renderCards);
+      renderStats();
+      renderExternal();
+      renderTopics();
+      renderCards();
+      drawMap();
+      document.body.classList.add('home-enhanced');
+    };
+
+    const enhanceCodeBlocks = () => {
+      document.querySelectorAll('pre').forEach((pre) => {
+        if (pre.classList.contains('mermaid') || pre.querySelector('.copy-code')) return;
+        const button = document.createElement('button');
+        button.className = 'copy-code';
+        button.type = 'button';
+        button.textContent = 'Copy';
+        button.addEventListener('click', async () => {
+          await navigator.clipboard.writeText(pre.textContent || '');
+          button.textContent = 'Copied';
+          setTimeout(() => { button.textContent = 'Copy'; }, 1200);
+        });
+        pre.appendChild(button);
+      });
+    };
+
+    window.addEventListener('scroll', updateReadingProgress, { passive: true });
+    window.addEventListener('pageshow', (event) => {
+      if (event.persisted) checkForSiteUpdate();
+    });
+    document.addEventListener('DOMContentLoaded', async () => {
+      checkForSiteUpdate();
+      cacheBustPageAssets();
+      updateReadingProgress();
+      enhanceHome();
+      enhanceCodeBlocks();
+      // pandoc 输出 mermaid 为 <pre class="mermaid"><code>...</code></pre>
+      // 需要转成 <div class="mermaid">...</div> 供 mermaid.js 渲染
+      document.querySelectorAll('pre.mermaid').forEach(pre => {
+        const div = document.createElement('div');
+        div.classList.add('mermaid');
+        div.textContent = pre.textContent;
+        pre.replaceWith(div);
+      });
+      // 也处理 <pre><code class="language-mermaid"> 形式（备用）
+      document.querySelectorAll('pre code.language-mermaid').forEach(code => {
+        const div = document.createElement('div');
+        div.classList.add('mermaid');
+        div.textContent = code.textContent;
+        code.closest('pre').replaceWith(div);
+      });
+      await mermaid.run();
+    });
+  </script>
+</body>
+
+</html>

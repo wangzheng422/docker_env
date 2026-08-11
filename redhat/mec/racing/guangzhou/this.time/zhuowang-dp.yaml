@@ -1,0 +1,740 @@
+---
+apiVersion: apps.openshift.io/v1
+kind: DeploymentConfig
+metadata:
+  name: zw-api-oc
+  namespace: zhuowang
+spec:
+  replicas: 1
+  selector:
+    zw-api-oc: 'true'
+  template:
+    metadata:
+      labels:
+        zw-api-oc: 'true'
+    spec:
+      containers:
+        - env:
+            - name: nginx_img_url
+              value: nginx
+            - name: key_ocean_ip
+              value: ocean
+            - name: mysql_ip
+              value: mysql
+            - name: kafka_address
+              value: 'kafka:9092'
+            - name: zookeeper_address
+              value: 'zookeeper:2181'
+            - name: engine_ip
+              value: ocean
+            - name: orc_ip
+              value: ocean
+            - name: orc_live_ip
+              value: ocean
+            - name: redis_ip
+              value: redisp
+            - name: ftp_ip
+              value: ocean
+          image: 'registry.crmi.cn:5021/zhuowang/ocean:1.4.2'
+          imagePullPolicy: Always
+          name: zw-api-oc
+          ports:
+            - containerPort: 11006
+              protocol: TCP
+          volumeMounts:
+            - mountPath: /home/nasdata
+              name: nasdata
+      dnsPolicy: ClusterFirst
+      nodeSelector:
+        kubernetes.io/hostname: node-otii.crmi.cn
+      restartPolicy: Always
+      serviceAccountName: mysvcacct
+      volumes:
+        - hostPath:
+            path: /data/zw/nasdata
+          name: nasdata
+  triggers:
+    - type: ConfigChange
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ocean
+  namespace: zhuowang
+spec:
+  ports:
+    - name: tcp-11006
+      port: 11006
+      protocol: TCP
+      targetPort: 11006
+      # nodePort: 32261
+  selector:
+    zw-api-oc: 'true'
+  type: ClusterIP
+  # type: NodePort
+---
+apiVersion: apps.openshift.io/v1
+kind: DeploymentConfig
+metadata:
+  name: zw-facego
+  namespace: zhuowang
+spec:
+  replicas: 1
+  selector:
+    zw-facego: 'true'
+  template:
+    metadata:
+      labels:
+        zw-facego: 'true'
+    spec:
+      containers:
+        - env:
+            - name: NVIDIA_VISIBLE_DEVICES
+              value: all
+            - name: NVIDIA_DRIVER_CAPABILITIES
+              value: 'compute,utility'
+            - name: NVIDIA_REQUIRE_CUDA
+              value: cuda>=5.0
+          image: 'registry.crmi.cn:5021/zhuowang/facego-gpu-t4:0806'
+          imagePullPolicy: Always
+          name: zw-facego
+          ports:
+            - containerPort: 7100
+              protocol: TCP
+            - containerPort: 23011
+              protocol: TCP
+            - containerPort: 20000
+              protocol: TCP
+            - containerPort: 23000
+              protocol: TCP
+          volumeMounts:
+            - mountPath: /usr/tmp/FaceGo-GPU/data
+              name: recogdata
+            - mountPath: /usr/tmp/FaceGo-GPU/facedb
+              name: facedb
+            - mountPath: /usr/tmp/FaceGo-Snap/data
+              name: snapdata
+            - mountPath: /usr/tmp/FaceGo-Feature/AlgorithmFeature/config
+              name: feature-config
+            - mountPath: /usr/tmp/FaceGo-GPU/facewarehouse_gpu/algosdk/config
+              name: recog-config
+          securityContext:
+            allowPrivilegeEscalation: true
+            # capabilities:
+            #   drop: ["ALL"]
+            seLinuxOptions:
+              type: nvidia_container_t
+      nodeSelector:
+        kubernetes.io/hostname: node-otii.crmi.cn
+      restartPolicy: Always
+      serviceAccountName: mysvcacct
+      volumes:
+        - hostPath:
+            path: /data/zw/recogdata/data
+          name: recogdata
+        - hostPath:
+            path: /data/zw/recogdata/facedb
+          name: facedb
+        - hostPath:
+            path: /data/zw/snapdata
+          name: snapdata
+        - hostPath:
+            path: /data/zw/Feature_config
+          name: feature-config
+        - hostPath:
+            path: /data/zw/Recog_config
+          name: recog-config
+  triggers:
+    - type: ConfigChange
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: facego
+  namespace: zhuowang
+spec:
+  ports:
+    - port: 8100
+      protocol: TCP
+      targetPort: 7100
+      name: http
+    - port: 23011
+      protocol: TCP
+      targetPort: 23011
+      name: http1
+    - port: 20000
+      protocol: TCP
+      targetPort: 20000
+      name: webpush
+    - port: 23000
+      protocol: TCP
+      targetPort: 23000
+      name: tcp-23000
+  selector:
+    zw-facego: 'true'
+  # type: NodePort
+  type: ClusterIP
+---
+apiVersion: apps.openshift.io/v1
+kind: DeploymentConfig
+metadata:
+  name: zw-kaf1
+  namespace: zhuowang
+spec:
+  replicas: 1
+  selector:
+    zw-kaf1: 'true'
+  template:
+    metadata:
+      labels:
+        zw-kaf1: 'true'
+    spec:
+      containers:
+        - env:
+            - name: KAFKA_ZOOKEEPER_CONNECT
+              value: 'zookeeper:2181'
+            - name: KAFKA_ADVERTISED_HOST_NAME
+              value: kafka
+          image: 'registry.crmi.cn:5021/zhuowang/kafka:1.4.2'
+          imagePullPolicy: Always
+          name: zw-kaf1
+          ports:
+            - containerPort: 9092
+              protocol: TCP
+      nodeSelector:
+        kubernetes.io/hostname: node-otii.crmi.cn
+      restartPolicy: Always
+      serviceAccountName: mysvcacct
+  triggers:
+    - type: ConfigChange
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka
+  namespace: zhuowang
+spec:
+  ports:
+    - port: 9092
+      protocol: TCP
+      targetPort: 9092
+  selector:
+    zw-kaf1: 'true'
+  type: ClusterIP
+
+---
+apiVersion: apps.openshift.io/v1
+kind: DeploymentConfig
+metadata:
+  name: zw-mysql-oc
+  namespace: zhuowang
+spec:
+  replicas: 1
+  selector:
+    zw-mysql-oc: 'true'
+  template:
+    metadata:
+      labels:
+        zw-mysql-oc: 'true'
+    spec:
+      containers:
+        - image: 'registry.crmi.cn:5021/zhuowang/mysql:1.4.2'
+          imagePullPolicy: Always
+          name: zw-mysql-oc
+          ports:
+            - containerPort: 3306
+              protocol: TCP
+          securityContext:
+            privileged: true
+          volumeMounts:
+            - mountPath: /var/lib/mysql
+              name: mysql
+      dnsPolicy: ClusterFirst
+      nodeSelector:
+        kubernetes.io/hostname: node-otii.crmi.cn
+      restartPolicy: Always
+      serviceAccountName: mysvcacct
+      volumes:
+        - hostPath:
+            path: /data/zw/mysql
+          name: mysql
+  triggers:
+    - type: ConfigChange
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql
+  namespace: zhuowang
+spec:
+  ports:
+    - port: 3306
+      protocol: TCP
+      targetPort: 3306
+  selector:
+    zw-mysql-oc: 'true'
+  type: ClusterIP
+---
+apiVersion: apps.openshift.io/v1
+kind: DeploymentConfig
+metadata:
+  name: zw-nginx-oc
+  namespace: zhuowang
+spec:
+  replicas: 1
+  selector:
+    zw-nginx-oc: 'true'
+  template:
+    metadata:
+      labels:
+        zw-nginx-oc: 'true'
+    spec:
+      containers:
+        - env:
+            - name: key_ocean
+              value: ocean
+            - name: key_facebigdata
+              value: facego
+            - name: key_ocean_manage
+              value: ocean-manage
+            - name: ocean_entry_http
+              value: ocean-entry-http
+            - name: key_ocean_socket_ip
+              value: ocean-socket
+            - name: key_ocean_ip
+              value: ocean
+            - name: ocean_manage_ip
+              value: ocean-manage
+            - name: key_nginx_ip
+              value: nginx
+          image: 'registry.crmi.cn:5021/zhuowang/nginx:1.4.2'
+          imagePullPolicy: Always
+          name: zw-nginx-oc
+          ports:
+            - containerPort: 10000
+              protocol: TCP
+            - containerPort: 10001
+              protocol: TCP
+            - containerPort: 10005
+              protocol: TCP
+            - containerPort: 10006
+              protocol: TCP
+            - containerPort: 10007
+              protocol: TCP
+            - containerPort: 10011
+              protocol: TCP
+          volumeMounts:
+            - mountPath: /home/nasdata
+              name: nasdata
+      dnsPolicy: ClusterFirst
+      nodeSelector:
+        kubernetes.io/hostname: node-otii.crmi.cn
+      restartPolicy: Always
+      serviceAccountName: mysvcacct
+      volumes:
+        - hostPath:
+            path: /data/zw/nasdata
+          name: nasdata
+  triggers:
+    - type: ConfigChange
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx
+  namespace: zhuowang
+spec:
+  ports:
+    - name: tcp-10000
+      port: 10000
+      protocol: TCP
+      targetPort: 10000
+    - name: ocean-manager
+      port: 10001
+      protocol: TCP
+      targetPort: 10001
+    - name: pic
+      port: 10005
+      protocol: TCP
+      targetPort: 10005
+    - name: ocean-api
+      port: 10006
+      protocol: TCP
+      targetPort: 10006
+    - name: tcp-10007
+      port: 10007
+      protocol: TCP
+      targetPort: 10007
+    - name: tcp-10011
+      port: 10011
+      protocol: TCP
+      targetPort: 10011
+  selector:
+    zw-nginx-oc: 'true'
+  type: ClusterIP
+---
+apiVersion: apps.openshift.io/v1
+kind: DeploymentConfig
+metadata:
+  name: zw-ocean-entry-http
+  namespace: zhuowang
+spec:
+  replicas: 1
+  selector:
+    zw-ocean-entry-http: 'true'
+  template:
+    metadata:
+      labels:
+        zw-ocean-entry-http: 'true'
+    spec:
+      containers:
+        - env:
+            - name: nginx_img_url
+              value: nginx
+            - name: ocean_entry_http_ip
+              value: "127.0.0.1" 
+            - name: mysql
+              value: zw-facego
+            - name: kafka_address
+              value: 'kafka:9092'
+            - name: zookeeper_address
+              value: 'zookeeper:2181'
+            - name: engine_ip
+              value: ocean
+            - name: redis_ip
+              value: redis
+          image: 'registry.crmi.cn:5021/zhuowang/ocean-entry-http:1.4.2'
+          imagePullPolicy: Always
+          name: zw-ocean-entry-http
+          ports:
+            - containerPort: 11013
+              protocol: TCP
+          volumeMounts:
+            - mountPath: /home/nasdata
+              name: nasdata
+      dnsPolicy: ClusterFirst
+      nodeSelector:
+        kubernetes.io/hostname: node-otii.crmi.cn
+      restartPolicy: Always
+      serviceAccountName: mysvcacct
+      volumes:
+        - hostPath:
+            path: /data/zw/nasdata
+            type: ''
+          name: nasdata
+  triggers:
+    - type: ConfigChange
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ocean-entry-http
+  namespace: zhuowang
+spec:
+  ports:
+    - name: tcp-11013
+      port: 11013
+      protocol: TCP
+      targetPort: 11013
+  selector:
+    zw-ocean-entry-http: 'true'
+  type: ClusterIP
+---
+apiVersion: apps.openshift.io/v1
+kind: DeploymentConfig
+metadata:
+  name: zw-ocean-manager
+  namespace: zhuowang
+spec:
+  replicas: 1
+  selector:
+    zw-ocean-manager: 'true'
+  template:
+    metadata:
+      labels:
+        zw-ocean-manager: 'true'
+    spec:
+      containers:
+        - env:
+            - name: nginx_ip
+              value: nginx
+            - name: mysql_ip
+              value: mysql
+            - name: key_ocean_manage
+              value: '127.0.0.1'
+            - name: kafka_address
+              value: 'kafka:9092'
+            - name: zookeeper_address
+              value: 'zookeeper:2181'
+            - name: FaceGo_ip
+              value: facego
+            - name: key_FaceGo_ip
+              value: facego
+            - name: redis_ip
+              value: redisp
+          image: 'registry.crmi.cn:5021/zhuowang/ocean-manager:1.4.2'
+          imagePullPolicy: Always
+          name: zw-ocean-manager
+          ports:
+            - containerPort: 11007
+              hostPort: 11007
+              protocol: TCP
+          volumeMounts:
+            - mountPath: /home/nasdata
+              name: nasdata
+      dnsPolicy: ClusterFirst
+      nodeSelector:
+        kubernetes.io/hostname: node-otii.crmi.cn
+      restartPolicy: Always
+      serviceAccountName: mysvcacct
+      volumes:
+        - hostPath:
+            path: /data/zw/nasdata_2
+          name: nasdata
+  triggers:
+    - type: ConfigChange
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ocean-manager
+  namespace: zhuowang
+spec:
+  ports:
+    - name: web
+      port: 11007
+      protocol: TCP
+      targetPort: 11007
+  selector:
+    zw-ocean-manager: 'true'
+  type: ClusterIP
+---
+apiVersion: apps.openshift.io/v1
+kind: DeploymentConfig
+metadata:
+  name: zw-ocean-socket
+  namespace: zhuowang
+spec:
+  replicas: 1
+  selector:
+    zw-ocean-socket: 'true'
+  template:
+    metadata:
+      labels:
+        zw-ocean-socket: 'true'
+    spec:
+      containers:
+        - env:
+            - name: ocean_socket_ip
+              value: "127.0.0.1"
+            - name: nginx_ip
+              value: nginx
+            - name: kafka_address
+              value: 'kafka:9092'
+            - name: zookeeper_address
+              value: 'zookeeper:2181'
+            - name: mysql_ip
+              value: mysql
+            - name: key_FaceGo_ip
+              value: facego
+            - name: FaceGo_Cluster_ip
+              value: facego
+            - name: redis_ip
+              value: redis
+          image: 'registry.crmi.cn:5021/zhuowang/ocean-socket:1.4.2'
+          imagePullPolicy: Always
+          name: zw-ocean-socket
+          ports:
+            - containerPort: 11011
+              protocol: TCP
+          volumeMounts:
+            - mountPath: /home/nasdata
+              name: nasdata
+      dnsPolicy: ClusterFirst
+      nodeSelector:
+        kubernetes.io/hostname: node-otii.crmi.cn
+      restartPolicy: Always
+      serviceAccountName: mysvcacct
+      volumes:
+        - hostPath:
+            path: /data/zw/nasdata
+          name: nasdata
+  triggers:
+    - type: ConfigChange
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ocean-socket
+  namespace: zhuowang
+spec:
+  ports:
+    - name: tcp-11011
+      port: 11011
+      protocol: TCP
+      targetPort: 11011
+  selector:
+    zw-ocean-socket: 'true'
+  type: ClusterIP
+  # type: NodePort
+---
+apiVersion: apps.openshift.io/v1
+kind: DeploymentConfig
+metadata:
+  name: zw-redisp
+  namespace: zhuowang
+spec:
+  replicas: 1
+  selector:
+    zw-redisp: 'true'
+  template:
+    metadata:
+      labels:
+        zw-redisp: 'true'
+    spec:
+      containers:
+        - args:
+            - '--requirepass'
+            - Anfang@123!
+          image: 'registry.crmi.cn:5021/zhuowang/redis:1.4.2'
+          imagePullPolicy: Always
+          name: zw-redisp
+          ports:
+            - containerPort: 6379
+              protocol: TCP
+      dnsPolicy: ClusterFirst
+      nodeSelector:
+        kubernetes.io/hostname: node-otii.crmi.cn
+      restartPolicy: Always
+      serviceAccountName: mysvcacct
+  triggers:
+    - type: ConfigChange
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  namespace: zhuowang
+spec:
+  ports:
+    - port: 6379
+      protocol: TCP
+      targetPort: 6379
+  selector:
+    zw-redisp: 'true'
+  type: ClusterIP
+---
+apiVersion: apps.openshift.io/v1
+kind: DeploymentConfig
+metadata:
+  name: zw-zk1
+  namespace: zhuowang
+spec:
+  replicas: 1
+  selector:
+    zw-zk1: 'true'
+  template:
+    metadata:
+      labels:
+        zw-zk1: 'true'
+    spec:
+      containers:
+        - image: 'registry.crmi.cn:5021/zhuowang/zookeeper:latest'
+          imagePullPolicy: Always
+          name: zw-zk1
+          ports:
+            - containerPort: 2181
+              protocol: TCP
+      dnsPolicy: ClusterFirst
+      nodeSelector:
+        kubernetes.io/hostname: node-otii.crmi.cn
+      restartPolicy: Always
+      serviceAccountName: mysvcacct
+  triggers:
+    - type: ConfigChange
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: zookeeper
+  namespace: zhuowang
+spec:
+  ports:
+    - port: 2181
+      protocol: TCP
+      targetPort: 2181
+  selector:
+    zw-zk1: 'true'
+  type: ClusterIP
+
+---
+apiVersion: apps.openshift.io/v1
+kind: DeploymentConfig
+metadata:
+  name: zw-xqplatform
+  namespace: zhuowang
+spec:
+  replicas: 1
+  selector:
+    zw-xqplatform: 'true'
+  template:
+    metadata:
+      labels:
+        zw-xqplatform: 'true'
+    spec:
+      containers:
+        - env:
+            - name: XQ_CONFIG_FILE
+              value: "/home/xqplatform/config/system.xml"
+          image: 'registry.crmi.cn:5021/zhuowang/xqplatform:20190927'
+          imagePullPolicy: Always
+          name: zw-xqplatform
+          ports:
+            - containerPort: 12345
+              protocol: TCP
+            - containerPort: 12346
+              protocol: TCP
+          volumeMounts:
+            - mountPath: /home/xqplatform/log
+              name: xqplatform-log
+            - mountPath: /home/xqplatform/config
+              name: xqplatform-config
+            - mountPath: /home/ssdb/var
+              name: ssdb-var
+      dnsPolicy: ClusterFirst
+      nodeSelector:
+        kubernetes.io/hostname: node-otii.crmi.cn
+      restartPolicy: Always
+      serviceAccountName: mysvcacct
+      volumes:
+        - hostPath:
+            path: /data/zw/ext/xqplatform_log
+          name: xqplatform-log
+        - hostPath:
+            path: /data/zw/ext/xqplatform_config
+          name: xqplatform-config
+        - hostPath:
+            path: /data/zw/ext/ssdb_var
+          name: ssdb-var
+  triggers:
+    - type: ConfigChange
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: xqplatform
+  namespace: zhuowang
+spec:
+  ports:
+    - port: 12345
+      protocol: TCP
+      targetPort: 12345
+      name: tcp-12345
+    - port: 12346
+      protocol: TCP
+      targetPort: 12346
+      name: tcp-12346
+  selector:
+    zw-xqplatform: 'true'
+  type: ClusterIP
+---

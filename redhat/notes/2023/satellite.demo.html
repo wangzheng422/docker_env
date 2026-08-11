@@ -1,0 +1,1748 @@
+<!DOCTYPE html>
+<html lang="zh" dir="ltr">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="generator" content="pandoc" />
+  <meta name="site-build-id" content="fbe91b569ae8" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <title>satellite 作为yum repo的简单演示 | wandering.star notes</title>
+  <meta name="description"
+    content="Wandering field notes on OpenShift, RHEL, AI infrastructure, and platform operations." />
+  <!-- Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-E3FRMDB7L2"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-E3FRMDB7L2');
+  </script>
+  <style>
+  html {
+    color: #1a1a1a;
+    background-color: #fdfdfd;
+  }
+  body {
+    margin: 0 auto;
+    max-width: 36em;
+    padding-left: 50px;
+    padding-right: 50px;
+    padding-top: 50px;
+    padding-bottom: 50px;
+    hyphens: auto;
+    overflow-wrap: break-word;
+    text-rendering: optimizeLegibility;
+    font-kerning: normal;
+  }
+  @media (max-width: 600px) {
+    body {
+      font-size: 0.9em;
+      padding: 12px;
+    }
+    h1 {
+      font-size: 1.8em;
+    }
+  }
+  @media print {
+    html {
+      background-color: white;
+    }
+    body {
+      background-color: transparent;
+      color: black;
+      font-size: 12pt;
+    }
+    p, h2, h3 {
+      orphans: 3;
+      widows: 3;
+    }
+    h2, h3, h4 {
+      page-break-after: avoid;
+    }
+  }
+  p {
+    margin: 1em 0;
+  }
+  a {
+    color: #1a1a1a;
+  }
+  a:visited {
+    color: #1a1a1a;
+  }
+  img {
+    max-width: 100%;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.4em;
+  }
+  h5, h6 {
+    font-size: 1em;
+    font-style: italic;
+  }
+  h6 {
+    font-weight: normal;
+  }
+  ol, ul {
+    padding-left: 1.7em;
+    margin-top: 1em;
+  }
+  li > ol, li > ul {
+    margin-top: 0;
+  }
+  blockquote {
+    margin: 1em 0 1em 1.7em;
+    padding-left: 1em;
+    border-left: 2px solid #e6e6e6;
+    color: #606060;
+  }
+  code {
+    font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+    font-size: 85%;
+    margin: 0;
+    hyphens: manual;
+  }
+  pre {
+    margin: 1em 0;
+    overflow: auto;
+  }
+  pre code {
+    padding: 0;
+    overflow: visible;
+    overflow-wrap: normal;
+  }
+  .sourceCode {
+   background-color: transparent;
+   overflow: visible;
+  }
+  hr {
+    background-color: #1a1a1a;
+    border: none;
+    height: 1px;
+    margin: 1em 0;
+  }
+  table {
+    margin: 1em 0;
+    border-collapse: collapse;
+    width: 100%;
+    overflow-x: auto;
+    display: block;
+    font-variant-numeric: lining-nums tabular-nums;
+  }
+  table caption {
+    margin-bottom: 0.75em;
+  }
+  tbody {
+    margin-top: 0.5em;
+    border-top: 1px solid #1a1a1a;
+    border-bottom: 1px solid #1a1a1a;
+  }
+  th {
+    border-top: 1px solid #1a1a1a;
+    padding: 0.25em 0.5em 0.25em 0.5em;
+  }
+  td {
+    padding: 0.125em 0.5em 0.25em 0.5em;
+  }
+  header {
+    margin-bottom: 4em;
+    text-align: center;
+  }
+  #TOC li {
+    list-style: none;
+  }
+  #TOC ul {
+    padding-left: 1.3em;
+  }
+  #TOC > ul {
+    padding-left: 0;
+  }
+  #TOC a:not(:hover) {
+    text-decoration: none;
+  }
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  div.columns{display: flex; gap: min(4vw, 1.5em);}
+  div.column{flex: auto; overflow-x: auto;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  /* The extra [class] is a hack that increases specificity enough to
+     override a similar rule in reveal.js */
+  ul.task-list[class]{list-style: none;}
+  ul.task-list li input[type="checkbox"] {
+    font-size: inherit;
+    width: 0.8em;
+    margin: 0 0.8em 0.2em -1.6em;
+    vertical-align: middle;
+  }
+  .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  /* CSS for syntax highlighting */
+  pre > code.sourceCode { white-space: pre; position: relative; }
+  pre > code.sourceCode > span { line-height: 1.25; }
+  pre > code.sourceCode > span:empty { height: 1.2em; }
+  .sourceCode { overflow: visible; }
+  code.sourceCode > span { color: inherit; text-decoration: inherit; }
+  div.sourceCode { margin: 1em 0; }
+  pre.sourceCode { margin: 0; }
+  @media screen {
+  div.sourceCode { overflow: auto; }
+  }
+  @media print {
+  pre > code.sourceCode { white-space: pre-wrap; }
+  pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+  }
+  pre.numberSource code
+    { counter-reset: source-line 0; }
+  pre.numberSource code > span
+    { position: relative; left: -4em; counter-increment: source-line; }
+  pre.numberSource code > span > a:first-child::before
+    { content: counter(source-line);
+      position: relative; left: -1em; text-align: right; vertical-align: baseline;
+      border: none; display: inline-block;
+      -webkit-touch-callout: none; -webkit-user-select: none;
+      -khtml-user-select: none; -moz-user-select: none;
+      -ms-user-select: none; user-select: none;
+      padding: 0 4px; width: 4em;
+    }
+  pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+  div.sourceCode
+    { color: #cccccc; background-color: #303030; }
+  @media screen {
+  pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+  }
+  code span.al { color: #ffcfaf; } /* Alert */
+  code span.an { color: #7f9f7f; font-weight: bold; } /* Annotation */
+  code span.at { } /* Attribute */
+  code span.bn { color: #dca3a3; } /* BaseN */
+  code span.bu { } /* BuiltIn */
+  code span.cf { color: #f0dfaf; } /* ControlFlow */
+  code span.ch { color: #dca3a3; } /* Char */
+  code span.cn { color: #dca3a3; font-weight: bold; } /* Constant */
+  code span.co { color: #7f9f7f; } /* Comment */
+  code span.cv { color: #7f9f7f; font-weight: bold; } /* CommentVar */
+  code span.do { color: #7f9f7f; } /* Documentation */
+  code span.dt { color: #dfdfbf; } /* DataType */
+  code span.dv { color: #dcdccc; } /* DecVal */
+  code span.er { color: #c3bf9f; } /* Error */
+  code span.ex { } /* Extension */
+  code span.fl { color: #c0bed1; } /* Float */
+  code span.fu { color: #efef8f; } /* Function */
+  code span.im { } /* Import */
+  code span.in { color: #7f9f7f; font-weight: bold; } /* Information */
+  code span.kw { color: #f0dfaf; } /* Keyword */
+  code span.op { color: #f0efd0; } /* Operator */
+  code span.ot { color: #efef8f; } /* Other */
+  code span.pp { color: #ffcfaf; font-weight: bold; } /* Preprocessor */
+  code span.sc { color: #dca3a3; } /* SpecialChar */
+  code span.ss { color: #cc9393; } /* SpecialString */
+  code span.st { color: #cc9393; } /* String */
+  code span.va { } /* Variable */
+  code span.vs { color: #cc9393; } /* VerbatimString */
+  code span.wa { color: #7f9f7f; font-weight: bold; } /* Warning */
+  </style>
+  <link rel="stylesheet" href="../../../style.css?v=fbe91b569ae8" />
+  </head>
+
+<body class="page-article">
+  <div class="reading-progress" aria-hidden="true"></div>
+  <div class="console-backdrop" aria-hidden="true"></div>
+  <nav class="site-nav">
+    <div class="nav-inner">
+      <a class="nav-brand" href="../../../index.html">wandering.star<span>notes</span></a>
+      <div class="nav-links">
+        <a href="https://github.com/wangzheng422/docker_env" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://www.youtube.com/@wangzheng422" target="_blank" rel="noopener">YouTube</a>
+      </div>
+    </div>
+  </nav>
+
+  <main>
+            <a class="back-link" href="../../../index.html">← Back to Index</a>
+        <div class="article-layout">
+            <aside class="toc-panel">
+        <div class="toc-title">ON THIS PAGE</div>
+        <ul>
+        <li><a href="#satellite-作为yum-repo的简单演示"
+        id="toc-satellite-作为yum-repo的简单演示">satellite 作为yum
+        repo的简单演示</a></li>
+        <li><a href="#安装-satellite-server"
+        id="toc-安装-satellite-server">安装 satellite server</a></li>
+        <li><a href="#下载订阅信息"
+        id="toc-下载订阅信息">下载订阅信息</a></li>
+        <li><a href="#导入订阅信息"
+        id="toc-导入订阅信息">导入订阅信息</a></li>
+        <li><a href="#配置-yum-repo-镜像"
+        id="toc-配置-yum-repo-镜像">配置 yum repo 镜像</a></li>
+        <li><a href="#配置-active-key" id="toc-配置-active-key">配置
+        active key</a></li>
+        <li><a href="#注册主机" id="toc-注册主机">注册主机</a></li>
+        <li><a href="#增加订阅数量"
+        id="toc-增加订阅数量">增加订阅数量</a></li>
+        <li><a href="#超用会发生什么"
+        id="toc-超用会发生什么">超用会发生什么</a></li>
+        <li><a href="#激活-simple-content-access-sca"
+        id="toc-激活-simple-content-access-sca">激活 Simple Content
+        Access (SCA)</a>
+        <ul>
+        <li><a href="#超用情况" id="toc-超用情况">超用情况</a></li>
+        </ul></li>
+        <li><a href="#使用-api-来注销主机"
+        id="toc-使用-api-来注销主机">使用 API 来注销主机</a>
+        <ul>
+        <li><a href="#使用-hostname-来注销"
+        id="toc-使用-hostname-来注销">使用 hostname 来注销</a></li>
+        <li><a href="#使用-host-id-来注销"
+        id="toc-使用-host-id-来注销">使用 host id 来注销</a></li>
+        </ul></li>
+        <li><a href="#网络防火墙端口"
+        id="toc-网络防火墙端口">网络防火墙端口</a></li>
+        <li><a href="#端口转发" id="toc-端口转发">端口转发</a></li>
+        <li><a href="#中国区加速"
+        id="toc-中国区加速">中国区加速</a></li>
+        <li><a href="#安装-insight-插件" id="toc-安装-insight-插件">安装
+        insight 插件</a></li>
+        <li><a href="#重装os" id="toc-重装os">重装os</a>
+        <ul>
+        <li><a href="#change-uuid" id="toc-change-uuid">change
+        uuid</a></li>
+        </ul></li>
+        <li><a href="#监控-subscription-订阅"
+        id="toc-监控-subscription-订阅">监控 subscription /
+        订阅</a></li>
+        <li><a href="#end" id="toc-end">end</a></li>
+        <li><a href="#next" id="toc-next">next</a></li>
+        </ul>
+      </aside>
+            <article class="markdown-body article-shell">
+        <h1 id="satellite-作为yum-repo的简单演示">satellite 作为yum
+        repo的简单演示</h1>
+        <p>客户购买了 redhat rhel 订阅，想在国内使用，但是 rhel
+        订阅在os上激活，是需要连接国外服务器的，由于众所周知的原因，国内访问有时候不稳定，甚至国外服务器本身有的时候就慢，那么这种情况下，客户就需要一个订阅的代理服务器。红帽的satellite产品，就是这样一个订阅注册代理服务器。</p>
+        <p>当然，satellite产品内涵很丰富，订阅注册代理只是一个其中一个很小的功能。satellite产品的标准使用场景是，用户有一个内网环境，里面有一个主机能联网，这个主机安装satellite，并向satellite导入订阅证书，启动yum
+        repo镜像服务，iPXE, dhcp,
+        dns服务等，这些服务在一起，就能让内网的其他主机具备了上电以后，自动安装rhel的能力，rhel装好以后，satellite还提供持续更新的功能。</p>
+        <p>所以satellite是一个带安装源的OS全生命周期管理维护产品，官方文档在这里：</p>
+        <ul>
+        <li>https://access.redhat.com/documentation/en-us/red_hat_satellite/6.13</li>
+        </ul>
+        <p>本文，就演示一个最简单的场景，安装satellite，并且内网rhel在satellite上激活订阅，并使用satellite作为yum
+        repo源。</p>
+        <p>实验架构图，请注意，本次实验展示的satellite的功能和场景很简单，其他satellite的功能，比如内容视图，satellite集群，离线操作等等很多功能，依然等待大家去探索。</p>
+        <p><img src="./dia/satellite.demo.01.drawio.svg" /></p>
+        <ul>
+        <li><a href="#satellite-作为yum-repo的简单演示">satellite
+        作为yum repo的简单演示</a></li>
+        <li><a href="#安装-satellite-server">安装 satellite
+        server</a></li>
+        <li><a href="#下载订阅信息">下载订阅信息</a></li>
+        <li><a href="#导入订阅信息">导入订阅信息</a></li>
+        <li><a href="#配置-yum-repo-镜像">配置 yum repo 镜像</a></li>
+        <li><a href="#配置-active-key">配置 active key</a></li>
+        <li><a href="#注册主机">注册主机</a></li>
+        <li><a href="#增加订阅数量">增加订阅数量</a></li>
+        <li><a href="#超用会发生什么">超用会发生什么</a></li>
+        <li><a href="#激活-simple-content-access-sca">激活 Simple
+        Content Access (SCA)</a>
+        <ul>
+        <li><a href="#超用情况">超用情况</a></li>
+        </ul></li>
+        <li><a href="#使用-api-来注销主机">使用 API 来注销主机</a>
+        <ul>
+        <li><a href="#使用-hostname-来注销">使用 hostname
+        来注销</a></li>
+        <li><a href="#使用-host-id-来注销">使用 host id 来注销</a></li>
+        </ul></li>
+        <li><a href="#网络防火墙端口">网络防火墙端口</a></li>
+        <li><a href="#端口转发">端口转发</a></li>
+        <li><a href="#中国区加速">中国区加速</a></li>
+        <li><a href="#安装-insight-插件">安装 insight 插件</a></li>
+        <li><a href="#重装os">重装os</a>
+        <ul>
+        <li><a href="#change-uuid">change uuid</a></li>
+        </ul></li>
+        <li><a href="#监控-subscription--订阅">监控 subscription /
+        订阅</a></li>
+        <li><a href="#end">end</a></li>
+        <li><a href="#next">next</a></li>
+        </ul>
+        <h1 id="安装-satellite-server">安装 satellite server</h1>
+        <p>satellite的完整产品架构里面，有server，还有独立的capsule，我们是极简部署，而且server里面也有内置的capsule，所以我们这次就部署一个server就好了。</p>
+        <p><img src="imgs/2023-05-17-22-58-51.png" /></p>
+        <p>服务器用的是16C 32G，500G
+        HDD的VM，实际项目里面，硬盘要大点。</p>
+        <p>另外，server要有域名，而且要配置好反向解析。</p>
+        <div class="sourceCode" id="cb1"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># satellite server</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="co"># 172.21.6.171</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co"># dns resolve and reverse to panlab-satellite-server.infra.wzhlab.top</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="co"># satellite client host</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="co"># 172.21.6.172</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="co"># on satellite server</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="fu">ssh</span> root@172.21.6.171</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="co"># https://access.redhat.com/documentation/en-us/red_hat_satellite/6.13/html-single/installing_satellite_server_in_a_connected_network_environment/index</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="ex">systemctl</span> disable <span class="at">--now</span> firewalld.service</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="ex">hostnamectl</span> set-hostname panlab-satellite-server.infra.wzhlab.top</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="fu">ping</span> <span class="at">-c1</span> localhost</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a><span class="co"># PING localhost(localhost (::1)) 56 data bytes</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a><span class="co"># 64 bytes from localhost (::1): icmp_seq=1 ttl=64 time=0.043 ms</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a><span class="fu">ping</span> <span class="at">-c1</span> <span class="kw">`</span><span class="fu">hostname</span> <span class="at">-f</span><span class="kw">`</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a><span class="co"># PING panlab-satellite-server.wzhlab.top (172.21.6.171) 56(84) bytes of data.</span></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a><span class="co"># 64 bytes from bogon (172.21.6.171): icmp_seq=1 ttl=64 time=0.047 ms</span></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a><span class="co"># active subscrition on this rhel.</span></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a><span class="ex">subscription-manager</span> register <span class="at">--auto-attach</span> <span class="at">--username</span> xxxxxxxxx <span class="at">--password</span> xxxxxxxxxx</span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a><span class="co"># add repo for satellite</span></span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a><span class="ex">subscription-manager</span> repos <span class="at">--enable</span><span class="op">=</span>rhel-8-for-x86_64-baseos-rpms <span class="dt">\</span></span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a>  <span class="at">--enable</span><span class="op">=</span>rhel-8-for-x86_64-appstream-rpms <span class="dt">\</span></span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a>  <span class="at">--enable</span><span class="op">=</span>satellite-6.13-for-rhel-8-x86_64-rpms <span class="dt">\</span></span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a>  <span class="at">--enable</span><span class="op">=</span>satellite-maintenance-6.13-for-rhel-8-x86_64-rpms</span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a><span class="co"># Repository &#39;rhel-8-for-x86_64-baseos-rpms&#39; is enabled for this system.</span></span>
+<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a><span class="co"># Repository &#39;rhel-8-for-x86_64-appstream-rpms&#39; is enabled for this system.</span></span>
+<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a><span class="co"># Repository &#39;satellite-6.13-for-rhel-8-x86_64-rpms&#39; is enabled for this system.</span></span>
+<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a><span class="co"># Repository &#39;satellite-maintenance-6.13-for-rhel-8-x86_64-rpms&#39; is enabled for this system.</span></span>
+<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-38"><a href="#cb1-38" aria-hidden="true" tabindex="-1"></a><span class="ex">dnf</span> module enable satellite:el8</span>
+<span id="cb1-39"><a href="#cb1-39" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-40"><a href="#cb1-40" aria-hidden="true" tabindex="-1"></a><span class="ex">dnf</span> update <span class="at">-y</span></span>
+<span id="cb1-41"><a href="#cb1-41" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-42"><a href="#cb1-42" aria-hidden="true" tabindex="-1"></a><span class="ex">dnf</span> install satellite chrony sos <span class="at">-y</span></span>
+<span id="cb1-43"><a href="#cb1-43" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-44"><a href="#cb1-44" aria-hidden="true" tabindex="-1"></a><span class="ex">systemctl</span> enable <span class="at">--now</span> chronyd</span>
+<span id="cb1-45"><a href="#cb1-45" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-46"><a href="#cb1-46" aria-hidden="true" tabindex="-1"></a><span class="co"># begin install satellite</span></span>
+<span id="cb1-47"><a href="#cb1-47" aria-hidden="true" tabindex="-1"></a><span class="ex">satellite-installer</span> <span class="at">--scenario</span> satellite <span class="dt">\</span></span>
+<span id="cb1-48"><a href="#cb1-48" aria-hidden="true" tabindex="-1"></a>--foreman-initial-organization <span class="st">&quot;My_Organization&quot;</span> <span class="dt">\</span></span>
+<span id="cb1-49"><a href="#cb1-49" aria-hidden="true" tabindex="-1"></a>--foreman-initial-location <span class="st">&quot;My_Location&quot;</span> <span class="dt">\</span></span>
+<span id="cb1-50"><a href="#cb1-50" aria-hidden="true" tabindex="-1"></a>--foreman-initial-admin-username admin <span class="dt">\</span></span>
+<span id="cb1-51"><a href="#cb1-51" aria-hidden="true" tabindex="-1"></a>--foreman-initial-admin-password redhat</span>
+<span id="cb1-52"><a href="#cb1-52" aria-hidden="true" tabindex="-1"></a><span class="co"># ......</span></span>
+<span id="cb1-53"><a href="#cb1-53" aria-hidden="true" tabindex="-1"></a><span class="co"># 2023-05-16 22:41:17 [</span><span class="al">NOTICE</span><span class="co">] [configure] System configuration has finished.</span></span>
+<span id="cb1-54"><a href="#cb1-54" aria-hidden="true" tabindex="-1"></a><span class="co">#   Success!</span></span>
+<span id="cb1-55"><a href="#cb1-55" aria-hidden="true" tabindex="-1"></a><span class="co">#   * Satellite is running at https://panlab-satellite-server.infra.wzhlab.top</span></span>
+<span id="cb1-56"><a href="#cb1-56" aria-hidden="true" tabindex="-1"></a><span class="co">#       Initial credentials are admin / redhat</span></span>
+<span id="cb1-57"><a href="#cb1-57" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-58"><a href="#cb1-58" aria-hidden="true" tabindex="-1"></a><span class="co">#   * To install an additional Capsule on separate machine continue by running:</span></span>
+<span id="cb1-59"><a href="#cb1-59" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-60"><a href="#cb1-60" aria-hidden="true" tabindex="-1"></a><span class="co">#       capsule-certs-generate --foreman-proxy-fqdn &quot;$CAPSULE&quot; --certs-tar &quot;/root/$CAPSULE-certs.tar&quot;</span></span>
+<span id="cb1-61"><a href="#cb1-61" aria-hidden="true" tabindex="-1"></a><span class="co">#   * Capsule is running at https://panlab-satellite-server.infra.wzhlab.top:9090</span></span>
+<span id="cb1-62"><a href="#cb1-62" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-63"><a href="#cb1-63" aria-hidden="true" tabindex="-1"></a><span class="co">#   The full log is at /var/log/foreman-installer/satellite.log</span></span>
+<span id="cb1-64"><a href="#cb1-64" aria-hidden="true" tabindex="-1"></a><span class="co"># Package versions are being locked.</span></span></code></pre></div>
+        <p>安装很容易，但是时间有点长，十几分钟，官方建议套在 tmux
+        里面运行安装程序。安装完成了，浏览器直接访问 url 就可以了。</p>
+        <p><img src="imgs/2023-05-16-22-50-40.png" /></p>
+        <p>我们可以在系统里面，看到satellite
+        server作为一个host已经存在了。</p>
+        <p><img src="imgs/2023-05-16-23-07-37.png" /></p>
+        <h1 id="下载订阅信息">下载订阅信息</h1>
+        <p>我们的业务场景，是内网主机都注册到satellite上来，这必然需要把红帽官网上的订阅信息导入到satellite里面去，我们来一步一步做一下。
+        <!-- export Subscription Manifest from redhat portal --></p>
+        <p>首先，我们要去红帽官网，创建一个订阅分配，如果我们有100个订阅，都要用到satellite上，那么就分配100个来。我们做实验，就分配1个，后面好实验超用，还有添加数量的场景。</p>
+        <p><img src="imgs/2023-05-16-23-51-22.png" /></p>
+        <p>我们创建的订阅分配，类型和我们装的satellite版本要保持一致。</p>
+        <p><img src="imgs/2023-05-16-23-52-08.png" /></p>
+        <p>切换到订阅tab:</p>
+        <p><img src="imgs/2023-05-16-23-53-01.png" /></p>
+        <p>添加订阅，会打开一个页面，让你搜索你有的订阅，并挑选一个出来：</p>
+        <p><img src="imgs/2023-05-16-23-59-18.png" /></p>
+        <p>我们选好了订阅以后，设定数量，根据需要的数量来，一般情况，把你所以的订阅都加进来。我们做实验，就设置
+        1. 然后下载。</p>
+        <p><img src="imgs/2023-05-17-00-09-53.png" /></p>
+        <h1 id="导入订阅信息">导入订阅信息</h1>
+        <p>我们已经有了订阅信息文件，那么我们回到satellite管理界面里面，导入它。</p>
+        <p><img src="imgs/2023-05-17-00-12-05.png" /></p>
+        <p>完成以后，我们就能看到订阅信息了。</p>
+        <p><img src="imgs/2023-05-17-00-18-28.png" /></p>
+        <h1 id="配置-yum-repo-镜像">配置 yum repo 镜像</h1>
+        <p>我们实验的目的，就是配置一个yum repo
+        镜像源出来，但是默认satellite使用的是on demand 的方式来下载
+        rpm，我们希望让他一气呵成，主动提前的下载好，那么需要做一个配置。</p>
+        <p><img src="imgs/2023-05-17-11-18-07.png" /></p>
+        <p>激活主动下载配置</p>
+        <p><img src="imgs/2023-05-17-11-18-38.png" /></p>
+        <p>做了主动下载配置以后，我们就来添加 yum 源。</p>
+        <p><img src="imgs/2023-05-17-00-18-57.png" /></p>
+        <p>我们先搜索 appstream 。</p>
+        <p><img src="imgs/2023-05-17-00-21-12.png" /></p>
+        <p>然后我们选择小版本</p>
+        <p><img src="imgs/2023-05-17-00-21-45.png" /></p>
+        <p>为了做实验，凸显效果，我们只选择8.6这个非最新版本。</p>
+        <p><img src="imgs/2023-05-17-00-22-43.png" /></p>
+        <p>我们再搜索 baseos ，并选择 8.6 版本</p>
+        <p><img src="imgs/2023-05-17-00-23-02.png" /></p>
+        <p>选择好了yum 源以后，我们开始手动同步。</p>
+        <p><img src="imgs/2023-05-17-09-57-12.png" /></p>
+        <p>选择要同步的repo, 开始</p>
+        <p><img src="imgs/2023-05-17-09-57-43.png" /></p>
+        <!-- ![](imgs/2023-05-17-10-14-08.png) -->
+        <p>经过漫长的时间，下载完成。</p>
+        <p><img src="imgs/2023-05-17-14-33-41.png" /></p>
+        <p>satellite服务器端的基本服务，就配置完了，我们看看系统情况。</p>
+        <div class="sourceCode" id="cb2"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="ex">satellite-maintain</span> service list</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Running Service List</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co"># ================================================================================</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="co"># List applicable services:</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="co"># dynflow-sidekiq@.service                   indirect</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="co"># foreman-proxy.service                      enabled</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="co"># foreman.service                            enabled</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="co"># httpd.service                              enabled</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="co"># postgresql.service                         enabled</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="co"># pulpcore-api.service                       enabled</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="co"># pulpcore-content.service                   enabled</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="co"># pulpcore-worker@.service                   indirect</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="co"># redis.service                              enabled</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a><span class="co"># tomcat.service                             enabled</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a><span class="co"># All services listed                                                   [OK]</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a><span class="co"># --------------------------------------------------------------------------------</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a><span class="fu">df</span> <span class="at">-h</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a><span class="co"># Filesystem      Size  Used Avail Use% Mounted on</span></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a><span class="co"># devtmpfs         16G     0   16G   0% /dev</span></span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a><span class="co"># tmpfs            16G  148K   16G   1% /dev/shm</span></span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a><span class="co"># tmpfs            16G  8.9M   16G   1% /run</span></span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a><span class="co"># tmpfs            16G     0   16G   0% /sys/fs/cgroup</span></span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a><span class="co"># /dev/sda3       499G  106G  393G  22% /</span></span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a><span class="co"># /dev/sda2      1014M  265M  749M  27% /boot</span></span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a><span class="co"># /dev/sda1       599M  9.6M  590M   2% /boot/efi</span></span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a><span class="co"># tmpfs           3.2G     0  3.2G   0% /run/user/0</span></span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a><span class="fu">free</span> <span class="at">-h</span></span>
+<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a><span class="co">#               total        used        free      shared  buff/cache   available</span></span>
+<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a><span class="co"># Mem:           31Gi        21Gi       1.7Gi       567Mi       7.9Gi       8.6Gi</span></span>
+<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a><span class="co"># Swap:            0B          0B          0B</span></span></code></pre></div>
+        <p>内存占用21G，硬盘占用
+        110G。这个数据给以后部署提供一个依据吧。。。</p>
+        <!-- ![](imgs/2023-05-17-11-18-07.png)
+
+        ![](imgs/2023-05-17-11-18-38.png) -->
+        <p>我们查看capsule的使用资源情况。</p>
+        <p><img src="imgs/2023-05-17-15-17-41.png" /></p>
+        <h1 id="配置-active-key">配置 active key</h1>
+        <p>我们导入了 subscription，要给rhel使用，需要创建active
+        key并绑定。active key可以灵活的控制激活的 rhel
+        数量，确保我们不超量使用订阅。</p>
+        <p><img src="imgs/2023-05-17-12-42-56.png" /></p>
+        <p>随便起一个名字</p>
+        <p><img src="imgs/2023-05-17-12-43-39.png" /></p>
+        <p>active key的详细配置里面, 我们设置 host limite 为 unlimited,
+        这个建议设置为具体数字, 保证不超用。我们还要选择 environment，
+        简单的场景，默认的就好，这个配置能让我们把主机分成不同的group来管理。
+        content view 也是默认的， 这个配置可以让不同的主机组，看到的rpm
+        版本不同 。release version
+        放空，这个配置可以配置主机默认的release版本。</p>
+        <p>可以看到，satellite的功能很多，是面向大规模主机部署场景设计的。</p>
+        <p><img src="imgs/2023-05-17-14-56-51.png" /></p>
+        <p>然后，我们把订阅附加到 active key里面去。</p>
+        <p><img src="imgs/2023-05-17-14-58-08.png" /></p>
+        <p>我们的orgnization启用了 simple access control，
+        为了对比，我们先 disable它，后面我们会打开它，来做个对比。</p>
+        <p><img src="imgs/2023-05-17-12-47-33.png" /></p>
+        <p>取消 SAC 的激活</p>
+        <p><img src="imgs/2023-05-17-12-48-05.png" /></p>
+        <!-- ![](imgs/2023-05-17-12-50-16.png) -->
+        <h1 id="注册主机">注册主机</h1>
+        <p>我们来创建就一个 URI, 目标rhel，curl这个
+        URL，会下载一个脚本，运行这个脚本，目标rhel就注册到我们的satellite
+        server上了。</p>
+        <p><img src="imgs/2023-05-17-13-24-23.png" /></p>
+        <p>根据图例，来配置，注意，激活insecure，因为我们是自签名证书</p>
+        <!-- ![](imgs/2023-05-17-13-24-53.png) -->
+        <p><img src="imgs/2023-05-17-14-35-06.png" /></p>
+        <p>详细配置里面，我们disable全部功能，因为我们不需要satellite来帮助我们部署服务器。我们让这个URL一直有效。</p>
+        <p><img src="imgs/2023-05-17-13-28-04.png" /></p>
+        <p>点击生成以后，就得到一个命令，复制下来，保存起来。</p>
+        <p><img src="imgs/2023-05-17-13-28-36.png" /></p>
+        <!-- ![](imgs/2023-05-17-14-33-41.png) -->
+        <p>有了命令，我们就找一台rhel，来试试。</p>
+        <div class="sourceCode" id="cb3"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># on client host</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="ex">curl</span> <span class="at">-sS</span> <span class="at">--insecure</span> <span class="st">&#39;https://panlab-satellite-server.infra.wzhlab.top/register?activation_keys=demo-activate&amp;location_id=2&amp;organization_id=1&amp;setup_insights=false&amp;setup_remote_execution=false&amp;setup_remote_execution_pull=false&amp;update_packages=false&#39;</span> <span class="at">-H</span> <span class="st">&#39;Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjo0LCJpYXQiOjE2ODQzMDU1MTYsImp0aSI6IjdiODBkNzdmMjVjYzY1MDZjODQ3OGI2Y2VjNzRkZWZjOGM2YjAyMDUxMDQ4YTcyYTJlMWE1YzRiNTgyMjE5NzAiLCJzY29wZSI6InJlZ2lzdHJhdGlvbiNnbG9iYWwgcmVnaXN0cmF0aW9uI2hvc3QifQ.EVXyW9gjWyAQIFYUxnwwdxAigrPmUo_XYWnqn-Wh1Fw&#39;</span> <span class="kw">|</span> <span class="fu">bash</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="co"># #</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="co"># # Running registration</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="co"># #</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Updating Subscription Management repositories.</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Unable to read consumer identity</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a><span class="co"># This system is not registered with an entitlement server. You can use subscription-manager to register.</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a><span class="co"># Error: There are no enabled repositories in &quot;/etc/yum.repos.d&quot;, &quot;/etc/yum/repos.d&quot;, &quot;/etc/distro.repos.d&quot;.</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a><span class="co"># The system has been registered with ID: e9d03372-d3f4-4970-bb38-3a2282458e29</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a><span class="co"># The registered system name is: panlab-satellite-client</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a><span class="co"># Installed Product Current Status:</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a><span class="co"># Product Name: Red Hat Enterprise Linux for x86_64</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a><span class="co"># Status:       Subscribed</span></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a><span class="co"># # Running [panlab-satellite-client] host initial configuration</span></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a><span class="co"># Refreshing subscription data</span></span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a><span class="co"># All local data refreshed</span></span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a><span class="co"># Host [panlab-satellite-client] successfully configured.</span></span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a><span class="co"># Successfully updated the system facts.</span></span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a><span class="ex">subscription-manager</span> status</span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a><span class="co"># +-------------------------------------------+</span></span>
+<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a><span class="co">#    System Status Details</span></span>
+<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a><span class="co"># +-------------------------------------------+</span></span>
+<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a><span class="co"># Overall Status: Current</span></span>
+<span id="cb3-31"><a href="#cb3-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-32"><a href="#cb3-32" aria-hidden="true" tabindex="-1"></a><span class="co"># System Purpose Status: Not Specified</span></span>
+<span id="cb3-33"><a href="#cb3-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-34"><a href="#cb3-34" aria-hidden="true" tabindex="-1"></a><span class="ex">subscription-manager</span> release <span class="at">--list</span></span>
+<span id="cb3-35"><a href="#cb3-35" aria-hidden="true" tabindex="-1"></a><span class="co"># +-------------------------------------------+</span></span>
+<span id="cb3-36"><a href="#cb3-36" aria-hidden="true" tabindex="-1"></a><span class="co">#           Available Releases</span></span>
+<span id="cb3-37"><a href="#cb3-37" aria-hidden="true" tabindex="-1"></a><span class="co"># +-------------------------------------------+</span></span>
+<span id="cb3-38"><a href="#cb3-38" aria-hidden="true" tabindex="-1"></a><span class="co"># 8.6</span></span>
+<span id="cb3-39"><a href="#cb3-39" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-40"><a href="#cb3-40" aria-hidden="true" tabindex="-1"></a><span class="ex">subscription-manager</span> release <span class="at">--set</span><span class="op">=</span>8.6</span>
+<span id="cb3-41"><a href="#cb3-41" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-42"><a href="#cb3-42" aria-hidden="true" tabindex="-1"></a><span class="ex">subscription-manager</span> config</span>
+<span id="cb3-43"><a href="#cb3-43" aria-hidden="true" tabindex="-1"></a><span class="co"># [server]</span></span>
+<span id="cb3-44"><a href="#cb3-44" aria-hidden="true" tabindex="-1"></a><span class="co">#    hostname = panlab-satellite-server.infra.wzhlab.top</span></span>
+<span id="cb3-45"><a href="#cb3-45" aria-hidden="true" tabindex="-1"></a><span class="co"># ......</span></span>
+<span id="cb3-46"><a href="#cb3-46" aria-hidden="true" tabindex="-1"></a><span class="co"># [rhsm]</span></span>
+<span id="cb3-47"><a href="#cb3-47" aria-hidden="true" tabindex="-1"></a><span class="co">#    auto_enable_yum_plugins = [1]</span></span>
+<span id="cb3-48"><a href="#cb3-48" aria-hidden="true" tabindex="-1"></a><span class="co">#    baseurl = https://panlab-satellite-server.infra.wzhlab.top/pulp/content</span></span>
+<span id="cb3-49"><a href="#cb3-49" aria-hidden="true" tabindex="-1"></a><span class="co"># ......</span></span>
+<span id="cb3-50"><a href="#cb3-50" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-51"><a href="#cb3-51" aria-hidden="true" tabindex="-1"></a><span class="ex">dnf</span> repolist</span>
+<span id="cb3-52"><a href="#cb3-52" aria-hidden="true" tabindex="-1"></a><span class="co"># Updating Subscription Management repositories.</span></span>
+<span id="cb3-53"><a href="#cb3-53" aria-hidden="true" tabindex="-1"></a><span class="co"># repo id                                                                   repo name</span></span>
+<span id="cb3-54"><a href="#cb3-54" aria-hidden="true" tabindex="-1"></a><span class="co"># rhel-8-for-x86_64-appstream-rpms                                          Red Hat Enterprise Linux 8 for x86_64 - AppStream (RPMs)</span></span>
+<span id="cb3-55"><a href="#cb3-55" aria-hidden="true" tabindex="-1"></a><span class="co"># rhel-8-for-x86_64-baseos-rpms                                             Red Hat Enterprise Linux 8 for x86_64 - BaseOS (RPMs)</span></span>
+<span id="cb3-56"><a href="#cb3-56" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-57"><a href="#cb3-57" aria-hidden="true" tabindex="-1"></a><span class="ex">dnf</span> makecache</span>
+<span id="cb3-58"><a href="#cb3-58" aria-hidden="true" tabindex="-1"></a><span class="co"># Updating Subscription Management repositories.</span></span>
+<span id="cb3-59"><a href="#cb3-59" aria-hidden="true" tabindex="-1"></a><span class="co"># Red Hat Enterprise Linux 8 for x86_64 - BaseOS (RPMs)                                                                                       63 kB/s | 4.1 kB     00:00</span></span>
+<span id="cb3-60"><a href="#cb3-60" aria-hidden="true" tabindex="-1"></a><span class="co"># Red Hat Enterprise Linux 8 for x86_64 - AppStream (RPMs)                                                                                    65 kB/s | 4.5 kB     00:00</span></span>
+<span id="cb3-61"><a href="#cb3-61" aria-hidden="true" tabindex="-1"></a><span class="co"># Metadata cache created.</span></span>
+<span id="cb3-62"><a href="#cb3-62" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-63"><a href="#cb3-63" aria-hidden="true" tabindex="-1"></a><span class="ex">subscription-manager</span> repos</span>
+<span id="cb3-64"><a href="#cb3-64" aria-hidden="true" tabindex="-1"></a><span class="co"># +----------------------------------------------------------+</span></span>
+<span id="cb3-65"><a href="#cb3-65" aria-hidden="true" tabindex="-1"></a><span class="co">#     Available Repositories in /etc/yum.repos.d/redhat.repo</span></span>
+<span id="cb3-66"><a href="#cb3-66" aria-hidden="true" tabindex="-1"></a><span class="co"># +----------------------------------------------------------+</span></span>
+<span id="cb3-67"><a href="#cb3-67" aria-hidden="true" tabindex="-1"></a><span class="co"># Repo ID:   rhel-8-for-x86_64-baseos-rpms</span></span>
+<span id="cb3-68"><a href="#cb3-68" aria-hidden="true" tabindex="-1"></a><span class="co"># Repo Name: Red Hat Enterprise Linux 8 for x86_64 - BaseOS (RPMs)</span></span>
+<span id="cb3-69"><a href="#cb3-69" aria-hidden="true" tabindex="-1"></a><span class="co"># Repo URL:  https://panlab-satellite-server.infra.wzhlab.top/pulp/content/My_Organization/Library/content/dist/rhel8/8.6/x86_64/baseos/os</span></span>
+<span id="cb3-70"><a href="#cb3-70" aria-hidden="true" tabindex="-1"></a><span class="co"># Enabled:   1</span></span>
+<span id="cb3-71"><a href="#cb3-71" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-72"><a href="#cb3-72" aria-hidden="true" tabindex="-1"></a><span class="co"># Repo ID:   rhel-8-for-x86_64-appstream-rpms</span></span>
+<span id="cb3-73"><a href="#cb3-73" aria-hidden="true" tabindex="-1"></a><span class="co"># Repo Name: Red Hat Enterprise Linux 8 for x86_64 - AppStream (RPMs)</span></span>
+<span id="cb3-74"><a href="#cb3-74" aria-hidden="true" tabindex="-1"></a><span class="co"># Repo URL:  https://panlab-satellite-server.infra.wzhlab.top/pulp/content/My_Organization/Library/content/dist/rhel8/8.6/x86_64/appstream/os</span></span>
+<span id="cb3-75"><a href="#cb3-75" aria-hidden="true" tabindex="-1"></a><span class="co"># Enabled:   1</span></span>
+<span id="cb3-76"><a href="#cb3-76" aria-hidden="true" tabindex="-1"></a></span></code></pre></div>
+        <!-- ![](imgs/2023-05-17-14-56-51.png) -->
+        <!-- ![](imgs/2023-05-17-14-58-08.png) -->
+        <p>我们回到active key，可以看到已经激活的 repo</p>
+        <p><img src="imgs/2023-05-17-15-00-11.png" /></p>
+        <p>然后看到，我们没有配置host collection，所以这里也是空的。</p>
+        <p><img src="imgs/2023-05-17-15-00-22.png" /></p>
+        <p>最后，我们在active
+        key的host列表中，看到了我们刚才的主机。</p>
+        <p><img src="imgs/2023-05-17-15-00-55.png" /></p>
+        <p>点进去看看，可以看到主机的rpm的安全问题，satellite已经能够看到。</p>
+        <p><img src="imgs/2023-05-17-15-09-56.png" /></p>
+        <p>问题那么多，我们更新一下看看</p>
+        <div class="sourceCode" id="cb4"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># on satellite-client</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="ex">dnf</span> update <span class="at">-y</span></span></code></pre></div>
+        <p>哈哈，问题都解决了。</p>
+        <p><img src="imgs/2023-05-17-18-18-48.png" /></p>
+        <p>我们能看到，已经使用了一个订阅</p>
+        <p><img src="imgs/2023-05-17-15-14-52.png" /></p>
+        <p>在订阅详细信息里面，也能看到一个activation key</p>
+        <p><img src="imgs/2023-05-17-15-15-23.png" /></p>
+        <p>订阅包含的，使用的产品内容就是baseos, appstream</p>
+        <p><img src="imgs/2023-05-17-15-15-46.png" /></p>
+        <p>主机列表多了我们刚才激活的主机。</p>
+        <p><img src="imgs/2023-05-17-15-16-44.png" /></p>
+        <!-- 我们查看capsule的使用资源情况。
+
+        ![](imgs/2023-05-17-15-17-41.png) -->
+        <h1 id="增加订阅数量">增加订阅数量</h1>
+        <p>如果我们多买了一些订阅，怎么添加数量呢？这里，我们就模拟增加1个订阅的场景。</p>
+        <p>我们访问redhat portal，点击之前创建的订阅分配。</p>
+        <p><img src="imgs/2023-05-17-15-18-46.png" /></p>
+        <p>调整数量为 2</p>
+        <p><img src="imgs/2023-05-17-15-26-21.png" /></p>
+        <p>回到satellite里面，我们维护一下我们的manifect</p>
+        <p><img src="imgs/2023-05-17-15-27-14.png" /></p>
+        <p>点击刷新，他会在线更新</p>
+        <p><img src="imgs/2023-05-17-15-28-45.png" /></p>
+        <p>更新完成以后，数量就变成 2 了。</p>
+        <p><img src="imgs/2023-05-17-15-29-32.png" /></p>
+        <h1 id="超用会发生什么">超用会发生什么</h1>
+        <p>我们回复订阅分配为 1
+        ，然后在第二台主机上激活订阅，会发生什么呢？</p>
+        <div class="sourceCode" id="cb5"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># on client-02 , to try over use</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="ex">curl</span> <span class="at">-sS</span> <span class="at">--insecure</span> <span class="st">&#39;https://panlab-satellite-server.infra.wzhlab.top/register?activation_keys=demo-activate&amp;location_id=2&amp;organization_id=1&amp;setup_insights=false&amp;setup_remote_execution=false&amp;setup_remote_execution_pull=false&amp;update_packages=false&#39;</span> <span class="at">-H</span> <span class="st">&#39;Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjo0LCJpYXQiOjE2ODQzMDU1MTYsImp0aSI6IjdiODBkNzdmMjVjYzY1MDZjODQ3OGI2Y2VjNzRkZWZjOGM2YjAyMDUxMDQ4YTcyYTJlMWE1YzRiNTgyMjE5NzAiLCJzY29wZSI6InJlZ2lzdHJhdGlvbiNnbG9iYWwgcmVnaXN0cmF0aW9uI2hvc3QifQ.EVXyW9gjWyAQIFYUxnwwdxAigrPmUo_XYWnqn-Wh1Fw&#39;</span> <span class="kw">|</span> <span class="fu">bash</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="co"># #</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="co"># # Running registration</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="co"># #</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Updating Subscription Management repositories.</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Unable to read consumer identity</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a><span class="co"># This system is not registered with an entitlement server. You can use subscription-manager to register.</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Error: There are no enabled repositories in &quot;/etc/yum.repos.d&quot;, &quot;/etc/yum/repos.d&quot;, &quot;/etc/distro.repos.d&quot;.</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a><span class="co"># The system has been registered with ID: 43e38f76-2416-49db-890f-1a3ad3973828</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a><span class="co"># The registered system name is: satellite-client-02</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a><span class="co"># Installed Product Current Status:</span></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Product Name: Red Hat Enterprise Linux for x86_64</span></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a><span class="co"># Status:       Not Subscribed</span></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a><span class="co"># Unable to find available subscriptions for all your installed products.</span></span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a><span class="ex">subscription-manager</span> list <span class="at">--consumed</span></span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a><span class="co"># No consumed subscription pools were found.</span></span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a><span class="ex">subscription-manager</span> repos</span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a><span class="co"># This system has no repositories available through subscriptions.</span></span>
+<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a><span class="ex">subscription-manager</span> status</span>
+<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a><span class="co"># +-------------------------------------------+</span></span>
+<span id="cb5-28"><a href="#cb5-28" aria-hidden="true" tabindex="-1"></a><span class="co">#    System Status Details</span></span>
+<span id="cb5-29"><a href="#cb5-29" aria-hidden="true" tabindex="-1"></a><span class="co"># +-------------------------------------------+</span></span>
+<span id="cb5-30"><a href="#cb5-30" aria-hidden="true" tabindex="-1"></a><span class="co"># Overall Status: Invalid</span></span>
+<span id="cb5-31"><a href="#cb5-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-32"><a href="#cb5-32" aria-hidden="true" tabindex="-1"></a><span class="co"># Red Hat Enterprise Linux for x86_64:</span></span>
+<span id="cb5-33"><a href="#cb5-33" aria-hidden="true" tabindex="-1"></a><span class="co"># - Not supported by a valid subscription.</span></span>
+<span id="cb5-34"><a href="#cb5-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-35"><a href="#cb5-35" aria-hidden="true" tabindex="-1"></a><span class="co"># System Purpose Status: Not Specified</span></span></code></pre></div>
+        <p>我们可以看到，订阅没有激活。我们确认一下，在订阅里面看，消耗量为
+        1</p>
+        <p><img src="imgs/2023-05-17-19-00-41.png" /></p>
+        <p>但是在activation key 里面，host 为2</p>
+        <p><img src="imgs/2023-05-17-19-10-32.png" /></p>
+        <p>不过，这个host list里面，有一个主机没有激活。</p>
+        <p><img src="imgs/2023-05-17-19-12-23.png" /></p>
+        <h1 id="激活-simple-content-access-sca">激活 Simple Content
+        Access (SCA)</h1>
+        <!-- if we enable SCA, and limit the active key host number, what happend? -->
+        <p>我们激活SCA，并限制 activation key 的 host
+        数量，用这种方法，来平衡使用方便和订阅不要超用。</p>
+        <p>激活 SCA</p>
+        <p><img src="imgs/2023-05-17-20-05-11.png" /></p>
+        <p>限制host 数量为1 <img
+        src="imgs/2023-05-17-20-05-56.png" /></p>
+        <p>我们在第二台主机上在激活试试</p>
+        <div class="sourceCode" id="cb6"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># on client-02 , to try over use</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="ex">curl</span> <span class="at">-sS</span> <span class="at">--insecure</span> <span class="st">&#39;https://panlab-satellite-server.infra.wzhlab.top/register?activation_keys=demo-activate&amp;location_id=2&amp;organization_id=1&amp;setup_insights=false&amp;setup_remote_execution=false&amp;setup_remote_execution_pull=false&amp;update_packages=false&#39;</span> <span class="at">-H</span> <span class="st">&#39;Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjo0LCJpYXQiOjE2ODQzMDU1MTYsImp0aSI6IjdiODBkNzdmMjVjYzY1MDZjODQ3OGI2Y2VjNzRkZWZjOGM2YjAyMDUxMDQ4YTcyYTJlMWE1YzRiNTgyMjE5NzAiLCJzY29wZSI6InJlZ2lzdHJhdGlvbiNnbG9iYWwgcmVnaXN0cmF0aW9uI2hvc3QifQ.EVXyW9gjWyAQIFYUxnwwdxAigrPmUo_XYWnqn-Wh1Fw&#39;</span> <span class="kw">|</span> <span class="fu">bash</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="co"># #</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="co"># # Running registration</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="co"># #</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Updating Subscription Management repositories.</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Unable to read consumer identity</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a><span class="co"># This system is not registered with an entitlement server. You can use subscription-manager to register.</span></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Error: There are no enabled repositories in &quot;/etc/yum.repos.d&quot;, &quot;/etc/yum/repos.d&quot;, &quot;/etc/distro.repos.d&quot;.</span></span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Max Hosts (1) reached for activation key &#39;demo-activate&#39; (HTTP error code 409: Conflict)</span></span></code></pre></div>
+        <p>激活失败。</p>
+        <h2 id="超用情况">超用情况</h2>
+        <p>如果启用了SCA，但是不限制host数量，超用的情况下，能不能激活成功呢？我们做个实验。</p>
+        <p>先导入只有1个订阅的离线订阅文件。</p>
+        <p><img src="imgs/2023-09-05-12-45-35.png" /></p>
+        <p>然后，在active key里面，放开host limit限制。</p>
+        <p><img src="imgs/2023-09-05-12-40-21.png" /></p>
+        <p>接下来，我们在2个主机上，进行激活。</p>
+        <div class="sourceCode" id="cb7"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="co"># on 172</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="co"># try to register</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a><span class="ex">curl</span> <span class="at">-sS</span> <span class="at">--insecure</span> <span class="st">&#39;https://panlab-satellite-server.infra.wzhlab.top:6443/register?activation_keys=demo-activate&amp;location_id=2&amp;organization_id=1&amp;setup_insights=false&amp;setup_remote_execution=false&amp;update_packages=false&#39;</span> <span class="at">-H</span> <span class="st">&#39;Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjo0LCJpYXQiOjE2OTM4ODg5NzIsImp0aSI6IjFlNzdkNDE1OWM4NmE3OGVjOWY5NjViMWQwODRlOWY5NThlN2ExZDBkNWZhZTJjZjY3NjMzMTQ1Nzk5NTRkNWEiLCJzY29wZSI6InJlZ2lzdHJhdGlvbiNnbG9iYWwgcmVnaXN0cmF0aW9uI2hvc3QifQ.aM6lKpNfBCH-FMHU0xkc6q4XaNeuS8JezLIQCf2faxI&#39;</span> <span class="kw">|</span> <span class="fu">bash</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="co"># #</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a><span class="co"># # Running registration</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a><span class="co"># #</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Updating Subscription Management repositories.</span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Unable to read consumer identity</span></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a><span class="co"># This system is not registered with an entitlement server. You can use subscription-manager to register.</span></span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a><span class="co"># Error: There are no enabled repositories in &quot;/etc/yum.repos.d&quot;, &quot;/etc/yum/repos.d&quot;, &quot;/etc/distro.repos.d&quot;.</span></span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a><span class="co"># The system has been registered with ID: b853bd17-204a-4eeb-83c7-1d07f3dea7c6</span></span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a><span class="co"># The registered system name is: client-0-changed</span></span>
+<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a><span class="co"># # Running [client-0-changed] host initial configuration</span></span>
+<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a><span class="co"># Refreshing subscription data</span></span>
+<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a><span class="co"># All local data refreshed</span></span>
+<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a><span class="co"># Host [client-0-changed] successfully configured.</span></span>
+<span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a><span class="co"># Successfully updated the system facts.</span></span>
+<span id="cb7-21"><a href="#cb7-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-22"><a href="#cb7-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-23"><a href="#cb7-23" aria-hidden="true" tabindex="-1"></a><span class="co"># on 173</span></span>
+<span id="cb7-24"><a href="#cb7-24" aria-hidden="true" tabindex="-1"></a><span class="co"># try to register</span></span>
+<span id="cb7-25"><a href="#cb7-25" aria-hidden="true" tabindex="-1"></a><span class="ex">curl</span> <span class="at">-sS</span> <span class="at">--insecure</span> <span class="st">&#39;https://panlab-satellite-server.infra.wzhlab.top:6443/register?activation_keys=demo-activate&amp;location_id=2&amp;organization_id=1&amp;setup_insights=false&amp;setup_remote_execution=false&amp;update_packages=false&#39;</span> <span class="at">-H</span> <span class="st">&#39;Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjo0LCJpYXQiOjE2OTM4ODg5NzIsImp0aSI6IjFlNzdkNDE1OWM4NmE3OGVjOWY5NjViMWQwODRlOWY5NThlN2ExZDBkNWZhZTJjZjY3NjMzMTQ1Nzk5NTRkNWEiLCJzY29wZSI6InJlZ2lzdHJhdGlvbiNnbG9iYWwgcmVnaXN0cmF0aW9uI2hvc3QifQ.aM6lKpNfBCH-FMHU0xkc6q4XaNeuS8JezLIQCf2faxI&#39;</span> <span class="kw">|</span> <span class="fu">bash</span></span>
+<span id="cb7-26"><a href="#cb7-26" aria-hidden="true" tabindex="-1"></a><span class="co"># #</span></span>
+<span id="cb7-27"><a href="#cb7-27" aria-hidden="true" tabindex="-1"></a><span class="co"># # Running registration</span></span>
+<span id="cb7-28"><a href="#cb7-28" aria-hidden="true" tabindex="-1"></a><span class="co"># #</span></span>
+<span id="cb7-29"><a href="#cb7-29" aria-hidden="true" tabindex="-1"></a><span class="co"># Updating Subscription Management repositories.</span></span>
+<span id="cb7-30"><a href="#cb7-30" aria-hidden="true" tabindex="-1"></a><span class="co"># Unable to read consumer identity</span></span>
+<span id="cb7-31"><a href="#cb7-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-32"><a href="#cb7-32" aria-hidden="true" tabindex="-1"></a><span class="co"># This system is not registered with an entitlement server. You can use subscription-manager to register.</span></span>
+<span id="cb7-33"><a href="#cb7-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-34"><a href="#cb7-34" aria-hidden="true" tabindex="-1"></a><span class="co"># Error: There are no enabled repositories in &quot;/etc/yum.repos.d&quot;, &quot;/etc/yum/repos.d&quot;, &quot;/etc/distro.repos.d&quot;.</span></span>
+<span id="cb7-35"><a href="#cb7-35" aria-hidden="true" tabindex="-1"></a><span class="co"># The system has been registered with ID: 4bba0a26-4f91-4bae-8752-4b073eeaee13</span></span>
+<span id="cb7-36"><a href="#cb7-36" aria-hidden="true" tabindex="-1"></a><span class="co"># The registered system name is: satellite-client-02</span></span>
+<span id="cb7-37"><a href="#cb7-37" aria-hidden="true" tabindex="-1"></a><span class="co"># # Running [satellite-client-02] host initial configuration</span></span>
+<span id="cb7-38"><a href="#cb7-38" aria-hidden="true" tabindex="-1"></a><span class="co"># Refreshing subscription data</span></span>
+<span id="cb7-39"><a href="#cb7-39" aria-hidden="true" tabindex="-1"></a><span class="co"># All local data refreshed</span></span>
+<span id="cb7-40"><a href="#cb7-40" aria-hidden="true" tabindex="-1"></a><span class="co"># Host [satellite-client-02] successfully configured.</span></span>
+<span id="cb7-41"><a href="#cb7-41" aria-hidden="true" tabindex="-1"></a><span class="co"># Successfully updated the system facts.</span></span></code></pre></div>
+        <p><img src="imgs/2023-09-05-12-48-49.png" /></p>
+        <h1 id="使用-api-来注销主机">使用 API 来注销主机</h1>
+        <p>一般情况下，主机注册以后就一直在satellite里面了，但是如果我们是一个云环境，主机需要频繁的注册和注销，那么我们需要一个自动的方法，让云平台来调用
+        satellite API，实现satellite里面的主机自动注销。</p>
+        <h2 id="使用-hostname-来注销">使用 hostname 来注销</h2>
+        <p><a
+        href="https://access.redhat.com/documentation/en-us/red_hat_satellite/6.11/html/api_guide/chap-red_hat_satellite-api_guide-using_the_red_hat_satellite_api#sect-Working_with_Hosts">satellite官方文档</a>里面，已经提供了一个API，可以自动注销主机。</p>
+        <p><img src="imgs/2023-06-25-15-25-39.png" /></p>
+        <p>本次实验就试试把client-2给删掉。</p>
+        <div class="sourceCode" id="cb8"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="ex">curl</span> <span class="at">-s</span> <span class="at">--request</span> DELETE <span class="at">--insecure</span> <span class="at">--user</span> admin:redhat <span class="dt">\</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>https://panlab-satellite-server.infra.wzhlab.top/api/v2/hosts/satellite-client-02 <span class="kw">|</span> <span class="ex">jq</span> .</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a><span class="co"># {</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;id&quot;: 3,</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;name&quot;: &quot;satellite-client-02&quot;,</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;last_compile&quot;: &quot;2023-05-17T10:21:24.000Z&quot;,</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;last_report&quot;: null,</span></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;updated_at&quot;: &quot;2023-05-17T10:21:24.861Z&quot;,</span></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;created_at&quot;: &quot;2023-05-17T10:19:49.756Z&quot;,</span></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;root_pass&quot;: null,</span></span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;architecture_id&quot;: 1,</span></span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;operatingsystem_id&quot;: 2,</span></span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;ptable_id&quot;: null,</span></span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;medium_id&quot;: null,</span></span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;build&quot;: false,</span></span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;comment&quot;: null,</span></span>
+<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;disk&quot;: null,</span></span>
+<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;installed_at&quot;: null,</span></span>
+<span id="cb8-20"><a href="#cb8-20" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;model_id&quot;: 1,</span></span>
+<span id="cb8-21"><a href="#cb8-21" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;hostgroup_id&quot;: null,</span></span>
+<span id="cb8-22"><a href="#cb8-22" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;owner_id&quot;: 1,</span></span>
+<span id="cb8-23"><a href="#cb8-23" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;owner_type&quot;: &quot;User&quot;,</span></span>
+<span id="cb8-24"><a href="#cb8-24" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;enabled&quot;: true,</span></span>
+<span id="cb8-25"><a href="#cb8-25" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;puppet_ca_proxy_id&quot;: null,</span></span>
+<span id="cb8-26"><a href="#cb8-26" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;managed&quot;: false,</span></span>
+<span id="cb8-27"><a href="#cb8-27" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;use_image&quot;: null,</span></span>
+<span id="cb8-28"><a href="#cb8-28" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;image_file&quot;: &quot;&quot;,</span></span>
+<span id="cb8-29"><a href="#cb8-29" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;uuid&quot;: null,</span></span>
+<span id="cb8-30"><a href="#cb8-30" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;compute_resource_id&quot;: null,</span></span>
+<span id="cb8-31"><a href="#cb8-31" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;puppet_proxy_id&quot;: null,</span></span>
+<span id="cb8-32"><a href="#cb8-32" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;certname&quot;: &quot;satellite-client-02&quot;,</span></span>
+<span id="cb8-33"><a href="#cb8-33" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;image_id&quot;: null,</span></span>
+<span id="cb8-34"><a href="#cb8-34" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;organization_id&quot;: 1,</span></span>
+<span id="cb8-35"><a href="#cb8-35" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;location_id&quot;: 2,</span></span>
+<span id="cb8-36"><a href="#cb8-36" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;otp&quot;: null,</span></span>
+<span id="cb8-37"><a href="#cb8-37" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;realm_id&quot;: null,</span></span>
+<span id="cb8-38"><a href="#cb8-38" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;compute_profile_id&quot;: null,</span></span>
+<span id="cb8-39"><a href="#cb8-39" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;provision_method&quot;: &quot;build&quot;,</span></span>
+<span id="cb8-40"><a href="#cb8-40" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;grub_pass&quot;: null,</span></span>
+<span id="cb8-41"><a href="#cb8-41" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;discovery_rule_id&quot;: null,</span></span>
+<span id="cb8-42"><a href="#cb8-42" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;global_status&quot;: 2,</span></span>
+<span id="cb8-43"><a href="#cb8-43" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;lookup_value_matcher&quot;: &quot;fqdn=satellite-client-02&quot;,</span></span>
+<span id="cb8-44"><a href="#cb8-44" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;openscap_proxy_id&quot;: null,</span></span>
+<span id="cb8-45"><a href="#cb8-45" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;pxe_loader&quot;: null,</span></span>
+<span id="cb8-46"><a href="#cb8-46" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;initiated_at&quot;: null,</span></span>
+<span id="cb8-47"><a href="#cb8-47" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;build_errors&quot;: null,</span></span>
+<span id="cb8-48"><a href="#cb8-48" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;content_facet_attributes&quot;: {</span></span>
+<span id="cb8-49"><a href="#cb8-49" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;id&quot;: 2,</span></span>
+<span id="cb8-50"><a href="#cb8-50" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;host_id&quot;: 3,</span></span>
+<span id="cb8-51"><a href="#cb8-51" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;uuid&quot;: null,</span></span>
+<span id="cb8-52"><a href="#cb8-52" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;content_view_id&quot;: 1,</span></span>
+<span id="cb8-53"><a href="#cb8-53" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;lifecycle_environment_id&quot;: 1,</span></span>
+<span id="cb8-54"><a href="#cb8-54" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;kickstart_repository_id&quot;: null,</span></span>
+<span id="cb8-55"><a href="#cb8-55" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;content_source_id&quot;: null,</span></span>
+<span id="cb8-56"><a href="#cb8-56" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;installable_security_errata_count&quot;: 0,</span></span>
+<span id="cb8-57"><a href="#cb8-57" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;installable_enhancement_errata_count&quot;: 0,</span></span>
+<span id="cb8-58"><a href="#cb8-58" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;installable_bugfix_errata_count&quot;: 0,</span></span>
+<span id="cb8-59"><a href="#cb8-59" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;applicable_rpm_count&quot;: 0,</span></span>
+<span id="cb8-60"><a href="#cb8-60" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;upgradable_rpm_count&quot;: 0,</span></span>
+<span id="cb8-61"><a href="#cb8-61" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;applicable_module_stream_count&quot;: 0,</span></span>
+<span id="cb8-62"><a href="#cb8-62" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;upgradable_module_stream_count&quot;: 0,</span></span>
+<span id="cb8-63"><a href="#cb8-63" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;applicable_deb_count&quot;: 0,</span></span>
+<span id="cb8-64"><a href="#cb8-64" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;upgradable_deb_count&quot;: 0</span></span>
+<span id="cb8-65"><a href="#cb8-65" aria-hidden="true" tabindex="-1"></a><span class="co">#   }</span></span>
+<span id="cb8-66"><a href="#cb8-66" aria-hidden="true" tabindex="-1"></a><span class="co"># }</span></span>
+<span id="cb8-67"><a href="#cb8-67" aria-hidden="true" tabindex="-1"></a></span></code></pre></div>
+        <p><img src="imgs/2023-06-25-15-50-41.png" /></p>
+        <p>API 调用以后，我们就能看到 client-2 这个主机被注销了。</p>
+        <p>这个注销主机的方法，有一个潜在问题，就是这个主机名会不会改变，如果我们在主机上，把主机名给改了，satellite里面会自动改，还是不会变呢？我们继续实验看看。</p>
+        <p>我们先看看现在的主机名是什么</p>
+        <div class="sourceCode" id="cb9"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="ex">hostnamectl</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  <span class="co">#  Static hostname: client-0</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  <span class="co">#        Icon name: computer-vm</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>  <span class="co">#          Chassis: vm</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>  <span class="co">#       Machine ID: 75587495919e40b7a0d39f7168df895e</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>  <span class="co">#          Boot ID: a15f631019d0463395d12c332873eb52</span></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>  <span class="co">#   Virtualization: vmware</span></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Operating System: Red Hat Enterprise Linux 8.6 (Ootpa)</span></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>  <span class="co">#      CPE OS Name: cpe:/o:redhat:enterprise_linux:8::baseos</span></span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>  <span class="co">#           Kernel: Linux 4.18.0-372.32.1.el8_6.x86_64</span></span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>  <span class="co">#     Architecture: x86-64</span></span></code></pre></div>
+        <p>在satellite里面确认一下主机名 <img
+        src="imgs/2023-06-29-11-25-05.png" /></p>
+        <p>接着，我们修改主机名，并刷新</p>
+        <div class="sourceCode" id="cb10"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="ex">hostnamectl</span> set-hostname client-0-changed</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="ex">subscription-manager</span> refresh</span></code></pre></div>
+        <p>我们在satellite里面确认一下，主机名没有修改 <img
+        src="imgs/2023-06-29-11-27-10.png" /></p>
+        <p>那么，什么情况下，satellite里面的主机名会改变呢，通过笔者的实验，发现必须unregister以后，重新注册才可以。</p>
+        <h2 id="使用-host-id-来注销">使用 host id 来注销</h2>
+        <div class="sourceCode" id="cb11"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co"># get host uuid on the managed host</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="ex">subscription-manager</span> facts <span class="kw">|</span> <span class="fu">grep</span> system.uuid</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a><span class="co"># dmi.system.uuid: 4C6B4D56-ACB7-585F-EB20-90FD676DEA4B</span></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a><span class="co"># check how many uuid you can find, from another host</span></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a><span class="ex">subscription-manager</span> facts <span class="kw">|</span> <span class="fu">grep</span> uuid</span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a><span class="co"># dmi.system.uuid: 8DF84D56-895F-6163-962B-30EF44BDE122</span></span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a><span class="co"># virt.uuid: 8DF84D56-895F-6163-962B-30EF44BDE122</span></span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a><span class="co"># get host id from satellite by uuid</span></span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a><span class="ex">curl</span> <span class="at">-s</span> <span class="at">--request</span> GET <span class="at">--insecure</span> <span class="at">--user</span> admin:redhat <span class="dt">\</span></span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a>  https://panlab-satellite-server.infra.wzhlab.top/api/v2/hosts<span class="pp">?</span>search=facts.dmi::system::uuid=4C6B4D56-ACB7-585F-EB20-90FD676DEA4B <span class="kw">|</span> <span class="dt">\</span></span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a>  <span class="ex">jq</span> .results<span class="pp">[</span><span class="ss">0</span><span class="pp">]</span>.id</span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a><span class="co"># 8</span></span>
+<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a><span class="co"># get host id from satellite by name</span></span>
+<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a><span class="ex">curl</span> <span class="at">-s</span> <span class="at">--request</span> GET <span class="at">--insecure</span> <span class="at">--user</span> admin:redhat <span class="dt">\</span></span>
+<span id="cb11-18"><a href="#cb11-18" aria-hidden="true" tabindex="-1"></a>https://panlab-satellite-server.infra.wzhlab.top/api/hosts/panlab-satellite-client <span class="kw">|</span> <span class="ex">jq</span> .id</span>
+<span id="cb11-19"><a href="#cb11-19" aria-hidden="true" tabindex="-1"></a><span class="co"># 2</span></span>
+<span id="cb11-20"><a href="#cb11-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-21"><a href="#cb11-21" aria-hidden="true" tabindex="-1"></a><span class="co"># delete host using host id</span></span>
+<span id="cb11-22"><a href="#cb11-22" aria-hidden="true" tabindex="-1"></a><span class="ex">curl</span> <span class="at">-s</span> <span class="at">--request</span> DELETE <span class="at">--insecure</span> <span class="at">--user</span> admin:redhat <span class="dt">\</span></span>
+<span id="cb11-23"><a href="#cb11-23" aria-hidden="true" tabindex="-1"></a>https://panlab-satellite-server.infra.wzhlab.top/api/hosts/2 <span class="kw">|</span> <span class="ex">jq</span> .</span>
+<span id="cb11-24"><a href="#cb11-24" aria-hidden="true" tabindex="-1"></a><span class="co"># {</span></span>
+<span id="cb11-25"><a href="#cb11-25" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;id&quot;: 2,</span></span>
+<span id="cb11-26"><a href="#cb11-26" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;name&quot;: &quot;panlab-satellite-client&quot;,</span></span>
+<span id="cb11-27"><a href="#cb11-27" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;last_compile&quot;: &quot;2023-05-17T12:26:28.000Z&quot;,</span></span>
+<span id="cb11-28"><a href="#cb11-28" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;last_report&quot;: null,</span></span>
+<span id="cb11-29"><a href="#cb11-29" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;updated_at&quot;: &quot;2023-05-17T12:26:28.289Z&quot;,</span></span>
+<span id="cb11-30"><a href="#cb11-30" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;created_at&quot;: &quot;2023-05-17T06:43:46.628Z&quot;,</span></span>
+<span id="cb11-31"><a href="#cb11-31" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;root_pass&quot;: null,</span></span>
+<span id="cb11-32"><a href="#cb11-32" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;architecture_id&quot;: 1,</span></span>
+<span id="cb11-33"><a href="#cb11-33" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;operatingsystem_id&quot;: 2,</span></span>
+<span id="cb11-34"><a href="#cb11-34" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;ptable_id&quot;: null,</span></span>
+<span id="cb11-35"><a href="#cb11-35" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;medium_id&quot;: null,</span></span>
+<span id="cb11-36"><a href="#cb11-36" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;build&quot;: false,</span></span>
+<span id="cb11-37"><a href="#cb11-37" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;comment&quot;: null,</span></span>
+<span id="cb11-38"><a href="#cb11-38" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;disk&quot;: null,</span></span>
+<span id="cb11-39"><a href="#cb11-39" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;installed_at&quot;: &quot;2023-05-17T06:44:01.221Z&quot;,</span></span>
+<span id="cb11-40"><a href="#cb11-40" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;model_id&quot;: 1,</span></span>
+<span id="cb11-41"><a href="#cb11-41" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;hostgroup_id&quot;: null,</span></span>
+<span id="cb11-42"><a href="#cb11-42" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;owner_id&quot;: 1,</span></span>
+<span id="cb11-43"><a href="#cb11-43" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;owner_type&quot;: &quot;User&quot;,</span></span>
+<span id="cb11-44"><a href="#cb11-44" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;enabled&quot;: true,</span></span>
+<span id="cb11-45"><a href="#cb11-45" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;puppet_ca_proxy_id&quot;: null,</span></span>
+<span id="cb11-46"><a href="#cb11-46" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;managed&quot;: false,</span></span>
+<span id="cb11-47"><a href="#cb11-47" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;use_image&quot;: null,</span></span>
+<span id="cb11-48"><a href="#cb11-48" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;image_file&quot;: &quot;&quot;,</span></span>
+<span id="cb11-49"><a href="#cb11-49" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;uuid&quot;: null,</span></span>
+<span id="cb11-50"><a href="#cb11-50" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;compute_resource_id&quot;: null,</span></span>
+<span id="cb11-51"><a href="#cb11-51" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;puppet_proxy_id&quot;: null,</span></span>
+<span id="cb11-52"><a href="#cb11-52" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;certname&quot;: &quot;panlab-satellite-client&quot;,</span></span>
+<span id="cb11-53"><a href="#cb11-53" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;image_id&quot;: null,</span></span>
+<span id="cb11-54"><a href="#cb11-54" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;organization_id&quot;: 1,</span></span>
+<span id="cb11-55"><a href="#cb11-55" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;location_id&quot;: 2,</span></span>
+<span id="cb11-56"><a href="#cb11-56" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;otp&quot;: null,</span></span>
+<span id="cb11-57"><a href="#cb11-57" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;realm_id&quot;: null,</span></span>
+<span id="cb11-58"><a href="#cb11-58" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;compute_profile_id&quot;: null,</span></span>
+<span id="cb11-59"><a href="#cb11-59" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;provision_method&quot;: &quot;build&quot;,</span></span>
+<span id="cb11-60"><a href="#cb11-60" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;grub_pass&quot;: null,</span></span>
+<span id="cb11-61"><a href="#cb11-61" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;discovery_rule_id&quot;: null,</span></span>
+<span id="cb11-62"><a href="#cb11-62" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;global_status&quot;: 0,</span></span>
+<span id="cb11-63"><a href="#cb11-63" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;lookup_value_matcher&quot;: &quot;fqdn=panlab-satellite-client&quot;,</span></span>
+<span id="cb11-64"><a href="#cb11-64" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;openscap_proxy_id&quot;: null,</span></span>
+<span id="cb11-65"><a href="#cb11-65" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;pxe_loader&quot;: null,</span></span>
+<span id="cb11-66"><a href="#cb11-66" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;initiated_at&quot;: &quot;2023-05-17T06:43:59.574Z&quot;,</span></span>
+<span id="cb11-67"><a href="#cb11-67" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;build_errors&quot;: null,</span></span>
+<span id="cb11-68"><a href="#cb11-68" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;content_facet_attributes&quot;: {</span></span>
+<span id="cb11-69"><a href="#cb11-69" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;id&quot;: 1,</span></span>
+<span id="cb11-70"><a href="#cb11-70" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;host_id&quot;: 2,</span></span>
+<span id="cb11-71"><a href="#cb11-71" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;uuid&quot;: &quot;e9d03372-d3f4-4970-bb38-3a2282458e29&quot;,</span></span>
+<span id="cb11-72"><a href="#cb11-72" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;content_view_id&quot;: 1,</span></span>
+<span id="cb11-73"><a href="#cb11-73" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;lifecycle_environment_id&quot;: 1,</span></span>
+<span id="cb11-74"><a href="#cb11-74" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;kickstart_repository_id&quot;: null,</span></span>
+<span id="cb11-75"><a href="#cb11-75" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;content_source_id&quot;: null,</span></span>
+<span id="cb11-76"><a href="#cb11-76" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;installable_security_errata_count&quot;: 0,</span></span>
+<span id="cb11-77"><a href="#cb11-77" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;installable_enhancement_errata_count&quot;: 0,</span></span>
+<span id="cb11-78"><a href="#cb11-78" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;installable_bugfix_errata_count&quot;: 0,</span></span>
+<span id="cb11-79"><a href="#cb11-79" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;applicable_rpm_count&quot;: 0,</span></span>
+<span id="cb11-80"><a href="#cb11-80" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;upgradable_rpm_count&quot;: 0,</span></span>
+<span id="cb11-81"><a href="#cb11-81" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;applicable_module_stream_count&quot;: 0,</span></span>
+<span id="cb11-82"><a href="#cb11-82" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;upgradable_module_stream_count&quot;: 0,</span></span>
+<span id="cb11-83"><a href="#cb11-83" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;applicable_deb_count&quot;: 0,</span></span>
+<span id="cb11-84"><a href="#cb11-84" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;upgradable_deb_count&quot;: 0</span></span>
+<span id="cb11-85"><a href="#cb11-85" aria-hidden="true" tabindex="-1"></a><span class="co">#   },</span></span>
+<span id="cb11-86"><a href="#cb11-86" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;subscription_facet_attributes&quot;: {</span></span>
+<span id="cb11-87"><a href="#cb11-87" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;id&quot;: 1,</span></span>
+<span id="cb11-88"><a href="#cb11-88" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;host_id&quot;: 2,</span></span>
+<span id="cb11-89"><a href="#cb11-89" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;uuid&quot;: &quot;e9d03372-d3f4-4970-bb38-3a2282458e29&quot;,</span></span>
+<span id="cb11-90"><a href="#cb11-90" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;last_checkin&quot;: &quot;2023-06-26T03:27:43.457Z&quot;,</span></span>
+<span id="cb11-91"><a href="#cb11-91" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;service_level&quot;: &quot;&quot;,</span></span>
+<span id="cb11-92"><a href="#cb11-92" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;release_version&quot;: &quot;8.6&quot;,</span></span>
+<span id="cb11-93"><a href="#cb11-93" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;autoheal&quot;: true,</span></span>
+<span id="cb11-94"><a href="#cb11-94" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;registered_at&quot;: &quot;2023-05-17T06:43:47.000Z&quot;,</span></span>
+<span id="cb11-95"><a href="#cb11-95" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;registered_through&quot;: &quot;panlab-satellite-server.infra.wzhlab.top&quot;,</span></span>
+<span id="cb11-96"><a href="#cb11-96" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;user_id&quot;: null,</span></span>
+<span id="cb11-97"><a href="#cb11-97" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;hypervisor&quot;: false,</span></span>
+<span id="cb11-98"><a href="#cb11-98" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;hypervisor_host_id&quot;: null,</span></span>
+<span id="cb11-99"><a href="#cb11-99" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;purpose_usage&quot;: &quot;&quot;,</span></span>
+<span id="cb11-100"><a href="#cb11-100" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;purpose_role&quot;: &quot;&quot;,</span></span>
+<span id="cb11-101"><a href="#cb11-101" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;dmi_uuid&quot;: &quot;4C6B4D56-ACB7-585F-EB20-90FD676DEA4B&quot;</span></span>
+<span id="cb11-102"><a href="#cb11-102" aria-hidden="true" tabindex="-1"></a><span class="co">#   }</span></span>
+<span id="cb11-103"><a href="#cb11-103" aria-hidden="true" tabindex="-1"></a><span class="co"># }</span></span></code></pre></div>
+        <p>调用了这个接口之后，我们就能看到这个主机被注销了。</p>
+        <p><img src="imgs/2023-06-26-11-52-35.png" /></p>
+        <h1 id="网络防火墙端口">网络防火墙端口</h1>
+        <p>客户的网络有严格的限制，要访问公网，需要特定的开防火墙，那么satellite需要开什么防火墙策略呢？</p>
+        <p>根据以下的一些官方知识库</p>
+        <ol type="1">
+        <li><a href="https://access.redhat.com/solutions/65300">How to
+        access Red Hat Subscription Manager (RHSM) through a firewall or
+        proxy</a></li>
+        <li><a href="https://access.redhat.com/articles/1525183">Public
+        CIDR Lists for Red Hat (IP Addresses for
+        cdn.redhat.com)</a></li>
+        <li><a
+        href="https://access.redhat.com/solutions/5090421">Downloading
+        Packages via Red Hat Official Network is Slow in mainland
+        China</a></li>
+        <li><a href="https://access.redhat.com/solutions/2109761">What
+        is the IP address range for ‘subscription.rhn.redhat.com’ and
+        ‘subscription.rhsm.redhat.com’?</a></li>
+        <li><a href="https://access.redhat.com/solutions/1179133">How do
+        I configure my firewall for api.access.redhat.com?</a></li>
+        </ol>
+        <p>我们总结出了一些域名需要放开</p>
+        <ol type="1">
+        <li>subscription.rhn.redhat.com:443 [https] AND
+        subscription.rhsm.redhat.com:443 [https] (This is the new
+        default address in newer versions of RHEL 7)</li>
+        <li>cdn.redhat.com:443 [https]</li>
+        <li><em>.akamaiedge.net:443 [https] OR
+        </em>.akamaitechnologies.com:443 [https]</li>
+        <li>china.cdn.redhat.com:443 [https]</li>
+        </ol>
+        <p>如果客户网络的防火墙，只支持ip，那么要放开如下的<a
+        href="./files/rh.cdn.ip.list.txt">一系列网络段</a>，不过根据作者实际测试，这个ip地址列表并不准确，或者说，更新的并不及时。</p>
+        <h1 id="端口转发">端口转发</h1>
+        <p>客户内网有严格的流量管理，不允许443端口通讯，需要把satellite的https
+        443端口，变成6443，那么我们来试试</p>
+        <p>先在web console上做一个配置</p>
+        <p><img src="imgs/2023-07-19-12-27-24.png" /></p>
+        <div class="sourceCode" id="cb12"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co"># on satellite server</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="co"># redirect 6443 to 443</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a><span class="ex">iptables</span> <span class="at">-t</span> nat <span class="at">-A</span> PREROUTING <span class="at">-p</span> tcp <span class="at">--dport</span> 6443 <span class="at">-j</span> REDIRECT <span class="at">--to-port</span> 443</span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a><span class="co"># block 443 traffic REJECT</span></span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a><span class="co"># iptables -A INPUT -p tcp --dport 443 -j DROP</span></span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a><span class="co"># iptables -A INPUT -p tcp --dport 443 -j REJECT</span></span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a><span class="co"># iptables -A INPUT -p tcp --dport 443 -j ACCEPT</span></span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a><span class="co"># iptables -A INPUT -p tcp --dport 80 -j ACCEPT</span></span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a><span class="co"># persistent</span></span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a><span class="ex">iptables-save</span> <span class="op">&gt;</span> /etc/sysconfig/iptables</span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> <span class="op">&lt;&lt; EOF</span> <span class="op">&gt;</span> /etc/systemd/system/iptables.service</span>
+<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a><span class="st">[Unit]</span></span>
+<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a><span class="st">Description=iptables Firewall Rules</span></span>
+<span id="cb12-17"><a href="#cb12-17" aria-hidden="true" tabindex="-1"></a><span class="st">After=network.target</span></span>
+<span id="cb12-18"><a href="#cb12-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-19"><a href="#cb12-19" aria-hidden="true" tabindex="-1"></a><span class="st">[Service]</span></span>
+<span id="cb12-20"><a href="#cb12-20" aria-hidden="true" tabindex="-1"></a><span class="st">ExecStart=/sbin/iptables-restore /etc/sysconfig/iptables</span></span>
+<span id="cb12-21"><a href="#cb12-21" aria-hidden="true" tabindex="-1"></a><span class="st">Type=oneshot</span></span>
+<span id="cb12-22"><a href="#cb12-22" aria-hidden="true" tabindex="-1"></a><span class="st">RemainAfterExit=yes</span></span>
+<span id="cb12-23"><a href="#cb12-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-24"><a href="#cb12-24" aria-hidden="true" tabindex="-1"></a><span class="st">[Install]</span></span>
+<span id="cb12-25"><a href="#cb12-25" aria-hidden="true" tabindex="-1"></a><span class="st">WantedBy=multi-user.target</span></span>
+<span id="cb12-26"><a href="#cb12-26" aria-hidden="true" tabindex="-1"></a><span class="op">EOF</span></span>
+<span id="cb12-27"><a href="#cb12-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-28"><a href="#cb12-28" aria-hidden="true" tabindex="-1"></a><span class="ex">systemctl</span> enable <span class="at">--now</span> iptables.service</span>
+<span id="cb12-29"><a href="#cb12-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-30"><a href="#cb12-30" aria-hidden="true" tabindex="-1"></a><span class="co"># systemctl disable --now iptables.service</span></span>
+<span id="cb12-31"><a href="#cb12-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-32"><a href="#cb12-32" aria-hidden="true" tabindex="-1"></a><span class="co"># sed -i &quot;s/443/6443/g&quot; /etc/httpd/conf/ports.conf</span></span>
+<span id="cb12-33"><a href="#cb12-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-34"><a href="#cb12-34" aria-hidden="true" tabindex="-1"></a><span class="co"># semanage port -a -t http_port_t -p tcp 6443</span></span>
+<span id="cb12-35"><a href="#cb12-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-36"><a href="#cb12-36" aria-hidden="true" tabindex="-1"></a><span class="co"># on client node</span></span>
+<span id="cb12-37"><a href="#cb12-37" aria-hidden="true" tabindex="-1"></a><span class="co"># to register</span></span>
+<span id="cb12-38"><a href="#cb12-38" aria-hidden="true" tabindex="-1"></a><span class="ex">curl</span> <span class="at">-sS</span> <span class="at">--insecure</span> <span class="st">&#39;https://panlab-satellite-server.infra.wzhlab.top:6443/register?activation_keys=demo-activate&amp;location_id=2&amp;organization_id=1&amp;setup_insights=false&amp;setup_remote_execution=false&amp;update_packages=false&#39;</span> <span class="at">-H</span> <span class="st">&#39;Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjo0LCJpYXQiOjE2ODk4MjMxNDksImp0aSI6IjUxNTNiZmFjMDIxMjNjYjEzZDdjZjM5NWRkMWIyZWEzMWQ3NzA3YTczNzgxNzRhOWI5MDMzMzdjOTA4MzBlY2UiLCJzY29wZSI6InJlZ2lzdHJhdGlvbiNnbG9iYWwgcmVnaXN0cmF0aW9uI2hvc3QifQ.idNFXNsi6mz0fKef42yn_XwVWvwdKD2R3FolAHsrRmo&#39;</span> <span class="op">&gt;</span> sub.sh</span>
+<span id="cb12-39"><a href="#cb12-39" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-40"><a href="#cb12-40" aria-hidden="true" tabindex="-1"></a><span class="fu">sed</span> <span class="at">-i</span> <span class="st">&#39;s/--server.port=&quot;443&quot;/--server.port=&quot;6443&quot;/g&#39;</span> sub.sh </span>
+<span id="cb12-41"><a href="#cb12-41" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-42"><a href="#cb12-42" aria-hidden="true" tabindex="-1"></a><span class="fu">sed</span> <span class="at">-i</span> <span class="st">&#39;s|https://panlab-satellite-server.infra.wzhlab.top/|https://panlab-satellite-server.infra.wzhlab.top:6443/|g&#39;</span> sub.sh </span>
+<span id="cb12-43"><a href="#cb12-43" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-44"><a href="#cb12-44" aria-hidden="true" tabindex="-1"></a><span class="co"># manually modify the shell</span></span>
+<span id="cb12-45"><a href="#cb12-45" aria-hidden="true" tabindex="-1"></a><span class="co"># comment out 2 step at the end of the script</span></span>
+<span id="cb12-46"><a href="#cb12-46" aria-hidden="true" tabindex="-1"></a><span class="co"># 我们的场景简单，就不需要其他步骤了</span></span>
+<span id="cb12-47"><a href="#cb12-47" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-48"><a href="#cb12-48" aria-hidden="true" tabindex="-1"></a><span class="co">#     #register_katello_host | bash</span></span>
+<span id="cb12-49"><a href="#cb12-49" aria-hidden="true" tabindex="-1"></a><span class="co">#   echo &#39;skip step&#39;</span></span>
+<span id="cb12-50"><a href="#cb12-50" aria-hidden="true" tabindex="-1"></a><span class="co"># else</span></span>
+<span id="cb12-51"><a href="#cb12-51" aria-hidden="true" tabindex="-1"></a><span class="co">#     #register_host | bash</span></span>
+<span id="cb12-52"><a href="#cb12-52" aria-hidden="true" tabindex="-1"></a><span class="co">#   echo &#39;skip step&#39;</span></span>
+<span id="cb12-53"><a href="#cb12-53" aria-hidden="true" tabindex="-1"></a><span class="co"># fi</span></span>
+<span id="cb12-54"><a href="#cb12-54" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-55"><a href="#cb12-55" aria-hidden="true" tabindex="-1"></a><span class="fu">bash</span> sub.sh</span>
+<span id="cb12-56"><a href="#cb12-56" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-57"><a href="#cb12-57" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-58"><a href="#cb12-58" aria-hidden="true" tabindex="-1"></a><span class="ex">subscription-manager</span> release <span class="at">--list</span></span>
+<span id="cb12-59"><a href="#cb12-59" aria-hidden="true" tabindex="-1"></a><span class="co"># +-------------------------------------------+</span></span>
+<span id="cb12-60"><a href="#cb12-60" aria-hidden="true" tabindex="-1"></a><span class="co">#           Available Releases</span></span>
+<span id="cb12-61"><a href="#cb12-61" aria-hidden="true" tabindex="-1"></a><span class="co"># +-------------------------------------------+</span></span>
+<span id="cb12-62"><a href="#cb12-62" aria-hidden="true" tabindex="-1"></a><span class="co"># 8.6</span></span>
+<span id="cb12-63"><a href="#cb12-63" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-64"><a href="#cb12-64" aria-hidden="true" tabindex="-1"></a><span class="ex">subscription-manager</span> release <span class="at">--set</span><span class="op">=</span>8.6</span>
+<span id="cb12-65"><a href="#cb12-65" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-66"><a href="#cb12-66" aria-hidden="true" tabindex="-1"></a><span class="ex">subscription-manager</span> config</span>
+<span id="cb12-67"><a href="#cb12-67" aria-hidden="true" tabindex="-1"></a><span class="co"># [server]</span></span>
+<span id="cb12-68"><a href="#cb12-68" aria-hidden="true" tabindex="-1"></a>  <span class="co">#  hostname = panlab-satellite-server.infra.wzhlab.top</span></span>
+<span id="cb12-69"><a href="#cb12-69" aria-hidden="true" tabindex="-1"></a>  <span class="co">#  insecure = [0]</span></span>
+<span id="cb12-70"><a href="#cb12-70" aria-hidden="true" tabindex="-1"></a>  <span class="co">#  no_proxy = []</span></span>
+<span id="cb12-71"><a href="#cb12-71" aria-hidden="true" tabindex="-1"></a>  <span class="co">#  port = 6443</span></span>
+<span id="cb12-72"><a href="#cb12-72" aria-hidden="true" tabindex="-1"></a><span class="co"># ......</span></span>
+<span id="cb12-73"><a href="#cb12-73" aria-hidden="true" tabindex="-1"></a><span class="co"># [rhsm]</span></span>
+<span id="cb12-74"><a href="#cb12-74" aria-hidden="true" tabindex="-1"></a><span class="co">#    auto_enable_yum_plugins = [1]</span></span>
+<span id="cb12-75"><a href="#cb12-75" aria-hidden="true" tabindex="-1"></a><span class="co">#    baseurl = https://panlab-satellite-server.infra.wzhlab.top:6443/pulp/content</span></span>
+<span id="cb12-76"><a href="#cb12-76" aria-hidden="true" tabindex="-1"></a><span class="co"># ......</span></span>
+<span id="cb12-77"><a href="#cb12-77" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-78"><a href="#cb12-78" aria-hidden="true" tabindex="-1"></a><span class="ex">subscription-manager</span> list <span class="at">--installed</span></span>
+<span id="cb12-79"><a href="#cb12-79" aria-hidden="true" tabindex="-1"></a><span class="co"># +-------------------------------------------+</span></span>
+<span id="cb12-80"><a href="#cb12-80" aria-hidden="true" tabindex="-1"></a><span class="co">#     Installed Product Status</span></span>
+<span id="cb12-81"><a href="#cb12-81" aria-hidden="true" tabindex="-1"></a><span class="co"># +-------------------------------------------+</span></span>
+<span id="cb12-82"><a href="#cb12-82" aria-hidden="true" tabindex="-1"></a><span class="co"># Product Name: Red Hat Enterprise Linux for x86_64</span></span>
+<span id="cb12-83"><a href="#cb12-83" aria-hidden="true" tabindex="-1"></a><span class="co"># Product ID:   479</span></span>
+<span id="cb12-84"><a href="#cb12-84" aria-hidden="true" tabindex="-1"></a><span class="co"># Version:      8.6</span></span>
+<span id="cb12-85"><a href="#cb12-85" aria-hidden="true" tabindex="-1"></a><span class="co"># Arch:         x86_64</span></span>
+<span id="cb12-86"><a href="#cb12-86" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-87"><a href="#cb12-87" aria-hidden="true" tabindex="-1"></a><span class="ex">subscription-manager</span> repos</span>
+<span id="cb12-88"><a href="#cb12-88" aria-hidden="true" tabindex="-1"></a><span class="co"># +----------------------------------------------------------+</span></span>
+<span id="cb12-89"><a href="#cb12-89" aria-hidden="true" tabindex="-1"></a><span class="co">#     Available Repositories in /etc/yum.repos.d/redhat.repo</span></span>
+<span id="cb12-90"><a href="#cb12-90" aria-hidden="true" tabindex="-1"></a><span class="co"># +----------------------------------------------------------+</span></span>
+<span id="cb12-91"><a href="#cb12-91" aria-hidden="true" tabindex="-1"></a><span class="co"># Repo ID:   rhel-8-for-x86_64-appstream-rpms</span></span>
+<span id="cb12-92"><a href="#cb12-92" aria-hidden="true" tabindex="-1"></a><span class="co"># Repo Name: Red Hat Enterprise Linux 8 for x86_64 - AppStream (RPMs)</span></span>
+<span id="cb12-93"><a href="#cb12-93" aria-hidden="true" tabindex="-1"></a><span class="co"># Repo URL:  https://panlab-satellite-server.infra.wzhlab.top:6443/pulp/content/My_Organization/Library/content/dist/rhel8/8.6/x86_64/appstream/os</span></span>
+<span id="cb12-94"><a href="#cb12-94" aria-hidden="true" tabindex="-1"></a><span class="co"># Enabled:   1</span></span>
+<span id="cb12-95"><a href="#cb12-95" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-96"><a href="#cb12-96" aria-hidden="true" tabindex="-1"></a><span class="co"># Repo ID:   rhel-8-for-x86_64-baseos-rpms</span></span>
+<span id="cb12-97"><a href="#cb12-97" aria-hidden="true" tabindex="-1"></a><span class="co"># Repo Name: Red Hat Enterprise Linux 8 for x86_64 - BaseOS (RPMs)</span></span>
+<span id="cb12-98"><a href="#cb12-98" aria-hidden="true" tabindex="-1"></a><span class="co"># Repo URL:  https://panlab-satellite-server.infra.wzhlab.top:6443/pulp/content/My_Organization/Library/content/dist/rhel8/8.6/x86_64/baseos/os</span></span>
+<span id="cb12-99"><a href="#cb12-99" aria-hidden="true" tabindex="-1"></a><span class="co"># Enabled:   1</span></span>
+<span id="cb12-100"><a href="#cb12-100" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-101"><a href="#cb12-101" aria-hidden="true" tabindex="-1"></a><span class="co"># try to unregister using satellite API</span></span>
+<span id="cb12-102"><a href="#cb12-102" aria-hidden="true" tabindex="-1"></a><span class="co"># get host id from satellite</span></span>
+<span id="cb12-103"><a href="#cb12-103" aria-hidden="true" tabindex="-1"></a><span class="co"># do not run below command on satellite server, you will face iptable redirect rule failure</span></span>
+<span id="cb12-104"><a href="#cb12-104" aria-hidden="true" tabindex="-1"></a><span class="ex">curl</span> <span class="at">-s</span> <span class="at">--request</span> GET <span class="at">--insecure</span> <span class="at">--user</span> admin:redhat <span class="dt">\</span></span>
+<span id="cb12-105"><a href="#cb12-105" aria-hidden="true" tabindex="-1"></a>https://panlab-satellite-server.infra.wzhlab.top:6443/api/hosts/client-0-changed <span class="kw">|</span> <span class="ex">jq</span> .id</span>
+<span id="cb12-106"><a href="#cb12-106" aria-hidden="true" tabindex="-1"></a><span class="co"># 6</span></span>
+<span id="cb12-107"><a href="#cb12-107" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-108"><a href="#cb12-108" aria-hidden="true" tabindex="-1"></a><span class="co"># delete host using host id</span></span>
+<span id="cb12-109"><a href="#cb12-109" aria-hidden="true" tabindex="-1"></a><span class="ex">curl</span> <span class="at">-s</span> <span class="at">--request</span> DELETE <span class="at">--insecure</span> <span class="at">--user</span> admin:redhat <span class="dt">\</span></span>
+<span id="cb12-110"><a href="#cb12-110" aria-hidden="true" tabindex="-1"></a>https://panlab-satellite-server.infra.wzhlab.top:6443/api/hosts/6 <span class="kw">|</span> <span class="ex">jq</span> .</span>
+<span id="cb12-111"><a href="#cb12-111" aria-hidden="true" tabindex="-1"></a><span class="co"># {</span></span>
+<span id="cb12-112"><a href="#cb12-112" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;id&quot;: 6,</span></span>
+<span id="cb12-113"><a href="#cb12-113" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;name&quot;: &quot;client-0-changed&quot;,</span></span>
+<span id="cb12-114"><a href="#cb12-114" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;last_compile&quot;: &quot;2023-07-20T04:02:48.000Z&quot;,</span></span>
+<span id="cb12-115"><a href="#cb12-115" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;last_report&quot;: null,</span></span>
+<span id="cb12-116"><a href="#cb12-116" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;updated_at&quot;: &quot;2023-07-20T04:02:48.132Z&quot;,</span></span>
+<span id="cb12-117"><a href="#cb12-117" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;created_at&quot;: &quot;2023-07-20T03:19:39.676Z&quot;,</span></span>
+<span id="cb12-118"><a href="#cb12-118" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;root_pass&quot;: null,</span></span>
+<span id="cb12-119"><a href="#cb12-119" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;architecture_id&quot;: 1,</span></span>
+<span id="cb12-120"><a href="#cb12-120" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;operatingsystem_id&quot;: 2,</span></span>
+<span id="cb12-121"><a href="#cb12-121" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;ptable_id&quot;: null,</span></span>
+<span id="cb12-122"><a href="#cb12-122" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;medium_id&quot;: null,</span></span>
+<span id="cb12-123"><a href="#cb12-123" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;build&quot;: false,</span></span>
+<span id="cb12-124"><a href="#cb12-124" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;comment&quot;: null,</span></span>
+<span id="cb12-125"><a href="#cb12-125" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;disk&quot;: null,</span></span>
+<span id="cb12-126"><a href="#cb12-126" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;installed_at&quot;: &quot;2023-07-20T03:20:28.857Z&quot;,</span></span>
+<span id="cb12-127"><a href="#cb12-127" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;model_id&quot;: 1,</span></span>
+<span id="cb12-128"><a href="#cb12-128" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;hostgroup_id&quot;: null,</span></span>
+<span id="cb12-129"><a href="#cb12-129" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;owner_id&quot;: 1,</span></span>
+<span id="cb12-130"><a href="#cb12-130" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;owner_type&quot;: &quot;User&quot;,</span></span>
+<span id="cb12-131"><a href="#cb12-131" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;enabled&quot;: true,</span></span>
+<span id="cb12-132"><a href="#cb12-132" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;puppet_ca_proxy_id&quot;: null,</span></span>
+<span id="cb12-133"><a href="#cb12-133" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;managed&quot;: false,</span></span>
+<span id="cb12-134"><a href="#cb12-134" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;use_image&quot;: null,</span></span>
+<span id="cb12-135"><a href="#cb12-135" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;image_file&quot;: &quot;&quot;,</span></span>
+<span id="cb12-136"><a href="#cb12-136" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;uuid&quot;: null,</span></span>
+<span id="cb12-137"><a href="#cb12-137" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;compute_resource_id&quot;: null,</span></span>
+<span id="cb12-138"><a href="#cb12-138" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;puppet_proxy_id&quot;: null,</span></span>
+<span id="cb12-139"><a href="#cb12-139" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;certname&quot;: &quot;client-0-changed&quot;,</span></span>
+<span id="cb12-140"><a href="#cb12-140" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;image_id&quot;: null,</span></span>
+<span id="cb12-141"><a href="#cb12-141" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;organization_id&quot;: 1,</span></span>
+<span id="cb12-142"><a href="#cb12-142" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;location_id&quot;: 2,</span></span>
+<span id="cb12-143"><a href="#cb12-143" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;otp&quot;: null,</span></span>
+<span id="cb12-144"><a href="#cb12-144" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;realm_id&quot;: null,</span></span>
+<span id="cb12-145"><a href="#cb12-145" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;compute_profile_id&quot;: null,</span></span>
+<span id="cb12-146"><a href="#cb12-146" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;provision_method&quot;: &quot;build&quot;,</span></span>
+<span id="cb12-147"><a href="#cb12-147" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;grub_pass&quot;: null,</span></span>
+<span id="cb12-148"><a href="#cb12-148" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;discovery_rule_id&quot;: null,</span></span>
+<span id="cb12-149"><a href="#cb12-149" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;global_status&quot;: 0,</span></span>
+<span id="cb12-150"><a href="#cb12-150" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;lookup_value_matcher&quot;: &quot;fqdn=client-0-changed&quot;,</span></span>
+<span id="cb12-151"><a href="#cb12-151" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;openscap_proxy_id&quot;: null,</span></span>
+<span id="cb12-152"><a href="#cb12-152" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;pxe_loader&quot;: null,</span></span>
+<span id="cb12-153"><a href="#cb12-153" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;initiated_at&quot;: &quot;2023-07-20T03:20:27.055Z&quot;,</span></span>
+<span id="cb12-154"><a href="#cb12-154" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;build_errors&quot;: null,</span></span>
+<span id="cb12-155"><a href="#cb12-155" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;content_facet_attributes&quot;: {</span></span>
+<span id="cb12-156"><a href="#cb12-156" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;id&quot;: 5,</span></span>
+<span id="cb12-157"><a href="#cb12-157" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;host_id&quot;: 6,</span></span>
+<span id="cb12-158"><a href="#cb12-158" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;uuid&quot;: &quot;e91e4f8d-6ace-4a7a-8af0-dd7311786042&quot;,</span></span>
+<span id="cb12-159"><a href="#cb12-159" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;content_view_id&quot;: 1,</span></span>
+<span id="cb12-160"><a href="#cb12-160" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;lifecycle_environment_id&quot;: 1,</span></span>
+<span id="cb12-161"><a href="#cb12-161" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;kickstart_repository_id&quot;: null,</span></span>
+<span id="cb12-162"><a href="#cb12-162" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;content_source_id&quot;: null,</span></span>
+<span id="cb12-163"><a href="#cb12-163" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;installable_security_errata_count&quot;: 0,</span></span>
+<span id="cb12-164"><a href="#cb12-164" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;installable_enhancement_errata_count&quot;: 0,</span></span>
+<span id="cb12-165"><a href="#cb12-165" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;installable_bugfix_errata_count&quot;: 0,</span></span>
+<span id="cb12-166"><a href="#cb12-166" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;applicable_rpm_count&quot;: 0,</span></span>
+<span id="cb12-167"><a href="#cb12-167" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;upgradable_rpm_count&quot;: 0,</span></span>
+<span id="cb12-168"><a href="#cb12-168" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;applicable_module_stream_count&quot;: 0,</span></span>
+<span id="cb12-169"><a href="#cb12-169" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;upgradable_module_stream_count&quot;: 0,</span></span>
+<span id="cb12-170"><a href="#cb12-170" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;applicable_deb_count&quot;: 0,</span></span>
+<span id="cb12-171"><a href="#cb12-171" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;upgradable_deb_count&quot;: 0</span></span>
+<span id="cb12-172"><a href="#cb12-172" aria-hidden="true" tabindex="-1"></a><span class="co">#   },</span></span>
+<span id="cb12-173"><a href="#cb12-173" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;subscription_facet_attributes&quot;: {</span></span>
+<span id="cb12-174"><a href="#cb12-174" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;id&quot;: 9,</span></span>
+<span id="cb12-175"><a href="#cb12-175" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;host_id&quot;: 6,</span></span>
+<span id="cb12-176"><a href="#cb12-176" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;uuid&quot;: &quot;e91e4f8d-6ace-4a7a-8af0-dd7311786042&quot;,</span></span>
+<span id="cb12-177"><a href="#cb12-177" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;last_checkin&quot;: &quot;2023-07-20T04:02:46.801Z&quot;,</span></span>
+<span id="cb12-178"><a href="#cb12-178" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;service_level&quot;: &quot;&quot;,</span></span>
+<span id="cb12-179"><a href="#cb12-179" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;release_version&quot;: &quot;8.6&quot;,</span></span>
+<span id="cb12-180"><a href="#cb12-180" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;autoheal&quot;: true,</span></span>
+<span id="cb12-181"><a href="#cb12-181" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;registered_at&quot;: &quot;2023-07-20T03:20:16.000Z&quot;,</span></span>
+<span id="cb12-182"><a href="#cb12-182" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;registered_through&quot;: &quot;panlab-satellite-server.infra.wzhlab.top&quot;,</span></span>
+<span id="cb12-183"><a href="#cb12-183" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;user_id&quot;: null,</span></span>
+<span id="cb12-184"><a href="#cb12-184" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;hypervisor&quot;: false,</span></span>
+<span id="cb12-185"><a href="#cb12-185" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;hypervisor_host_id&quot;: null,</span></span>
+<span id="cb12-186"><a href="#cb12-186" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;purpose_usage&quot;: &quot;&quot;,</span></span>
+<span id="cb12-187"><a href="#cb12-187" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;purpose_role&quot;: &quot;&quot;,</span></span>
+<span id="cb12-188"><a href="#cb12-188" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;dmi_uuid&quot;: &quot;4C6B4D56-ACB7-585F-EB20-90FD676DEA4B&quot;</span></span>
+<span id="cb12-189"><a href="#cb12-189" aria-hidden="true" tabindex="-1"></a><span class="co">#   }</span></span>
+<span id="cb12-190"><a href="#cb12-190" aria-hidden="true" tabindex="-1"></a><span class="co"># }</span></span>
+<span id="cb12-191"><a href="#cb12-191" aria-hidden="true" tabindex="-1"></a></span></code></pre></div>
+        <p>从上面的操作，可以看到，客户的需求非常简单，那么我们是可以把端口从443变成6443的。大致的过程，是在web
+        console上配置一下入口url，然后在主机上配置iptables，做端口转发。然后，在被管理节点上，把下发的shell脚本，做个定制，就可以了。</p>
+        <p>但是，需要注意，更改443端口，是红帽官方不支持的定制化，所以只能用于需求非常简单的场景中。</p>
+        <h1 id="中国区加速">中国区加速</h1>
+        <p>satellite默认会从cdn.redhat.com上下载rpm，但是在客户网络里面很慢，从china.cdn.redhat.com下载比较快，那么我们怎么配置，来用中国区的镜像呢？</p>
+        <p>第一步，配置一个 Content
+        Credentials，注意，这里面的文件，是/etc/rhsm/ca/redhat-uep.pem，你可以下载到本地上传，也可以复制内容进去。</p>
+        <p><img src="imgs/2023-07-20-16-27-48.png" /></p>
+        <p>第二步，是配置一个 “Custom CDN”，注意这里面要配置 SSL CA
+        Content Credential ，用我们第一步配置的就好。</p>
+        <p><img src="imgs/2023-07-20-16-29-17.png" /></p>
+        <p>第三步，是刷新一下</p>
+        <p><img src="imgs/2023-07-20-16-30-49.png" /></p>
+        <p>到这里，我们就配置成功，可以同步啦。</p>
+        <h1 id="安装-insight-插件">安装 insight 插件</h1>
+        <p>satellite也可以作为insight的proxy来使用，尝试之前，参考以下官方知识库，把对应的insight开关打开。</p>
+        <ul>
+        <li><a
+        href="https://access.redhat.com/solutions/6627771">Satellite
+        host registration with insights fails with “Telemetry is not
+        enabled for this host” message.</a></li>
+        </ul>
+        <p>对应到实验环境，我们需要去目标主机上，单独打开insight开关</p>
+        <p><img src="imgs/2023-09-05-13-06-50.png" /></p>
+        <p>默认是关上的(false)</p>
+        <p><img src="imgs/2023-09-05-13-07-24.png" /></p>
+        <p>我们打开它。 <img src="imgs/2023-09-05-13-08-01.png" /></p>
+        <p>然后，我们去目标主机，进行操作。我们先模拟离线环境，做iptables规则，关闭所有出流量，只留下satellite。</p>
+        <div class="sourceCode" id="cb13"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co"># block traffic to outside</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="co"># except to satellite</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a><span class="ex">iptables</span> <span class="at">-A</span> OUTPUT <span class="at">-p</span> tcp <span class="at">-d</span> 172.21.6.171 <span class="at">-j</span> ACCEPT</span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a><span class="ex">iptables</span> <span class="at">-A</span> OUTPUT <span class="at">-p</span> tcp <span class="at">--sport</span> 22 <span class="at">-j</span> ACCEPT</span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a><span class="ex">iptables</span> <span class="at">-A</span> OUTPUT <span class="at">-p</span> tcp <span class="at">-j</span> REJECT</span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a><span class="co"># try to register on insight</span></span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a><span class="ex">insights-client</span> <span class="at">--register</span></span>
+<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Successfully registered host client-0-changed</span></span>
+<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Automatic scheduling for Insights has been enabled.</span></span>
+<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a><span class="co"># Starting to collect Insights data for client-0-changed</span></span>
+<span id="cb13-14"><a href="#cb13-14" aria-hidden="true" tabindex="-1"></a><span class="co"># Uploading Insights data.</span></span>
+<span id="cb13-15"><a href="#cb13-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Successfully uploaded report from client-0-changed to account 5910538.</span></span>
+<span id="cb13-16"><a href="#cb13-16" aria-hidden="true" tabindex="-1"></a><span class="co"># View the Red Hat Insights console at https://console.redhat.com/insights/</span></span>
+<span id="cb13-17"><a href="#cb13-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-18"><a href="#cb13-18" aria-hidden="true" tabindex="-1"></a><span class="ex">insights-client</span> <span class="at">--check-results</span></span>
+<span id="cb13-19"><a href="#cb13-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-20"><a href="#cb13-20" aria-hidden="true" tabindex="-1"></a><span class="ex">insights-client</span> <span class="at">--show-results</span></span>
+<span id="cb13-21"><a href="#cb13-21" aria-hidden="true" tabindex="-1"></a><span class="co"># [</span></span>
+<span id="cb13-22"><a href="#cb13-22" aria-hidden="true" tabindex="-1"></a><span class="co">#  {</span></span>
+<span id="cb13-23"><a href="#cb13-23" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;rule&quot;: {</span></span>
+<span id="cb13-24"><a href="#cb13-24" aria-hidden="true" tabindex="-1"></a><span class="co">#    &quot;rule_id&quot;: &quot;generate_vmcore_failed_during_makedumpfile|GENERATE_VMCORE_FAILED_DURING_MAKEDUMPFILE&quot;,</span></span>
+<span id="cb13-25"><a href="#cb13-25" aria-hidden="true" tabindex="-1"></a><span class="co">#    &quot;created_at&quot;: &quot;2023-02-08T08:31:18.561333Z&quot;,</span></span>
+<span id="cb13-26"><a href="#cb13-26" aria-hidden="true" tabindex="-1"></a><span class="co">#    &quot;updated_at&quot;: &quot;2023-03-05T08:31:21.314917Z&quot;,</span></span>
+<span id="cb13-27"><a href="#cb13-27" aria-hidden="true" tabindex="-1"></a><span class="co">#    &quot;description&quot;: &quot;The vmcore generation fails in RHEL 8.6 when \&quot;cgroup_disable=memory\&quot; is configured due to a known bug in the kernel&quot;,</span></span>
+<span id="cb13-28"><a href="#cb13-28" aria-hidden="true" tabindex="-1"></a><span class="co">#    &quot;active&quot;: true,</span></span>
+<span id="cb13-29"><a href="#cb13-29" aria-hidden="true" tabindex="-1"></a><span class="co">#    &quot;category&quot;: {</span></span>
+<span id="cb13-30"><a href="#cb13-30" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;id&quot;: 1,</span></span>
+<span id="cb13-31"><a href="#cb13-31" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;name&quot;: &quot;Availability&quot;</span></span>
+<span id="cb13-32"><a href="#cb13-32" aria-hidden="true" tabindex="-1"></a><span class="co">#    },</span></span>
+<span id="cb13-33"><a href="#cb13-33" aria-hidden="true" tabindex="-1"></a><span class="co">#    &quot;impact&quot;: {</span></span>
+<span id="cb13-34"><a href="#cb13-34" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;name&quot;: &quot;Kernel Panic&quot;,</span></span>
+<span id="cb13-35"><a href="#cb13-35" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;impact&quot;: 4</span></span>
+<span id="cb13-36"><a href="#cb13-36" aria-hidden="true" tabindex="-1"></a><span class="co">#    },</span></span>
+<span id="cb13-37"><a href="#cb13-37" aria-hidden="true" tabindex="-1"></a><span class="co">#    &quot;likelihood&quot;: 3,</span></span>
+<span id="cb13-38"><a href="#cb13-38" aria-hidden="true" tabindex="-1"></a><span class="co">#    &quot;node_id&quot;: &quot;6969010&quot;,</span></span>
+<span id="cb13-39"><a href="#cb13-39" aria-hidden="true" tabindex="-1"></a><span class="co">#    &quot;tags&quot;: &quot;kdump kernel panic&quot;,</span></span>
+<span id="cb13-40"><a href="#cb13-40" aria-hidden="true" tabindex="-1"></a><span class="co">#    &quot;reboot_required&quot;: true,</span></span>
+<span id="cb13-41"><a href="#cb13-41" aria-hidden="true" tabindex="-1"></a><span class="co">#    &quot;publish_date&quot;: &quot;2023-03-05T03:26:00Z&quot;,</span></span>
+<span id="cb13-42"><a href="#cb13-42" aria-hidden="true" tabindex="-1"></a><span class="co">#    &quot;summary&quot;: &quot;The vmcore generation fails in RHEL 8.6 when \&quot;cgroup_disable=memory\&quot; is configured due to a known bug in the kernel.\n&quot;,</span></span>
+<span id="cb13-43"><a href="#cb13-43" aria-hidden="true" tabindex="-1"></a><span class="co">#    &quot;generic&quot;: &quot;The vmcore generation fails in RHEL 8.6 when \&quot;cgroup_disable=memory\&quot; is configured due to a known bug in the kernel.\n&quot;,</span></span>
+<span id="cb13-44"><a href="#cb13-44" aria-hidden="true" tabindex="-1"></a><span class="co">#    &quot;reason&quot;: &quot;This host is running **RHEL 8.6** with **kernel-{{=pydata.rhel_version}}** and \n**\&quot;cgroup_disable=memory\&quot;** is appended to the **KDUMP_COMMANDLINE_APPEND** in\nthe `/etc/sysconfig/kdump`:\n~~~\nKDUMP_COMMANDLINE_APPEND=\&quot;{{=pydata.kdump_data_append}}\&quot;\n~~~\n\nHowever, due to a known bug in the kernel versions prior to **4.18.0-372.40.1.el8_6**, \nthe vmcore generation fails when **\&quot;cgroup_disable=memory\&quot;** is appended to \n**KDUMP_COMMANDLINE_APPEND** in the `/etc/sysconfig/kdump`.\n&quot;,</span></span>
+<span id="cb13-45"><a href="#cb13-45" aria-hidden="true" tabindex="-1"></a><span class="co">#    &quot;more_info&quot;: &quot;&quot;,</span></span>
+<span id="cb13-46"><a href="#cb13-46" aria-hidden="true" tabindex="-1"></a><span class="co">#    &quot;resolution_set&quot;: [</span></span>
+<span id="cb13-47"><a href="#cb13-47" aria-hidden="true" tabindex="-1"></a><span class="co">#     {</span></span>
+<span id="cb13-48"><a href="#cb13-48" aria-hidden="true" tabindex="-1"></a><span class="co">#      &quot;system_type&quot;: 105,</span></span>
+<span id="cb13-49"><a href="#cb13-49" aria-hidden="true" tabindex="-1"></a><span class="co">#      &quot;resolution&quot;: &quot;Red Hat recommends that you perform the following steps:\n\n{{?pydata.cur_lock &amp;&amp; pydata.rcm_locks}}\n* Unset the release lock.\n  ~~~\n  # subscription-manager release --unset\n  ~~~\n{{?}}\n\n{{?pydata.no_base &amp;&amp;\n  (pydata.cur_lock==null || (pydata.cur_lock &amp;&amp; pydata.rcm_locks))}}\n* Enable the RHEL base repo:\n  ~~~\n  # subscription-manager repos --enable={{=pydata.no_base}}\n  ~~~\n  Note: To fix the issue in the base channel, you have to enable the base channel at first.\n{{?}}\n\n{{?pydata.cur_lock &amp;&amp; pydata.req_repos &amp;&amp; pydata.rcm_locks==null}}\n* {{?Object.keys(pydata.req_repos).length &gt; 1}}Enable one of the following channels{{??}}Enable the following channel{{?}}:\n  ~~~\n  {{~pydata.req_repos:e}}# subscription-manager repos --enable={{=e}}\n  {{~}}\n  ~~~\n  Note: Red Hat only provides the resolution in the required channel{{?Object.keys(pydata.req_repos).length &gt; 1}}s{{?}}. \n{{?}}\n* Update the `kernel` package:\n  ~~~\n  # yum update kernel\n  ~~~\n* Reboot the system with the new kernel:\n  ~~~\n  # reboot\n  ~~~\n{{?pydata.cur_lock &amp;&amp; pydata.rcm_locks}}\n**Alternatively**, if unsetting the release lock is not an option, fix this issue by re-setting the release lock to {{?Object.keys(pydata.rcm_locks).length &gt; 1}}one of the RHEL releases ``{{~pydata.rcm_locks:e}}{{=e}}, {{~}}``{{??}}the RHEL release ``{{=pydata.rcm_locks[0]}}``{{?}} and updating the package.{{?}}\n\n\nAfter applying the remediation, refresh the results of Advisor analysis by running the `insights-client` command on the system. \n~~~ \n# insights-client \n~~~ \n&quot;,</span></span>
+<span id="cb13-50"><a href="#cb13-50" aria-hidden="true" tabindex="-1"></a><span class="co">#      &quot;resolution_risk&quot;: {</span></span>
+<span id="cb13-51"><a href="#cb13-51" aria-hidden="true" tabindex="-1"></a><span class="co">#       &quot;name&quot;: &quot;Upgrade Kernel&quot;,</span></span>
+<span id="cb13-52"><a href="#cb13-52" aria-hidden="true" tabindex="-1"></a><span class="co">#       &quot;risk&quot;: 3</span></span>
+<span id="cb13-53"><a href="#cb13-53" aria-hidden="true" tabindex="-1"></a><span class="co">#      },</span></span>
+<span id="cb13-54"><a href="#cb13-54" aria-hidden="true" tabindex="-1"></a><span class="co">#      &quot;has_playbook&quot;: true</span></span>
+<span id="cb13-55"><a href="#cb13-55" aria-hidden="true" tabindex="-1"></a><span class="co">#     }</span></span>
+<span id="cb13-56"><a href="#cb13-56" aria-hidden="true" tabindex="-1"></a><span class="co">#    ],</span></span>
+<span id="cb13-57"><a href="#cb13-57" aria-hidden="true" tabindex="-1"></a><span class="co">#    &quot;total_risk&quot;: 3</span></span>
+<span id="cb13-58"><a href="#cb13-58" aria-hidden="true" tabindex="-1"></a><span class="co">#   },</span></span>
+<span id="cb13-59"><a href="#cb13-59" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;details&quot;: {</span></span>
+<span id="cb13-60"><a href="#cb13-60" aria-hidden="true" tabindex="-1"></a><span class="co">#    &quot;type&quot;: &quot;rule&quot;,</span></span>
+<span id="cb13-61"><a href="#cb13-61" aria-hidden="true" tabindex="-1"></a><span class="co">#    &quot;error_key&quot;: &quot;GENERATE_VMCORE_FAILED_DURING_MAKEDUMPFILE&quot;,</span></span>
+<span id="cb13-62"><a href="#cb13-62" aria-hidden="true" tabindex="-1"></a><span class="co">#    &quot;rhel_version&quot;: &quot;4.18.0-372.32.1.el8_6.x86_64&quot;,</span></span>
+<span id="cb13-63"><a href="#cb13-63" aria-hidden="true" tabindex="-1"></a><span class="co">#    &quot;kdump_data_append&quot;: &quot;irqpoll nr_cpus=1 reset_devices cgroup_disable=memory mce=off numa=off udev.children-max=2 panic=10 rootflags=nofail acpi_no_memhotplug transparent_hugepage=never nokaslr novmcoredd hest_disable&quot;</span></span>
+<span id="cb13-64"><a href="#cb13-64" aria-hidden="true" tabindex="-1"></a><span class="co">#   },</span></span>
+<span id="cb13-65"><a href="#cb13-65" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;resolution&quot;: {</span></span>
+<span id="cb13-66"><a href="#cb13-66" aria-hidden="true" tabindex="-1"></a><span class="co">#    &quot;system_type&quot;: 105,</span></span>
+<span id="cb13-67"><a href="#cb13-67" aria-hidden="true" tabindex="-1"></a><span class="co">#    &quot;resolution&quot;: &quot;Red Hat recommends that you perform the following steps:\n\n{{?pydata.cur_lock &amp;&amp; pydata.rcm_locks}}\n* Unset the release lock.\n  ~~~\n  # subscription-manager release --unset\n  ~~~\n{{?}}\n\n{{?pydata.no_base &amp;&amp;\n  (pydata.cur_lock==null || (pydata.cur_lock &amp;&amp; pydata.rcm_locks))}}\n* Enable the RHEL base repo:\n  ~~~\n  # subscription-manager repos --enable={{=pydata.no_base}}\n  ~~~\n  Note: To fix the issue in the base channel, you have to enable the base channel at first.\n{{?}}\n\n{{?pydata.cur_lock &amp;&amp; pydata.req_repos &amp;&amp; pydata.rcm_locks==null}}\n* {{?Object.keys(pydata.req_repos).length &gt; 1}}Enable one of the following channels{{??}}Enable the following channel{{?}}:\n  ~~~\n  {{~pydata.req_repos:e}}# subscription-manager repos --enable={{=e}}\n  {{~}}\n  ~~~\n  Note: Red Hat only provides the resolution in the required channel{{?Object.keys(pydata.req_repos).length &gt; 1}}s{{?}}. \n{{?}}\n* Update the `kernel` package:\n  ~~~\n  # yum update kernel\n  ~~~\n* Reboot the system with the new kernel:\n  ~~~\n  # reboot\n  ~~~\n{{?pydata.cur_lock &amp;&amp; pydata.rcm_locks}}\n**Alternatively**, if unsetting the release lock is not an option, fix this issue by re-setting the release lock to {{?Object.keys(pydata.rcm_locks).length &gt; 1}}one of the RHEL releases ``{{~pydata.rcm_locks:e}}{{=e}}, {{~}}``{{??}}the RHEL release ``{{=pydata.rcm_locks[0]}}``{{?}} and updating the package.{{?}}\n\n\nAfter applying the remediation, refresh the results of Advisor analysis by running the `insights-client` command on the system. \n~~~ \n# insights-client \n~~~ \n&quot;,</span></span>
+<span id="cb13-68"><a href="#cb13-68" aria-hidden="true" tabindex="-1"></a><span class="co">#    &quot;resolution_risk&quot;: {</span></span>
+<span id="cb13-69"><a href="#cb13-69" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;name&quot;: &quot;Upgrade Kernel&quot;,</span></span>
+<span id="cb13-70"><a href="#cb13-70" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;risk&quot;: 3</span></span>
+<span id="cb13-71"><a href="#cb13-71" aria-hidden="true" tabindex="-1"></a><span class="co">#    },</span></span>
+<span id="cb13-72"><a href="#cb13-72" aria-hidden="true" tabindex="-1"></a><span class="co">#    &quot;has_playbook&quot;: true</span></span>
+<span id="cb13-73"><a href="#cb13-73" aria-hidden="true" tabindex="-1"></a><span class="co">#   },</span></span>
+<span id="cb13-74"><a href="#cb13-74" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;impacted_date&quot;: &quot;2023-09-05T05:09:54.945795Z&quot;</span></span>
+<span id="cb13-75"><a href="#cb13-75" aria-hidden="true" tabindex="-1"></a><span class="co">#  },</span></span>
+<span id="cb13-76"><a href="#cb13-76" aria-hidden="true" tabindex="-1"></a><span class="co">#  {</span></span>
+<span id="cb13-77"><a href="#cb13-77" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;rule&quot;: {</span></span>
+<span id="cb13-78"><a href="#cb13-78" aria-hidden="true" tabindex="-1"></a><span class="co">#    &quot;rule_id&quot;: &quot;el8_to_el9_upgrade|RHEL8_TO_RHEL9_UPGRADE_AVAILABLE_V1&quot;,</span></span>
+<span id="cb13-79"><a href="#cb13-79" aria-hidden="true" tabindex="-1"></a><span class="co">#    &quot;created_at&quot;: &quot;2023-07-18T08:45:10.136263Z&quot;,</span></span>
+<span id="cb13-80"><a href="#cb13-80" aria-hidden="true" tabindex="-1"></a><span class="co">#    &quot;updated_at&quot;: &quot;2023-09-04T20:32:26.551599Z&quot;,</span></span>
+<span id="cb13-81"><a href="#cb13-81" aria-hidden="true" tabindex="-1"></a><span class="co">#    &quot;description&quot;: &quot;RHEL 8 system is eligible for an in-place upgrade to RHEL 9 using the Leapp utility&quot;,</span></span>
+<span id="cb13-82"><a href="#cb13-82" aria-hidden="true" tabindex="-1"></a><span class="co">#    &quot;active&quot;: true,</span></span>
+<span id="cb13-83"><a href="#cb13-83" aria-hidden="true" tabindex="-1"></a><span class="co">#    &quot;category&quot;: {</span></span>
+<span id="cb13-84"><a href="#cb13-84" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;id&quot;: 4,</span></span>
+<span id="cb13-85"><a href="#cb13-85" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;name&quot;: &quot;Performance&quot;</span></span>
+<span id="cb13-86"><a href="#cb13-86" aria-hidden="true" tabindex="-1"></a><span class="co">#    },</span></span>
+<span id="cb13-87"><a href="#cb13-87" aria-hidden="true" tabindex="-1"></a><span class="co">#    &quot;impact&quot;: {</span></span>
+<span id="cb13-88"><a href="#cb13-88" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;name&quot;: &quot;Best Practice&quot;,</span></span>
+<span id="cb13-89"><a href="#cb13-89" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;impact&quot;: 1</span></span>
+<span id="cb13-90"><a href="#cb13-90" aria-hidden="true" tabindex="-1"></a><span class="co">#    },</span></span>
+<span id="cb13-91"><a href="#cb13-91" aria-hidden="true" tabindex="-1"></a><span class="co">#    &quot;likelihood&quot;: 1,</span></span>
+<span id="cb13-92"><a href="#cb13-92" aria-hidden="true" tabindex="-1"></a><span class="co">#    &quot;node_id&quot;: &quot;6955478&quot;,</span></span>
+<span id="cb13-93"><a href="#cb13-93" aria-hidden="true" tabindex="-1"></a><span class="co">#    &quot;tags&quot;: &quot;autoack kernel leapp&quot;,</span></span>
+<span id="cb13-94"><a href="#cb13-94" aria-hidden="true" tabindex="-1"></a><span class="co">#    &quot;reboot_required&quot;: true,</span></span>
+<span id="cb13-95"><a href="#cb13-95" aria-hidden="true" tabindex="-1"></a><span class="co">#    &quot;publish_date&quot;: &quot;2023-08-11T08:32:29Z&quot;,</span></span>
+<span id="cb13-96"><a href="#cb13-96" aria-hidden="true" tabindex="-1"></a><span class="co">#    &quot;summary&quot;: &quot;Red Hat provides `leapp` utility to support upgrade from **RHEL 8** to **RHEL 9**. The current **RHEL 8** version is eligible for upgrade to **RHEL 9** via `leapp` utility. Red Hat recommends that you install `leapp` packages.\n\nOne way to install `leapp` is during execution of **RHEL preupgrade analysis utility** in *Automation Toolkit -&gt; Tasks* service. Run this task to understand the impact of an upgrade on your fleet and make a remediation plan before your maintenance window begins.\n&quot;,</span></span>
+<span id="cb13-97"><a href="#cb13-97" aria-hidden="true" tabindex="-1"></a><span class="co">#    &quot;generic&quot;: &quot;Red Hat provides `leapp` utility to support upgrade from **RHEL 8** to **RHEL 9**. The current **RHEL 8** version is eligible for upgrade to **RHEL 9** via `leapp` utility. Red Hat recommends that you install `leapp` packages.\n\nOne way to install `leapp` is during execution of **RHEL preupgrade analysis utility** in *Automation Toolkit -&gt; Tasks* service. Run this task to understand the impact of an upgrade on your fleet and make a remediation plan before your maintenance window begins.\n&quot;,</span></span>
+<span id="cb13-98"><a href="#cb13-98" aria-hidden="true" tabindex="-1"></a><span class="co">#    &quot;reason&quot;: &quot;{{? pydata.error_key == \&quot;RHEL8_TO_RHEL9_UPGRADE_AVAILABLE\&quot;}}\nThe current **RHEL** version **{{=pydata.supported_path[0]}}** is eligible for upgrade to **RHEL** version {{? pydata.supported_path.length &gt; 2}}**{{=pydata.supported_path[2]}}** (default) or **{{=pydata.supported_path[1]}}**{{??}}**{{=pydata.supported_path[1]}}**{{?}} via the Leapp utility.\n{{?}}\n\n{{? pydata.error_key == \&quot;RHEL8_TO_RHEL9_UPGRADE_AVAILABLE_RPMS\&quot;}}\nThe Leapp utility is available on this system. The current **RHEL** version **{{=pydata.supported_path[0]}}** is eligible for upgrade to **RHEL** version {{? pydata.supported_path.length &gt; 2}}**{{=pydata.supported_path[2]}}** (default) or **{{=pydata.supported_path[1]}}**{{??}}**{{=pydata.supported_path[1]}}**{{?}} via the Leapp utility.\n{{?}}\n&quot;,</span></span>
+<span id="cb13-99"><a href="#cb13-99" aria-hidden="true" tabindex="-1"></a><span class="co">#    &quot;more_info&quot;: &quot;One way to install `leapp` is during execution of **RHEL preupgrade analysis utility** in [Automation Toolkit -&gt; Tasks](https://console.redhat.com/insights/tasks) service. Run this task to understand the impact of an upgrade on your fleet and make a remediation plan before your maintenance window begins.\n&quot;,</span></span>
+<span id="cb13-100"><a href="#cb13-100" aria-hidden="true" tabindex="-1"></a><span class="co">#    &quot;resolution_set&quot;: [</span></span>
+<span id="cb13-101"><a href="#cb13-101" aria-hidden="true" tabindex="-1"></a><span class="co">#     {</span></span>
+<span id="cb13-102"><a href="#cb13-102" aria-hidden="true" tabindex="-1"></a><span class="co">#      &quot;system_type&quot;: 105,</span></span>
+<span id="cb13-103"><a href="#cb13-103" aria-hidden="true" tabindex="-1"></a><span class="co">#      &quot;resolution&quot;: &quot;Red Hat recommends that you upgrade to **RHEL9** with the following steps:\n\n{{? pydata.error_key == \&quot;RHEL8_TO_RHEL9_UPGRADE_AVAILABLE\&quot;}}\n1. Planning an upgrade according to these [points](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/9/html/upgrading_from_rhel_8_to_rhel_9/planning-an-upgrade_upgrading-from-rhel-8-to-rhel-9)\n1. Preparing a RHEL 8 system for the upgrade according to this [procedure](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/9/html/upgrading_from_rhel_8_to_rhel_9/assembly_preparing-for-the-upgrade_upgrading-from-rhel-8-to-rhel-9).\n\n1. Install `leapp` utility.\n   ~~~\n   # dnf install leapp-upgrade\n   ~~~\n1. Identify potential upgrade problems before upgrade.\n   ~~~\n   # leapp preupgrade --target {{? pydata.supported_path.length &gt; 2}}{{=pydata.supported_path[2]}}{{??}}{{=pydata.supported_path[1]}}{{?}}\n   ~~~\n   **Note**: Check `/var/log/leapp/leapp-report.txt` or web console for any pre-check failure and refer to [Reviewing the pre-upgrade report](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/9/html/upgrading_from_rhel_8_to_rhel_9/reviewing-the-pre-upgrade-report_upgrading-from-rhel-8-to-rhel-9) for more details. \n1. Start the upgrade.\n   ~~~\n   # leapp upgrade --target {{? pydata.supported_path.length &gt; 2}}{{=pydata.supported_path[2]}}{{??}}{{=pydata.supported_path[1]}}{{?}}\n   ~~~\n1. Reboot system.\n   ~~~\n   # reboot\n   ~~~\n{{?}}\n\n{{? pydata.error_key == \&quot;RHEL8_TO_RHEL9_UPGRADE_AVAILABLE_RPMS\&quot;}}\n1. Planning an upgrade according to these [points](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/9/html/upgrading_from_rhel_8_to_rhel_9/planning-an-upgrade_upgrading-from-rhel-8-to-rhel-9)\n1. Preparing a RHEL 8 system for the upgrade according to this [procedure](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/9/html/upgrading_from_rhel_8_to_rhel_9/assembly_preparing-for-the-upgrade_upgrading-from-rhel-8-to-rhel-9).\n\n1. Identify potential upgrade problems before upgrade.\n   ~~~\n   # leapp preupgrade --target {{? pydata.supported_path.length &gt; 2}}{{=pydata.supported_path[2]}}{{??}}{{=pydata.supported_path[1]}}{{?}}\n   ~~~\n1. Start the upgrade.\n   ~~~\n   # leapp upgrade --target {{? pydata.supported_path.length &gt; 2}}{{=pydata.supported_path[2]}}{{??}}{{=pydata.supported_path[1]}}{{?}}\n   ~~~\n   **Note**: Check `/var/log/leapp/leapp-report.txt` or web console for any pre-check failure and refer to [Reviewing the pre-upgrade report](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/9/html/upgrading_from_rhel_8_to_rhel_9/reviewing-the-pre-upgrade-report_upgrading-from-rhel-8-to-rhel-9) for more details.\n1. Reboot system.\n   ~~~\n   # reboot\n   ~~~\n{{?}}\nFor more details about upgrading, refer to [Upgrading to RHEL9](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/9/html/upgrading_from_rhel_8_to_rhel_9/index).\n\n\nAfter applying the remediation, refresh the results of Advisor analysis by running the `insights-client` command on the system. \n~~~ \n# insights-client \n~~~ \n&quot;,</span></span>
+<span id="cb13-104"><a href="#cb13-104" aria-hidden="true" tabindex="-1"></a><span class="co">#      &quot;resolution_risk&quot;: {</span></span>
+<span id="cb13-105"><a href="#cb13-105" aria-hidden="true" tabindex="-1"></a><span class="co">#       &quot;name&quot;: &quot;Upgrade RHEL&quot;,</span></span>
+<span id="cb13-106"><a href="#cb13-106" aria-hidden="true" tabindex="-1"></a><span class="co">#       &quot;risk&quot;: 3</span></span>
+<span id="cb13-107"><a href="#cb13-107" aria-hidden="true" tabindex="-1"></a><span class="co">#      },</span></span>
+<span id="cb13-108"><a href="#cb13-108" aria-hidden="true" tabindex="-1"></a><span class="co">#      &quot;has_playbook&quot;: false</span></span>
+<span id="cb13-109"><a href="#cb13-109" aria-hidden="true" tabindex="-1"></a><span class="co">#     }</span></span>
+<span id="cb13-110"><a href="#cb13-110" aria-hidden="true" tabindex="-1"></a><span class="co">#    ],</span></span>
+<span id="cb13-111"><a href="#cb13-111" aria-hidden="true" tabindex="-1"></a><span class="co">#    &quot;total_risk&quot;: 1</span></span>
+<span id="cb13-112"><a href="#cb13-112" aria-hidden="true" tabindex="-1"></a><span class="co">#   },</span></span>
+<span id="cb13-113"><a href="#cb13-113" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;details&quot;: {</span></span>
+<span id="cb13-114"><a href="#cb13-114" aria-hidden="true" tabindex="-1"></a><span class="co">#    &quot;type&quot;: &quot;rule&quot;,</span></span>
+<span id="cb13-115"><a href="#cb13-115" aria-hidden="true" tabindex="-1"></a><span class="co">#    &quot;error_key&quot;: &quot;RHEL8_TO_RHEL9_UPGRADE_AVAILABLE_V1&quot;,</span></span>
+<span id="cb13-116"><a href="#cb13-116" aria-hidden="true" tabindex="-1"></a><span class="co">#    &quot;supported_path&quot;: [</span></span>
+<span id="cb13-117"><a href="#cb13-117" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;8.6&quot;,</span></span>
+<span id="cb13-118"><a href="#cb13-118" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;9.0&quot;</span></span>
+<span id="cb13-119"><a href="#cb13-119" aria-hidden="true" tabindex="-1"></a><span class="co">#    ]</span></span>
+<span id="cb13-120"><a href="#cb13-120" aria-hidden="true" tabindex="-1"></a><span class="co">#   },</span></span>
+<span id="cb13-121"><a href="#cb13-121" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;resolution&quot;: {</span></span>
+<span id="cb13-122"><a href="#cb13-122" aria-hidden="true" tabindex="-1"></a><span class="co">#    &quot;system_type&quot;: 105,</span></span>
+<span id="cb13-123"><a href="#cb13-123" aria-hidden="true" tabindex="-1"></a><span class="co">#    &quot;resolution&quot;: &quot;Red Hat recommends that you upgrade to **RHEL9** with the following steps:\n\n{{? pydata.error_key == \&quot;RHEL8_TO_RHEL9_UPGRADE_AVAILABLE\&quot;}}\n1. Planning an upgrade according to these [points](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/9/html/upgrading_from_rhel_8_to_rhel_9/planning-an-upgrade_upgrading-from-rhel-8-to-rhel-9)\n1. Preparing a RHEL 8 system for the upgrade according to this [procedure](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/9/html/upgrading_from_rhel_8_to_rhel_9/assembly_preparing-for-the-upgrade_upgrading-from-rhel-8-to-rhel-9).\n\n1. Install `leapp` utility.\n   ~~~\n   # dnf install leapp-upgrade\n   ~~~\n1. Identify potential upgrade problems before upgrade.\n   ~~~\n   # leapp preupgrade --target {{? pydata.supported_path.length &gt; 2}}{{=pydata.supported_path[2]}}{{??}}{{=pydata.supported_path[1]}}{{?}}\n   ~~~\n   **Note**: Check `/var/log/leapp/leapp-report.txt` or web console for any pre-check failure and refer to [Reviewing the pre-upgrade report](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/9/html/upgrading_from_rhel_8_to_rhel_9/reviewing-the-pre-upgrade-report_upgrading-from-rhel-8-to-rhel-9) for more details. \n1. Start the upgrade.\n   ~~~\n   # leapp upgrade --target {{? pydata.supported_path.length &gt; 2}}{{=pydata.supported_path[2]}}{{??}}{{=pydata.supported_path[1]}}{{?}}\n   ~~~\n1. Reboot system.\n   ~~~\n   # reboot\n   ~~~\n{{?}}\n\n{{? pydata.error_key == \&quot;RHEL8_TO_RHEL9_UPGRADE_AVAILABLE_RPMS\&quot;}}\n1. Planning an upgrade according to these [points](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/9/html/upgrading_from_rhel_8_to_rhel_9/planning-an-upgrade_upgrading-from-rhel-8-to-rhel-9)\n1. Preparing a RHEL 8 system for the upgrade according to this [procedure](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/9/html/upgrading_from_rhel_8_to_rhel_9/assembly_preparing-for-the-upgrade_upgrading-from-rhel-8-to-rhel-9).\n\n1. Identify potential upgrade problems before upgrade.\n   ~~~\n   # leapp preupgrade --target {{? pydata.supported_path.length &gt; 2}}{{=pydata.supported_path[2]}}{{??}}{{=pydata.supported_path[1]}}{{?}}\n   ~~~\n1. Start the upgrade.\n   ~~~\n   # leapp upgrade --target {{? pydata.supported_path.length &gt; 2}}{{=pydata.supported_path[2]}}{{??}}{{=pydata.supported_path[1]}}{{?}}\n   ~~~\n   **Note**: Check `/var/log/leapp/leapp-report.txt` or web console for any pre-check failure and refer to [Reviewing the pre-upgrade report](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/9/html/upgrading_from_rhel_8_to_rhel_9/reviewing-the-pre-upgrade-report_upgrading-from-rhel-8-to-rhel-9) for more details.\n1. Reboot system.\n   ~~~\n   # reboot\n   ~~~\n{{?}}\nFor more details about upgrading, refer to [Upgrading to RHEL9](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/9/html/upgrading_from_rhel_8_to_rhel_9/index).\n\n\nAfter applying the remediation, refresh the results of Advisor analysis by running the `insights-client` command on the system. \n~~~ \n# insights-client \n~~~ \n&quot;,</span></span>
+<span id="cb13-124"><a href="#cb13-124" aria-hidden="true" tabindex="-1"></a><span class="co">#    &quot;resolution_risk&quot;: {</span></span>
+<span id="cb13-125"><a href="#cb13-125" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;name&quot;: &quot;Upgrade RHEL&quot;,</span></span>
+<span id="cb13-126"><a href="#cb13-126" aria-hidden="true" tabindex="-1"></a><span class="co">#     &quot;risk&quot;: 3</span></span>
+<span id="cb13-127"><a href="#cb13-127" aria-hidden="true" tabindex="-1"></a><span class="co">#    },</span></span>
+<span id="cb13-128"><a href="#cb13-128" aria-hidden="true" tabindex="-1"></a><span class="co">#    &quot;has_playbook&quot;: false</span></span>
+<span id="cb13-129"><a href="#cb13-129" aria-hidden="true" tabindex="-1"></a><span class="co">#   },</span></span>
+<span id="cb13-130"><a href="#cb13-130" aria-hidden="true" tabindex="-1"></a><span class="co">#   &quot;impacted_date&quot;: &quot;2023-09-05T05:09:54.945795Z&quot;</span></span>
+<span id="cb13-131"><a href="#cb13-131" aria-hidden="true" tabindex="-1"></a><span class="co">#  }</span></span>
+<span id="cb13-132"><a href="#cb13-132" aria-hidden="true" tabindex="-1"></a><span class="co"># ]</span></span></code></pre></div>
+        <p>最后，我们能在公网的insight console上，看到我们的主机。</p>
+        <p><img src="imgs/2023-09-05-13-13-20.png" /></p>
+        <p>同时，我们注意到，虽然在公网的insight上，能看到这个主机，但是在access.redhat.com的订阅管理中，是看不到这个被管主机的。</p>
+        <p>总结以下，satellite可以作为insight的proxy使用，但是在实验过程中，我发现insight的结果，只能在主机自己，和insight公网console上展现，而satellite上面，虽然有insight结果展示的入口页面，但是页面是空的，也许有别的配置吧。</p>
+        <h1 id="重装os">重装os</h1>
+        <p>客户有一个特殊场景，如果rhel重装了，那么satellite上面，原来的信息要怎么处理？是否可以不删除satellite上面的信息，直接在rhel上面注册，复用之前的注册信息呢？我们试试</p>
+        <p>我们重装实验环境中的一台主机</p>
+        <div class="sourceCode" id="cb14"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="co"># before reinstall, we check the uuid</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="ex">subscription-manager</span> facts <span class="kw">|</span> <span class="fu">grep</span> uuid</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a><span class="co"># dmi.system.uuid: 8DF84D56-895F-6163-962B-30EF44BDE122</span></span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a><span class="co"># virt.uuid: 8DF84D56-895F-6163-962B-30EF44BDE122</span></span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a><span class="co"># after reinstall os</span></span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a><span class="co"># we can see the uuid is the same</span></span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a><span class="ex">subscription-manager</span> facts <span class="kw">|</span> <span class="fu">grep</span> uuid</span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a><span class="co"># dmi.system.uuid: 8DF84D56-895F-6163-962B-30EF44BDE122</span></span>
+<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a><span class="co"># virt.uuid: 8DF84D56-895F-6163-962B-30EF44BDE122</span></span>
+<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a><span class="co"># try to register again</span></span>
+<span id="cb14-13"><a href="#cb14-13" aria-hidden="true" tabindex="-1"></a><span class="ex">curl</span> <span class="at">-sS</span> <span class="at">--insecure</span> <span class="st">&#39;https://panlab-satellite-server.infra.wzhlab.top/register?activation_keys=demo-activate&amp;location_id=2&amp;organization_id=1&amp;setup_insights=false&amp;setup_remote_execution=false&amp;setup_remote_execution_pull=false&amp;update_packages=false&#39;</span> <span class="at">-H</span> <span class="st">&#39;Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjo0LCJpYXQiOjE2ODQzMDU1MTYsImp0aSI6IjdiODBkNzdmMjVjYzY1MDZjODQ3OGI2Y2VjNzRkZWZjOGM2YjAyMDUxMDQ4YTcyYTJlMWE1YzRiNTgyMjE5NzAiLCJzY29wZSI6InJlZ2lzdHJhdGlvbiNnbG9iYWwgcmVnaXN0cmF0aW9uI2hvc3QifQ.EVXyW9gjWyAQIFYUxnwwdxAigrPmUo_XYWnqn-Wh1Fw&#39;</span> <span class="kw">|</span> <span class="fu">bash</span></span>
+<span id="cb14-14"><a href="#cb14-14" aria-hidden="true" tabindex="-1"></a><span class="co"># ......</span></span>
+<span id="cb14-15"><a href="#cb14-15" aria-hidden="true" tabindex="-1"></a><span class="co"># The DMI UUID of this host (8DF84D56-895F-6163-962B-30EF44BDE122) matches other registered hosts: satellite-client-02 (HTTP error code 422: Unprocessable Entity)</span></span></code></pre></div>
+        <p>好了，我们看到了结论，satellite发现，已经有一个相同的uuid主机存在，不能再注册了。我们能做的，就是先在satellite里面，把现在已经存在的这个主机给删掉。</p>
+        <h2 id="change-uuid">change uuid</h2>
+        <p>我们知道了，uuid是注册satellite的一个key，但是，如果我们的环境特殊，uuid就是重复的，那么怎么办呢？官方有解决方案</p>
+        <ul>
+        <li><a href="https://access.redhat.com/solutions/4207781">How to
+        register multiple Content Hosts with same UUID to Red Hat
+        Satellite 6?</a></li>
+        </ul>
+        <pre><code>[root@client ~]# vi /etc/rhsm/facts/uuid.facts 
+{&quot;dmi.system.uuid&quot;: &quot;customuuid&quot;}
+
+* customuuid = hostname which is unique for every machine.</code></pre>
+        <h1 id="监控-subscription-订阅">监控 subscription / 订阅</h1>
+        <p>客户想自动化的监控订阅的过期时间，好及时的更新订阅。虽然我们可以在红帽的portal上面方便的看到订阅的状态，但是，如果我们是运维组，没有访问红帽portal的权限（内部沟通协调问题，你懂的），还是需要一个监控的工具来做这件事情。</p>
+        <p>那么我们就用 satellite 的 API 来做这件事情。</p>
+        <div class="sourceCode" id="cb16"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a><span class="co"># you can get the org_id by search a host, the result json contain org_id</span></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a><span class="ex">curl</span> <span class="at">-s</span> <span class="at">--request</span> GET <span class="at">--insecure</span> <span class="at">--user</span> admin:redhat <span class="dt">\</span></span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>  https://panlab-satellite-server.infra.wzhlab.top:6443//katello/api/subscriptions<span class="pp">?</span>organization_id=1 <span class="kw">|</span> <span class="dt">\</span></span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>  <span class="ex">jq</span> <span class="at">-r</span> <span class="st">&#39;[&quot;Name&quot;,&quot;End Date&quot;], (.results[] | [.name, .end_date] ) | @tsv &#39;</span></span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Name    End Date</span></span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Employee SKU    2027-01-01 04:59:59 UTC</span></span></code></pre></div>
+        <p>从上面的例子，我们可以看到，从 satellite API
+        里面，能直接拿到订阅的过期时间。方便运维组监控。</p>
+        <h1 id="end">end</h1>
+        <h1 id="next">next</h1>
+      </article>
+    </div>
+      </main>
+
+  <footer>
+    <p>
+      Licensed under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank"
+        rel="noopener">CC-BY-NC-SA 4.0</a>
+      &nbsp;·&nbsp;
+      <a href="https://github.com/wangzheng422/docker_env" target="_blank" rel="noopener">wangzheng422/docker_env</a>
+    </p>
+  </footer>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: false, theme: 'dark' });
+
+    const SITE_BUILD_ID = 'fbe91b569ae8';
+    const SITE_HOME_URL = '../../../index.html';
+
+    const getBuildIdFromHtml = (html) => {
+      const match = String(html).match(/<meta[^>]+name=["']site-build-id["'][^>]+content=["']([^"']+)["']/i)
+        || String(html).match(/<meta[^>]+content=["']([^"']+)["'][^>]+name=["']site-build-id["']/i);
+      return match ? match[1] : '';
+    };
+
+    const checkForSiteUpdate = async () => {
+      if (!SITE_BUILD_ID || window.location.protocol === 'file:') return;
+      try {
+        const probeUrl = new URL(SITE_HOME_URL || './index.html', window.location.href);
+        probeUrl.searchParams.set('site_cache_probe', Date.now().toString());
+        const response = await fetch(probeUrl.toString(), { cache: 'no-store' });
+        if (!response.ok) return;
+        const latestBuildId = getBuildIdFromHtml(await response.text());
+        if (!latestBuildId || latestBuildId === SITE_BUILD_ID) return;
+        if (sessionStorage.getItem('site-build-refresh') === latestBuildId) return;
+        sessionStorage.setItem('site-build-refresh', latestBuildId);
+        const freshUrl = new URL(window.location.href);
+        freshUrl.searchParams.set('v', latestBuildId);
+        window.location.replace(freshUrl.toString());
+      } catch (error) {
+        // Network errors should not block reading the current page.
+      }
+    };
+
+    const versionedLocalUrl = (rawUrl) => {
+      if (!rawUrl || /^(https?:)?\/\//i.test(rawUrl) || /^(data|blob|mailto):/i.test(rawUrl)) return rawUrl;
+      const url = new URL(rawUrl, window.location.href);
+      if (url.searchParams.has('v')) return rawUrl;
+      url.searchParams.set('v', SITE_BUILD_ID);
+      return url.toString();
+    };
+
+    const cacheBustPageAssets = () => {
+      document.querySelectorAll('img[src], video[src], audio[src], source[src]').forEach((node) => {
+        const src = node.getAttribute('src');
+        const versioned = versionedLocalUrl(src);
+        if (versioned !== src) node.setAttribute('src', versioned);
+      });
+    };
+
+    const updateReadingProgress = () => {
+      const progress = document.querySelector('.reading-progress');
+      if (!progress) return;
+      const scrollable = document.documentElement.scrollHeight - window.innerHeight;
+      const ratio = scrollable > 0 ? window.scrollY / scrollable : 0;
+      progress.style.transform = 'scaleX(' + Math.min(1, Math.max(0, ratio)) + ')';
+    };
+
+    const topicFor = (text, href) => {
+      const haystack = (text + ' ' + href).toLowerCase();
+      if (/developers\.redhat\.com|redhatquickcourses|github\.com\/redhatquickcourses/.test(haystack)) return 'Red Hat';
+      if (/ai|llm|gpu|vllm|llama|model|rhaiis/.test(haystack)) return 'AI';
+      if (/network|ovn|bgp|dns|egress|ingress|metallb|nic|route/.test(haystack)) return 'Network';
+      if (/cert|tls|sso|keycloak|rhbk|security|compliance/.test(haystack)) return 'Security';
+      if (/perf|profile|throttling|heap|debug/.test(haystack)) return 'Performance';
+      if (/install|ipi|upi|sno|disconnected|bootstrap/.test(haystack)) return 'Install';
+      if (/rhel|coreos|rhcos|kernel|rpm|ostree/.test(haystack)) return 'RHEL';
+      if (/backup|storage|nfs|odf|ocs|ceph|dr/.test(haystack)) return 'Storage';
+      if (/pipeline|gitops|ansible|aap|rhdh|devops/.test(haystack)) return 'DevOps';
+      return 'OpenShift';
+    };
+
+    const yearFor = (text, href) => {
+      const match = (text + ' ' + href).match(/20\d{2}/);
+      return match ? match[0] : 'Notes';
+    };
+
+    const importantExternal = (href) =>
+      /developers\.redhat\.com|redhatquickcourses\.github\.io/i.test(href);
+
+    const titleForLink = (link) => {
+      const href = link.getAttribute('href') || '';
+      const directText = link.textContent.trim().replace(/\s+/g, ' ');
+      if (!/^https?:\/\//.test(directText)) return directText;
+      const parentItem = link.closest('ul')?.parentElement;
+      if (parentItem) {
+        const clone = parentItem.cloneNode(true);
+        clone.querySelectorAll('ul').forEach((nested) => nested.remove());
+        const parentText = clone.textContent.trim().replace(/\s+/g, ' ');
+        if (parentText) {
+          return parentText;
+        }
+      }
+      return directText;
+    };
+
+    const escapeHtml = (value) => String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+
+    const enhanceHome = () => {
+      if (!document.body.classList.contains('page-index')) return;
+      const source = document.querySelector('.home-source');
+      const grid = document.getElementById('note-grid');
+      const stats = document.getElementById('console-stats');
+      const externalPanel = document.getElementById('external-panel');
+      const topicStrip = document.getElementById('topic-strip');
+      const search = document.getElementById('console-search');
+      if (!source || !grid || !stats || !externalPanel || !topicStrip || !search) return;
+
+      const seen = new Set();
+      const links = Array.from(source.querySelectorAll('a[href]'))
+        .map((link) => {
+          const href = link.getAttribute('href') || '';
+          const text = titleForLink(link);
+          return { text, href, topic: topicFor(text, href), year: yearFor(text, href) };
+        });
+      const notes = links
+        .filter((note) => note.text && !note.href.startsWith('http') && !seen.has(note.href) && seen.add(note.href));
+      const externalLinks = links
+        .filter((note) => note.text && importantExternal(note.href));
+
+      const topics = ['All', ...Array.from(new Set(notes.map((note) => note.topic))).sort()];
+      let activeTopic = 'All';
+
+      const renderStats = () => {
+        const years = notes.map((note) => note.year).filter((year) => year.length === 4 && /^\d{4}/.test(year));
+        const latest = years.length ? Math.max(...years.map(Number)) : 'N/A';
+        const oldest = years.length ? Math.min(...years.map(Number)) : 'N/A';
+        stats.innerHTML = [
+          ['Notes', notes.length],
+          ['Resources', externalLinks.length],
+          ['Topics', topics.length - 1],
+          ['Latest', latest],
+        ].map(([label, value]) => '<div class="stat-tile"><span>' + label + '</span><strong>' + value + '</strong></div>').join('');
+        const signal = document.getElementById('signal-count');
+        if (signal) signal.textContent = notes.length + ' links indexed';
+      };
+
+      const renderExternal = () => {
+        externalPanel.innerHTML =
+          '<div class="section-heading"><span>Published / Learning</span><strong>Red Hat resources</strong></div>' +
+          '<div class="external-grid">' +
+          externalLinks.map((note) =>
+            '<a class="resource-card" href="' + escapeHtml(note.href) + '" target="_blank" rel="noopener">' +
+            '<span class="note-meta"><span>' + escapeHtml(note.year) + '</span><span>' + escapeHtml(note.topic) + '</span></span>' +
+            '<strong>' + escapeHtml(note.text) + '</strong>' +
+            '<small>' + escapeHtml(note.href) + '</small>' +
+            '</a>'
+          ).join('') +
+          '</div>';
+      };
+
+      const renderTopics = () => {
+        topicStrip.innerHTML = topics.map((topic) => '<button class="topic-chip' + (topic === activeTopic ? ' active' : '') + '" type="button" data-topic="' + escapeHtml(topic) + '">' + escapeHtml(topic) + '</button>').join('');
+        topicStrip.querySelectorAll('button').forEach((button) => {
+          button.addEventListener('click', () => {
+            activeTopic = button.dataset.topic || 'All';
+            renderTopics();
+            renderCards();
+          });
+        });
+      };
+
+      const renderCards = () => {
+        const query = search.value.trim().toLowerCase();
+        const filtered = notes.filter((note) => {
+          const topicMatch = activeTopic === 'All' || note.topic === activeTopic;
+          const queryMatch = !query || (note.text + ' ' + note.href + ' ' + note.topic + ' ' + note.year).toLowerCase().includes(query);
+          return topicMatch && queryMatch;
+        });
+        grid.innerHTML = filtered.map((note) =>
+          '<a class="note-card" href="' + escapeHtml(note.href) + '">' +
+          '<span class="note-meta"><span>' + escapeHtml(note.year) + '</span><span>' + escapeHtml(note.topic) + '</span></span>' +
+          '<strong>' + escapeHtml(note.text) + '</strong>' +
+          '<small>' + escapeHtml(note.href) + '</small>' +
+          '</a>'
+        ).join('') || '<p class="empty-state">No matching notes.</p>';
+      };
+
+      const drawMap = () => {
+        const canvas = document.getElementById('knowledge-canvas');
+        if (!(canvas instanceof HTMLCanvasElement)) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        const width = canvas.width;
+        const height = canvas.height;
+        const nodes = notes.slice(0, 44).map((note, index) => {
+          const angle = (index / 44) * Math.PI * 2;
+          const ring = 90 + (index % 5) * 22;
+          return {
+            x: width / 2 + Math.cos(angle) * ring,
+            y: height / 2 + Math.sin(angle) * ring * 0.72,
+            topic: note.topic,
+          };
+        });
+        ctx.clearRect(0, 0, width, height);
+        ctx.strokeStyle = 'rgba(88, 166, 255, 0.14)';
+        ctx.lineWidth = 1;
+        nodes.forEach((node, index) => {
+          const next = nodes[(index + 7) % nodes.length];
+          ctx.beginPath();
+          ctx.moveTo(node.x, node.y);
+          ctx.lineTo(next.x, next.y);
+          ctx.stroke();
+        });
+        const palette = {
+          AI: '#a371f7',
+          Network: '#39d0d8',
+          Security: '#ff7b72',
+          Performance: '#f2cc60',
+          Install: '#7ee787',
+          RHEL: '#ff7b72',
+          Storage: '#d2a8ff',
+          DevOps: '#ffa657',
+          OpenShift: '#58a6ff',
+        };
+        nodes.forEach((node) => {
+          ctx.fillStyle = palette[node.topic] || '#58a6ff';
+          ctx.beginPath();
+          ctx.arc(node.x, node.y, 3.4, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      };
+
+      search.addEventListener('input', renderCards);
+      renderStats();
+      renderExternal();
+      renderTopics();
+      renderCards();
+      drawMap();
+      document.body.classList.add('home-enhanced');
+    };
+
+    const enhanceCodeBlocks = () => {
+      document.querySelectorAll('pre').forEach((pre) => {
+        if (pre.classList.contains('mermaid') || pre.querySelector('.copy-code')) return;
+        const button = document.createElement('button');
+        button.className = 'copy-code';
+        button.type = 'button';
+        button.textContent = 'Copy';
+        button.addEventListener('click', async () => {
+          await navigator.clipboard.writeText(pre.textContent || '');
+          button.textContent = 'Copied';
+          setTimeout(() => { button.textContent = 'Copy'; }, 1200);
+        });
+        pre.appendChild(button);
+      });
+    };
+
+    window.addEventListener('scroll', updateReadingProgress, { passive: true });
+    window.addEventListener('pageshow', (event) => {
+      if (event.persisted) checkForSiteUpdate();
+    });
+    document.addEventListener('DOMContentLoaded', async () => {
+      checkForSiteUpdate();
+      cacheBustPageAssets();
+      updateReadingProgress();
+      enhanceHome();
+      enhanceCodeBlocks();
+      // pandoc 输出 mermaid 为 <pre class="mermaid"><code>...</code></pre>
+      // 需要转成 <div class="mermaid">...</div> 供 mermaid.js 渲染
+      document.querySelectorAll('pre.mermaid').forEach(pre => {
+        const div = document.createElement('div');
+        div.classList.add('mermaid');
+        div.textContent = pre.textContent;
+        pre.replaceWith(div);
+      });
+      // 也处理 <pre><code class="language-mermaid"> 形式（备用）
+      document.querySelectorAll('pre code.language-mermaid').forEach(code => {
+        const div = document.createElement('div');
+        div.classList.add('mermaid');
+        div.textContent = code.textContent;
+        code.closest('pre').replaceWith(div);
+      });
+      await mermaid.run();
+    });
+  </script>
+</body>
+
+</html>

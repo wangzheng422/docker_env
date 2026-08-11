@@ -1,0 +1,1426 @@
+<!DOCTYPE html>
+<html lang="zh" dir="ltr">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="generator" content="pandoc" />
+  <meta name="site-build-id" content="fbe91b569ae8" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <title>Solution: Rebootless Kernel Live Patching (kpatch) on OpenShift 4.16 CoreOS | wandering.star notes</title>
+  <meta name="description"
+    content="Wandering field notes on OpenShift, RHEL, AI infrastructure, and platform operations." />
+  <!-- Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-E3FRMDB7L2"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-E3FRMDB7L2');
+  </script>
+  <style>
+  html {
+    color: #1a1a1a;
+    background-color: #fdfdfd;
+  }
+  body {
+    margin: 0 auto;
+    max-width: 36em;
+    padding-left: 50px;
+    padding-right: 50px;
+    padding-top: 50px;
+    padding-bottom: 50px;
+    hyphens: auto;
+    overflow-wrap: break-word;
+    text-rendering: optimizeLegibility;
+    font-kerning: normal;
+  }
+  @media (max-width: 600px) {
+    body {
+      font-size: 0.9em;
+      padding: 12px;
+    }
+    h1 {
+      font-size: 1.8em;
+    }
+  }
+  @media print {
+    html {
+      background-color: white;
+    }
+    body {
+      background-color: transparent;
+      color: black;
+      font-size: 12pt;
+    }
+    p, h2, h3 {
+      orphans: 3;
+      widows: 3;
+    }
+    h2, h3, h4 {
+      page-break-after: avoid;
+    }
+  }
+  p {
+    margin: 1em 0;
+  }
+  a {
+    color: #1a1a1a;
+  }
+  a:visited {
+    color: #1a1a1a;
+  }
+  img {
+    max-width: 100%;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.4em;
+  }
+  h5, h6 {
+    font-size: 1em;
+    font-style: italic;
+  }
+  h6 {
+    font-weight: normal;
+  }
+  ol, ul {
+    padding-left: 1.7em;
+    margin-top: 1em;
+  }
+  li > ol, li > ul {
+    margin-top: 0;
+  }
+  blockquote {
+    margin: 1em 0 1em 1.7em;
+    padding-left: 1em;
+    border-left: 2px solid #e6e6e6;
+    color: #606060;
+  }
+  code {
+    font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+    font-size: 85%;
+    margin: 0;
+    hyphens: manual;
+  }
+  pre {
+    margin: 1em 0;
+    overflow: auto;
+  }
+  pre code {
+    padding: 0;
+    overflow: visible;
+    overflow-wrap: normal;
+  }
+  .sourceCode {
+   background-color: transparent;
+   overflow: visible;
+  }
+  hr {
+    background-color: #1a1a1a;
+    border: none;
+    height: 1px;
+    margin: 1em 0;
+  }
+  table {
+    margin: 1em 0;
+    border-collapse: collapse;
+    width: 100%;
+    overflow-x: auto;
+    display: block;
+    font-variant-numeric: lining-nums tabular-nums;
+  }
+  table caption {
+    margin-bottom: 0.75em;
+  }
+  tbody {
+    margin-top: 0.5em;
+    border-top: 1px solid #1a1a1a;
+    border-bottom: 1px solid #1a1a1a;
+  }
+  th {
+    border-top: 1px solid #1a1a1a;
+    padding: 0.25em 0.5em 0.25em 0.5em;
+  }
+  td {
+    padding: 0.125em 0.5em 0.25em 0.5em;
+  }
+  header {
+    margin-bottom: 4em;
+    text-align: center;
+  }
+  #TOC li {
+    list-style: none;
+  }
+  #TOC ul {
+    padding-left: 1.3em;
+  }
+  #TOC > ul {
+    padding-left: 0;
+  }
+  #TOC a:not(:hover) {
+    text-decoration: none;
+  }
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  div.columns{display: flex; gap: min(4vw, 1.5em);}
+  div.column{flex: auto; overflow-x: auto;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  /* The extra [class] is a hack that increases specificity enough to
+     override a similar rule in reveal.js */
+  ul.task-list[class]{list-style: none;}
+  ul.task-list li input[type="checkbox"] {
+    font-size: inherit;
+    width: 0.8em;
+    margin: 0 0.8em 0.2em -1.6em;
+    vertical-align: middle;
+  }
+  .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  /* CSS for syntax highlighting */
+  pre > code.sourceCode { white-space: pre; position: relative; }
+  pre > code.sourceCode > span { line-height: 1.25; }
+  pre > code.sourceCode > span:empty { height: 1.2em; }
+  .sourceCode { overflow: visible; }
+  code.sourceCode > span { color: inherit; text-decoration: inherit; }
+  div.sourceCode { margin: 1em 0; }
+  pre.sourceCode { margin: 0; }
+  @media screen {
+  div.sourceCode { overflow: auto; }
+  }
+  @media print {
+  pre > code.sourceCode { white-space: pre-wrap; }
+  pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+  }
+  pre.numberSource code
+    { counter-reset: source-line 0; }
+  pre.numberSource code > span
+    { position: relative; left: -4em; counter-increment: source-line; }
+  pre.numberSource code > span > a:first-child::before
+    { content: counter(source-line);
+      position: relative; left: -1em; text-align: right; vertical-align: baseline;
+      border: none; display: inline-block;
+      -webkit-touch-callout: none; -webkit-user-select: none;
+      -khtml-user-select: none; -moz-user-select: none;
+      -ms-user-select: none; user-select: none;
+      padding: 0 4px; width: 4em;
+    }
+  pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+  div.sourceCode
+    { color: #cccccc; background-color: #303030; }
+  @media screen {
+  pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+  }
+  code span.al { color: #ffcfaf; } /* Alert */
+  code span.an { color: #7f9f7f; font-weight: bold; } /* Annotation */
+  code span.at { } /* Attribute */
+  code span.bn { color: #dca3a3; } /* BaseN */
+  code span.bu { } /* BuiltIn */
+  code span.cf { color: #f0dfaf; } /* ControlFlow */
+  code span.ch { color: #dca3a3; } /* Char */
+  code span.cn { color: #dca3a3; font-weight: bold; } /* Constant */
+  code span.co { color: #7f9f7f; } /* Comment */
+  code span.cv { color: #7f9f7f; font-weight: bold; } /* CommentVar */
+  code span.do { color: #7f9f7f; } /* Documentation */
+  code span.dt { color: #dfdfbf; } /* DataType */
+  code span.dv { color: #dcdccc; } /* DecVal */
+  code span.er { color: #c3bf9f; } /* Error */
+  code span.ex { } /* Extension */
+  code span.fl { color: #c0bed1; } /* Float */
+  code span.fu { color: #efef8f; } /* Function */
+  code span.im { } /* Import */
+  code span.in { color: #7f9f7f; font-weight: bold; } /* Information */
+  code span.kw { color: #f0dfaf; } /* Keyword */
+  code span.op { color: #f0efd0; } /* Operator */
+  code span.ot { color: #efef8f; } /* Other */
+  code span.pp { color: #ffcfaf; font-weight: bold; } /* Preprocessor */
+  code span.sc { color: #dca3a3; } /* SpecialChar */
+  code span.ss { color: #cc9393; } /* SpecialString */
+  code span.st { color: #cc9393; } /* String */
+  code span.va { } /* Variable */
+  code span.vs { color: #cc9393; } /* VerbatimString */
+  code span.wa { color: #7f9f7f; font-weight: bold; } /* Warning */
+  </style>
+  <link rel="stylesheet" href="../../../../style.css?v=fbe91b569ae8" />
+  </head>
+
+<body class="page-article">
+  <div class="reading-progress" aria-hidden="true"></div>
+  <div class="console-backdrop" aria-hidden="true"></div>
+  <nav class="site-nav">
+    <div class="nav-inner">
+      <a class="nav-brand" href="../../../../index.html">wandering.star<span>notes</span></a>
+      <div class="nav-links">
+        <a href="https://github.com/wangzheng422/docker_env" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://www.youtube.com/@wangzheng422" target="_blank" rel="noopener">YouTube</a>
+      </div>
+    </div>
+  </nav>
+
+  <main>
+            <a class="back-link" href="../../../../index.html">← Back to Index</a>
+        <div class="article-layout">
+            <aside class="toc-panel">
+        <div class="toc-title">ON THIS PAGE</div>
+        <ul>
+        <li><a
+        href="#solution-rebootless-kernel-live-patching-kpatch-on-openshift-4.16-coreos"
+        id="toc-solution-rebootless-kernel-live-patching-kpatch-on-openshift-4.16-coreos">Solution:
+        Rebootless Kernel Live Patching (kpatch) on OpenShift 4.16
+        CoreOS</a>
+        <ul>
+        <li><a href="#executive-summary" id="toc-executive-summary">1.
+        Executive Summary</a></li>
+        <li><a href="#ocp-4.16-specifics" id="toc-ocp-4.16-specifics">2.
+        OCP 4.16 Specifics</a>
+        <ul>
+        <li><a href="#rhcos-kernel-and-kpatch-availability"
+        id="toc-rhcos-kernel-and-kpatch-availability">RHCOS Kernel and
+        kpatch Availability</a></li>
+        <li><a href="#ocp-4.16-fixed-versions-for-cve-2026-31431"
+        id="toc-ocp-4.16-fixed-versions-for-cve-2026-31431">OCP 4.16
+        Fixed Versions for CVE-2026-31431</a></li>
+        </ul></li>
+        <li><a href="#cve-2026-31431-poc-verification-on-ocp-4.16"
+        id="toc-cve-2026-31431-poc-verification-on-ocp-4.16">3.
+        CVE-2026-31431 PoC Verification on OCP 4.16</a>
+        <ul>
+        <li><a href="#three-way-comparison"
+        id="toc-three-way-comparison">Three-Way Comparison</a></li>
+        <li><a href="#command-output-unpatched-node"
+        id="toc-command-output-unpatched-node">Command Output —
+        Unpatched Node</a></li>
+        <li><a href="#command-output-patched-node"
+        id="toc-command-output-patched-node">Command Output — Patched
+        Node</a></li>
+        <li><a href="#dmesg-on-patched-node"
+        id="toc-dmesg-on-patched-node">dmesg on Patched Node</a></li>
+        </ul></li>
+        <li><a href="#complete-procedure-for-ocp-4.16"
+        id="toc-complete-procedure-for-ocp-4.16">4. Complete Procedure
+        for OCP 4.16</a>
+        <ul>
+        <li><a href="#manual-kpatch-loading"
+        id="toc-manual-kpatch-loading">4.1 Manual kpatch
+        Loading</a></li>
+        <li><a href="#automated-daemonset-deployment"
+        id="toc-automated-daemonset-deployment">4.2 Automated DaemonSet
+        Deployment</a></li>
+        </ul></li>
+        <li><a href="#ocp-4.16-vs-ocp-4.20-comparison"
+        id="toc-ocp-4.16-vs-ocp-4.20-comparison">5. OCP 4.16 vs OCP 4.20
+        Comparison</a></li>
+        <li><a href="#decision-flowchart" id="toc-decision-flowchart">6.
+        Decision Flowchart</a></li>
+        <li><a href="#caveats-and-risks" id="toc-caveats-and-risks">7.
+        Caveats and Risks</a></li>
+        <li><a href="#references" id="toc-references">8.
+        References</a></li>
+        </ul></li>
+        </ul>
+      </aside>
+            <article class="markdown-body article-shell">
+        <h1
+        id="solution-rebootless-kernel-live-patching-kpatch-on-openshift-4.16-coreos">Solution:
+        Rebootless Kernel Live Patching (kpatch) on OpenShift 4.16
+        CoreOS</h1>
+        <blockquote>
+        <p>Date: 2026-05-21<br> Target CVE: CVE-2026-31431 (“Copy
+        Fail”)<br> Platform: OpenShift Container Platform 4.16.50<br>
+        RHCOS: 416.94.202510081640-0 (based on RHEL 9.4 EUS)<br> Kernel:
+        5.14.0-427.93.1.el9_4.x86_64<br> Status: <strong>Verified —
+        kpatch loaded, CVE fix confirmed via PoC, DaemonSet
+        deployed</strong></p>
+        </blockquote>
+        <hr />
+        <h2 id="executive-summary">1. Executive Summary</h2>
+        <p>We successfully loaded a kpatch kernel live patch on RHCOS
+        nodes running OCP 4.16.50 (kernel <code>427.93.1</code>)
+        <strong>without rebooting any node</strong>, and verified the
+        fix with a CVE-2026-31431 page-cache corruption PoC.</p>
+        <p>The kpatch .ko module was sourced from the RHEL 9.4 EUS
+        repository (built for kernel <code>427.100.1</code>) and loaded
+        via <code>insmod</code> on kernel <code>427.93.1</code>. A
+        DaemonSet was deployed to automate the process across all 3
+        cluster nodes.</p>
+        <table>
+        <colgroup>
+        <col style="width: 50%" />
+        <col style="width: 50%" />
+        </colgroup>
+        <thead>
+        <tr class="header">
+        <th>Verification Step</th>
+        <th>Result</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr class="odd">
+        <td><code>CONFIG_LIVEPATCH=y</code> in RHCOS kernel</td>
+        <td>PASS</td>
+        </tr>
+        <tr class="even">
+        <td>kpatch signing key in trusted keyring</td>
+        <td>PASS</td>
+        </tr>
+        <tr class="odd">
+        <td>Kernel lockdown = none</td>
+        <td>PASS</td>
+        </tr>
+        <tr class="even">
+        <td>insmod after SELinux relabel</td>
+        <td><strong>SUCCESS</strong></td>
+        </tr>
+        <tr class="odd">
+        <td>CVE PoC on unpatched node</td>
+        <td><strong>VULNERABLE</strong> (page cache corrupted)</td>
+        </tr>
+        <tr class="even">
+        <td>CVE PoC on patched node</td>
+        <td><strong>NOT VULNERABLE</strong> (page cache intact)</td>
+        </tr>
+        <tr class="odd">
+        <td>DaemonSet auto-deploy to 3 nodes</td>
+        <td><strong>SUCCESS</strong> — all 3 nodes protected</td>
+        </tr>
+        </tbody>
+        </table>
+        <blockquote>
+        <p><strong>NOTE: This method is NOT officially supported by Red
+        Hat.</strong> It is provided as a technical feasibility study
+        and emergency workaround reference.</p>
+        </blockquote>
+        <hr />
+        <h2 id="ocp-4.16-specifics">2. OCP 4.16 Specifics</h2>
+        <h3 id="rhcos-kernel-and-kpatch-availability">RHCOS Kernel and
+        kpatch Availability</h3>
+        <p>OCP 4.16 uses RHCOS based on <strong>RHEL 9.4 EUS</strong>.
+        The kpatch RPMs must be sourced from the
+        <code>rhel-9-for-x86_64-baseos-eus-rpms</code> repository with
+        release pinned to <code>9.4</code>.</p>
+        <pre class="mermaid"><code>flowchart LR
+    subgraph Repos[&quot;Repository Setup&quot;]
+        R1[&quot;subscription-manager repos&lt;br&gt;--enable=rhel-9-for-x86_64-baseos-eus-rpms&quot;] --&gt; R2[&quot;subscription-manager&lt;br&gt;release --set=9.4&quot;]
+    end
+    R2 --&gt; S[&quot;dnf list available&lt;br&gt;kpatch-patch-5_14_0-427*&quot;]
+
+    style Repos fill:#e3f2fd</code></pre>
+        <p>Available kpatch RPMs for the RHEL 9.4 EUS kernel family:</p>
+        <table>
+        <colgroup>
+        <col style="width: 33%" />
+        <col style="width: 33%" />
+        <col style="width: 33%" />
+        </colgroup>
+        <thead>
+        <tr class="header">
+        <th>kpatch Target Kernel</th>
+        <th>Latest Version</th>
+        <th>Matches RHCOS 427.93.1?</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr class="odd">
+        <td>427.13.1</td>
+        <td>1-12.el9_4</td>
+        <td>No (older)</td>
+        </tr>
+        <tr class="even">
+        <td>427.31.1</td>
+        <td>1-14.el9_4</td>
+        <td>No (older)</td>
+        </tr>
+        <tr class="odd">
+        <td>427.44.1</td>
+        <td>1-14.el9_4</td>
+        <td>No (older)</td>
+        </tr>
+        <tr class="even">
+        <td>427.55.1</td>
+        <td>1-14.el9_4</td>
+        <td>No (older)</td>
+        </tr>
+        <tr class="odd">
+        <td>427.68.2</td>
+        <td>1-11.el9_4</td>
+        <td>No (older)</td>
+        </tr>
+        <tr class="even">
+        <td>427.84.1</td>
+        <td>1-6.el9_4</td>
+        <td>No (older)</td>
+        </tr>
+        <tr class="odd">
+        <td><strong>427.100.1</strong></td>
+        <td><strong>1-4.el9_4</strong></td>
+        <td><strong>No (but closest above — WORKS via
+        modversions)</strong></td>
+        </tr>
+        <tr class="even">
+        <td>427.113.1</td>
+        <td>1-2.el9_4</td>
+        <td>No (newer)</td>
+        </tr>
+        </tbody>
+        </table>
+        <p><strong>Key finding confirmed on OCP 4.16</strong>: kpatch
+        <code>.ko</code> built for kernel <code>427.100.1</code> loads
+        successfully on kernel <code>427.93.1</code> via modversions
+        symbol CRC compatibility within the same RHEL 9.4 EUS
+        branch.</p>
+        <h3 id="ocp-4.16-fixed-versions-for-cve-2026-31431">OCP 4.16
+        Fixed Versions for CVE-2026-31431</h3>
+        <table>
+        <colgroup>
+        <col style="width: 33%" />
+        <col style="width: 33%" />
+        <col style="width: 33%" />
+        </colgroup>
+        <thead>
+        <tr class="header">
+        <th>OCP Version</th>
+        <th>Fixed Version</th>
+        <th>Errata</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr class="odd">
+        <td>4.16</td>
+        <td><strong>4.16.61</strong></td>
+        <td><a
+        href="https://access.redhat.com/errata/RHSA-2026:13729">RHSA-2026:13729</a></td>
+        </tr>
+        </tbody>
+        </table>
+        <p>Current cluster version <code>4.16.50</code> is below the fix
+        threshold — <strong>vulnerable</strong>.</p>
+        <hr />
+        <h2 id="cve-2026-31431-poc-verification-on-ocp-4.16">3.
+        CVE-2026-31431 PoC Verification on OCP 4.16</h2>
+        <h3 id="three-way-comparison">Three-Way Comparison</h3>
+        <pre class="mermaid"><code>flowchart LR
+    subgraph Test1[&quot;master-02: No kpatch&quot;]
+        T1A[&quot;Run PoC&quot;] --&gt; T1B[&quot;Page cache corrupted&lt;br&gt;PWND at offset 0&quot;]
+        T1B --&gt; T1C[&quot;VULNERABLE&quot;]
+    end
+
+    subgraph Test2[&quot;master-01: kpatch loaded&quot;]
+        T2A[&quot;Run PoC&quot;] --&gt; T2B[&quot;Page cache intact&quot;]
+        T2B --&gt; T2C[&quot;NOT VULNERABLE&quot;]
+    end
+
+    subgraph Test3[&quot;All nodes: DaemonSet&quot;]
+        T3A[&quot;Run PoC on 3 nodes&quot;] --&gt; T3B[&quot;All page caches intact&quot;]
+        T3B --&gt; T3C[&quot;CLUSTER PROTECTED&quot;]
+    end
+
+    Test1 ~~~ Test2 ~~~ Test3
+
+    style T1C fill:#ef9a9a
+    style T2C fill:#a5d6a7
+    style T3C fill:#a5d6a7</code></pre>
+        <table>
+        <colgroup>
+        <col style="width: 20%" />
+        <col style="width: 20%" />
+        <col style="width: 20%" />
+        <col style="width: 20%" />
+        <col style="width: 20%" />
+        </colgroup>
+        <thead>
+        <tr class="header">
+        <th>Test</th>
+        <th>Node</th>
+        <th>kpatch</th>
+        <th>Page Cache</th>
+        <th>Result</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr class="odd">
+        <td>No kpatch</td>
+        <td>master-02</td>
+        <td>Not loaded</td>
+        <td><strong>Corrupted</strong> — “PWND” at offset 0</td>
+        <td>VULNERABLE (exit 2)</td>
+        </tr>
+        <tr class="even">
+        <td>Manual insmod</td>
+        <td>master-01</td>
+        <td><code>kpatch_5_14_0_427_100_1_1_4</code></td>
+        <td>Intact</td>
+        <td><strong>NOT VULNERABLE</strong> (exit 0)</td>
+        </tr>
+        <tr class="odd">
+        <td>DaemonSet</td>
+        <td>all 3 nodes</td>
+        <td>Auto-loaded</td>
+        <td>All intact</td>
+        <td><strong>CLUSTER PROTECTED</strong></td>
+        </tr>
+        </tbody>
+        </table>
+        <h3 id="command-output-unpatched-node">Command Output —
+        Unpatched Node</h3>
+        <pre><code>CVE-2026-31431 Copy Fail — page cache corruption test
+Kernel: 5.14.0-427.93.1.el9_4.x86_64
+Bound to authencesn(hmac(sha256),cbc(aes))
+Key set OK (rtattr+auth=32+enc=16)
+Sent 8 bytes AAD (marker &#39;PWND&#39; at offset 4)
+Spliced 32 bytes: pipe → AF_ALG (page cache pages sent)
+recv: -1 (errno=74 Bad message)
+
+Checking page cache for corruption...
+  MARKER &#39;PWND&#39; found at offset 0!
+  Byte changed: offset=0 val=0x50(&#39;P&#39;)
+  Byte changed: offset=1 val=0x57(&#39;W&#39;)
+  Byte changed: offset=2 val=0x4e(&#39;N&#39;)
+  Byte changed: offset=3 val=0x44(&#39;D&#39;)
+
+*** VULNERABLE: Page cache was corrupted! (4 bytes changed) ***</code></pre>
+        <h3 id="command-output-patched-node">Command Output — Patched
+        Node</h3>
+        <pre><code>CVE-2026-31431 Copy Fail — page cache corruption test
+Kernel: 5.14.0-427.93.1.el9_4.x86_64
+...
+Checking page cache for corruption...
+
+*** NOT VULNERABLE: Page cache is intact ***</code></pre>
+        <h3 id="dmesg-on-patched-node">dmesg on Patched Node</h3>
+        <pre><code>kpatch_5_14_0_427_100_1_1_4: loading out-of-tree module taints kernel.
+kpatch_5_14_0_427_100_1_1_4: tainting kernel with TAINT_LIVEPATCH
+livepatch: enabling patch &#39;kpatch_5_14_0_427_100_1_1_4&#39;
+livepatch: &#39;kpatch_5_14_0_427_100_1_1_4&#39;: starting patching transition</code></pre>
+        <hr />
+        <h2 id="complete-procedure-for-ocp-4.16">4. Complete Procedure
+        for OCP 4.16</h2>
+        <h3 id="manual-kpatch-loading">4.1 Manual kpatch Loading</h3>
+        <div class="sourceCode" id="cb6"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 1. Check RHCOS kernel version</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> debug node/<span class="op">&lt;</span>node<span class="op">&gt;</span> -- chroot /host uname <span class="at">-r</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Output: 5.14.0-427.93.1.el9_4.x86_64</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="co"># 2. On a RHEL 9.4 helper, enable EUS repos and download kpatch</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="ex">subscription-manager</span> repos <span class="at">--enable</span><span class="op">=</span>rhel-9-for-x86_64-baseos-eus-rpms</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a><span class="ex">subscription-manager</span> release <span class="at">--set</span><span class="op">=</span>9.4</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a><span class="ex">dnf</span> download kpatch-patch-5_14_0-427_100_1 <span class="at">--destdir</span><span class="op">=</span>/var/tmp/kpatch/</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a><span class="co"># 3. Extract the .ko</span></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> /var/tmp/kpatch/</span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a><span class="ex">rpm2cpio</span> kpatch-patch-<span class="pp">*</span>.rpm <span class="kw">|</span> <span class="fu">cpio</span> <span class="at">-idmv</span></span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a><span class="co"># Output: ./usr/lib/kpatch/5.14.0-427.100.1.el9_4.x86_64/kpatch-*.ko</span></span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a><span class="co"># 4. Serve via HTTP</span></span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> usr/lib/kpatch/5.14.0-427.100.1.el9_4.x86_64/</span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> <span class="at">-m</span> http.server 18080 <span class="kw">&amp;</span></span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a><span class="ex">firewall-cmd</span> <span class="at">--add-port</span><span class="op">=</span>18080/tcp</span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a><span class="co"># 5. Download to RHCOS node and load</span></span>
+<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> debug node/<span class="op">&lt;</span>node<span class="op">&gt;</span> -- nsenter <span class="at">-t</span> 1 <span class="at">-m</span> <span class="at">-u</span> <span class="at">-i</span> <span class="at">-n</span> <span class="at">-p</span> <span class="at">--</span> bash <span class="at">-c</span> <span class="dt">\</span></span>
+<span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;curl -sS -o /var/tmp/kpatch.ko http://&lt;helper-ip&gt;:18080/kpatch-*.ko &amp;&amp; </span><span class="dt">\</span></span>
+<span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a><span class="st">     chcon -t modules_object_t /var/tmp/kpatch.ko &amp;&amp; </span><span class="dt">\</span></span>
+<span id="cb6-24"><a href="#cb6-24" aria-hidden="true" tabindex="-1"></a><span class="st">     insmod /var/tmp/kpatch.ko&quot;</span></span>
+<span id="cb6-25"><a href="#cb6-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-26"><a href="#cb6-26" aria-hidden="true" tabindex="-1"></a><span class="co"># 6. Verify</span></span>
+<span id="cb6-27"><a href="#cb6-27" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> debug node/<span class="op">&lt;</span>node<span class="op">&gt;</span> -- chroot /host lsmod <span class="kw">|</span> <span class="fu">grep</span> kpatch</span>
+<span id="cb6-28"><a href="#cb6-28" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> debug node/<span class="op">&lt;</span>node<span class="op">&gt;</span> -- chroot /host dmesg <span class="kw">|</span> <span class="fu">grep</span> livepatch</span></code></pre></div>
+        <h3 id="automated-daemonset-deployment">4.2 Automated DaemonSet
+        Deployment</h3>
+        <h4 id="build-and-push-container-image">Build and Push Container
+        Image</h4>
+        <div class="sourceCode" id="cb7"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># On a build host with podman</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="fu">mkdir</span> <span class="at">-p</span> kpatch-image/usr/lib/kpatch/5.14.0-427.100.1.el9_4.x86_64/</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="fu">cp</span> kpatch-5_14_0-427_100_1-1-4.ko kpatch-image/usr/lib/kpatch/5.14.0-427.100.1.el9_4.x86_64/</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> <span class="op">&gt;</span> kpatch-image/Containerfile <span class="op">&lt;&lt; &#39;EOF&#39;</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a><span class="st">FROM registry.access.redhat.com/ubi9/ubi-minimal:latest</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a><span class="st">COPY usr/lib/kpatch/ /usr/lib/kpatch/</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a><span class="op">EOF</span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> kpatch-image</span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a><span class="ex">podman</span> build <span class="at">-t</span> quay.io/wangzheng422/qimgs:kpatch-ocp416-2026-05-21 .</span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a><span class="ex">podman</span> push quay.io/wangzheng422/qimgs:kpatch-ocp416-2026-05-21</span></code></pre></div>
+        <blockquote>
+        <p>Verified image:
+        <code>quay.io/wangzheng422/qimgs:kpatch-ocp416-2026-05-21</code></p>
+        </blockquote>
+        <h4 id="daemonset-yaml-verified-on-ocp-4.16.50">DaemonSet YAML
+        (Verified on OCP 4.16.50)</h4>
+        <div class="sourceCode" id="cb8"><pre
+        class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="fu">apiVersion</span><span class="kw">:</span><span class="at"> v1</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="fu">kind</span><span class="kw">:</span><span class="at"> Namespace</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a><span class="fu">metadata</span><span class="kw">:</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">name</span><span class="kw">:</span><span class="at"> kpatch-loader</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="pp">---</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a><span class="fu">apiVersion</span><span class="kw">:</span><span class="at"> apps/v1</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a><span class="fu">kind</span><span class="kw">:</span><span class="at"> DaemonSet</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a><span class="fu">metadata</span><span class="kw">:</span></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">name</span><span class="kw">:</span><span class="at"> kpatch-loader</span></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">namespace</span><span class="kw">:</span><span class="at"> kpatch-loader</span></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a><span class="fu">spec</span><span class="kw">:</span></span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">selector</span><span class="kw">:</span></span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">matchLabels</span><span class="kw">:</span></span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">app</span><span class="kw">:</span><span class="at"> kpatch-loader</span></span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">template</span><span class="kw">:</span></span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">metadata</span><span class="kw">:</span></span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">labels</span><span class="kw">:</span></span>
+<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">app</span><span class="kw">:</span><span class="at"> kpatch-loader</span></span>
+<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">spec</span><span class="kw">:</span></span>
+<span id="cb8-20"><a href="#cb8-20" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">hostPID</span><span class="kw">:</span><span class="at"> </span><span class="ch">true</span></span>
+<span id="cb8-21"><a href="#cb8-21" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">hostNetwork</span><span class="kw">:</span><span class="at"> </span><span class="ch">true</span></span>
+<span id="cb8-22"><a href="#cb8-22" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">tolerations</span><span class="kw">:</span></span>
+<span id="cb8-23"><a href="#cb8-23" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="kw">-</span><span class="at"> </span><span class="fu">operator</span><span class="kw">:</span><span class="at"> Exists</span></span>
+<span id="cb8-24"><a href="#cb8-24" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">initContainers</span><span class="kw">:</span></span>
+<span id="cb8-25"><a href="#cb8-25" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="kw">-</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> load-kpatch</span></span>
+<span id="cb8-26"><a href="#cb8-26" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">image</span><span class="kw">:</span><span class="at"> quay.io/wangzheng422/qimgs:kpatch-ocp416-2026-05-21</span></span>
+<span id="cb8-27"><a href="#cb8-27" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">securityContext</span><span class="kw">:</span></span>
+<span id="cb8-28"><a href="#cb8-28" aria-hidden="true" tabindex="-1"></a><span class="at">            </span><span class="fu">privileged</span><span class="kw">:</span><span class="at"> </span><span class="ch">true</span></span>
+<span id="cb8-29"><a href="#cb8-29" aria-hidden="true" tabindex="-1"></a><span class="at">            </span><span class="fu">runAsUser</span><span class="kw">:</span><span class="at"> </span><span class="dv">0</span></span>
+<span id="cb8-30"><a href="#cb8-30" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">command</span><span class="kw">:</span></span>
+<span id="cb8-31"><a href="#cb8-31" aria-hidden="true" tabindex="-1"></a><span class="at">            </span><span class="kw">-</span><span class="at"> /bin/sh</span></span>
+<span id="cb8-32"><a href="#cb8-32" aria-hidden="true" tabindex="-1"></a><span class="at">            </span><span class="kw">-</span><span class="at"> -c</span></span>
+<span id="cb8-33"><a href="#cb8-33" aria-hidden="true" tabindex="-1"></a><span class="kw">            - </span><span class="ch">|</span></span>
+<span id="cb8-34"><a href="#cb8-34" aria-hidden="true" tabindex="-1"></a>              set -ex</span>
+<span id="cb8-35"><a href="#cb8-35" aria-hidden="true" tabindex="-1"></a>              if chroot /host lsmod | grep -q kpatch; then</span>
+<span id="cb8-36"><a href="#cb8-36" aria-hidden="true" tabindex="-1"></a>                echo &quot;kpatch already loaded, skipping&quot;</span>
+<span id="cb8-37"><a href="#cb8-37" aria-hidden="true" tabindex="-1"></a>                exit 0</span>
+<span id="cb8-38"><a href="#cb8-38" aria-hidden="true" tabindex="-1"></a>              fi</span>
+<span id="cb8-39"><a href="#cb8-39" aria-hidden="true" tabindex="-1"></a>              KO_FILE=$(find /usr/lib/kpatch/ -name &#39;*.ko&#39; | head -1)</span>
+<span id="cb8-40"><a href="#cb8-40" aria-hidden="true" tabindex="-1"></a>              if [ -z &quot;${KO_FILE}&quot; ]; then</span>
+<span id="cb8-41"><a href="#cb8-41" aria-hidden="true" tabindex="-1"></a>                echo &quot;ERROR: No kpatch .ko found&quot;</span>
+<span id="cb8-42"><a href="#cb8-42" aria-hidden="true" tabindex="-1"></a>                exit 1</span>
+<span id="cb8-43"><a href="#cb8-43" aria-hidden="true" tabindex="-1"></a>              fi</span>
+<span id="cb8-44"><a href="#cb8-44" aria-hidden="true" tabindex="-1"></a>              echo &quot;Found: ${KO_FILE}&quot;</span>
+<span id="cb8-45"><a href="#cb8-45" aria-hidden="true" tabindex="-1"></a>              cp &quot;${KO_FILE}&quot; /host/var/tmp/kpatch.ko</span>
+<span id="cb8-46"><a href="#cb8-46" aria-hidden="true" tabindex="-1"></a>              chroot /host chcon -t modules_object_t /var/tmp/kpatch.ko</span>
+<span id="cb8-47"><a href="#cb8-47" aria-hidden="true" tabindex="-1"></a>              chroot /host insmod /var/tmp/kpatch.ko</span>
+<span id="cb8-48"><a href="#cb8-48" aria-hidden="true" tabindex="-1"></a>              echo &quot;insmod OK&quot;</span>
+<span id="cb8-49"><a href="#cb8-49" aria-hidden="true" tabindex="-1"></a>              chroot /host dmesg | tail -5 | grep -i livepatch || true</span>
+<span id="cb8-50"><a href="#cb8-50" aria-hidden="true" tabindex="-1"></a>              echo &quot;kpatch loaded successfully&quot;</span>
+<span id="cb8-51"><a href="#cb8-51" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">volumeMounts</span><span class="kw">:</span></span>
+<span id="cb8-52"><a href="#cb8-52" aria-hidden="true" tabindex="-1"></a><span class="at">            </span><span class="kw">-</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> host-root</span></span>
+<span id="cb8-53"><a href="#cb8-53" aria-hidden="true" tabindex="-1"></a><span class="at">              </span><span class="fu">mountPath</span><span class="kw">:</span><span class="at"> /host</span></span>
+<span id="cb8-54"><a href="#cb8-54" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">containers</span><span class="kw">:</span></span>
+<span id="cb8-55"><a href="#cb8-55" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="kw">-</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> pause</span></span>
+<span id="cb8-56"><a href="#cb8-56" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">image</span><span class="kw">:</span><span class="at"> quay.io/wangzheng422/qimgs:kpatch-ocp416-2026-05-21</span></span>
+<span id="cb8-57"><a href="#cb8-57" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">command</span><span class="kw">:</span><span class="at"> </span><span class="kw">[</span><span class="st">&quot;/bin/sh&quot;</span><span class="kw">,</span><span class="at"> </span><span class="st">&quot;-c&quot;</span><span class="kw">,</span><span class="at"> </span><span class="st">&quot;echo kpatch active &amp;&amp; sleep infinity&quot;</span><span class="kw">]</span></span>
+<span id="cb8-58"><a href="#cb8-58" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">volumes</span><span class="kw">:</span></span>
+<span id="cb8-59"><a href="#cb8-59" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="kw">-</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> host-root</span></span>
+<span id="cb8-60"><a href="#cb8-60" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">hostPath</span><span class="kw">:</span></span>
+<span id="cb8-61"><a href="#cb8-61" aria-hidden="true" tabindex="-1"></a><span class="at">            </span><span class="fu">path</span><span class="kw">:</span><span class="at"> /</span></span>
+<span id="cb8-62"><a href="#cb8-62" aria-hidden="true" tabindex="-1"></a><span class="at">            </span><span class="fu">type</span><span class="kw">:</span><span class="at"> Directory</span></span></code></pre></div>
+        <h4 id="deploy">Deploy</h4>
+        <div class="sourceCode" id="cb9"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 1. Apply</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> apply <span class="at">-f</span> kpatch-daemonset.yaml</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a><span class="co"># 2. Grant privileged SCC (required)</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> adm policy add-scc-to-user privileged <span class="at">-z</span> default <span class="at">-n</span> kpatch-loader</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a><span class="co"># 3. Verify</span></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> get pods <span class="at">-n</span> kpatch-loader <span class="at">-o</span> wide</span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> logs <span class="at">-n</span> kpatch-loader <span class="op">&lt;</span>pod-name<span class="op">&gt;</span> -c load-kpatch</span></code></pre></div>
+        <h4 id="verified-results-on-ocp-4.16.50">Verified Results on OCP
+        4.16.50</h4>
+        <pre><code>$ oc get pods -n kpatch-loader -o wide
+NAME                  READY   STATUS    NODE
+kpatch-loader-bkr77   1/1     Running   master-03-demo
+kpatch-loader-vztkb   1/1     Running   master-01-demo
+kpatch-loader-zd4cz   1/1     Running   master-02-demo
+
+$ # CVE PoC after DaemonSet:
+master-01: *** NOT VULNERABLE: Page cache is intact ***
+master-02: *** NOT VULNERABLE: Page cache is intact ***
+master-03: *** NOT VULNERABLE: Page cache is intact ***</code></pre>
+        <h4
+        id="daemonset-v2-auto-unload-on-delete-upgrade-support-verified">DaemonSet
+        v2: Auto-Unload on Delete + Upgrade Support (Verified)</h4>
+        <p>The v2 DaemonSet adds two key features:</p>
+        <ol type="1">
+        <li><strong>preStop hook</strong> — automatically unloads kpatch
+        when the pod is terminated (DaemonSet deleted or updated)</li>
+        <li><strong>initContainer unload-before-load</strong> — removes
+        any existing kpatch before loading the new one (supports
+        in-place upgrades)</li>
+        </ol>
+        <pre class="mermaid"><code>flowchart TD
+    subgraph Deploy[&quot;Deploy / Upgrade&quot;]
+        D1[&quot;oc apply DaemonSet&quot;] --&gt; D2[&quot;initContainer runs&quot;]
+        D2 --&gt; D3{&quot;Existing kpatch&lt;br&gt;loaded?&quot;}
+        D3 --&gt;|Yes| D4[&quot;echo 0 &gt; enabled&lt;br&gt;wait transition=0&lt;br&gt;rmmod old kpatch&quot;]
+        D3 --&gt;|No| D5[&quot;Skip&quot;]
+        D4 --&gt; D6[&quot;insmod new kpatch.ko&quot;]
+        D5 --&gt; D6
+        D6 --&gt; D7[&quot;Main container:&lt;br&gt;sleep infinity + preStop hook&quot;]
+    end
+
+    subgraph Delete[&quot;Delete / Scale Down&quot;]
+        X1[&quot;oc delete daemonset&quot;] --&gt; X2[&quot;preStop hook fires&quot;]
+        X2 --&gt; X3[&quot;echo 0 &gt; enabled&lt;br&gt;wait transition=0&lt;br&gt;rmmod kpatch&quot;]
+        X3 --&gt; X4[&quot;kpatch fully unloaded&lt;br&gt;CVE becomes exploitable again&quot;]
+    end
+
+    Deploy ~~~ Delete
+
+    style D6 fill:#c8e6c9
+    style X4 fill:#fff9c4</code></pre>
+        <h5 id="verified-lifecycle-test-results">Verified Lifecycle Test
+        Results</h5>
+        <table>
+        <colgroup>
+        <col style="width: 33%" />
+        <col style="width: 33%" />
+        <col style="width: 33%" />
+        </colgroup>
+        <thead>
+        <tr class="header">
+        <th>Step</th>
+        <th>kpatch State</th>
+        <th>CVE PoC Result</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr class="odd">
+        <td>1. Deploy DaemonSet v2</td>
+        <td>Loaded (<code>livepatch enabled=1</code>)</td>
+        <td>NOT VULNERABLE</td>
+        </tr>
+        <tr class="even">
+        <td>2. Delete DaemonSet (preStop fires)</td>
+        <td><strong>Auto-unloaded</strong> (rmmod by preStop hook)</td>
+        <td>VULNERABLE</td>
+        </tr>
+        <tr class="odd">
+        <td>3. Redeploy DaemonSet v2</td>
+        <td>Loaded again</td>
+        <td>NOT VULNERABLE</td>
+        </tr>
+        </tbody>
+        </table>
+        <h5 id="upgrade-procedure">Upgrade Procedure</h5>
+        <p>To upgrade to a newer kpatch version:</p>
+        <div class="sourceCode" id="cb12"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 1. Build new image with updated .ko</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="ex">podman</span> build <span class="at">-t</span> quay.io/<span class="op">&lt;</span>org<span class="op">&gt;</span>/<span class="op">&lt;</span>repo<span class="op">&gt;</span>:kpatch-v2 .</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a><span class="ex">podman</span> push quay.io/<span class="op">&lt;</span>org<span class="op">&gt;</span>/<span class="op">&lt;</span>repo<span class="op">&gt;</span>:kpatch-v2</span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a><span class="co"># 2. Update the DaemonSet image — rolling update handles the rest:</span></span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a><span class="co">#    preStop unloads old kpatch → initContainer loads new kpatch</span></span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> set image daemonset/kpatch-loader <span class="dt">\</span></span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>    load-kpatch=quay.io/<span class="op">&lt;</span>org<span class="op">&gt;</span>/<span class="op">&lt;</span>repo<span class="op">&gt;</span>:kpatch-v2 <span class="dt">\</span></span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>    keeper=quay.io/<span class="op">&lt;</span>org<span class="op">&gt;</span>/<span class="op">&lt;</span>repo<span class="op">&gt;</span>:kpatch-v2 <span class="dt">\</span></span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">-n</span> kpatch-loader</span></code></pre></div>
+        <p>The rolling update process per node:</p>
+        <ol type="1">
+        <li>Old pod receives SIGTERM → preStop hook fires → old kpatch
+        unloaded via <code>rmmod</code></li>
+        <li>New pod starts → initContainer detects no kpatch loaded →
+        loads new .ko via <code>insmod</code></li>
+        </ol>
+        <h5 id="daemonset-v2-yaml-verified">DaemonSet v2 YAML
+        (Verified)</h5>
+        <div class="sourceCode" id="cb13"><pre
+        class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="fu">apiVersion</span><span class="kw">:</span><span class="at"> v1</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="fu">kind</span><span class="kw">:</span><span class="at"> Namespace</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a><span class="fu">metadata</span><span class="kw">:</span></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">name</span><span class="kw">:</span><span class="at"> kpatch-loader</span></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a><span class="pp">---</span></span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a><span class="fu">apiVersion</span><span class="kw">:</span><span class="at"> apps/v1</span></span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a><span class="fu">kind</span><span class="kw">:</span><span class="at"> DaemonSet</span></span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a><span class="fu">metadata</span><span class="kw">:</span></span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">name</span><span class="kw">:</span><span class="at"> kpatch-loader</span></span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">namespace</span><span class="kw">:</span><span class="at"> kpatch-loader</span></span>
+<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a><span class="fu">spec</span><span class="kw">:</span></span>
+<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">selector</span><span class="kw">:</span></span>
+<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">matchLabels</span><span class="kw">:</span></span>
+<span id="cb13-14"><a href="#cb13-14" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">app</span><span class="kw">:</span><span class="at"> kpatch-loader</span></span>
+<span id="cb13-15"><a href="#cb13-15" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">updateStrategy</span><span class="kw">:</span></span>
+<span id="cb13-16"><a href="#cb13-16" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">type</span><span class="kw">:</span><span class="at"> RollingUpdate</span></span>
+<span id="cb13-17"><a href="#cb13-17" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">rollingUpdate</span><span class="kw">:</span></span>
+<span id="cb13-18"><a href="#cb13-18" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">maxUnavailable</span><span class="kw">:</span><span class="at"> </span><span class="dv">1</span></span>
+<span id="cb13-19"><a href="#cb13-19" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">template</span><span class="kw">:</span></span>
+<span id="cb13-20"><a href="#cb13-20" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">metadata</span><span class="kw">:</span></span>
+<span id="cb13-21"><a href="#cb13-21" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">labels</span><span class="kw">:</span></span>
+<span id="cb13-22"><a href="#cb13-22" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">app</span><span class="kw">:</span><span class="at"> kpatch-loader</span></span>
+<span id="cb13-23"><a href="#cb13-23" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">spec</span><span class="kw">:</span></span>
+<span id="cb13-24"><a href="#cb13-24" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">hostPID</span><span class="kw">:</span><span class="at"> </span><span class="ch">true</span></span>
+<span id="cb13-25"><a href="#cb13-25" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">hostNetwork</span><span class="kw">:</span><span class="at"> </span><span class="ch">true</span></span>
+<span id="cb13-26"><a href="#cb13-26" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">terminationGracePeriodSeconds</span><span class="kw">:</span><span class="at"> </span><span class="dv">60</span></span>
+<span id="cb13-27"><a href="#cb13-27" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">tolerations</span><span class="kw">:</span></span>
+<span id="cb13-28"><a href="#cb13-28" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="kw">-</span><span class="at"> </span><span class="fu">operator</span><span class="kw">:</span><span class="at"> Exists</span></span>
+<span id="cb13-29"><a href="#cb13-29" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">initContainers</span><span class="kw">:</span></span>
+<span id="cb13-30"><a href="#cb13-30" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="kw">-</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> load-kpatch</span></span>
+<span id="cb13-31"><a href="#cb13-31" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">image</span><span class="kw">:</span><span class="at"> quay.io/wangzheng422/qimgs:kpatch-ocp416-2026-05-21</span></span>
+<span id="cb13-32"><a href="#cb13-32" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">securityContext</span><span class="kw">:</span></span>
+<span id="cb13-33"><a href="#cb13-33" aria-hidden="true" tabindex="-1"></a><span class="at">            </span><span class="fu">privileged</span><span class="kw">:</span><span class="at"> </span><span class="ch">true</span></span>
+<span id="cb13-34"><a href="#cb13-34" aria-hidden="true" tabindex="-1"></a><span class="at">            </span><span class="fu">runAsUser</span><span class="kw">:</span><span class="at"> </span><span class="dv">0</span></span>
+<span id="cb13-35"><a href="#cb13-35" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">command</span><span class="kw">:</span></span>
+<span id="cb13-36"><a href="#cb13-36" aria-hidden="true" tabindex="-1"></a><span class="at">            </span><span class="kw">-</span><span class="at"> /bin/sh</span></span>
+<span id="cb13-37"><a href="#cb13-37" aria-hidden="true" tabindex="-1"></a><span class="at">            </span><span class="kw">-</span><span class="at"> -c</span></span>
+<span id="cb13-38"><a href="#cb13-38" aria-hidden="true" tabindex="-1"></a><span class="kw">            - </span><span class="ch">|</span></span>
+<span id="cb13-39"><a href="#cb13-39" aria-hidden="true" tabindex="-1"></a>              set -ex</span>
+<span id="cb13-40"><a href="#cb13-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-41"><a href="#cb13-41" aria-hidden="true" tabindex="-1"></a>              # Unload any existing kpatch first (upgrade scenario)</span>
+<span id="cb13-42"><a href="#cb13-42" aria-hidden="true" tabindex="-1"></a>              EXISTING=$(chroot /host lsmod | grep kpatch | awk &#39;{print $1}&#39; || true)</span>
+<span id="cb13-43"><a href="#cb13-43" aria-hidden="true" tabindex="-1"></a>              if [ -n &quot;${EXISTING}&quot; ]; then</span>
+<span id="cb13-44"><a href="#cb13-44" aria-hidden="true" tabindex="-1"></a>                echo &quot;Unloading existing kpatch: ${EXISTING}&quot;</span>
+<span id="cb13-45"><a href="#cb13-45" aria-hidden="true" tabindex="-1"></a>                chroot /host bash -c &quot;echo 0 &gt; /sys/kernel/livepatch/${EXISTING}/enabled&quot; 2&gt;/dev/null || true</span>
+<span id="cb13-46"><a href="#cb13-46" aria-hidden="true" tabindex="-1"></a>                for i in 1 2 3 4 5 6 7 8 9 10; do</span>
+<span id="cb13-47"><a href="#cb13-47" aria-hidden="true" tabindex="-1"></a>                  T=$(chroot /host cat /sys/kernel/livepatch/${EXISTING}/transition 2&gt;/dev/null || echo 0)</span>
+<span id="cb13-48"><a href="#cb13-48" aria-hidden="true" tabindex="-1"></a>                  [ &quot;$T&quot; = &quot;0&quot; ] &amp;&amp; break</span>
+<span id="cb13-49"><a href="#cb13-49" aria-hidden="true" tabindex="-1"></a>                  echo &quot;Waiting for transition... (round $i)&quot;</span>
+<span id="cb13-50"><a href="#cb13-50" aria-hidden="true" tabindex="-1"></a>                  sleep 3</span>
+<span id="cb13-51"><a href="#cb13-51" aria-hidden="true" tabindex="-1"></a>                done</span>
+<span id="cb13-52"><a href="#cb13-52" aria-hidden="true" tabindex="-1"></a>                chroot /host rmmod ${EXISTING} 2&gt;/dev/null || true</span>
+<span id="cb13-53"><a href="#cb13-53" aria-hidden="true" tabindex="-1"></a>                echo &quot;Old kpatch unloaded&quot;</span>
+<span id="cb13-54"><a href="#cb13-54" aria-hidden="true" tabindex="-1"></a>              fi</span>
+<span id="cb13-55"><a href="#cb13-55" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-56"><a href="#cb13-56" aria-hidden="true" tabindex="-1"></a>              # Find and load new kpatch</span>
+<span id="cb13-57"><a href="#cb13-57" aria-hidden="true" tabindex="-1"></a>              KO_FILE=$(find /usr/lib/kpatch/ -name &#39;*.ko&#39; | head -1)</span>
+<span id="cb13-58"><a href="#cb13-58" aria-hidden="true" tabindex="-1"></a>              if [ -z &quot;${KO_FILE}&quot; ]; then</span>
+<span id="cb13-59"><a href="#cb13-59" aria-hidden="true" tabindex="-1"></a>                echo &quot;ERROR: No kpatch .ko found&quot;</span>
+<span id="cb13-60"><a href="#cb13-60" aria-hidden="true" tabindex="-1"></a>                exit 1</span>
+<span id="cb13-61"><a href="#cb13-61" aria-hidden="true" tabindex="-1"></a>              fi</span>
+<span id="cb13-62"><a href="#cb13-62" aria-hidden="true" tabindex="-1"></a>              echo &quot;Found: ${KO_FILE}&quot;</span>
+<span id="cb13-63"><a href="#cb13-63" aria-hidden="true" tabindex="-1"></a>              cp &quot;${KO_FILE}&quot; /host/var/tmp/kpatch.ko</span>
+<span id="cb13-64"><a href="#cb13-64" aria-hidden="true" tabindex="-1"></a>              chroot /host chcon -t modules_object_t /var/tmp/kpatch.ko</span>
+<span id="cb13-65"><a href="#cb13-65" aria-hidden="true" tabindex="-1"></a>              chroot /host insmod /var/tmp/kpatch.ko</span>
+<span id="cb13-66"><a href="#cb13-66" aria-hidden="true" tabindex="-1"></a>              echo &quot;insmod OK&quot;</span>
+<span id="cb13-67"><a href="#cb13-67" aria-hidden="true" tabindex="-1"></a>              chroot /host dmesg | tail -5 | grep -i livepatch || true</span>
+<span id="cb13-68"><a href="#cb13-68" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-69"><a href="#cb13-69" aria-hidden="true" tabindex="-1"></a>              # Record loaded module name for preStop</span>
+<span id="cb13-70"><a href="#cb13-70" aria-hidden="true" tabindex="-1"></a>              KO_NAME=$(chroot /host lsmod | grep kpatch | awk &#39;{print $1}&#39;)</span>
+<span id="cb13-71"><a href="#cb13-71" aria-hidden="true" tabindex="-1"></a>              echo &quot;${KO_NAME}&quot; &gt; /host/var/tmp/kpatch-loaded-module</span>
+<span id="cb13-72"><a href="#cb13-72" aria-hidden="true" tabindex="-1"></a>              echo &quot;kpatch loaded: ${KO_NAME}&quot;</span>
+<span id="cb13-73"><a href="#cb13-73" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">volumeMounts</span><span class="kw">:</span></span>
+<span id="cb13-74"><a href="#cb13-74" aria-hidden="true" tabindex="-1"></a><span class="at">            </span><span class="kw">-</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> host-root</span></span>
+<span id="cb13-75"><a href="#cb13-75" aria-hidden="true" tabindex="-1"></a><span class="at">              </span><span class="fu">mountPath</span><span class="kw">:</span><span class="at"> /host</span></span>
+<span id="cb13-76"><a href="#cb13-76" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">containers</span><span class="kw">:</span></span>
+<span id="cb13-77"><a href="#cb13-77" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="kw">-</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> keeper</span></span>
+<span id="cb13-78"><a href="#cb13-78" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">image</span><span class="kw">:</span><span class="at"> quay.io/wangzheng422/qimgs:kpatch-ocp416-2026-05-21</span></span>
+<span id="cb13-79"><a href="#cb13-79" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">securityContext</span><span class="kw">:</span></span>
+<span id="cb13-80"><a href="#cb13-80" aria-hidden="true" tabindex="-1"></a><span class="at">            </span><span class="fu">privileged</span><span class="kw">:</span><span class="at"> </span><span class="ch">true</span></span>
+<span id="cb13-81"><a href="#cb13-81" aria-hidden="true" tabindex="-1"></a><span class="at">            </span><span class="fu">runAsUser</span><span class="kw">:</span><span class="at"> </span><span class="dv">0</span></span>
+<span id="cb13-82"><a href="#cb13-82" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">command</span><span class="kw">:</span></span>
+<span id="cb13-83"><a href="#cb13-83" aria-hidden="true" tabindex="-1"></a><span class="at">            </span><span class="kw">-</span><span class="at"> /bin/sh</span></span>
+<span id="cb13-84"><a href="#cb13-84" aria-hidden="true" tabindex="-1"></a><span class="at">            </span><span class="kw">-</span><span class="at"> -c</span></span>
+<span id="cb13-85"><a href="#cb13-85" aria-hidden="true" tabindex="-1"></a><span class="kw">            - </span><span class="ch">|</span></span>
+<span id="cb13-86"><a href="#cb13-86" aria-hidden="true" tabindex="-1"></a>              echo &quot;kpatch active&quot;</span>
+<span id="cb13-87"><a href="#cb13-87" aria-hidden="true" tabindex="-1"></a>              trap &#39;echo SIGTERM received&#39; TERM</span>
+<span id="cb13-88"><a href="#cb13-88" aria-hidden="true" tabindex="-1"></a>              while true; do sleep 3600 &amp; wait; done</span>
+<span id="cb13-89"><a href="#cb13-89" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">lifecycle</span><span class="kw">:</span></span>
+<span id="cb13-90"><a href="#cb13-90" aria-hidden="true" tabindex="-1"></a><span class="at">            </span><span class="fu">preStop</span><span class="kw">:</span></span>
+<span id="cb13-91"><a href="#cb13-91" aria-hidden="true" tabindex="-1"></a><span class="at">              </span><span class="fu">exec</span><span class="kw">:</span></span>
+<span id="cb13-92"><a href="#cb13-92" aria-hidden="true" tabindex="-1"></a><span class="at">                </span><span class="fu">command</span><span class="kw">:</span></span>
+<span id="cb13-93"><a href="#cb13-93" aria-hidden="true" tabindex="-1"></a><span class="at">                  </span><span class="kw">-</span><span class="at"> /bin/sh</span></span>
+<span id="cb13-94"><a href="#cb13-94" aria-hidden="true" tabindex="-1"></a><span class="at">                  </span><span class="kw">-</span><span class="at"> -c</span></span>
+<span id="cb13-95"><a href="#cb13-95" aria-hidden="true" tabindex="-1"></a><span class="kw">                  - </span><span class="ch">|</span></span>
+<span id="cb13-96"><a href="#cb13-96" aria-hidden="true" tabindex="-1"></a>                    echo &quot;preStop: unloading kpatch...&quot;</span>
+<span id="cb13-97"><a href="#cb13-97" aria-hidden="true" tabindex="-1"></a>                    MOD=$(cat /host/var/tmp/kpatch-loaded-module 2&gt;/dev/null || chroot /host lsmod | grep kpatch | awk &#39;{print $1}&#39;)</span>
+<span id="cb13-98"><a href="#cb13-98" aria-hidden="true" tabindex="-1"></a>                    if [ -z &quot;${MOD}&quot; ]; then</span>
+<span id="cb13-99"><a href="#cb13-99" aria-hidden="true" tabindex="-1"></a>                      echo &quot;No kpatch module found&quot;</span>
+<span id="cb13-100"><a href="#cb13-100" aria-hidden="true" tabindex="-1"></a>                      exit 0</span>
+<span id="cb13-101"><a href="#cb13-101" aria-hidden="true" tabindex="-1"></a>                    fi</span>
+<span id="cb13-102"><a href="#cb13-102" aria-hidden="true" tabindex="-1"></a>                    echo &quot;Disabling livepatch: ${MOD}&quot;</span>
+<span id="cb13-103"><a href="#cb13-103" aria-hidden="true" tabindex="-1"></a>                    chroot /host bash -c &quot;echo 0 &gt; /sys/kernel/livepatch/${MOD}/enabled&quot; 2&gt;/dev/null || true</span>
+<span id="cb13-104"><a href="#cb13-104" aria-hidden="true" tabindex="-1"></a>                    for i in 1 2 3 4 5 6 7 8 9 10; do</span>
+<span id="cb13-105"><a href="#cb13-105" aria-hidden="true" tabindex="-1"></a>                      T=$(chroot /host cat /sys/kernel/livepatch/${MOD}/transition 2&gt;/dev/null || echo 0)</span>
+<span id="cb13-106"><a href="#cb13-106" aria-hidden="true" tabindex="-1"></a>                      [ &quot;$T&quot; = &quot;0&quot; ] &amp;&amp; break</span>
+<span id="cb13-107"><a href="#cb13-107" aria-hidden="true" tabindex="-1"></a>                      echo &quot;Waiting for transition... (round $i)&quot;</span>
+<span id="cb13-108"><a href="#cb13-108" aria-hidden="true" tabindex="-1"></a>                      sleep 3</span>
+<span id="cb13-109"><a href="#cb13-109" aria-hidden="true" tabindex="-1"></a>                    done</span>
+<span id="cb13-110"><a href="#cb13-110" aria-hidden="true" tabindex="-1"></a>                    chroot /host rmmod ${MOD} 2&gt;/dev/null</span>
+<span id="cb13-111"><a href="#cb13-111" aria-hidden="true" tabindex="-1"></a>                    echo &quot;kpatch ${MOD} unloaded&quot;</span>
+<span id="cb13-112"><a href="#cb13-112" aria-hidden="true" tabindex="-1"></a>                    rm -f /host/var/tmp/kpatch-loaded-module /host/var/tmp/kpatch.ko</span>
+<span id="cb13-113"><a href="#cb13-113" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">volumeMounts</span><span class="kw">:</span></span>
+<span id="cb13-114"><a href="#cb13-114" aria-hidden="true" tabindex="-1"></a><span class="at">            </span><span class="kw">-</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> host-root</span></span>
+<span id="cb13-115"><a href="#cb13-115" aria-hidden="true" tabindex="-1"></a><span class="at">              </span><span class="fu">mountPath</span><span class="kw">:</span><span class="at"> /host</span></span>
+<span id="cb13-116"><a href="#cb13-116" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">volumes</span><span class="kw">:</span></span>
+<span id="cb13-117"><a href="#cb13-117" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="kw">-</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> host-root</span></span>
+<span id="cb13-118"><a href="#cb13-118" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">hostPath</span><span class="kw">:</span></span>
+<span id="cb13-119"><a href="#cb13-119" aria-hidden="true" tabindex="-1"></a><span class="at">            </span><span class="fu">path</span><span class="kw">:</span><span class="at"> /</span></span>
+<span id="cb13-120"><a href="#cb13-120" aria-hidden="true" tabindex="-1"></a><span class="at">            </span><span class="fu">type</span><span class="kw">:</span><span class="at"> Directory</span></span></code></pre></div>
+        <h5 id="deploy-1">Deploy</h5>
+        <div class="sourceCode" id="cb14"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> apply <span class="at">-f</span> kpatch-daemonset-v2.yaml</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> adm policy add-scc-to-user privileged <span class="at">-z</span> default <span class="at">-n</span> kpatch-loader</span></code></pre></div>
+        <h5 id="cleanup-kpatch-auto-unloaded">Cleanup (kpatch
+        auto-unloaded)</h5>
+        <div class="sourceCode" id="cb15"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="co"># preStop hook automatically unloads kpatch from every node</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> delete daemonset kpatch-loader <span class="at">-n</span> kpatch-loader</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a><span class="co"># or</span></span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> delete project kpatch-loader</span></code></pre></div>
+        <hr />
+        <h2 id="ocp-4.16-vs-ocp-4.20-comparison">5. OCP 4.16 vs OCP 4.20
+        Comparison</h2>
+        <p>This solution has now been verified on two different OCP
+        versions:</p>
+        <table>
+        <colgroup>
+        <col style="width: 33%" />
+        <col style="width: 33%" />
+        <col style="width: 33%" />
+        </colgroup>
+        <thead>
+        <tr class="header">
+        <th>Dimension</th>
+        <th>OCP 4.16.50</th>
+        <th>OCP 4.20.10</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr class="odd">
+        <td>RHCOS base</td>
+        <td>RHEL 9.4 EUS</td>
+        <td>RHEL 9.6 EUS</td>
+        </tr>
+        <tr class="even">
+        <td>RHCOS kernel</td>
+        <td>5.14.0-427.93.1.el9_4</td>
+        <td>5.14.0-570.76.1.el9_6</td>
+        </tr>
+        <tr class="odd">
+        <td>kpatch used</td>
+        <td>427.100.1 (1-4)</td>
+        <td>570.94.1 (1-2)</td>
+        </tr>
+        <tr class="even">
+        <td>Cross-version load</td>
+        <td>YES (427.100→427.93)</td>
+        <td>YES (570.94→570.76)</td>
+        </tr>
+        <tr class="odd">
+        <td>EUS repo needed</td>
+        <td><code>release --set=9.4</code></td>
+        <td><code>release --set=9.6</code></td>
+        </tr>
+        <tr class="even">
+        <td>CVE PoC result</td>
+        <td>Confirmed</td>
+        <td>Confirmed</td>
+        </tr>
+        <tr class="odd">
+        <td>DaemonSet deploy</td>
+        <td>3/3 nodes OK</td>
+        <td>3/3 nodes OK</td>
+        </tr>
+        <tr class="even">
+        <td>Container image</td>
+        <td><code>kpatch-ocp416-2026-05-21</code></td>
+        <td><code>kpatch-demo-2026-05-20-2130</code></td>
+        </tr>
+        </tbody>
+        </table>
+        <p><strong>Conclusion</strong>: The kpatch-on-RHCOS approach is
+        reproducible across OCP 4.16 and 4.20. The same pattern applies:
+        enable the matching EUS repo, find the closest kpatch, extract
+        the .ko, and deploy via DaemonSet.</p>
+        <hr />
+        <h2 id="decision-flowchart">6. Decision Flowchart</h2>
+        <pre class="mermaid"><code>flowchart TD
+    START[&quot;CVE Alert on OCP 4.16&quot;] --&gt; Q1{&quot;Can you upgrade to&lt;br&gt;4.16.61+ ?&quot;}
+    Q1 --&gt;|Yes| S1[&quot;z-stream Upgrade&lt;br&gt;(Recommended)&quot;]
+    Q1 --&gt;|No| Q2{&quot;Is reboot&lt;br&gt;acceptable?&quot;}
+
+    Q2 --&gt;|Yes| S4[&quot;MachineConfig&lt;br&gt;initcall_blacklist=algif_aead_init&quot;]
+    Q2 --&gt;|No| Q3{&quot;Official eBPF&lt;br&gt;mitigation available?&quot;}
+
+    Q3 --&gt;|Yes| S2[&quot;eBPF DaemonSet&lt;br&gt;block-copyfail&quot;]
+    Q3 --&gt;|No| Q4{&quot;kpatch RPM in&lt;br&gt;EUS 9.4 repo?&quot;}
+
+    Q4 --&gt;|Yes| S3[&quot;kpatch DaemonSet&lt;br&gt;(Verified on 4.16.50)&quot;]
+    Q4 --&gt;|No| S5[&quot;Open support case&quot;]
+
+    style S1 fill:#c8e6c9
+    style S2 fill:#c8e6c9
+    style S3 fill:#fff9c4
+    style S4 fill:#c8e6c9
+    style S5 fill:#ffcdd2</code></pre>
+        <hr />
+        <h2 id="caveats-and-risks">7. Caveats and Risks</h2>
+        <ol type="1">
+        <li><strong>Not officially supported</strong> — Red Hat does not
+        support manual insmod of kpatch on RHCOS.</li>
+        <li><strong>modversions compatibility</strong> — Cross-version
+        loading within the same EUS branch works (verified on 9.4 and
+        9.6), but not all combinations are guaranteed.</li>
+        <li><strong>Lost on reboot</strong> — kpatch loaded via insmod
+        is lost on node reboot. The DaemonSet will re-load it when the
+        pod restarts.</li>
+        <li><strong>SELinux context required</strong> — <code>.ko</code>
+        must have <code>modules_object_t</code> context before
+        insmod.</li>
+        <li><strong>x86_64 only</strong> — Not tested on
+        ARM64/ppc64le/s390x.</li>
+        <li><strong>Privileged SCC required</strong> — DaemonSet needs
+        <code>oc adm policy add-scc-to-user privileged</code> on the
+        namespace’s default service account.</li>
+        <li><strong>Protection lost after rmmod</strong> — Unloading
+        kpatch restores the vulnerability. Verified on OCP 4.20.</li>
+        <li><strong>kpatch RPMs only for EUS milestone kernels</strong>
+        — Not every RHCOS kernel version has a matching kpatch. Use the
+        closest available version from the same EUS branch.</li>
+        </ol>
+        <hr />
+        <h2 id="references">8. References</h2>
+        <table>
+        <colgroup>
+        <col style="width: 33%" />
+        <col style="width: 33%" />
+        <col style="width: 33%" />
+        </colgroup>
+        <thead>
+        <tr class="header">
+        <th>#</th>
+        <th>Resource</th>
+        <th>Link</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr class="odd">
+        <td>1</td>
+        <td>CVE-2026-31431 OCP Mitigation</td>
+        <td><a href="https://access.redhat.com/solutions/7141979">KCS
+        7141979</a></td>
+        </tr>
+        <tr class="even">
+        <td>2</td>
+        <td>CVE-2026-31431 RHEL Mitigation</td>
+        <td><a href="https://access.redhat.com/solutions/7141931">KCS
+        7141931</a></td>
+        </tr>
+        <tr class="odd">
+        <td>3</td>
+        <td>Zero-Reboot eBPF Mitigation</td>
+        <td><a href="https://access.redhat.com/solutions/7142136">KCS
+        7142136</a></td>
+        </tr>
+        <tr class="even">
+        <td>4</td>
+        <td>kpatch Support on RHEL</td>
+        <td><a href="https://access.redhat.com/solutions/2206511">KCS
+        2206511</a></td>
+        </tr>
+        <tr class="odd">
+        <td>5</td>
+        <td>RHCOS Package Upgrade Restrictions</td>
+        <td><a href="https://access.redhat.com/solutions/6224181">KCS
+        6224181</a></td>
+        </tr>
+        <tr class="even">
+        <td>6</td>
+        <td>Security Bulletin RHSB-2026-02</td>
+        <td><a
+        href="https://access.redhat.com/security/vulnerabilities/RHSB-2026-02">RHSB-2026-02</a></td>
+        </tr>
+        <tr class="odd">
+        <td>7</td>
+        <td>OCP 4.16 Fixed Version</td>
+        <td><a
+        href="https://access.redhat.com/errata/RHSA-2026:13729">RHSA-2026:13729</a>
+        (4.16.61)</td>
+        </tr>
+        <tr class="even">
+        <td>8</td>
+        <td>block-copyfail eBPF Tool</td>
+        <td><a
+        href="https://github.com/openshift/block-copyfail">GitHub</a></td>
+        </tr>
+        </tbody>
+        </table>
+      </article>
+    </div>
+      </main>
+
+  <footer>
+    <p>
+      Licensed under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank"
+        rel="noopener">CC-BY-NC-SA 4.0</a>
+      &nbsp;·&nbsp;
+      <a href="https://github.com/wangzheng422/docker_env" target="_blank" rel="noopener">wangzheng422/docker_env</a>
+    </p>
+  </footer>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: false, theme: 'dark' });
+
+    const SITE_BUILD_ID = 'fbe91b569ae8';
+    const SITE_HOME_URL = '../../../../index.html';
+
+    const getBuildIdFromHtml = (html) => {
+      const match = String(html).match(/<meta[^>]+name=["']site-build-id["'][^>]+content=["']([^"']+)["']/i)
+        || String(html).match(/<meta[^>]+content=["']([^"']+)["'][^>]+name=["']site-build-id["']/i);
+      return match ? match[1] : '';
+    };
+
+    const checkForSiteUpdate = async () => {
+      if (!SITE_BUILD_ID || window.location.protocol === 'file:') return;
+      try {
+        const probeUrl = new URL(SITE_HOME_URL || './index.html', window.location.href);
+        probeUrl.searchParams.set('site_cache_probe', Date.now().toString());
+        const response = await fetch(probeUrl.toString(), { cache: 'no-store' });
+        if (!response.ok) return;
+        const latestBuildId = getBuildIdFromHtml(await response.text());
+        if (!latestBuildId || latestBuildId === SITE_BUILD_ID) return;
+        if (sessionStorage.getItem('site-build-refresh') === latestBuildId) return;
+        sessionStorage.setItem('site-build-refresh', latestBuildId);
+        const freshUrl = new URL(window.location.href);
+        freshUrl.searchParams.set('v', latestBuildId);
+        window.location.replace(freshUrl.toString());
+      } catch (error) {
+        // Network errors should not block reading the current page.
+      }
+    };
+
+    const versionedLocalUrl = (rawUrl) => {
+      if (!rawUrl || /^(https?:)?\/\//i.test(rawUrl) || /^(data|blob|mailto):/i.test(rawUrl)) return rawUrl;
+      const url = new URL(rawUrl, window.location.href);
+      if (url.searchParams.has('v')) return rawUrl;
+      url.searchParams.set('v', SITE_BUILD_ID);
+      return url.toString();
+    };
+
+    const cacheBustPageAssets = () => {
+      document.querySelectorAll('img[src], video[src], audio[src], source[src]').forEach((node) => {
+        const src = node.getAttribute('src');
+        const versioned = versionedLocalUrl(src);
+        if (versioned !== src) node.setAttribute('src', versioned);
+      });
+    };
+
+    const updateReadingProgress = () => {
+      const progress = document.querySelector('.reading-progress');
+      if (!progress) return;
+      const scrollable = document.documentElement.scrollHeight - window.innerHeight;
+      const ratio = scrollable > 0 ? window.scrollY / scrollable : 0;
+      progress.style.transform = 'scaleX(' + Math.min(1, Math.max(0, ratio)) + ')';
+    };
+
+    const topicFor = (text, href) => {
+      const haystack = (text + ' ' + href).toLowerCase();
+      if (/developers\.redhat\.com|redhatquickcourses|github\.com\/redhatquickcourses/.test(haystack)) return 'Red Hat';
+      if (/ai|llm|gpu|vllm|llama|model|rhaiis/.test(haystack)) return 'AI';
+      if (/network|ovn|bgp|dns|egress|ingress|metallb|nic|route/.test(haystack)) return 'Network';
+      if (/cert|tls|sso|keycloak|rhbk|security|compliance/.test(haystack)) return 'Security';
+      if (/perf|profile|throttling|heap|debug/.test(haystack)) return 'Performance';
+      if (/install|ipi|upi|sno|disconnected|bootstrap/.test(haystack)) return 'Install';
+      if (/rhel|coreos|rhcos|kernel|rpm|ostree/.test(haystack)) return 'RHEL';
+      if (/backup|storage|nfs|odf|ocs|ceph|dr/.test(haystack)) return 'Storage';
+      if (/pipeline|gitops|ansible|aap|rhdh|devops/.test(haystack)) return 'DevOps';
+      return 'OpenShift';
+    };
+
+    const yearFor = (text, href) => {
+      const match = (text + ' ' + href).match(/20\d{2}/);
+      return match ? match[0] : 'Notes';
+    };
+
+    const importantExternal = (href) =>
+      /developers\.redhat\.com|redhatquickcourses\.github\.io/i.test(href);
+
+    const titleForLink = (link) => {
+      const href = link.getAttribute('href') || '';
+      const directText = link.textContent.trim().replace(/\s+/g, ' ');
+      if (!/^https?:\/\//.test(directText)) return directText;
+      const parentItem = link.closest('ul')?.parentElement;
+      if (parentItem) {
+        const clone = parentItem.cloneNode(true);
+        clone.querySelectorAll('ul').forEach((nested) => nested.remove());
+        const parentText = clone.textContent.trim().replace(/\s+/g, ' ');
+        if (parentText) {
+          return parentText;
+        }
+      }
+      return directText;
+    };
+
+    const escapeHtml = (value) => String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+
+    const enhanceHome = () => {
+      if (!document.body.classList.contains('page-index')) return;
+      const source = document.querySelector('.home-source');
+      const grid = document.getElementById('note-grid');
+      const stats = document.getElementById('console-stats');
+      const externalPanel = document.getElementById('external-panel');
+      const topicStrip = document.getElementById('topic-strip');
+      const search = document.getElementById('console-search');
+      if (!source || !grid || !stats || !externalPanel || !topicStrip || !search) return;
+
+      const seen = new Set();
+      const links = Array.from(source.querySelectorAll('a[href]'))
+        .map((link) => {
+          const href = link.getAttribute('href') || '';
+          const text = titleForLink(link);
+          return { text, href, topic: topicFor(text, href), year: yearFor(text, href) };
+        });
+      const notes = links
+        .filter((note) => note.text && !note.href.startsWith('http') && !seen.has(note.href) && seen.add(note.href));
+      const externalLinks = links
+        .filter((note) => note.text && importantExternal(note.href));
+
+      const topics = ['All', ...Array.from(new Set(notes.map((note) => note.topic))).sort()];
+      let activeTopic = 'All';
+
+      const renderStats = () => {
+        const years = notes.map((note) => note.year).filter((year) => year.length === 4 && /^\d{4}/.test(year));
+        const latest = years.length ? Math.max(...years.map(Number)) : 'N/A';
+        const oldest = years.length ? Math.min(...years.map(Number)) : 'N/A';
+        stats.innerHTML = [
+          ['Notes', notes.length],
+          ['Resources', externalLinks.length],
+          ['Topics', topics.length - 1],
+          ['Latest', latest],
+        ].map(([label, value]) => '<div class="stat-tile"><span>' + label + '</span><strong>' + value + '</strong></div>').join('');
+        const signal = document.getElementById('signal-count');
+        if (signal) signal.textContent = notes.length + ' links indexed';
+      };
+
+      const renderExternal = () => {
+        externalPanel.innerHTML =
+          '<div class="section-heading"><span>Published / Learning</span><strong>Red Hat resources</strong></div>' +
+          '<div class="external-grid">' +
+          externalLinks.map((note) =>
+            '<a class="resource-card" href="' + escapeHtml(note.href) + '" target="_blank" rel="noopener">' +
+            '<span class="note-meta"><span>' + escapeHtml(note.year) + '</span><span>' + escapeHtml(note.topic) + '</span></span>' +
+            '<strong>' + escapeHtml(note.text) + '</strong>' +
+            '<small>' + escapeHtml(note.href) + '</small>' +
+            '</a>'
+          ).join('') +
+          '</div>';
+      };
+
+      const renderTopics = () => {
+        topicStrip.innerHTML = topics.map((topic) => '<button class="topic-chip' + (topic === activeTopic ? ' active' : '') + '" type="button" data-topic="' + escapeHtml(topic) + '">' + escapeHtml(topic) + '</button>').join('');
+        topicStrip.querySelectorAll('button').forEach((button) => {
+          button.addEventListener('click', () => {
+            activeTopic = button.dataset.topic || 'All';
+            renderTopics();
+            renderCards();
+          });
+        });
+      };
+
+      const renderCards = () => {
+        const query = search.value.trim().toLowerCase();
+        const filtered = notes.filter((note) => {
+          const topicMatch = activeTopic === 'All' || note.topic === activeTopic;
+          const queryMatch = !query || (note.text + ' ' + note.href + ' ' + note.topic + ' ' + note.year).toLowerCase().includes(query);
+          return topicMatch && queryMatch;
+        });
+        grid.innerHTML = filtered.map((note) =>
+          '<a class="note-card" href="' + escapeHtml(note.href) + '">' +
+          '<span class="note-meta"><span>' + escapeHtml(note.year) + '</span><span>' + escapeHtml(note.topic) + '</span></span>' +
+          '<strong>' + escapeHtml(note.text) + '</strong>' +
+          '<small>' + escapeHtml(note.href) + '</small>' +
+          '</a>'
+        ).join('') || '<p class="empty-state">No matching notes.</p>';
+      };
+
+      const drawMap = () => {
+        const canvas = document.getElementById('knowledge-canvas');
+        if (!(canvas instanceof HTMLCanvasElement)) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        const width = canvas.width;
+        const height = canvas.height;
+        const nodes = notes.slice(0, 44).map((note, index) => {
+          const angle = (index / 44) * Math.PI * 2;
+          const ring = 90 + (index % 5) * 22;
+          return {
+            x: width / 2 + Math.cos(angle) * ring,
+            y: height / 2 + Math.sin(angle) * ring * 0.72,
+            topic: note.topic,
+          };
+        });
+        ctx.clearRect(0, 0, width, height);
+        ctx.strokeStyle = 'rgba(88, 166, 255, 0.14)';
+        ctx.lineWidth = 1;
+        nodes.forEach((node, index) => {
+          const next = nodes[(index + 7) % nodes.length];
+          ctx.beginPath();
+          ctx.moveTo(node.x, node.y);
+          ctx.lineTo(next.x, next.y);
+          ctx.stroke();
+        });
+        const palette = {
+          AI: '#a371f7',
+          Network: '#39d0d8',
+          Security: '#ff7b72',
+          Performance: '#f2cc60',
+          Install: '#7ee787',
+          RHEL: '#ff7b72',
+          Storage: '#d2a8ff',
+          DevOps: '#ffa657',
+          OpenShift: '#58a6ff',
+        };
+        nodes.forEach((node) => {
+          ctx.fillStyle = palette[node.topic] || '#58a6ff';
+          ctx.beginPath();
+          ctx.arc(node.x, node.y, 3.4, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      };
+
+      search.addEventListener('input', renderCards);
+      renderStats();
+      renderExternal();
+      renderTopics();
+      renderCards();
+      drawMap();
+      document.body.classList.add('home-enhanced');
+    };
+
+    const enhanceCodeBlocks = () => {
+      document.querySelectorAll('pre').forEach((pre) => {
+        if (pre.classList.contains('mermaid') || pre.querySelector('.copy-code')) return;
+        const button = document.createElement('button');
+        button.className = 'copy-code';
+        button.type = 'button';
+        button.textContent = 'Copy';
+        button.addEventListener('click', async () => {
+          await navigator.clipboard.writeText(pre.textContent || '');
+          button.textContent = 'Copied';
+          setTimeout(() => { button.textContent = 'Copy'; }, 1200);
+        });
+        pre.appendChild(button);
+      });
+    };
+
+    window.addEventListener('scroll', updateReadingProgress, { passive: true });
+    window.addEventListener('pageshow', (event) => {
+      if (event.persisted) checkForSiteUpdate();
+    });
+    document.addEventListener('DOMContentLoaded', async () => {
+      checkForSiteUpdate();
+      cacheBustPageAssets();
+      updateReadingProgress();
+      enhanceHome();
+      enhanceCodeBlocks();
+      // pandoc 输出 mermaid 为 <pre class="mermaid"><code>...</code></pre>
+      // 需要转成 <div class="mermaid">...</div> 供 mermaid.js 渲染
+      document.querySelectorAll('pre.mermaid').forEach(pre => {
+        const div = document.createElement('div');
+        div.classList.add('mermaid');
+        div.textContent = pre.textContent;
+        pre.replaceWith(div);
+      });
+      // 也处理 <pre><code class="language-mermaid"> 形式（备用）
+      document.querySelectorAll('pre code.language-mermaid').forEach(code => {
+        const div = document.createElement('div');
+        div.classList.add('mermaid');
+        div.textContent = code.textContent;
+        code.closest('pre').replaceWith(div);
+      });
+      await mermaid.run();
+    });
+  </script>
+</body>
+
+</html>

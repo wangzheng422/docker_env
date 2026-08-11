@@ -1,0 +1,1383 @@
+<!DOCTYPE html>
+<html lang="zh" dir="ltr">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="generator" content="pandoc" />
+  <meta name="site-build-id" content="fbe91b569ae8" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <title>sriov on openshift4 with unsupport NIC | wandering.star notes</title>
+  <meta name="description"
+    content="Wandering field notes on OpenShift, RHEL, AI infrastructure, and platform operations." />
+  <!-- Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-E3FRMDB7L2"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-E3FRMDB7L2');
+  </script>
+  <style>
+  html {
+    color: #1a1a1a;
+    background-color: #fdfdfd;
+  }
+  body {
+    margin: 0 auto;
+    max-width: 36em;
+    padding-left: 50px;
+    padding-right: 50px;
+    padding-top: 50px;
+    padding-bottom: 50px;
+    hyphens: auto;
+    overflow-wrap: break-word;
+    text-rendering: optimizeLegibility;
+    font-kerning: normal;
+  }
+  @media (max-width: 600px) {
+    body {
+      font-size: 0.9em;
+      padding: 12px;
+    }
+    h1 {
+      font-size: 1.8em;
+    }
+  }
+  @media print {
+    html {
+      background-color: white;
+    }
+    body {
+      background-color: transparent;
+      color: black;
+      font-size: 12pt;
+    }
+    p, h2, h3 {
+      orphans: 3;
+      widows: 3;
+    }
+    h2, h3, h4 {
+      page-break-after: avoid;
+    }
+  }
+  p {
+    margin: 1em 0;
+  }
+  a {
+    color: #1a1a1a;
+  }
+  a:visited {
+    color: #1a1a1a;
+  }
+  img {
+    max-width: 100%;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.4em;
+  }
+  h5, h6 {
+    font-size: 1em;
+    font-style: italic;
+  }
+  h6 {
+    font-weight: normal;
+  }
+  ol, ul {
+    padding-left: 1.7em;
+    margin-top: 1em;
+  }
+  li > ol, li > ul {
+    margin-top: 0;
+  }
+  blockquote {
+    margin: 1em 0 1em 1.7em;
+    padding-left: 1em;
+    border-left: 2px solid #e6e6e6;
+    color: #606060;
+  }
+  code {
+    font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+    font-size: 85%;
+    margin: 0;
+    hyphens: manual;
+  }
+  pre {
+    margin: 1em 0;
+    overflow: auto;
+  }
+  pre code {
+    padding: 0;
+    overflow: visible;
+    overflow-wrap: normal;
+  }
+  .sourceCode {
+   background-color: transparent;
+   overflow: visible;
+  }
+  hr {
+    background-color: #1a1a1a;
+    border: none;
+    height: 1px;
+    margin: 1em 0;
+  }
+  table {
+    margin: 1em 0;
+    border-collapse: collapse;
+    width: 100%;
+    overflow-x: auto;
+    display: block;
+    font-variant-numeric: lining-nums tabular-nums;
+  }
+  table caption {
+    margin-bottom: 0.75em;
+  }
+  tbody {
+    margin-top: 0.5em;
+    border-top: 1px solid #1a1a1a;
+    border-bottom: 1px solid #1a1a1a;
+  }
+  th {
+    border-top: 1px solid #1a1a1a;
+    padding: 0.25em 0.5em 0.25em 0.5em;
+  }
+  td {
+    padding: 0.125em 0.5em 0.25em 0.5em;
+  }
+  header {
+    margin-bottom: 4em;
+    text-align: center;
+  }
+  #TOC li {
+    list-style: none;
+  }
+  #TOC ul {
+    padding-left: 1.3em;
+  }
+  #TOC > ul {
+    padding-left: 0;
+  }
+  #TOC a:not(:hover) {
+    text-decoration: none;
+  }
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  div.columns{display: flex; gap: min(4vw, 1.5em);}
+  div.column{flex: auto; overflow-x: auto;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  /* The extra [class] is a hack that increases specificity enough to
+     override a similar rule in reveal.js */
+  ul.task-list[class]{list-style: none;}
+  ul.task-list li input[type="checkbox"] {
+    font-size: inherit;
+    width: 0.8em;
+    margin: 0 0.8em 0.2em -1.6em;
+    vertical-align: middle;
+  }
+  .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  /* CSS for syntax highlighting */
+  pre > code.sourceCode { white-space: pre; position: relative; }
+  pre > code.sourceCode > span { line-height: 1.25; }
+  pre > code.sourceCode > span:empty { height: 1.2em; }
+  .sourceCode { overflow: visible; }
+  code.sourceCode > span { color: inherit; text-decoration: inherit; }
+  div.sourceCode { margin: 1em 0; }
+  pre.sourceCode { margin: 0; }
+  @media screen {
+  div.sourceCode { overflow: auto; }
+  }
+  @media print {
+  pre > code.sourceCode { white-space: pre-wrap; }
+  pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+  }
+  pre.numberSource code
+    { counter-reset: source-line 0; }
+  pre.numberSource code > span
+    { position: relative; left: -4em; counter-increment: source-line; }
+  pre.numberSource code > span > a:first-child::before
+    { content: counter(source-line);
+      position: relative; left: -1em; text-align: right; vertical-align: baseline;
+      border: none; display: inline-block;
+      -webkit-touch-callout: none; -webkit-user-select: none;
+      -khtml-user-select: none; -moz-user-select: none;
+      -ms-user-select: none; user-select: none;
+      padding: 0 4px; width: 4em;
+    }
+  pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+  div.sourceCode
+    { color: #cccccc; background-color: #303030; }
+  @media screen {
+  pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+  }
+  code span.al { color: #ffcfaf; } /* Alert */
+  code span.an { color: #7f9f7f; font-weight: bold; } /* Annotation */
+  code span.at { } /* Attribute */
+  code span.bn { color: #dca3a3; } /* BaseN */
+  code span.bu { } /* BuiltIn */
+  code span.cf { color: #f0dfaf; } /* ControlFlow */
+  code span.ch { color: #dca3a3; } /* Char */
+  code span.cn { color: #dca3a3; font-weight: bold; } /* Constant */
+  code span.co { color: #7f9f7f; } /* Comment */
+  code span.cv { color: #7f9f7f; font-weight: bold; } /* CommentVar */
+  code span.do { color: #7f9f7f; } /* Documentation */
+  code span.dt { color: #dfdfbf; } /* DataType */
+  code span.dv { color: #dcdccc; } /* DecVal */
+  code span.er { color: #c3bf9f; } /* Error */
+  code span.ex { } /* Extension */
+  code span.fl { color: #c0bed1; } /* Float */
+  code span.fu { color: #efef8f; } /* Function */
+  code span.im { } /* Import */
+  code span.in { color: #7f9f7f; font-weight: bold; } /* Information */
+  code span.kw { color: #f0dfaf; } /* Keyword */
+  code span.op { color: #f0efd0; } /* Operator */
+  code span.ot { color: #efef8f; } /* Other */
+  code span.pp { color: #ffcfaf; font-weight: bold; } /* Preprocessor */
+  code span.sc { color: #dca3a3; } /* SpecialChar */
+  code span.ss { color: #cc9393; } /* SpecialString */
+  code span.st { color: #cc9393; } /* String */
+  code span.va { } /* Variable */
+  code span.vs { color: #cc9393; } /* VerbatimString */
+  code span.wa { color: #7f9f7f; font-weight: bold; } /* Warning */
+  </style>
+  <link rel="stylesheet" href="../../../style.css?v=fbe91b569ae8" />
+  </head>
+
+<body class="page-article">
+  <div class="reading-progress" aria-hidden="true"></div>
+  <div class="console-backdrop" aria-hidden="true"></div>
+  <nav class="site-nav">
+    <div class="nav-inner">
+      <a class="nav-brand" href="../../../index.html">wandering.star<span>notes</span></a>
+      <div class="nav-links">
+        <a href="https://github.com/wangzheng422/docker_env" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://www.youtube.com/@wangzheng422" target="_blank" rel="noopener">YouTube</a>
+      </div>
+    </div>
+  </nav>
+
+  <main>
+            <a class="back-link" href="../../../index.html">← Back to Index</a>
+        <div class="article-layout">
+            <aside class="toc-panel">
+        <div class="toc-title">ON THIS PAGE</div>
+        <ul>
+        <li><a href="#sriov-on-openshift4-with-unsupport-nic"
+        id="toc-sriov-on-openshift4-with-unsupport-nic">sriov on
+        openshift4 with unsupport NIC</a></li>
+        <li><a href="#openshift" id="toc-openshift">openshift</a></li>
+        <li><a href="#kvm-doest-support-sriov-pf-passthrough"
+        id="toc-kvm-doest-support-sriov-pf-passthrough">kvm does’t
+        support sriov PF passthrough</a>
+        <ul>
+        <li><a href="#on-103" id="toc-on-103">on 103</a></li>
+        </ul></li>
+        </ul>
+      </aside>
+            <article class="markdown-body article-shell">
+        <h1 id="sriov-on-openshift4-with-unsupport-nic">sriov on
+        openshift4 with unsupport NIC</h1>
+        <p>openshift4自带sriov支持，但是由于内核只认证了某些网卡，所以openshift4内置了一个白名单，sriov的功能只对这些网卡开放。那么我们做实验的时候，没有这些网卡，但是网卡本身支持sriov，怎么做实验呢？本文就讲述如何操作。</p>
+        <p>实验拓扑图</p>
+        <p><img src="./dia/4.7.sriov.drawio.svg" /></p>
+        <p>视频讲解:</p>
+        <p><a
+        href="https://www.bilibili.com/video/BV1ey4y1M7C2/"><kbd><img src="imgs/2021-07-01-23-55-57.png" width="600"></kbd></a></p>
+        <ul>
+        <li><a
+        href="https://www.bilibili.com/video/BV1ey4y1M7C2/">bilibili</a></li>
+        <li><a
+        href="https://www.ixigua.com/6979983491584918023">xigua</a></li>
+        <li><a href="https://youtu.be/HJZQYogTZFg">youtube</a></li>
+        </ul>
+        <p>there is nic whitelist build-in for openshift4’s sriov, to
+        disable it, using:</p>
+        <ul>
+        <li>https://docs.openshift.com/container-platform/4.6/networking/hardware_networks/configuring-sriov-operator.html#disable-enable-sr-iov-operator-admission-control-webhook_configuring-sriov-operator</li>
+        </ul>
+        <h1 id="openshift">openshift</h1>
+        <div class="sourceCode" id="cb1"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># sriov的实验不能在kvm里面做，因为sriov PF不能透传到kvm里面，那我们就搞一个物理机worker node</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co"># check vendoer id and device id</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co"># https://access.redhat.com/solutions/56081</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="co"># on worker-1</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="ex">lspci</span> <span class="at">-vv</span> <span class="kw">|</span> <span class="fu">grep</span> <span class="at">-i</span> Mellanox</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="co"># 04:00.0 Ethernet controller: Mellanox Technologies MT2892 Family [ConnectX-6 Dx]</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co">#         Subsystem: Mellanox Technologies Device 0011</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="co"># 04:00.1 Ethernet controller: Mellanox Technologies MT2892 Family [ConnectX-6 Dx]</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="co">#         Subsystem: Mellanox Technologies Device 0011</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="ex">lspci</span> <span class="at">-nvv</span> <span class="kw">|</span> <span class="fu">grep</span> <span class="st">&quot;04:00.0\|04:00.1&quot;</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="co"># pcilib: sysfs_read_vpd: read failed: Input/output error</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="co"># 04:00.0 0200: 15b3:101d</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="co"># 04:00.1 0200: 15b3:101d</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> /sys/class/net/<span class="pp">*</span>/device/sriov_numvfs</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a><span class="co"># 0</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a><span class="co"># 0</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> /sys/class/net/<span class="pp">*</span>/device/sriov_totalvfs</span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a><span class="co"># 8</span></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a><span class="co"># 8</span></span></code></pre></div>
+        <p>install NFD ( node feature discovery) operator</p>
+        <p><img src="imgs/2021-06-30-15-16-13.png" /></p>
+        <p>install SRIOV operator</p>
+        <p><img src="imgs/2021-06-30-14-21-21.png" /></p>
+        <div class="sourceCode" id="cb2"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> create namespace openshift-sriov-network-operator</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> create <span class="at">-f</span> <span class="at">-</span> <span class="op">&lt;&lt;EOF</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="st">apiVersion: operators.coreos.com/v1</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="st">kind: OperatorGroup</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="st">metadata:</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="st">  name: sriov-network-operators</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="st">  namespace: openshift-sriov-network-operator</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="st">spec:</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="st">  targetNamespaces:</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="st">  - openshift-sriov-network-operator</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="op">EOF</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="co"># https://catalog.redhat.com/software/containers/openshift4/dpdk-base-rhel8/5e32be6cdd19c77896004a41</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a><span class="co"># registry.redhat.io/openshift4/dpdk-base-rhel8:latest</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a><span class="co"># oc get sriovnetworknodestates -n openshift-sriov-network-operator -o jsonpath=&#39;{.items[*].status}&#39;  | jq</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a><span class="co"># 可以看到，worker-1上的网卡，已经辨别出了VF</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> get sriovnetworknodestates <span class="at">-n</span> openshift-sriov-network-operator <span class="at">-o</span> json  <span class="kw">|</span> <span class="ex">jq</span> <span class="st">&quot;.items[] | (.metadata.name, .status)&quot;</span></span></code></pre></div>
+        <div class="sourceCode" id="cb3"><pre
+        class="sourceCode json"><code class="sourceCode json"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="er">&quot;master-0&quot;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;interfaces&quot;</span><span class="fu">:</span> <span class="ot">[</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">{</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;deviceID&quot;</span><span class="fu">:</span> <span class="st">&quot;1000&quot;</span><span class="fu">,</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;driver&quot;</span><span class="fu">:</span> <span class="st">&quot;virtio-pci&quot;</span><span class="fu">,</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;pciAddress&quot;</span><span class="fu">:</span> <span class="st">&quot;0000:00:03.0&quot;</span><span class="fu">,</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;vendor&quot;</span><span class="fu">:</span> <span class="st">&quot;1af4&quot;</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    <span class="fu">}</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>  <span class="ot">]</span><span class="fu">,</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;syncStatus&quot;</span><span class="fu">:</span> <span class="st">&quot;Succeeded&quot;</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a><span class="er">&quot;master-1&quot;</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;interfaces&quot;</span><span class="fu">:</span> <span class="ot">[</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>    <span class="fu">{</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;deviceID&quot;</span><span class="fu">:</span> <span class="st">&quot;1000&quot;</span><span class="fu">,</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;driver&quot;</span><span class="fu">:</span> <span class="st">&quot;virtio-pci&quot;</span><span class="fu">,</span></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;pciAddress&quot;</span><span class="fu">:</span> <span class="st">&quot;0000:00:03.0&quot;</span><span class="fu">,</span></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;vendor&quot;</span><span class="fu">:</span> <span class="st">&quot;1af4&quot;</span></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>    <span class="fu">}</span></span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>  <span class="ot">]</span><span class="fu">,</span></span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;syncStatus&quot;</span><span class="fu">:</span> <span class="st">&quot;Succeeded&quot;</span></span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a><span class="er">&quot;master-2&quot;</span></span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;interfaces&quot;</span><span class="fu">:</span> <span class="ot">[</span></span>
+<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a>    <span class="fu">{</span></span>
+<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;deviceID&quot;</span><span class="fu">:</span> <span class="st">&quot;1000&quot;</span><span class="fu">,</span></span>
+<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;driver&quot;</span><span class="fu">:</span> <span class="st">&quot;virtio-pci&quot;</span><span class="fu">,</span></span>
+<span id="cb3-31"><a href="#cb3-31" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;pciAddress&quot;</span><span class="fu">:</span> <span class="st">&quot;0000:00:03.0&quot;</span><span class="fu">,</span></span>
+<span id="cb3-32"><a href="#cb3-32" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;vendor&quot;</span><span class="fu">:</span> <span class="st">&quot;1af4&quot;</span></span>
+<span id="cb3-33"><a href="#cb3-33" aria-hidden="true" tabindex="-1"></a>    <span class="fu">}</span></span>
+<span id="cb3-34"><a href="#cb3-34" aria-hidden="true" tabindex="-1"></a>  <span class="ot">]</span><span class="fu">,</span></span>
+<span id="cb3-35"><a href="#cb3-35" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;syncStatus&quot;</span><span class="fu">:</span> <span class="st">&quot;Succeeded&quot;</span></span>
+<span id="cb3-36"><a href="#cb3-36" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span>
+<span id="cb3-37"><a href="#cb3-37" aria-hidden="true" tabindex="-1"></a><span class="er">&quot;worker-0&quot;</span></span>
+<span id="cb3-38"><a href="#cb3-38" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb3-39"><a href="#cb3-39" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;interfaces&quot;</span><span class="fu">:</span> <span class="ot">[</span></span>
+<span id="cb3-40"><a href="#cb3-40" aria-hidden="true" tabindex="-1"></a>    <span class="fu">{</span></span>
+<span id="cb3-41"><a href="#cb3-41" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;deviceID&quot;</span><span class="fu">:</span> <span class="st">&quot;1000&quot;</span><span class="fu">,</span></span>
+<span id="cb3-42"><a href="#cb3-42" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;driver&quot;</span><span class="fu">:</span> <span class="st">&quot;virtio-pci&quot;</span><span class="fu">,</span></span>
+<span id="cb3-43"><a href="#cb3-43" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;pciAddress&quot;</span><span class="fu">:</span> <span class="st">&quot;0000:00:03.0&quot;</span><span class="fu">,</span></span>
+<span id="cb3-44"><a href="#cb3-44" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;vendor&quot;</span><span class="fu">:</span> <span class="st">&quot;1af4&quot;</span></span>
+<span id="cb3-45"><a href="#cb3-45" aria-hidden="true" tabindex="-1"></a>    <span class="fu">}</span></span>
+<span id="cb3-46"><a href="#cb3-46" aria-hidden="true" tabindex="-1"></a>  <span class="ot">]</span><span class="fu">,</span></span>
+<span id="cb3-47"><a href="#cb3-47" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;syncStatus&quot;</span><span class="fu">:</span> <span class="st">&quot;Succeeded&quot;</span></span>
+<span id="cb3-48"><a href="#cb3-48" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span>
+<span id="cb3-49"><a href="#cb3-49" aria-hidden="true" tabindex="-1"></a><span class="er">&quot;worker-1&quot;</span></span>
+<span id="cb3-50"><a href="#cb3-50" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb3-51"><a href="#cb3-51" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;interfaces&quot;</span><span class="fu">:</span> <span class="ot">[</span></span>
+<span id="cb3-52"><a href="#cb3-52" aria-hidden="true" tabindex="-1"></a>    <span class="fu">{</span></span>
+<span id="cb3-53"><a href="#cb3-53" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;deviceID&quot;</span><span class="fu">:</span> <span class="st">&quot;165f&quot;</span><span class="fu">,</span></span>
+<span id="cb3-54"><a href="#cb3-54" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;driver&quot;</span><span class="fu">:</span> <span class="st">&quot;tg3&quot;</span><span class="fu">,</span></span>
+<span id="cb3-55"><a href="#cb3-55" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;linkSpeed&quot;</span><span class="fu">:</span> <span class="st">&quot;1000 Mb/s&quot;</span><span class="fu">,</span></span>
+<span id="cb3-56"><a href="#cb3-56" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;linkType&quot;</span><span class="fu">:</span> <span class="st">&quot;ETH&quot;</span><span class="fu">,</span></span>
+<span id="cb3-57"><a href="#cb3-57" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;mac&quot;</span><span class="fu">:</span> <span class="st">&quot;90:b1:1c:44:d6:0f&quot;</span><span class="fu">,</span></span>
+<span id="cb3-58"><a href="#cb3-58" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;mtu&quot;</span><span class="fu">:</span> <span class="dv">1500</span><span class="fu">,</span></span>
+<span id="cb3-59"><a href="#cb3-59" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;name&quot;</span><span class="fu">:</span> <span class="st">&quot;eno1&quot;</span><span class="fu">,</span></span>
+<span id="cb3-60"><a href="#cb3-60" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;pciAddress&quot;</span><span class="fu">:</span> <span class="st">&quot;0000:01:00.0&quot;</span><span class="fu">,</span></span>
+<span id="cb3-61"><a href="#cb3-61" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;vendor&quot;</span><span class="fu">:</span> <span class="st">&quot;14e4&quot;</span></span>
+<span id="cb3-62"><a href="#cb3-62" aria-hidden="true" tabindex="-1"></a>    <span class="fu">}</span><span class="ot">,</span></span>
+<span id="cb3-63"><a href="#cb3-63" aria-hidden="true" tabindex="-1"></a>    <span class="fu">{</span></span>
+<span id="cb3-64"><a href="#cb3-64" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;deviceID&quot;</span><span class="fu">:</span> <span class="st">&quot;165f&quot;</span><span class="fu">,</span></span>
+<span id="cb3-65"><a href="#cb3-65" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;driver&quot;</span><span class="fu">:</span> <span class="st">&quot;tg3&quot;</span><span class="fu">,</span></span>
+<span id="cb3-66"><a href="#cb3-66" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;linkSpeed&quot;</span><span class="fu">:</span> <span class="st">&quot;-1 Mb/s&quot;</span><span class="fu">,</span></span>
+<span id="cb3-67"><a href="#cb3-67" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;linkType&quot;</span><span class="fu">:</span> <span class="st">&quot;ETH&quot;</span><span class="fu">,</span></span>
+<span id="cb3-68"><a href="#cb3-68" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;mac&quot;</span><span class="fu">:</span> <span class="st">&quot;90:b1:1c:44:d6:10&quot;</span><span class="fu">,</span></span>
+<span id="cb3-69"><a href="#cb3-69" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;mtu&quot;</span><span class="fu">:</span> <span class="dv">1500</span><span class="fu">,</span></span>
+<span id="cb3-70"><a href="#cb3-70" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;name&quot;</span><span class="fu">:</span> <span class="st">&quot;eno2&quot;</span><span class="fu">,</span></span>
+<span id="cb3-71"><a href="#cb3-71" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;pciAddress&quot;</span><span class="fu">:</span> <span class="st">&quot;0000:01:00.1&quot;</span><span class="fu">,</span></span>
+<span id="cb3-72"><a href="#cb3-72" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;vendor&quot;</span><span class="fu">:</span> <span class="st">&quot;14e4&quot;</span></span>
+<span id="cb3-73"><a href="#cb3-73" aria-hidden="true" tabindex="-1"></a>    <span class="fu">}</span><span class="ot">,</span></span>
+<span id="cb3-74"><a href="#cb3-74" aria-hidden="true" tabindex="-1"></a>    <span class="fu">{</span></span>
+<span id="cb3-75"><a href="#cb3-75" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;deviceID&quot;</span><span class="fu">:</span> <span class="st">&quot;165f&quot;</span><span class="fu">,</span></span>
+<span id="cb3-76"><a href="#cb3-76" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;driver&quot;</span><span class="fu">:</span> <span class="st">&quot;tg3&quot;</span><span class="fu">,</span></span>
+<span id="cb3-77"><a href="#cb3-77" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;linkSpeed&quot;</span><span class="fu">:</span> <span class="st">&quot;-1 Mb/s&quot;</span><span class="fu">,</span></span>
+<span id="cb3-78"><a href="#cb3-78" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;linkType&quot;</span><span class="fu">:</span> <span class="st">&quot;ETH&quot;</span><span class="fu">,</span></span>
+<span id="cb3-79"><a href="#cb3-79" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;mac&quot;</span><span class="fu">:</span> <span class="st">&quot;90:b1:1c:44:d6:11&quot;</span><span class="fu">,</span></span>
+<span id="cb3-80"><a href="#cb3-80" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;mtu&quot;</span><span class="fu">:</span> <span class="dv">1500</span><span class="fu">,</span></span>
+<span id="cb3-81"><a href="#cb3-81" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;name&quot;</span><span class="fu">:</span> <span class="st">&quot;eno3&quot;</span><span class="fu">,</span></span>
+<span id="cb3-82"><a href="#cb3-82" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;pciAddress&quot;</span><span class="fu">:</span> <span class="st">&quot;0000:02:00.0&quot;</span><span class="fu">,</span></span>
+<span id="cb3-83"><a href="#cb3-83" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;vendor&quot;</span><span class="fu">:</span> <span class="st">&quot;14e4&quot;</span></span>
+<span id="cb3-84"><a href="#cb3-84" aria-hidden="true" tabindex="-1"></a>    <span class="fu">}</span><span class="ot">,</span></span>
+<span id="cb3-85"><a href="#cb3-85" aria-hidden="true" tabindex="-1"></a>    <span class="fu">{</span></span>
+<span id="cb3-86"><a href="#cb3-86" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;deviceID&quot;</span><span class="fu">:</span> <span class="st">&quot;165f&quot;</span><span class="fu">,</span></span>
+<span id="cb3-87"><a href="#cb3-87" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;driver&quot;</span><span class="fu">:</span> <span class="st">&quot;tg3&quot;</span><span class="fu">,</span></span>
+<span id="cb3-88"><a href="#cb3-88" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;linkSpeed&quot;</span><span class="fu">:</span> <span class="st">&quot;-1 Mb/s&quot;</span><span class="fu">,</span></span>
+<span id="cb3-89"><a href="#cb3-89" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;linkType&quot;</span><span class="fu">:</span> <span class="st">&quot;ETH&quot;</span><span class="fu">,</span></span>
+<span id="cb3-90"><a href="#cb3-90" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;mac&quot;</span><span class="fu">:</span> <span class="st">&quot;90:b1:1c:44:d6:12&quot;</span><span class="fu">,</span></span>
+<span id="cb3-91"><a href="#cb3-91" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;mtu&quot;</span><span class="fu">:</span> <span class="dv">1500</span><span class="fu">,</span></span>
+<span id="cb3-92"><a href="#cb3-92" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;name&quot;</span><span class="fu">:</span> <span class="st">&quot;eno4&quot;</span><span class="fu">,</span></span>
+<span id="cb3-93"><a href="#cb3-93" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;pciAddress&quot;</span><span class="fu">:</span> <span class="st">&quot;0000:02:00.1&quot;</span><span class="fu">,</span></span>
+<span id="cb3-94"><a href="#cb3-94" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;vendor&quot;</span><span class="fu">:</span> <span class="st">&quot;14e4&quot;</span></span>
+<span id="cb3-95"><a href="#cb3-95" aria-hidden="true" tabindex="-1"></a>    <span class="fu">}</span><span class="ot">,</span></span>
+<span id="cb3-96"><a href="#cb3-96" aria-hidden="true" tabindex="-1"></a>    <span class="fu">{</span></span>
+<span id="cb3-97"><a href="#cb3-97" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;deviceID&quot;</span><span class="fu">:</span> <span class="st">&quot;101d&quot;</span><span class="fu">,</span></span>
+<span id="cb3-98"><a href="#cb3-98" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;driver&quot;</span><span class="fu">:</span> <span class="st">&quot;mlx5_core&quot;</span><span class="fu">,</span></span>
+<span id="cb3-99"><a href="#cb3-99" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;linkSpeed&quot;</span><span class="fu">:</span> <span class="st">&quot;-1 Mb/s&quot;</span><span class="fu">,</span></span>
+<span id="cb3-100"><a href="#cb3-100" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;linkType&quot;</span><span class="fu">:</span> <span class="st">&quot;ETH&quot;</span><span class="fu">,</span></span>
+<span id="cb3-101"><a href="#cb3-101" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;mac&quot;</span><span class="fu">:</span> <span class="st">&quot;0c:42:a1:fa:18:52&quot;</span><span class="fu">,</span></span>
+<span id="cb3-102"><a href="#cb3-102" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;mtu&quot;</span><span class="fu">:</span> <span class="dv">1500</span><span class="fu">,</span></span>
+<span id="cb3-103"><a href="#cb3-103" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;name&quot;</span><span class="fu">:</span> <span class="st">&quot;enp4s0f0&quot;</span><span class="fu">,</span></span>
+<span id="cb3-104"><a href="#cb3-104" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;pciAddress&quot;</span><span class="fu">:</span> <span class="st">&quot;0000:04:00.0&quot;</span><span class="fu">,</span></span>
+<span id="cb3-105"><a href="#cb3-105" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;totalvfs&quot;</span><span class="fu">:</span> <span class="dv">8</span><span class="fu">,</span></span>
+<span id="cb3-106"><a href="#cb3-106" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;vendor&quot;</span><span class="fu">:</span> <span class="st">&quot;15b3&quot;</span></span>
+<span id="cb3-107"><a href="#cb3-107" aria-hidden="true" tabindex="-1"></a>    <span class="fu">}</span><span class="ot">,</span></span>
+<span id="cb3-108"><a href="#cb3-108" aria-hidden="true" tabindex="-1"></a>    <span class="fu">{</span></span>
+<span id="cb3-109"><a href="#cb3-109" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;deviceID&quot;</span><span class="fu">:</span> <span class="st">&quot;101d&quot;</span><span class="fu">,</span></span>
+<span id="cb3-110"><a href="#cb3-110" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;driver&quot;</span><span class="fu">:</span> <span class="st">&quot;mlx5_core&quot;</span><span class="fu">,</span></span>
+<span id="cb3-111"><a href="#cb3-111" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;linkSpeed&quot;</span><span class="fu">:</span> <span class="st">&quot;-1 Mb/s&quot;</span><span class="fu">,</span></span>
+<span id="cb3-112"><a href="#cb3-112" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;linkType&quot;</span><span class="fu">:</span> <span class="st">&quot;ETH&quot;</span><span class="fu">,</span></span>
+<span id="cb3-113"><a href="#cb3-113" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;mac&quot;</span><span class="fu">:</span> <span class="st">&quot;0c:42:a1:fa:18:53&quot;</span><span class="fu">,</span></span>
+<span id="cb3-114"><a href="#cb3-114" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;mtu&quot;</span><span class="fu">:</span> <span class="dv">1500</span><span class="fu">,</span></span>
+<span id="cb3-115"><a href="#cb3-115" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;name&quot;</span><span class="fu">:</span> <span class="st">&quot;enp4s0f1&quot;</span><span class="fu">,</span></span>
+<span id="cb3-116"><a href="#cb3-116" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;pciAddress&quot;</span><span class="fu">:</span> <span class="st">&quot;0000:04:00.1&quot;</span><span class="fu">,</span></span>
+<span id="cb3-117"><a href="#cb3-117" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;totalvfs&quot;</span><span class="fu">:</span> <span class="dv">8</span><span class="fu">,</span></span>
+<span id="cb3-118"><a href="#cb3-118" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;vendor&quot;</span><span class="fu">:</span> <span class="st">&quot;15b3&quot;</span></span>
+<span id="cb3-119"><a href="#cb3-119" aria-hidden="true" tabindex="-1"></a>    <span class="fu">}</span></span>
+<span id="cb3-120"><a href="#cb3-120" aria-hidden="true" tabindex="-1"></a>  <span class="ot">]</span><span class="fu">,</span></span>
+<span id="cb3-121"><a href="#cb3-121" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;syncStatus&quot;</span><span class="fu">:</span> <span class="st">&quot;Succeeded&quot;</span></span>
+<span id="cb3-122"><a href="#cb3-122" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+        <div class="sourceCode" id="cb4"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># config worker-1 with hugepage</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> <span class="op">&lt;&lt; EOF</span> <span class="op">&gt;</span> /data/install/worker-performance.yaml</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="st">apiVersion: machineconfiguration.openshift.io/v1</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="st">kind: MachineConfigPool</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="st">metadata:</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="st">  name: worker-performance</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="st">spec:</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a><span class="st">  machineConfigSelector:</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="st">    matchExpressions:</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a><span class="st">      - {key: machineconfiguration.openshift.io/role, operator: In, values: [worker,worker-performance]}</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a><span class="st">  nodeSelector:</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a><span class="st">    matchLabels:</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a><span class="st">      node-role.kubernetes.io/worker-performance: &quot;&quot;</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a><span class="op">EOF</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> create <span class="at">-f</span> /data/install/worker-performance.yaml</span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a><span class="co"># to restore</span></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> delete <span class="at">-f</span> /data/install/worker-performance.yaml</span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> label node worker-1 node-role.kubernetes.io/worker-performance=<span class="st">&quot;&quot;</span></span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> <span class="op">&lt;&lt; EOF</span> <span class="op">&gt;</span> /data/install/worker-1-hugepage.yaml</span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a><span class="st">apiVersion: performance.openshift.io/v2</span></span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a><span class="st">kind: PerformanceProfile</span></span>
+<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a><span class="st">metadata:</span></span>
+<span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a><span class="st">  name: worker-1-hugepage</span></span>
+<span id="cb4-29"><a href="#cb4-29" aria-hidden="true" tabindex="-1"></a><span class="st">spec:</span></span>
+<span id="cb4-30"><a href="#cb4-30" aria-hidden="true" tabindex="-1"></a><span class="st">  cpu:</span></span>
+<span id="cb4-31"><a href="#cb4-31" aria-hidden="true" tabindex="-1"></a><span class="st">    isolated: &quot;5-23&quot;</span></span>
+<span id="cb4-32"><a href="#cb4-32" aria-hidden="true" tabindex="-1"></a><span class="st">    reserved: &quot;0-4&quot;</span></span>
+<span id="cb4-33"><a href="#cb4-33" aria-hidden="true" tabindex="-1"></a><span class="st">  hugepages:</span></span>
+<span id="cb4-34"><a href="#cb4-34" aria-hidden="true" tabindex="-1"></a><span class="st">    defaultHugepagesSize: 1G</span></span>
+<span id="cb4-35"><a href="#cb4-35" aria-hidden="true" tabindex="-1"></a><span class="st">    pages:</span></span>
+<span id="cb4-36"><a href="#cb4-36" aria-hidden="true" tabindex="-1"></a><span class="st">      - count: 4</span></span>
+<span id="cb4-37"><a href="#cb4-37" aria-hidden="true" tabindex="-1"></a><span class="st">        size: 1G</span></span>
+<span id="cb4-38"><a href="#cb4-38" aria-hidden="true" tabindex="-1"></a><span class="st">  nodeSelector:</span></span>
+<span id="cb4-39"><a href="#cb4-39" aria-hidden="true" tabindex="-1"></a><span class="st">    node-role.kubernetes.io/worker-performance: &#39;&#39;</span></span>
+<span id="cb4-40"><a href="#cb4-40" aria-hidden="true" tabindex="-1"></a><span class="op">EOF</span></span>
+<span id="cb4-41"><a href="#cb4-41" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> create <span class="at">-f</span> /data/install/worker-1-hugepage.yaml</span>
+<span id="cb4-42"><a href="#cb4-42" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-43"><a href="#cb4-43" aria-hidden="true" tabindex="-1"></a><span class="co"># to restore</span></span>
+<span id="cb4-44"><a href="#cb4-44" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> delete <span class="at">-f</span> /data/install/worker-1-hugepage.yaml</span>
+<span id="cb4-45"><a href="#cb4-45" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-46"><a href="#cb4-46" aria-hidden="true" tabindex="-1"></a><span class="co"># on worker-1</span></span>
+<span id="cb4-47"><a href="#cb4-47" aria-hidden="true" tabindex="-1"></a><span class="fu">grep</span> <span class="at">-i</span> huge /proc/meminfo</span>
+<span id="cb4-48"><a href="#cb4-48" aria-hidden="true" tabindex="-1"></a><span class="co"># before</span></span>
+<span id="cb4-49"><a href="#cb4-49" aria-hidden="true" tabindex="-1"></a><span class="co"># AnonHugePages:    448512 kB</span></span>
+<span id="cb4-50"><a href="#cb4-50" aria-hidden="true" tabindex="-1"></a><span class="co"># ShmemHugePages:        0 kB</span></span>
+<span id="cb4-51"><a href="#cb4-51" aria-hidden="true" tabindex="-1"></a><span class="co"># HugePages_Total:       0</span></span>
+<span id="cb4-52"><a href="#cb4-52" aria-hidden="true" tabindex="-1"></a><span class="co"># HugePages_Free:        0</span></span>
+<span id="cb4-53"><a href="#cb4-53" aria-hidden="true" tabindex="-1"></a><span class="co"># HugePages_Rsvd:        0</span></span>
+<span id="cb4-54"><a href="#cb4-54" aria-hidden="true" tabindex="-1"></a><span class="co"># HugePages_Surp:        0</span></span>
+<span id="cb4-55"><a href="#cb4-55" aria-hidden="true" tabindex="-1"></a><span class="co"># Hugepagesize:       2048 kB</span></span>
+<span id="cb4-56"><a href="#cb4-56" aria-hidden="true" tabindex="-1"></a><span class="co"># Hugetlb:               0 kB</span></span>
+<span id="cb4-57"><a href="#cb4-57" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-58"><a href="#cb4-58" aria-hidden="true" tabindex="-1"></a><span class="co"># after</span></span>
+<span id="cb4-59"><a href="#cb4-59" aria-hidden="true" tabindex="-1"></a><span class="co"># AnonHugePages:    376832 kB</span></span>
+<span id="cb4-60"><a href="#cb4-60" aria-hidden="true" tabindex="-1"></a><span class="co"># ShmemHugePages:        0 kB</span></span>
+<span id="cb4-61"><a href="#cb4-61" aria-hidden="true" tabindex="-1"></a><span class="co"># HugePages_Total:       4</span></span>
+<span id="cb4-62"><a href="#cb4-62" aria-hidden="true" tabindex="-1"></a><span class="co"># HugePages_Free:        4</span></span>
+<span id="cb4-63"><a href="#cb4-63" aria-hidden="true" tabindex="-1"></a><span class="co"># HugePages_Rsvd:        0</span></span>
+<span id="cb4-64"><a href="#cb4-64" aria-hidden="true" tabindex="-1"></a><span class="co"># HugePages_Surp:        0</span></span>
+<span id="cb4-65"><a href="#cb4-65" aria-hidden="true" tabindex="-1"></a><span class="co"># Hugepagesize:    1048576 kB</span></span>
+<span id="cb4-66"><a href="#cb4-66" aria-hidden="true" tabindex="-1"></a><span class="co"># Hugetlb:         4194304 kB</span></span>
+<span id="cb4-67"><a href="#cb4-67" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-68"><a href="#cb4-68" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-69"><a href="#cb4-69" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> <span class="op">&lt;&lt; EOF</span> <span class="op">&gt;</span> /data/install/sriov-cx4.yaml</span>
+<span id="cb4-70"><a href="#cb4-70" aria-hidden="true" tabindex="-1"></a><span class="st">apiVersion: sriovnetwork.openshift.io/v1</span></span>
+<span id="cb4-71"><a href="#cb4-71" aria-hidden="true" tabindex="-1"></a><span class="st">kind: SriovNetworkNodePolicy</span></span>
+<span id="cb4-72"><a href="#cb4-72" aria-hidden="true" tabindex="-1"></a><span class="st">metadata:</span></span>
+<span id="cb4-73"><a href="#cb4-73" aria-hidden="true" tabindex="-1"></a><span class="st">  name: policy-cx4-net-1</span></span>
+<span id="cb4-74"><a href="#cb4-74" aria-hidden="true" tabindex="-1"></a><span class="st">  namespace: openshift-sriov-network-operator</span></span>
+<span id="cb4-75"><a href="#cb4-75" aria-hidden="true" tabindex="-1"></a><span class="st">spec:</span></span>
+<span id="cb4-76"><a href="#cb4-76" aria-hidden="true" tabindex="-1"></a><span class="st">  resourceName: cx4nic1</span></span>
+<span id="cb4-77"><a href="#cb4-77" aria-hidden="true" tabindex="-1"></a><span class="st">  nodeSelector:</span></span>
+<span id="cb4-78"><a href="#cb4-78" aria-hidden="true" tabindex="-1"></a><span class="st">    feature.node.kubernetes.io/network-sriov.capable: &quot;true&quot;</span></span>
+<span id="cb4-79"><a href="#cb4-79" aria-hidden="true" tabindex="-1"></a><span class="st">  numVfs: 4</span></span>
+<span id="cb4-80"><a href="#cb4-80" aria-hidden="true" tabindex="-1"></a><span class="st">  nicSelector:</span></span>
+<span id="cb4-81"><a href="#cb4-81" aria-hidden="true" tabindex="-1"></a><span class="st">    vendor: &quot;15b3&quot;</span></span>
+<span id="cb4-82"><a href="#cb4-82" aria-hidden="true" tabindex="-1"></a><span class="st">    deviceID: &quot;101d&quot;</span></span>
+<span id="cb4-83"><a href="#cb4-83" aria-hidden="true" tabindex="-1"></a><span class="st">    # rootDevices:</span></span>
+<span id="cb4-84"><a href="#cb4-84" aria-hidden="true" tabindex="-1"></a><span class="st">    #   - &quot;0000:19:00.0&quot;</span></span>
+<span id="cb4-85"><a href="#cb4-85" aria-hidden="true" tabindex="-1"></a><span class="st">  deviceType: netdevice </span></span>
+<span id="cb4-86"><a href="#cb4-86" aria-hidden="true" tabindex="-1"></a><span class="st">  isRdma: true</span></span>
+<span id="cb4-87"><a href="#cb4-87" aria-hidden="true" tabindex="-1"></a><span class="op">EOF</span></span>
+<span id="cb4-88"><a href="#cb4-88" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> create <span class="at">-f</span> /data/install/sriov-cx4.yaml</span>
+<span id="cb4-89"><a href="#cb4-89" aria-hidden="true" tabindex="-1"></a><span class="co"># Error from server (vendor/device 15b3/101d is not supported): error when creating &quot;/data/install/sriov-cx4.yaml&quot;: admission webhook &quot;operator-webhook.sriovnetwork.openshift.io&quot; denied the request: vendor/device 15b3/101d is not supported</span></span>
+<span id="cb4-90"><a href="#cb4-90" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-91"><a href="#cb4-91" aria-hidden="true" tabindex="-1"></a><span class="co"># to restore</span></span>
+<span id="cb4-92"><a href="#cb4-92" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> delete <span class="at">-f</span> /data/install/sriov-cx4.yaml</span>
+<span id="cb4-93"><a href="#cb4-93" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-94"><a href="#cb4-94" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> get sriovoperatorconfig default <span class="at">-n</span> openshift-sriov-network-operator <span class="at">-o</span> yaml <span class="kw">|</span> <span class="ex">yq</span> e <span class="st">&#39;.spec&#39;</span> <span class="at">-</span></span>
+<span id="cb4-95"><a href="#cb4-95" aria-hidden="true" tabindex="-1"></a><span class="co"># enableInjector: true</span></span>
+<span id="cb4-96"><a href="#cb4-96" aria-hidden="true" tabindex="-1"></a><span class="co"># enableOperatorWebhook: true</span></span>
+<span id="cb4-97"><a href="#cb4-97" aria-hidden="true" tabindex="-1"></a><span class="co"># logLevel: 2</span></span>
+<span id="cb4-98"><a href="#cb4-98" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-99"><a href="#cb4-99" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> patch sriovoperatorconfig default <span class="at">--type</span><span class="op">=</span>merge <span class="dt">\</span></span>
+<span id="cb4-100"><a href="#cb4-100" aria-hidden="true" tabindex="-1"></a>  <span class="at">-n</span> openshift-sriov-network-operator <span class="dt">\</span></span>
+<span id="cb4-101"><a href="#cb4-101" aria-hidden="true" tabindex="-1"></a>  <span class="at">--patch</span> <span class="st">&#39;{ &quot;spec&quot;: { &quot;enableOperatorWebhook&quot;: false } }&#39;</span></span>
+<span id="cb4-102"><a href="#cb4-102" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-103"><a href="#cb4-103" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> get sriovoperatorconfig default <span class="at">-n</span> openshift-sriov-network-operator <span class="at">-o</span> yaml <span class="kw">|</span> <span class="ex">yq</span> e <span class="st">&#39;.spec&#39;</span> <span class="at">-</span></span>
+<span id="cb4-104"><a href="#cb4-104" aria-hidden="true" tabindex="-1"></a><span class="co"># enableInjector: true</span></span>
+<span id="cb4-105"><a href="#cb4-105" aria-hidden="true" tabindex="-1"></a><span class="co"># enableOperatorWebhook: false</span></span>
+<span id="cb4-106"><a href="#cb4-106" aria-hidden="true" tabindex="-1"></a><span class="co"># logLevel: 2</span></span>
+<span id="cb4-107"><a href="#cb4-107" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-108"><a href="#cb4-108" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> create <span class="at">-f</span> /data/install/sriov-cx4.yaml</span>
+<span id="cb4-109"><a href="#cb4-109" aria-hidden="true" tabindex="-1"></a><span class="co"># sriovnetworknodepolicy.sriovnetwork.openshift.io/policy-cx4-net-1 created</span></span>
+<span id="cb4-110"><a href="#cb4-110" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-111"><a href="#cb4-111" aria-hidden="true" tabindex="-1"></a><span class="co"># you can see, VF num set to &#39;4&#39;</span></span>
+<span id="cb4-112"><a href="#cb4-112" aria-hidden="true" tabindex="-1"></a><span class="co"># oc get sriovnetworknodestates worker-1 -n openshift-sriov-network-operator -o json  | jq &quot;(.metadata.name, .status)&quot;</span></span>
+<span id="cb4-113"><a href="#cb4-113" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> get sriovnetworknodestates worker-1 <span class="at">-n</span> openshift-sriov-network-operator <span class="at">-o</span> yaml <span class="kw">|</span> <span class="ex">yq</span> e <span class="st">&quot;del(.metadata.managedFields)&quot;</span> <span class="at">-</span></span></code></pre></div>
+        <div class="sourceCode" id="cb5"><pre
+        class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">apiVersion</span><span class="kw">:</span><span class="at"> sriovnetwork.openshift.io/v1</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="fu">kind</span><span class="kw">:</span><span class="at"> SriovNetworkNodeState</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="fu">metadata</span><span class="kw">:</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">creationTimestamp</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;2021-06-30T16:00:09Z&quot;</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">generation</span><span class="kw">:</span><span class="at"> </span><span class="dv">4</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">name</span><span class="kw">:</span><span class="at"> worker-1</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">namespace</span><span class="kw">:</span><span class="at"> openshift-sriov-network-operator</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">ownerReferences</span><span class="kw">:</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> </span><span class="fu">apiVersion</span><span class="kw">:</span><span class="at"> sriovnetwork.openshift.io/v1</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">blockOwnerDeletion</span><span class="kw">:</span><span class="at"> </span><span class="ch">true</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">controller</span><span class="kw">:</span><span class="at"> </span><span class="ch">true</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">kind</span><span class="kw">:</span><span class="at"> SriovNetworkNodePolicy</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">name</span><span class="kw">:</span><span class="at"> default</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">uid</span><span class="kw">:</span><span class="at"> cef00fc5-7952-42ec-b863-980fdc1e6318</span></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">resourceVersion</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;4425538&quot;</span></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">selfLink</span><span class="kw">:</span><span class="at"> /apis/sriovnetwork.openshift.io/v1/namespaces/openshift-sriov-network-operator/sriovnetworknodestates/worker-1</span></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">uid</span><span class="kw">:</span><span class="at"> fcf58d46-3127-4956-ac2f-df5ce2e2ac8c</span></span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a><span class="fu">spec</span><span class="kw">:</span></span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">dpConfigVersion</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;4381421&quot;</span></span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">interfaces</span><span class="kw">:</span></span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> enp4s0f0</span></span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">numVfs</span><span class="kw">:</span><span class="at"> </span><span class="dv">4</span></span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">pciAddress</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;0000:04:00.0&quot;</span></span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">vfGroups</span><span class="kw">:</span></span>
+<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="kw">-</span><span class="at"> </span><span class="fu">deviceType</span><span class="kw">:</span><span class="at"> netdevice</span></span>
+<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">policyName</span><span class="kw">:</span><span class="at"> policy-cx4-net-1</span></span>
+<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">resourceName</span><span class="kw">:</span><span class="at"> cx4nic1</span></span>
+<span id="cb5-28"><a href="#cb5-28" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">vfRange</span><span class="kw">:</span><span class="at"> 0-3</span></span>
+<span id="cb5-29"><a href="#cb5-29" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> enp4s0f1</span></span>
+<span id="cb5-30"><a href="#cb5-30" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">numVfs</span><span class="kw">:</span><span class="at"> </span><span class="dv">4</span></span>
+<span id="cb5-31"><a href="#cb5-31" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">pciAddress</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;0000:04:00.1&quot;</span></span>
+<span id="cb5-32"><a href="#cb5-32" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">vfGroups</span><span class="kw">:</span></span>
+<span id="cb5-33"><a href="#cb5-33" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="kw">-</span><span class="at"> </span><span class="fu">deviceType</span><span class="kw">:</span><span class="at"> netdevice</span></span>
+<span id="cb5-34"><a href="#cb5-34" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">policyName</span><span class="kw">:</span><span class="at"> policy-cx4-net-1</span></span>
+<span id="cb5-35"><a href="#cb5-35" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">resourceName</span><span class="kw">:</span><span class="at"> cx4nic1</span></span>
+<span id="cb5-36"><a href="#cb5-36" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">vfRange</span><span class="kw">:</span><span class="at"> 0-3</span></span>
+<span id="cb5-37"><a href="#cb5-37" aria-hidden="true" tabindex="-1"></a><span class="fu">status</span><span class="kw">:</span></span>
+<span id="cb5-38"><a href="#cb5-38" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">interfaces</span><span class="kw">:</span></span>
+<span id="cb5-39"><a href="#cb5-39" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> </span><span class="fu">deviceID</span><span class="kw">:</span><span class="at"> 165f</span></span>
+<span id="cb5-40"><a href="#cb5-40" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">driver</span><span class="kw">:</span><span class="at"> tg3</span></span>
+<span id="cb5-41"><a href="#cb5-41" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">linkSpeed</span><span class="kw">:</span><span class="at"> 1000 Mb/s</span></span>
+<span id="cb5-42"><a href="#cb5-42" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">linkType</span><span class="kw">:</span><span class="at"> ETH</span></span>
+<span id="cb5-43"><a href="#cb5-43" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">mac</span><span class="kw">:</span><span class="at"> 90:b1:1c:44:d6:0f</span></span>
+<span id="cb5-44"><a href="#cb5-44" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">mtu</span><span class="kw">:</span><span class="at"> </span><span class="dv">1500</span></span>
+<span id="cb5-45"><a href="#cb5-45" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">name</span><span class="kw">:</span><span class="at"> eno1</span></span>
+<span id="cb5-46"><a href="#cb5-46" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">pciAddress</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;0000:01:00.0&quot;</span></span>
+<span id="cb5-47"><a href="#cb5-47" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">vendor</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;14e4&quot;</span></span>
+<span id="cb5-48"><a href="#cb5-48" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> </span><span class="fu">deviceID</span><span class="kw">:</span><span class="at"> 165f</span></span>
+<span id="cb5-49"><a href="#cb5-49" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">driver</span><span class="kw">:</span><span class="at"> tg3</span></span>
+<span id="cb5-50"><a href="#cb5-50" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">linkSpeed</span><span class="kw">:</span><span class="at"> -1 Mb/s</span></span>
+<span id="cb5-51"><a href="#cb5-51" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">linkType</span><span class="kw">:</span><span class="at"> ETH</span></span>
+<span id="cb5-52"><a href="#cb5-52" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">mac</span><span class="kw">:</span><span class="at"> 90:b1:1c:44:d6:10</span></span>
+<span id="cb5-53"><a href="#cb5-53" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">mtu</span><span class="kw">:</span><span class="at"> </span><span class="dv">1500</span></span>
+<span id="cb5-54"><a href="#cb5-54" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">name</span><span class="kw">:</span><span class="at"> eno2</span></span>
+<span id="cb5-55"><a href="#cb5-55" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">pciAddress</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;0000:01:00.1&quot;</span></span>
+<span id="cb5-56"><a href="#cb5-56" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">vendor</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;14e4&quot;</span></span>
+<span id="cb5-57"><a href="#cb5-57" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> </span><span class="fu">deviceID</span><span class="kw">:</span><span class="at"> 165f</span></span>
+<span id="cb5-58"><a href="#cb5-58" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">driver</span><span class="kw">:</span><span class="at"> tg3</span></span>
+<span id="cb5-59"><a href="#cb5-59" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">linkSpeed</span><span class="kw">:</span><span class="at"> -1 Mb/s</span></span>
+<span id="cb5-60"><a href="#cb5-60" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">linkType</span><span class="kw">:</span><span class="at"> ETH</span></span>
+<span id="cb5-61"><a href="#cb5-61" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">mac</span><span class="kw">:</span><span class="at"> 90:b1:1c:44:d6:11</span></span>
+<span id="cb5-62"><a href="#cb5-62" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">mtu</span><span class="kw">:</span><span class="at"> </span><span class="dv">1500</span></span>
+<span id="cb5-63"><a href="#cb5-63" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">name</span><span class="kw">:</span><span class="at"> eno3</span></span>
+<span id="cb5-64"><a href="#cb5-64" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">pciAddress</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;0000:02:00.0&quot;</span></span>
+<span id="cb5-65"><a href="#cb5-65" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">vendor</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;14e4&quot;</span></span>
+<span id="cb5-66"><a href="#cb5-66" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> </span><span class="fu">deviceID</span><span class="kw">:</span><span class="at"> 165f</span></span>
+<span id="cb5-67"><a href="#cb5-67" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">driver</span><span class="kw">:</span><span class="at"> tg3</span></span>
+<span id="cb5-68"><a href="#cb5-68" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">linkSpeed</span><span class="kw">:</span><span class="at"> -1 Mb/s</span></span>
+<span id="cb5-69"><a href="#cb5-69" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">linkType</span><span class="kw">:</span><span class="at"> ETH</span></span>
+<span id="cb5-70"><a href="#cb5-70" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">mac</span><span class="kw">:</span><span class="at"> 90:b1:1c:44:d6:12</span></span>
+<span id="cb5-71"><a href="#cb5-71" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">mtu</span><span class="kw">:</span><span class="at"> </span><span class="dv">1500</span></span>
+<span id="cb5-72"><a href="#cb5-72" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">name</span><span class="kw">:</span><span class="at"> eno4</span></span>
+<span id="cb5-73"><a href="#cb5-73" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">pciAddress</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;0000:02:00.1&quot;</span></span>
+<span id="cb5-74"><a href="#cb5-74" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">vendor</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;14e4&quot;</span></span>
+<span id="cb5-75"><a href="#cb5-75" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> </span><span class="fu">Vfs</span><span class="kw">:</span></span>
+<span id="cb5-76"><a href="#cb5-76" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="kw">-</span><span class="at"> </span><span class="fu">deviceID</span><span class="kw">:</span><span class="at"> 101e</span></span>
+<span id="cb5-77"><a href="#cb5-77" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">driver</span><span class="kw">:</span><span class="at"> mlx5_core</span></span>
+<span id="cb5-78"><a href="#cb5-78" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">mac</span><span class="kw">:</span><span class="at"> 36:da:1c:a9:47:9a</span></span>
+<span id="cb5-79"><a href="#cb5-79" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">mtu</span><span class="kw">:</span><span class="at"> </span><span class="dv">1500</span></span>
+<span id="cb5-80"><a href="#cb5-80" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">name</span><span class="kw">:</span><span class="at"> enp4s0f0v0</span></span>
+<span id="cb5-81"><a href="#cb5-81" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">pciAddress</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;0000:04:00.2&quot;</span></span>
+<span id="cb5-82"><a href="#cb5-82" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">vendor</span><span class="kw">:</span><span class="at"> 15b3</span></span>
+<span id="cb5-83"><a href="#cb5-83" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">vfID</span><span class="kw">:</span><span class="at"> </span><span class="dv">0</span></span>
+<span id="cb5-84"><a href="#cb5-84" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="kw">-</span><span class="at"> </span><span class="fu">deviceID</span><span class="kw">:</span><span class="at"> 101e</span></span>
+<span id="cb5-85"><a href="#cb5-85" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">driver</span><span class="kw">:</span><span class="at"> mlx5_core</span></span>
+<span id="cb5-86"><a href="#cb5-86" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">mac</span><span class="kw">:</span><span class="at"> 62:ab:95:db:e6:cc</span></span>
+<span id="cb5-87"><a href="#cb5-87" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">mtu</span><span class="kw">:</span><span class="at"> </span><span class="dv">1500</span></span>
+<span id="cb5-88"><a href="#cb5-88" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">name</span><span class="kw">:</span><span class="at"> enp4s0f0v1</span></span>
+<span id="cb5-89"><a href="#cb5-89" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">pciAddress</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;0000:04:00.3&quot;</span></span>
+<span id="cb5-90"><a href="#cb5-90" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">vendor</span><span class="kw">:</span><span class="at"> 15b3</span></span>
+<span id="cb5-91"><a href="#cb5-91" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">vfID</span><span class="kw">:</span><span class="at"> </span><span class="dv">1</span></span>
+<span id="cb5-92"><a href="#cb5-92" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="kw">-</span><span class="at"> </span><span class="fu">deviceID</span><span class="kw">:</span><span class="at"> 101e</span></span>
+<span id="cb5-93"><a href="#cb5-93" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">driver</span><span class="kw">:</span><span class="at"> mlx5_core</span></span>
+<span id="cb5-94"><a href="#cb5-94" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">pciAddress</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;0000:04:00.4&quot;</span></span>
+<span id="cb5-95"><a href="#cb5-95" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">vendor</span><span class="kw">:</span><span class="at"> 15b3</span></span>
+<span id="cb5-96"><a href="#cb5-96" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">vfID</span><span class="kw">:</span><span class="at"> </span><span class="dv">2</span></span>
+<span id="cb5-97"><a href="#cb5-97" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="kw">-</span><span class="at"> </span><span class="fu">deviceID</span><span class="kw">:</span><span class="at"> 101e</span></span>
+<span id="cb5-98"><a href="#cb5-98" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">driver</span><span class="kw">:</span><span class="at"> mlx5_core</span></span>
+<span id="cb5-99"><a href="#cb5-99" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">mac</span><span class="kw">:</span><span class="at"> 5e:9f:cc:cc:e4:a1</span></span>
+<span id="cb5-100"><a href="#cb5-100" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">mtu</span><span class="kw">:</span><span class="at"> </span><span class="dv">1500</span></span>
+<span id="cb5-101"><a href="#cb5-101" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">name</span><span class="kw">:</span><span class="at"> enp4s0f0v3</span></span>
+<span id="cb5-102"><a href="#cb5-102" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">pciAddress</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;0000:04:00.5&quot;</span></span>
+<span id="cb5-103"><a href="#cb5-103" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">vendor</span><span class="kw">:</span><span class="at"> 15b3</span></span>
+<span id="cb5-104"><a href="#cb5-104" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">vfID</span><span class="kw">:</span><span class="at"> </span><span class="dv">3</span></span>
+<span id="cb5-105"><a href="#cb5-105" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">deviceID</span><span class="kw">:</span><span class="at"> 101d</span></span>
+<span id="cb5-106"><a href="#cb5-106" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">driver</span><span class="kw">:</span><span class="at"> mlx5_core</span></span>
+<span id="cb5-107"><a href="#cb5-107" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">eSwitchMode</span><span class="kw">:</span><span class="at"> legacy</span></span>
+<span id="cb5-108"><a href="#cb5-108" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">linkSpeed</span><span class="kw">:</span><span class="at"> -1 Mb/s</span></span>
+<span id="cb5-109"><a href="#cb5-109" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">linkType</span><span class="kw">:</span><span class="at"> ETH</span></span>
+<span id="cb5-110"><a href="#cb5-110" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">mac</span><span class="kw">:</span><span class="at"> 0c:42:a1:fa:18:52</span></span>
+<span id="cb5-111"><a href="#cb5-111" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">mtu</span><span class="kw">:</span><span class="at"> </span><span class="dv">1500</span></span>
+<span id="cb5-112"><a href="#cb5-112" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">name</span><span class="kw">:</span><span class="at"> enp4s0f0</span></span>
+<span id="cb5-113"><a href="#cb5-113" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">numVfs</span><span class="kw">:</span><span class="at"> </span><span class="dv">4</span></span>
+<span id="cb5-114"><a href="#cb5-114" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">pciAddress</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;0000:04:00.0&quot;</span></span>
+<span id="cb5-115"><a href="#cb5-115" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">totalvfs</span><span class="kw">:</span><span class="at"> </span><span class="dv">4</span></span>
+<span id="cb5-116"><a href="#cb5-116" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">vendor</span><span class="kw">:</span><span class="at"> 15b3</span></span>
+<span id="cb5-117"><a href="#cb5-117" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> </span><span class="fu">Vfs</span><span class="kw">:</span></span>
+<span id="cb5-118"><a href="#cb5-118" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="kw">-</span><span class="at"> </span><span class="fu">deviceID</span><span class="kw">:</span><span class="at"> 101e</span></span>
+<span id="cb5-119"><a href="#cb5-119" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">driver</span><span class="kw">:</span><span class="at"> mlx5_core</span></span>
+<span id="cb5-120"><a href="#cb5-120" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">mac</span><span class="kw">:</span><span class="at"> e6:75:48:6f:56:33</span></span>
+<span id="cb5-121"><a href="#cb5-121" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">mtu</span><span class="kw">:</span><span class="at"> </span><span class="dv">1500</span></span>
+<span id="cb5-122"><a href="#cb5-122" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">name</span><span class="kw">:</span><span class="at"> enp4s0f1v0</span></span>
+<span id="cb5-123"><a href="#cb5-123" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">pciAddress</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;0000:04:00.6&quot;</span></span>
+<span id="cb5-124"><a href="#cb5-124" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">vendor</span><span class="kw">:</span><span class="at"> 15b3</span></span>
+<span id="cb5-125"><a href="#cb5-125" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">vfID</span><span class="kw">:</span><span class="at"> </span><span class="dv">0</span></span>
+<span id="cb5-126"><a href="#cb5-126" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="kw">-</span><span class="at"> </span><span class="fu">deviceID</span><span class="kw">:</span><span class="at"> 101e</span></span>
+<span id="cb5-127"><a href="#cb5-127" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">driver</span><span class="kw">:</span><span class="at"> mlx5_core</span></span>
+<span id="cb5-128"><a href="#cb5-128" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">mac</span><span class="kw">:</span><span class="at"> 5a:74:7a:e7:3d:2b</span></span>
+<span id="cb5-129"><a href="#cb5-129" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">mtu</span><span class="kw">:</span><span class="at"> </span><span class="dv">1500</span></span>
+<span id="cb5-130"><a href="#cb5-130" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">name</span><span class="kw">:</span><span class="at"> enp4s0f1v1</span></span>
+<span id="cb5-131"><a href="#cb5-131" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">pciAddress</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;0000:04:00.7&quot;</span></span>
+<span id="cb5-132"><a href="#cb5-132" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">vendor</span><span class="kw">:</span><span class="at"> 15b3</span></span>
+<span id="cb5-133"><a href="#cb5-133" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">vfID</span><span class="kw">:</span><span class="at"> </span><span class="dv">1</span></span>
+<span id="cb5-134"><a href="#cb5-134" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="kw">-</span><span class="at"> </span><span class="fu">deviceID</span><span class="kw">:</span><span class="at"> 101e</span></span>
+<span id="cb5-135"><a href="#cb5-135" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">driver</span><span class="kw">:</span><span class="at"> mlx5_core</span></span>
+<span id="cb5-136"><a href="#cb5-136" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">mac</span><span class="kw">:</span><span class="at"> 62:f8:19:98:d5:5f</span></span>
+<span id="cb5-137"><a href="#cb5-137" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">mtu</span><span class="kw">:</span><span class="at"> </span><span class="dv">1500</span></span>
+<span id="cb5-138"><a href="#cb5-138" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">name</span><span class="kw">:</span><span class="at"> enp4s0f1v2</span></span>
+<span id="cb5-139"><a href="#cb5-139" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">pciAddress</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;0000:04:01.0&quot;</span></span>
+<span id="cb5-140"><a href="#cb5-140" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">vendor</span><span class="kw">:</span><span class="at"> 15b3</span></span>
+<span id="cb5-141"><a href="#cb5-141" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">vfID</span><span class="kw">:</span><span class="at"> </span><span class="dv">2</span></span>
+<span id="cb5-142"><a href="#cb5-142" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="kw">-</span><span class="at"> </span><span class="fu">deviceID</span><span class="kw">:</span><span class="at"> 101e</span></span>
+<span id="cb5-143"><a href="#cb5-143" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">driver</span><span class="kw">:</span><span class="at"> mlx5_core</span></span>
+<span id="cb5-144"><a href="#cb5-144" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">mac</span><span class="kw">:</span><span class="at"> f2:14:1e:93:e9:39</span></span>
+<span id="cb5-145"><a href="#cb5-145" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">mtu</span><span class="kw">:</span><span class="at"> </span><span class="dv">1500</span></span>
+<span id="cb5-146"><a href="#cb5-146" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">name</span><span class="kw">:</span><span class="at"> enp4s0f1v3</span></span>
+<span id="cb5-147"><a href="#cb5-147" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">pciAddress</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;0000:04:01.1&quot;</span></span>
+<span id="cb5-148"><a href="#cb5-148" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">vendor</span><span class="kw">:</span><span class="at"> 15b3</span></span>
+<span id="cb5-149"><a href="#cb5-149" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">vfID</span><span class="kw">:</span><span class="at"> </span><span class="dv">3</span></span>
+<span id="cb5-150"><a href="#cb5-150" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">deviceID</span><span class="kw">:</span><span class="at"> 101d</span></span>
+<span id="cb5-151"><a href="#cb5-151" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">driver</span><span class="kw">:</span><span class="at"> mlx5_core</span></span>
+<span id="cb5-152"><a href="#cb5-152" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">eSwitchMode</span><span class="kw">:</span><span class="at"> legacy</span></span>
+<span id="cb5-153"><a href="#cb5-153" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">linkSpeed</span><span class="kw">:</span><span class="at"> -1 Mb/s</span></span>
+<span id="cb5-154"><a href="#cb5-154" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">linkType</span><span class="kw">:</span><span class="at"> ETH</span></span>
+<span id="cb5-155"><a href="#cb5-155" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">mac</span><span class="kw">:</span><span class="at"> 0c:42:a1:fa:18:53</span></span>
+<span id="cb5-156"><a href="#cb5-156" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">mtu</span><span class="kw">:</span><span class="at"> </span><span class="dv">1500</span></span>
+<span id="cb5-157"><a href="#cb5-157" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">name</span><span class="kw">:</span><span class="at"> enp4s0f1</span></span>
+<span id="cb5-158"><a href="#cb5-158" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">numVfs</span><span class="kw">:</span><span class="at"> </span><span class="dv">4</span></span>
+<span id="cb5-159"><a href="#cb5-159" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">pciAddress</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;0000:04:00.1&quot;</span></span>
+<span id="cb5-160"><a href="#cb5-160" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">totalvfs</span><span class="kw">:</span><span class="at"> </span><span class="dv">4</span></span>
+<span id="cb5-161"><a href="#cb5-161" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">vendor</span><span class="kw">:</span><span class="at"> 15b3</span></span>
+<span id="cb5-162"><a href="#cb5-162" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">syncStatus</span><span class="kw">:</span><span class="at"> Succeeded</span></span></code></pre></div>
+        <div class="sourceCode" id="cb6"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> <span class="op">&lt;&lt; EOF</span> <span class="op">&gt;</span> /data/install/sriov-network.yaml</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="st">apiVersion: sriovnetwork.openshift.io/v1</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="st">kind: SriovNetwork</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="st">metadata:</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="st">  name: mlx-dpdk-network</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="st">  namespace: openshift-sriov-network-operator</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a><span class="st">spec:</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a><span class="st">  networkNamespace: demo</span></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a><span class="st">  ipam: &quot;{}&quot;</span></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a><span class="st">  resourceName: cx4nic1</span></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a><span class="op">EOF</span></span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> create <span class="at">-f</span> /data/install/sriov-network.yaml</span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a><span class="co"># to restore</span></span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> delete <span class="at">-f</span> /data/install/sriov-network.yaml</span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a><span class="co"># https://github.com/openshift/sriov-network-operator/issues/133</span></span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a><span class="ex">lspci</span> <span class="at">-vv</span> <span class="kw">|</span> <span class="fu">grep</span> <span class="at">-i</span> Mellanox</span>
+<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a><span class="co"># 04:00.0 Ethernet controller: Mellanox Technologies MT2892 Family [ConnectX-6 Dx]</span></span>
+<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a><span class="co">#         Subsystem: Mellanox Technologies Device 0011</span></span>
+<span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a><span class="co"># 04:00.1 Ethernet controller: Mellanox Technologies MT2892 Family [ConnectX-6 Dx]</span></span>
+<span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a><span class="co">#         Subsystem: Mellanox Technologies Device 0011</span></span>
+<span id="cb6-24"><a href="#cb6-24" aria-hidden="true" tabindex="-1"></a><span class="co"># 04:00.2 Ethernet controller: Mellanox Technologies ConnectX Family mlx5Gen Virtual Function</span></span>
+<span id="cb6-25"><a href="#cb6-25" aria-hidden="true" tabindex="-1"></a><span class="co">#         Subsystem: Mellanox Technologies Device 0011</span></span>
+<span id="cb6-26"><a href="#cb6-26" aria-hidden="true" tabindex="-1"></a><span class="co"># 04:00.3 Ethernet controller: Mellanox Technologies ConnectX Family mlx5Gen Virtual Function</span></span>
+<span id="cb6-27"><a href="#cb6-27" aria-hidden="true" tabindex="-1"></a><span class="co">#         Subsystem: Mellanox Technologies Device 0011</span></span>
+<span id="cb6-28"><a href="#cb6-28" aria-hidden="true" tabindex="-1"></a><span class="co"># 04:00.4 Ethernet controller: Mellanox Technologies ConnectX Family mlx5Gen Virtual Function</span></span>
+<span id="cb6-29"><a href="#cb6-29" aria-hidden="true" tabindex="-1"></a><span class="co">#         Subsystem: Mellanox Technologies Device 0011</span></span>
+<span id="cb6-30"><a href="#cb6-30" aria-hidden="true" tabindex="-1"></a><span class="co"># 04:00.5 Ethernet controller: Mellanox Technologies ConnectX Family mlx5Gen Virtual Function</span></span>
+<span id="cb6-31"><a href="#cb6-31" aria-hidden="true" tabindex="-1"></a><span class="co">#         Subsystem: Mellanox Technologies Device 0011</span></span>
+<span id="cb6-32"><a href="#cb6-32" aria-hidden="true" tabindex="-1"></a><span class="co"># 04:00.6 Ethernet controller: Mellanox Technologies ConnectX Family mlx5Gen Virtual Function</span></span>
+<span id="cb6-33"><a href="#cb6-33" aria-hidden="true" tabindex="-1"></a><span class="co">#         Subsystem: Mellanox Technologies Device 0011</span></span>
+<span id="cb6-34"><a href="#cb6-34" aria-hidden="true" tabindex="-1"></a><span class="co"># 04:00.7 Ethernet controller: Mellanox Technologies ConnectX Family mlx5Gen Virtual Function</span></span>
+<span id="cb6-35"><a href="#cb6-35" aria-hidden="true" tabindex="-1"></a><span class="co">#         Subsystem: Mellanox Technologies Device 0011</span></span>
+<span id="cb6-36"><a href="#cb6-36" aria-hidden="true" tabindex="-1"></a><span class="co"># 04:01.0 Ethernet controller: Mellanox Technologies ConnectX Family mlx5Gen Virtual Function</span></span>
+<span id="cb6-37"><a href="#cb6-37" aria-hidden="true" tabindex="-1"></a><span class="co">#         Subsystem: Mellanox Technologies Device 0011</span></span>
+<span id="cb6-38"><a href="#cb6-38" aria-hidden="true" tabindex="-1"></a><span class="co"># 04:01.1 Ethernet controller: Mellanox Technologies ConnectX Family mlx5Gen Virtual Function</span></span>
+<span id="cb6-39"><a href="#cb6-39" aria-hidden="true" tabindex="-1"></a><span class="co">#         Subsystem: Mellanox Technologies Device 0011</span></span>
+<span id="cb6-40"><a href="#cb6-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-41"><a href="#cb6-41" aria-hidden="true" tabindex="-1"></a><span class="ex">lspci</span> <span class="at">-nvv</span> <span class="kw">|</span> <span class="fu">grep</span> <span class="st">&quot;04:00.0\|04:00.1&quot;</span></span>
+<span id="cb6-42"><a href="#cb6-42" aria-hidden="true" tabindex="-1"></a><span class="co"># pcilib: sysfs_read_vpd: read failed: Input/output error</span></span>
+<span id="cb6-43"><a href="#cb6-43" aria-hidden="true" tabindex="-1"></a><span class="co"># 04:00.0 0200: 15b3:101d</span></span>
+<span id="cb6-44"><a href="#cb6-44" aria-hidden="true" tabindex="-1"></a><span class="co"># 04:00.1 0200: 15b3:101d</span></span>
+<span id="cb6-45"><a href="#cb6-45" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-46"><a href="#cb6-46" aria-hidden="true" tabindex="-1"></a><span class="ex">lspci</span> <span class="kw">|</span> <span class="fu">grep</span> <span class="at">-i</span> Mellanox <span class="kw">|</span> <span class="fu">awk</span> <span class="st">&#39;{print $1}&#39;</span> <span class="kw">|</span> <span class="fu">xargs</span> <span class="at">-I</span> DEMO sh <span class="at">-c</span> <span class="st">&quot;lspci -nvv | grep DEMO &quot;</span></span>
+<span id="cb6-47"><a href="#cb6-47" aria-hidden="true" tabindex="-1"></a><span class="co"># pcilib: sysfs_read_vpd: read failed: Input/output error</span></span>
+<span id="cb6-48"><a href="#cb6-48" aria-hidden="true" tabindex="-1"></a><span class="co"># 04:00.0 0200: 15b3:101d</span></span>
+<span id="cb6-49"><a href="#cb6-49" aria-hidden="true" tabindex="-1"></a><span class="co"># pcilib: sysfs_read_vpd: read failed: Input/output error</span></span>
+<span id="cb6-50"><a href="#cb6-50" aria-hidden="true" tabindex="-1"></a><span class="co"># 04:00.1 0200: 15b3:101d</span></span>
+<span id="cb6-51"><a href="#cb6-51" aria-hidden="true" tabindex="-1"></a><span class="co"># pcilib: sysfs_read_vpd: read failed: Input/output error</span></span>
+<span id="cb6-52"><a href="#cb6-52" aria-hidden="true" tabindex="-1"></a><span class="co"># 04:00.2 0200: 15b3:101e</span></span>
+<span id="cb6-53"><a href="#cb6-53" aria-hidden="true" tabindex="-1"></a><span class="co"># pcilib: sysfs_read_vpd: read failed: Input/output error</span></span>
+<span id="cb6-54"><a href="#cb6-54" aria-hidden="true" tabindex="-1"></a><span class="co"># 04:00.3 0200: 15b3:101e</span></span>
+<span id="cb6-55"><a href="#cb6-55" aria-hidden="true" tabindex="-1"></a><span class="co"># pcilib: sysfs_read_vpd: read failed: Input/output error</span></span>
+<span id="cb6-56"><a href="#cb6-56" aria-hidden="true" tabindex="-1"></a><span class="co"># 04:00.4 0200: 15b3:101e</span></span>
+<span id="cb6-57"><a href="#cb6-57" aria-hidden="true" tabindex="-1"></a><span class="co"># pcilib: sysfs_read_vpd: read failed: Input/output error</span></span>
+<span id="cb6-58"><a href="#cb6-58" aria-hidden="true" tabindex="-1"></a><span class="co"># 04:00.5 0200: 15b3:101e</span></span>
+<span id="cb6-59"><a href="#cb6-59" aria-hidden="true" tabindex="-1"></a><span class="co"># pcilib: sysfs_read_vpd: read failed: Input/output error</span></span>
+<span id="cb6-60"><a href="#cb6-60" aria-hidden="true" tabindex="-1"></a><span class="co"># 04:00.6 0200: 15b3:101e</span></span>
+<span id="cb6-61"><a href="#cb6-61" aria-hidden="true" tabindex="-1"></a><span class="co"># pcilib: sysfs_read_vpd: read failed: Input/output error</span></span>
+<span id="cb6-62"><a href="#cb6-62" aria-hidden="true" tabindex="-1"></a><span class="co"># 04:00.7 0200: 15b3:101e</span></span>
+<span id="cb6-63"><a href="#cb6-63" aria-hidden="true" tabindex="-1"></a><span class="co"># pcilib: sysfs_read_vpd: read failed: Input/output error</span></span>
+<span id="cb6-64"><a href="#cb6-64" aria-hidden="true" tabindex="-1"></a><span class="co"># 04:01.0 0200: 15b3:101e</span></span>
+<span id="cb6-65"><a href="#cb6-65" aria-hidden="true" tabindex="-1"></a><span class="co"># pcilib: sysfs_read_vpd: read failed: Input/output error</span></span>
+<span id="cb6-66"><a href="#cb6-66" aria-hidden="true" tabindex="-1"></a><span class="co"># 04:01.1 0200: 15b3:101e</span></span>
+<span id="cb6-67"><a href="#cb6-67" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-68"><a href="#cb6-68" aria-hidden="true" tabindex="-1"></a><span class="co"># &lt;human readable name&gt;: &lt;vendor ID&gt; &lt;pf ID&gt; &lt;vf ID&gt;</span></span>
+<span id="cb6-69"><a href="#cb6-69" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> <span class="op">&lt;&lt; EOF</span> <span class="op">&gt;</span> /data/install/sriov-unsupport.yaml</span>
+<span id="cb6-70"><a href="#cb6-70" aria-hidden="true" tabindex="-1"></a><span class="st">apiVersion: v1</span></span>
+<span id="cb6-71"><a href="#cb6-71" aria-hidden="true" tabindex="-1"></a><span class="st">data:</span></span>
+<span id="cb6-72"><a href="#cb6-72" aria-hidden="true" tabindex="-1"></a><span class="st">  CX6DX: 15b3 101d 101e</span></span>
+<span id="cb6-73"><a href="#cb6-73" aria-hidden="true" tabindex="-1"></a><span class="st">kind: ConfigMap</span></span>
+<span id="cb6-74"><a href="#cb6-74" aria-hidden="true" tabindex="-1"></a><span class="st">metadata:</span></span>
+<span id="cb6-75"><a href="#cb6-75" aria-hidden="true" tabindex="-1"></a><span class="st">  name: unsupported-nic-ids</span></span>
+<span id="cb6-76"><a href="#cb6-76" aria-hidden="true" tabindex="-1"></a><span class="st">  namespace: openshift-sriov-network-operator</span></span>
+<span id="cb6-77"><a href="#cb6-77" aria-hidden="true" tabindex="-1"></a><span class="op">EOF</span></span>
+<span id="cb6-78"><a href="#cb6-78" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> create <span class="at">-f</span> /data/install/sriov-unsupport.yaml</span>
+<span id="cb6-79"><a href="#cb6-79" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-80"><a href="#cb6-80" aria-hidden="true" tabindex="-1"></a><span class="co"># try to deply a demo pod</span></span>
+<span id="cb6-81"><a href="#cb6-81" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> <span class="op">&lt;&lt; EOF</span> <span class="op">&gt;</span> /data/install/dpdk-test.yaml</span>
+<span id="cb6-82"><a href="#cb6-82" aria-hidden="true" tabindex="-1"></a><span class="st">apiVersion: v1</span></span>
+<span id="cb6-83"><a href="#cb6-83" aria-hidden="true" tabindex="-1"></a><span class="st">kind: Pod</span></span>
+<span id="cb6-84"><a href="#cb6-84" aria-hidden="true" tabindex="-1"></a><span class="st">metadata:</span></span>
+<span id="cb6-85"><a href="#cb6-85" aria-hidden="true" tabindex="-1"></a><span class="st">  name: dpdk-app</span></span>
+<span id="cb6-86"><a href="#cb6-86" aria-hidden="true" tabindex="-1"></a><span class="st">  annotations:</span></span>
+<span id="cb6-87"><a href="#cb6-87" aria-hidden="true" tabindex="-1"></a><span class="st">    k8s.v1.cni.cncf.io/networks: mlx-dpdk-network</span></span>
+<span id="cb6-88"><a href="#cb6-88" aria-hidden="true" tabindex="-1"></a><span class="st">spec:</span></span>
+<span id="cb6-89"><a href="#cb6-89" aria-hidden="true" tabindex="-1"></a><span class="st">  containers:</span></span>
+<span id="cb6-90"><a href="#cb6-90" aria-hidden="true" tabindex="-1"></a><span class="st">  - name: testpmd</span></span>
+<span id="cb6-91"><a href="#cb6-91" aria-hidden="true" tabindex="-1"></a><span class="st">    image: registry.redhat.io/openshift4/dpdk-base-rhel8:v4.6</span></span>
+<span id="cb6-92"><a href="#cb6-92" aria-hidden="true" tabindex="-1"></a><span class="st">    securityContext:</span></span>
+<span id="cb6-93"><a href="#cb6-93" aria-hidden="true" tabindex="-1"></a><span class="st">     capabilities:</span></span>
+<span id="cb6-94"><a href="#cb6-94" aria-hidden="true" tabindex="-1"></a><span class="st">        add: [&quot;IPC_LOCK&quot;] </span></span>
+<span id="cb6-95"><a href="#cb6-95" aria-hidden="true" tabindex="-1"></a><span class="st">    volumeMounts:</span></span>
+<span id="cb6-96"><a href="#cb6-96" aria-hidden="true" tabindex="-1"></a><span class="st">    - mountPath: /dev/hugepages </span></span>
+<span id="cb6-97"><a href="#cb6-97" aria-hidden="true" tabindex="-1"></a><span class="st">      name: hugepage</span></span>
+<span id="cb6-98"><a href="#cb6-98" aria-hidden="true" tabindex="-1"></a><span class="st">    resources:</span></span>
+<span id="cb6-99"><a href="#cb6-99" aria-hidden="true" tabindex="-1"></a><span class="st">      limits:</span></span>
+<span id="cb6-100"><a href="#cb6-100" aria-hidden="true" tabindex="-1"></a><span class="st">        openshift.io/cx4nic1: &quot;1&quot; </span></span>
+<span id="cb6-101"><a href="#cb6-101" aria-hidden="true" tabindex="-1"></a><span class="st">        memory: &quot;1Gi&quot;</span></span>
+<span id="cb6-102"><a href="#cb6-102" aria-hidden="true" tabindex="-1"></a><span class="st">        cpu: &quot;4&quot; </span></span>
+<span id="cb6-103"><a href="#cb6-103" aria-hidden="true" tabindex="-1"></a><span class="st">        hugepages-1Gi: &quot;4Gi&quot; </span></span>
+<span id="cb6-104"><a href="#cb6-104" aria-hidden="true" tabindex="-1"></a><span class="st">      requests:</span></span>
+<span id="cb6-105"><a href="#cb6-105" aria-hidden="true" tabindex="-1"></a><span class="st">        openshift.io/cx4nic1: &quot;1&quot;</span></span>
+<span id="cb6-106"><a href="#cb6-106" aria-hidden="true" tabindex="-1"></a><span class="st">        memory: &quot;1Gi&quot;</span></span>
+<span id="cb6-107"><a href="#cb6-107" aria-hidden="true" tabindex="-1"></a><span class="st">        cpu: &quot;4&quot;</span></span>
+<span id="cb6-108"><a href="#cb6-108" aria-hidden="true" tabindex="-1"></a><span class="st">        hugepages-1Gi: &quot;4Gi&quot;</span></span>
+<span id="cb6-109"><a href="#cb6-109" aria-hidden="true" tabindex="-1"></a><span class="st">    command: [&quot;sleep&quot;, &quot;infinity&quot;]</span></span>
+<span id="cb6-110"><a href="#cb6-110" aria-hidden="true" tabindex="-1"></a><span class="st">  volumes:</span></span>
+<span id="cb6-111"><a href="#cb6-111" aria-hidden="true" tabindex="-1"></a><span class="st">  - name: hugepage</span></span>
+<span id="cb6-112"><a href="#cb6-112" aria-hidden="true" tabindex="-1"></a><span class="st">    emptyDir:</span></span>
+<span id="cb6-113"><a href="#cb6-113" aria-hidden="true" tabindex="-1"></a><span class="st">      medium: HugePages</span></span>
+<span id="cb6-114"><a href="#cb6-114" aria-hidden="true" tabindex="-1"></a><span class="op">EOF</span></span>
+<span id="cb6-115"><a href="#cb6-115" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> create <span class="at">-n</span> demo <span class="at">-f</span> /data/install/dpdk-test.yaml</span>
+<span id="cb6-116"><a href="#cb6-116" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-117"><a href="#cb6-117" aria-hidden="true" tabindex="-1"></a><span class="co"># to restore</span></span>
+<span id="cb6-118"><a href="#cb6-118" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> delete <span class="at">-n</span> demo <span class="at">-f</span> /data/install/dpdk-test.yaml</span>
+<span id="cb6-119"><a href="#cb6-119" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-120"><a href="#cb6-120" aria-hidden="true" tabindex="-1"></a><span class="co"># in the pod</span></span>
+<span id="cb6-121"><a href="#cb6-121" aria-hidden="true" tabindex="-1"></a><span class="ex">rpm</span> <span class="at">-ql</span> dpdk-tools</span>
+<span id="cb6-122"><a href="#cb6-122" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/sbin/dpdk-devbind</span></span>
+<span id="cb6-123"><a href="#cb6-123" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/share/dpdk/usertools</span></span>
+<span id="cb6-124"><a href="#cb6-124" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/share/dpdk/usertools/cpu_layout.py</span></span>
+<span id="cb6-125"><a href="#cb6-125" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/share/dpdk/usertools/dpdk-devbind.py</span></span>
+<span id="cb6-126"><a href="#cb6-126" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/share/dpdk/usertools/dpdk-pmdinfo.py</span></span>
+<span id="cb6-127"><a href="#cb6-127" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/share/dpdk/usertools/dpdk-telemetry-client.py</span></span>
+<span id="cb6-128"><a href="#cb6-128" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-129"><a href="#cb6-129" aria-hidden="true" tabindex="-1"></a><span class="ex">/usr/share/dpdk/usertools/dpdk-devbind.py</span> <span class="at">--status-dev</span> net</span>
+<span id="cb6-130"><a href="#cb6-130" aria-hidden="true" tabindex="-1"></a><span class="co"># lspci: Unable to load libkmod resources: error -12</span></span>
+<span id="cb6-131"><a href="#cb6-131" aria-hidden="true" tabindex="-1"></a><span class="co"># lspci: Unable to load libkmod resources: error -12</span></span>
+<span id="cb6-132"><a href="#cb6-132" aria-hidden="true" tabindex="-1"></a><span class="co"># lspci: Unable to load libkmod resources: error -12</span></span>
+<span id="cb6-133"><a href="#cb6-133" aria-hidden="true" tabindex="-1"></a><span class="co"># lspci: Unable to load libkmod resources: error -12</span></span>
+<span id="cb6-134"><a href="#cb6-134" aria-hidden="true" tabindex="-1"></a><span class="co"># lspci: Unable to load libkmod resources: error -12</span></span>
+<span id="cb6-135"><a href="#cb6-135" aria-hidden="true" tabindex="-1"></a><span class="co"># lspci: Unable to load libkmod resources: error -12</span></span>
+<span id="cb6-136"><a href="#cb6-136" aria-hidden="true" tabindex="-1"></a><span class="co"># lspci: Unable to load libkmod resources: error -12</span></span>
+<span id="cb6-137"><a href="#cb6-137" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-138"><a href="#cb6-138" aria-hidden="true" tabindex="-1"></a><span class="co"># Network devices using kernel driver</span></span>
+<span id="cb6-139"><a href="#cb6-139" aria-hidden="true" tabindex="-1"></a><span class="co"># ===================================</span></span>
+<span id="cb6-140"><a href="#cb6-140" aria-hidden="true" tabindex="-1"></a><span class="co"># 0000:01:00.0 &#39;NetXtreme BCM5720 2-port Gigabit Ethernet PCIe 165f&#39; if= drv=tg3 unused= </span></span>
+<span id="cb6-141"><a href="#cb6-141" aria-hidden="true" tabindex="-1"></a><span class="co"># 0000:01:00.1 &#39;NetXtreme BCM5720 2-port Gigabit Ethernet PCIe 165f&#39; if= drv=tg3 unused= </span></span>
+<span id="cb6-142"><a href="#cb6-142" aria-hidden="true" tabindex="-1"></a><span class="co"># 0000:02:00.0 &#39;NetXtreme BCM5720 2-port Gigabit Ethernet PCIe 165f&#39; if= drv=tg3 unused= </span></span>
+<span id="cb6-143"><a href="#cb6-143" aria-hidden="true" tabindex="-1"></a><span class="co"># 0000:02:00.1 &#39;NetXtreme BCM5720 2-port Gigabit Ethernet PCIe 165f&#39; if= drv=tg3 unused= </span></span>
+<span id="cb6-144"><a href="#cb6-144" aria-hidden="true" tabindex="-1"></a><span class="co"># 0000:04:00.0 &#39;MT2892 Family [ConnectX-6 Dx] 101d&#39; if= drv=mlx5_core unused= </span></span>
+<span id="cb6-145"><a href="#cb6-145" aria-hidden="true" tabindex="-1"></a><span class="co"># 0000:04:00.1 &#39;MT2892 Family [ConnectX-6 Dx] 101d&#39; if= drv=mlx5_core unused= </span></span>
+<span id="cb6-146"><a href="#cb6-146" aria-hidden="true" tabindex="-1"></a><span class="co"># 0000:04:00.2 &#39;ConnectX Family mlx5Gen Virtual Function 101e&#39; if= drv=mlx5_core unused= </span></span>
+<span id="cb6-147"><a href="#cb6-147" aria-hidden="true" tabindex="-1"></a><span class="co"># 0000:04:00.3 &#39;ConnectX Family mlx5Gen Virtual Function 101e&#39; if= drv=mlx5_core unused= </span></span>
+<span id="cb6-148"><a href="#cb6-148" aria-hidden="true" tabindex="-1"></a><span class="co"># 0000:04:00.4 &#39;ConnectX Family mlx5Gen Virtual Function 101e&#39; if=net1 drv=mlx5_core unused= </span></span>
+<span id="cb6-149"><a href="#cb6-149" aria-hidden="true" tabindex="-1"></a><span class="co"># 0000:04:00.5 &#39;ConnectX Family mlx5Gen Virtual Function 101e&#39; if= drv=mlx5_core unused= </span></span>
+<span id="cb6-150"><a href="#cb6-150" aria-hidden="true" tabindex="-1"></a><span class="co"># 0000:04:00.6 &#39;ConnectX Family mlx5Gen Virtual Function 101e&#39; if= drv=mlx5_core unused= </span></span>
+<span id="cb6-151"><a href="#cb6-151" aria-hidden="true" tabindex="-1"></a><span class="co"># 0000:04:00.7 &#39;ConnectX Family mlx5Gen Virtual Function 101e&#39; if= drv=mlx5_core unused= </span></span>
+<span id="cb6-152"><a href="#cb6-152" aria-hidden="true" tabindex="-1"></a><span class="co"># 0000:04:01.0 &#39;ConnectX Family mlx5Gen Virtual Function 101e&#39; if= drv=mlx5_core unused= </span></span>
+<span id="cb6-153"><a href="#cb6-153" aria-hidden="true" tabindex="-1"></a><span class="co"># 0000:04:01.1 &#39;ConnectX Family mlx5Gen Virtual Function 101e&#39; if= drv=mlx5_core unused= </span></span></code></pre></div>
+        <h1 id="kvm-doest-support-sriov-pf-passthrough">kvm does’t
+        support sriov PF passthrough</h1>
+        <p>it only support VF passthrough</p>
+        <ul>
+        <li>https://www.cnblogs.com/dion-90/articles/8522733.html</li>
+        <li>https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/7/html/virtualization_deployment_and_administration_guide/sect-pci_devices-pci_passthrough</li>
+        </ul>
+        <div class="sourceCode" id="cb7"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># on 101</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="fu">ls</span> /sys/class/net/</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a><span class="ex">lspci</span> <span class="at">-vv</span> <span class="kw">|</span> <span class="fu">grep</span> <span class="at">-i</span> Mellanox</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="co"># pcilib: sysfs_read_vpd: read failed: Input/output error</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a><span class="co"># 05:00.0 Ethernet controller: Mellanox Technologies MT27710 Family [ConnectX-4 Lx]</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a><span class="co">#         Subsystem: Mellanox Technologies Stand-up ConnectX-4 Lx EN, 25GbE dual-port SFP28, PCIe3.0 x8, MCX4121A-ACAT</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a><span class="co"># 05:00.1 Ethernet controller: Mellanox Technologies MT27710 Family [ConnectX-4 Lx]</span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a><span class="co">#         Subsystem: Mellanox Technologies Stand-up ConnectX-4 Lx EN, 25GbE dual-port SFP28, PCIe3.0 x8, MCX4121A-ACAT</span></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a><span class="co"># 07:00.0 Ethernet controller: Mellanox Technologies MT27710 Family [ConnectX-4 Lx]</span></span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a><span class="co">#         Subsystem: Mellanox Technologies Stand-up ConnectX-4 Lx EN, 25GbE dual-port SFP28, PCIe3.0 x8, MCX4121A-ACAT</span></span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a><span class="co"># 07:00.1 Ethernet controller: Mellanox Technologies MT27710 Family [ConnectX-4 Lx]</span></span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a><span class="co">#         Subsystem: Mellanox Technologies Stand-up ConnectX-4 Lx EN, 25GbE dual-port SFP28, PCIe3.0 x8, MCX4121A-ACAT</span></span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a><span class="ex">virsh</span> nodedev-list <span class="kw">|</span> <span class="fu">grep</span> 000_05</span>
+<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a><span class="co"># pci_0000_05_00_0</span></span>
+<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a><span class="co"># pci_0000_05_00_1</span></span>
+<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a><span class="ex">virsh</span> nodedev-dumpxml pci_0000_05_00_0</span></code></pre></div>
+        <div class="sourceCode" id="cb8"><pre
+        class="sourceCode xml"><code class="sourceCode xml"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">device</span>&gt;</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  &lt;<span class="kw">name</span>&gt;pci_0000_05_00_0&lt;/<span class="kw">name</span>&gt;</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  &lt;<span class="kw">path</span>&gt;/sys/devices/pci0000:00/0000:00:06.0/0000:05:00.0&lt;/<span class="kw">path</span>&gt;</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>  &lt;<span class="kw">parent</span>&gt;pci_0000_00_06_0&lt;/<span class="kw">parent</span>&gt;</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>  &lt;<span class="kw">driver</span>&gt;</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">name</span>&gt;mlx5_core&lt;/<span class="kw">name</span>&gt;</span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>  &lt;/<span class="kw">driver</span>&gt;</span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>  &lt;<span class="kw">capability</span><span class="ot"> type=</span><span class="st">&#39;pci&#39;</span>&gt;</span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">domain</span>&gt;0&lt;/<span class="kw">domain</span>&gt;</span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">bus</span>&gt;5&lt;/<span class="kw">bus</span>&gt;</span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">slot</span>&gt;0&lt;/<span class="kw">slot</span>&gt;</span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">function</span>&gt;0&lt;/<span class="kw">function</span>&gt;</span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">product</span><span class="ot"> id=</span><span class="st">&#39;0x1015&#39;</span>&gt;MT27710 Family [ConnectX-4 Lx]&lt;/<span class="kw">product</span>&gt;</span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">vendor</span><span class="ot"> id=</span><span class="st">&#39;0x15b3&#39;</span>&gt;Mellanox Technologies&lt;/<span class="kw">vendor</span>&gt;</span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">capability</span><span class="ot"> type=</span><span class="st">&#39;virt_functions&#39;</span><span class="ot"> maxCount=</span><span class="st">&#39;64&#39;</span>/&gt;</span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">iommuGroup</span><span class="ot"> number=</span><span class="st">&#39;17&#39;</span>&gt;</span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a>      &lt;<span class="kw">address</span><span class="ot"> domain=</span><span class="st">&#39;0x0000&#39;</span><span class="ot"> bus=</span><span class="st">&#39;0x05&#39;</span><span class="ot"> slot=</span><span class="st">&#39;0x00&#39;</span><span class="ot"> function=</span><span class="st">&#39;0x0&#39;</span>/&gt;</span>
+<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a>    &lt;/<span class="kw">iommuGroup</span>&gt;</span>
+<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">pci-express</span>&gt;</span>
+<span id="cb8-20"><a href="#cb8-20" aria-hidden="true" tabindex="-1"></a>      &lt;<span class="kw">link</span><span class="ot"> validity=</span><span class="st">&#39;cap&#39;</span><span class="ot"> port=</span><span class="st">&#39;0&#39;</span><span class="ot"> speed=</span><span class="st">&#39;8&#39;</span><span class="ot"> width=</span><span class="st">&#39;8&#39;</span>/&gt;</span>
+<span id="cb8-21"><a href="#cb8-21" aria-hidden="true" tabindex="-1"></a>      &lt;<span class="kw">link</span><span class="ot"> validity=</span><span class="st">&#39;sta&#39;</span><span class="ot"> speed=</span><span class="st">&#39;5&#39;</span><span class="ot"> width=</span><span class="st">&#39;4&#39;</span>/&gt;</span>
+<span id="cb8-22"><a href="#cb8-22" aria-hidden="true" tabindex="-1"></a>    &lt;/<span class="kw">pci-express</span>&gt;</span>
+<span id="cb8-23"><a href="#cb8-23" aria-hidden="true" tabindex="-1"></a>  &lt;/<span class="kw">capability</span>&gt;</span>
+<span id="cb8-24"><a href="#cb8-24" aria-hidden="true" tabindex="-1"></a>&lt;/<span class="kw">device</span>&gt;</span></code></pre></div>
+        <div class="sourceCode" id="cb9"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="ex">virsh</span> nodedev-dumpxml pci_0000_05_00_1</span></code></pre></div>
+        <div class="sourceCode" id="cb10"><pre
+        class="sourceCode xml"><code class="sourceCode xml"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">device</span>&gt;</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  &lt;<span class="kw">name</span>&gt;pci_0000_05_00_1&lt;/<span class="kw">name</span>&gt;</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>  &lt;<span class="kw">path</span>&gt;/sys/devices/pci0000:00/0000:00:06.0/0000:05:00.1&lt;/<span class="kw">path</span>&gt;</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>  &lt;<span class="kw">parent</span>&gt;pci_0000_00_06_0&lt;/<span class="kw">parent</span>&gt;</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>  &lt;<span class="kw">driver</span>&gt;</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">name</span>&gt;mlx5_core&lt;/<span class="kw">name</span>&gt;</span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>  &lt;/<span class="kw">driver</span>&gt;</span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>  &lt;<span class="kw">capability</span><span class="ot"> type=</span><span class="st">&#39;pci&#39;</span>&gt;</span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">domain</span>&gt;0&lt;/<span class="kw">domain</span>&gt;</span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">bus</span>&gt;5&lt;/<span class="kw">bus</span>&gt;</span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">slot</span>&gt;0&lt;/<span class="kw">slot</span>&gt;</span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">function</span>&gt;1&lt;/<span class="kw">function</span>&gt;</span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">product</span><span class="ot"> id=</span><span class="st">&#39;0x1015&#39;</span>&gt;MT27710 Family [ConnectX-4 Lx]&lt;/<span class="kw">product</span>&gt;</span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">vendor</span><span class="ot"> id=</span><span class="st">&#39;0x15b3&#39;</span>&gt;Mellanox Technologies&lt;/<span class="kw">vendor</span>&gt;</span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">capability</span><span class="ot"> type=</span><span class="st">&#39;virt_functions&#39;</span><span class="ot"> maxCount=</span><span class="st">&#39;64&#39;</span>/&gt;</span>
+<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">iommuGroup</span><span class="ot"> number=</span><span class="st">&#39;18&#39;</span>&gt;</span>
+<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a>      &lt;<span class="kw">address</span><span class="ot"> domain=</span><span class="st">&#39;0x0000&#39;</span><span class="ot"> bus=</span><span class="st">&#39;0x05&#39;</span><span class="ot"> slot=</span><span class="st">&#39;0x00&#39;</span><span class="ot"> function=</span><span class="st">&#39;0x1&#39;</span>/&gt;</span>
+<span id="cb10-18"><a href="#cb10-18" aria-hidden="true" tabindex="-1"></a>    &lt;/<span class="kw">iommuGroup</span>&gt;</span>
+<span id="cb10-19"><a href="#cb10-19" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">pci-express</span>&gt;</span>
+<span id="cb10-20"><a href="#cb10-20" aria-hidden="true" tabindex="-1"></a>      &lt;<span class="kw">link</span><span class="ot"> validity=</span><span class="st">&#39;cap&#39;</span><span class="ot"> port=</span><span class="st">&#39;0&#39;</span><span class="ot"> speed=</span><span class="st">&#39;8&#39;</span><span class="ot"> width=</span><span class="st">&#39;8&#39;</span>/&gt;</span>
+<span id="cb10-21"><a href="#cb10-21" aria-hidden="true" tabindex="-1"></a>      &lt;<span class="kw">link</span><span class="ot"> validity=</span><span class="st">&#39;sta&#39;</span><span class="ot"> speed=</span><span class="st">&#39;5&#39;</span><span class="ot"> width=</span><span class="st">&#39;4&#39;</span>/&gt;</span>
+<span id="cb10-22"><a href="#cb10-22" aria-hidden="true" tabindex="-1"></a>    &lt;/<span class="kw">pci-express</span>&gt;</span>
+<span id="cb10-23"><a href="#cb10-23" aria-hidden="true" tabindex="-1"></a>  &lt;/<span class="kw">capability</span>&gt;</span>
+<span id="cb10-24"><a href="#cb10-24" aria-hidden="true" tabindex="-1"></a>&lt;/<span class="kw">device</span>&gt;</span></code></pre></div>
+        <h2 id="on-103">on 103</h2>
+        <div class="sourceCode" id="cb11"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ls</span> /sys/class/net/</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="co"># baremetal  eno1  eno2  eno3  eno4  enp4s0f0  enp4s0f1  lo  virbr0  virbr0-nic</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> 0 <span class="op">&gt;</span> /sys/class/net/enp4s0f0/device/sriov_numvfs</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> 0 <span class="op">&gt;</span> /sys/class/net/enp4s0f1/device/sriov_numvfs</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a><span class="ex">lspci</span> <span class="at">-vv</span> <span class="kw">|</span> <span class="fu">grep</span> <span class="at">-i</span> Mellanox</span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a><span class="co"># 04:00.0 Ethernet controller: Mellanox Technologies MT2892 Family [ConnectX-6 Dx]</span></span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a><span class="co">#         Subsystem: Mellanox Technologies Device 0011</span></span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a><span class="co"># 04:00.1 Ethernet controller: Mellanox Technologies MT2892 Family [ConnectX-6 Dx]</span></span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a><span class="co">#         Subsystem: Mellanox Technologies Device 0011</span></span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a><span class="ex">virsh</span> nodedev-list <span class="kw">|</span> <span class="fu">grep</span> 000_04</span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a><span class="co"># pci_0000_04_00_0</span></span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a><span class="co"># pci_0000_04_00_1</span></span>
+<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a><span class="ex">virsh</span> nodedev-dumpxml pci_0000_04_00_0</span></code></pre></div>
+        <div class="sourceCode" id="cb12"><pre
+        class="sourceCode xml"><code class="sourceCode xml"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">device</span>&gt;</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  &lt;<span class="kw">name</span>&gt;pci_0000_04_00_0&lt;/<span class="kw">name</span>&gt;</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>  &lt;<span class="kw">path</span>&gt;/sys/devices/pci0000:00/0000:00:02.0/0000:04:00.0&lt;/<span class="kw">path</span>&gt;</span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>  &lt;<span class="kw">parent</span>&gt;pci_0000_00_02_0&lt;/<span class="kw">parent</span>&gt;</span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>  &lt;<span class="kw">driver</span>&gt;</span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">name</span>&gt;mlx5_core&lt;/<span class="kw">name</span>&gt;</span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>  &lt;/<span class="kw">driver</span>&gt;</span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>  &lt;<span class="kw">capability</span><span class="ot"> type=</span><span class="st">&#39;pci&#39;</span>&gt;</span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">class</span>&gt;0x020000&lt;/<span class="kw">class</span>&gt;</span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">domain</span>&gt;0&lt;/<span class="kw">domain</span>&gt;</span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">bus</span>&gt;4&lt;/<span class="kw">bus</span>&gt;</span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">slot</span>&gt;0&lt;/<span class="kw">slot</span>&gt;</span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">function</span>&gt;0&lt;/<span class="kw">function</span>&gt;</span>
+<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">product</span><span class="ot"> id=</span><span class="st">&#39;0x101d&#39;</span>&gt;MT2892 Family [ConnectX-6 Dx]&lt;/<span class="kw">product</span>&gt;</span>
+<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">vendor</span><span class="ot"> id=</span><span class="st">&#39;0x15b3&#39;</span>&gt;Mellanox Technologies&lt;/<span class="kw">vendor</span>&gt;</span>
+<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">capability</span><span class="ot"> type=</span><span class="st">&#39;virt_functions&#39;</span><span class="ot"> maxCount=</span><span class="st">&#39;8&#39;</span>/&gt;</span>
+<span id="cb12-17"><a href="#cb12-17" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">iommuGroup</span><span class="ot"> number=</span><span class="st">&#39;27&#39;</span>&gt;</span>
+<span id="cb12-18"><a href="#cb12-18" aria-hidden="true" tabindex="-1"></a>      &lt;<span class="kw">address</span><span class="ot"> domain=</span><span class="st">&#39;0x0000&#39;</span><span class="ot"> bus=</span><span class="st">&#39;0x04&#39;</span><span class="ot"> slot=</span><span class="st">&#39;0x00&#39;</span><span class="ot"> function=</span><span class="st">&#39;0x0&#39;</span>/&gt;</span>
+<span id="cb12-19"><a href="#cb12-19" aria-hidden="true" tabindex="-1"></a>    &lt;/<span class="kw">iommuGroup</span>&gt;</span>
+<span id="cb12-20"><a href="#cb12-20" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">numa</span><span class="ot"> node=</span><span class="st">&#39;0&#39;</span>/&gt;</span>
+<span id="cb12-21"><a href="#cb12-21" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">pci-express</span>&gt;</span>
+<span id="cb12-22"><a href="#cb12-22" aria-hidden="true" tabindex="-1"></a>      &lt;<span class="kw">link</span><span class="ot"> validity=</span><span class="st">&#39;cap&#39;</span><span class="ot"> port=</span><span class="st">&#39;0&#39;</span><span class="ot"> speed=</span><span class="st">&#39;16&#39;</span><span class="ot"> width=</span><span class="st">&#39;16&#39;</span>/&gt;</span>
+<span id="cb12-23"><a href="#cb12-23" aria-hidden="true" tabindex="-1"></a>      &lt;<span class="kw">link</span><span class="ot"> validity=</span><span class="st">&#39;sta&#39;</span><span class="ot"> speed=</span><span class="st">&#39;8&#39;</span><span class="ot"> width=</span><span class="st">&#39;8&#39;</span>/&gt;</span>
+<span id="cb12-24"><a href="#cb12-24" aria-hidden="true" tabindex="-1"></a>    &lt;/<span class="kw">pci-express</span>&gt;</span>
+<span id="cb12-25"><a href="#cb12-25" aria-hidden="true" tabindex="-1"></a>  &lt;/<span class="kw">capability</span>&gt;</span>
+<span id="cb12-26"><a href="#cb12-26" aria-hidden="true" tabindex="-1"></a>&lt;/<span class="kw">device</span>&gt;</span></code></pre></div>
+        <div class="sourceCode" id="cb13"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="ex">virsh</span> nodedev-dumpxml pci_0000_04_00_1</span></code></pre></div>
+        <div class="sourceCode" id="cb14"><pre
+        class="sourceCode xml"><code class="sourceCode xml"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">device</span>&gt;</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>  &lt;<span class="kw">name</span>&gt;pci_0000_04_00_1&lt;/<span class="kw">name</span>&gt;</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>  &lt;<span class="kw">path</span>&gt;/sys/devices/pci0000:00/0000:00:02.0/0000:04:00.1&lt;/<span class="kw">path</span>&gt;</span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>  &lt;<span class="kw">parent</span>&gt;pci_0000_00_02_0&lt;/<span class="kw">parent</span>&gt;</span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>  &lt;<span class="kw">driver</span>&gt;</span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">name</span>&gt;mlx5_core&lt;/<span class="kw">name</span>&gt;</span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>  &lt;/<span class="kw">driver</span>&gt;</span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>  &lt;<span class="kw">capability</span><span class="ot"> type=</span><span class="st">&#39;pci&#39;</span>&gt;</span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">class</span>&gt;0x020000&lt;/<span class="kw">class</span>&gt;</span>
+<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">domain</span>&gt;0&lt;/<span class="kw">domain</span>&gt;</span>
+<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">bus</span>&gt;4&lt;/<span class="kw">bus</span>&gt;</span>
+<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">slot</span>&gt;0&lt;/<span class="kw">slot</span>&gt;</span>
+<span id="cb14-13"><a href="#cb14-13" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">function</span>&gt;1&lt;/<span class="kw">function</span>&gt;</span>
+<span id="cb14-14"><a href="#cb14-14" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">product</span><span class="ot"> id=</span><span class="st">&#39;0x101d&#39;</span>&gt;MT2892 Family [ConnectX-6 Dx]&lt;/<span class="kw">product</span>&gt;</span>
+<span id="cb14-15"><a href="#cb14-15" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">vendor</span><span class="ot"> id=</span><span class="st">&#39;0x15b3&#39;</span>&gt;Mellanox Technologies&lt;/<span class="kw">vendor</span>&gt;</span>
+<span id="cb14-16"><a href="#cb14-16" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">capability</span><span class="ot"> type=</span><span class="st">&#39;virt_functions&#39;</span><span class="ot"> maxCount=</span><span class="st">&#39;8&#39;</span>/&gt;</span>
+<span id="cb14-17"><a href="#cb14-17" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">iommuGroup</span><span class="ot"> number=</span><span class="st">&#39;28&#39;</span>&gt;</span>
+<span id="cb14-18"><a href="#cb14-18" aria-hidden="true" tabindex="-1"></a>      &lt;<span class="kw">address</span><span class="ot"> domain=</span><span class="st">&#39;0x0000&#39;</span><span class="ot"> bus=</span><span class="st">&#39;0x04&#39;</span><span class="ot"> slot=</span><span class="st">&#39;0x00&#39;</span><span class="ot"> function=</span><span class="st">&#39;0x1&#39;</span>/&gt;</span>
+<span id="cb14-19"><a href="#cb14-19" aria-hidden="true" tabindex="-1"></a>    &lt;/<span class="kw">iommuGroup</span>&gt;</span>
+<span id="cb14-20"><a href="#cb14-20" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">numa</span><span class="ot"> node=</span><span class="st">&#39;0&#39;</span>/&gt;</span>
+<span id="cb14-21"><a href="#cb14-21" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">pci-express</span>&gt;</span>
+<span id="cb14-22"><a href="#cb14-22" aria-hidden="true" tabindex="-1"></a>      &lt;<span class="kw">link</span><span class="ot"> validity=</span><span class="st">&#39;cap&#39;</span><span class="ot"> port=</span><span class="st">&#39;0&#39;</span><span class="ot"> speed=</span><span class="st">&#39;16&#39;</span><span class="ot"> width=</span><span class="st">&#39;16&#39;</span>/&gt;</span>
+<span id="cb14-23"><a href="#cb14-23" aria-hidden="true" tabindex="-1"></a>      &lt;<span class="kw">link</span><span class="ot"> validity=</span><span class="st">&#39;sta&#39;</span><span class="ot"> speed=</span><span class="st">&#39;8&#39;</span><span class="ot"> width=</span><span class="st">&#39;8&#39;</span>/&gt;</span>
+<span id="cb14-24"><a href="#cb14-24" aria-hidden="true" tabindex="-1"></a>    &lt;/<span class="kw">pci-express</span>&gt;</span>
+<span id="cb14-25"><a href="#cb14-25" aria-hidden="true" tabindex="-1"></a>  &lt;/<span class="kw">capability</span>&gt;</span>
+<span id="cb14-26"><a href="#cb14-26" aria-hidden="true" tabindex="-1"></a>&lt;/<span class="kw">device</span>&gt;</span></code></pre></div>
+        <p>for ocp4-aHelper, change below kvm config</p>
+        <div class="sourceCode" id="cb15"><pre
+        class="sourceCode xml"><code class="sourceCode xml"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">hostdev</span><span class="ot"> mode=</span><span class="st">&#39;subsystem&#39;</span><span class="ot"> type=</span><span class="st">&#39;pci&#39;</span><span class="ot"> managed=</span><span class="st">&#39;yes&#39;</span>&gt;</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>      &lt;<span class="kw">driver</span><span class="ot"> name=</span><span class="st">&#39;vfio&#39;</span>/&gt;</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>      &lt;<span class="kw">source</span>&gt;</span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>        &lt;<span class="kw">address</span><span class="ot"> domain=</span><span class="st">&#39;0x0000&#39;</span><span class="ot"> bus=</span><span class="st">&#39;0x05&#39;</span><span class="ot"> slot=</span><span class="st">&#39;0x00&#39;</span><span class="ot"> function=</span><span class="st">&#39;0x0&#39;</span>/&gt;</span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>      &lt;/<span class="kw">source</span>&gt;</span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>      &lt;<span class="kw">alias</span><span class="ot"> name=</span><span class="st">&#39;hostdev0&#39;</span>/&gt;</span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>      &lt;<span class="kw">address</span><span class="ot"> type=</span><span class="st">&#39;pci&#39;</span><span class="ot"> domain=</span><span class="st">&#39;0x0000&#39;</span><span class="ot"> bus=</span><span class="st">&#39;0x00&#39;</span><span class="ot"> slot=</span><span class="st">&#39;0x0a&#39;</span><span class="ot"> function=</span><span class="st">&#39;0x0&#39;</span>/&gt;</span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a>    &lt;/<span class="kw">hostdev</span>&gt;</span>
+<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">hostdev</span><span class="ot"> mode=</span><span class="st">&#39;subsystem&#39;</span><span class="ot"> type=</span><span class="st">&#39;pci&#39;</span><span class="ot"> managed=</span><span class="st">&#39;yes&#39;</span>&gt;</span>
+<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a>      &lt;<span class="kw">driver</span><span class="ot"> name=</span><span class="st">&#39;vfio&#39;</span>/&gt;</span>
+<span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a>      &lt;<span class="kw">source</span>&gt;</span>
+<span id="cb15-12"><a href="#cb15-12" aria-hidden="true" tabindex="-1"></a>        &lt;<span class="kw">address</span><span class="ot"> domain=</span><span class="st">&#39;0x0000&#39;</span><span class="ot"> bus=</span><span class="st">&#39;0x05&#39;</span><span class="ot"> slot=</span><span class="st">&#39;0x00&#39;</span><span class="ot"> function=</span><span class="st">&#39;0x1&#39;</span>/&gt;</span>
+<span id="cb15-13"><a href="#cb15-13" aria-hidden="true" tabindex="-1"></a>      &lt;/<span class="kw">source</span>&gt;</span>
+<span id="cb15-14"><a href="#cb15-14" aria-hidden="true" tabindex="-1"></a>      &lt;<span class="kw">alias</span><span class="ot"> name=</span><span class="st">&#39;hostdev1&#39;</span>/&gt;</span>
+<span id="cb15-15"><a href="#cb15-15" aria-hidden="true" tabindex="-1"></a>      &lt;<span class="kw">address</span><span class="ot"> type=</span><span class="st">&#39;pci&#39;</span><span class="ot"> domain=</span><span class="st">&#39;0x0000&#39;</span><span class="ot"> bus=</span><span class="st">&#39;0x00&#39;</span><span class="ot"> slot=</span><span class="st">&#39;0x0b&#39;</span><span class="ot"> function=</span><span class="st">&#39;0x0&#39;</span>/&gt;</span>
+<span id="cb15-16"><a href="#cb15-16" aria-hidden="true" tabindex="-1"></a>    &lt;/<span class="kw">hostdev</span>&gt;</span></code></pre></div>
+        <p>to</p>
+        <div class="sourceCode" id="cb16"><pre
+        class="sourceCode xml"><code class="sourceCode xml"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">interface</span><span class="ot"> type=</span><span class="st">&#39;hostdev&#39;</span><span class="ot"> managed=</span><span class="st">&#39;yes&#39;</span>&gt;</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>      &lt;<span class="kw">driver</span><span class="ot"> name=</span><span class="st">&#39;vfio&#39;</span>/&gt;</span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>      &lt;<span class="kw">source</span>&gt;</span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>        &lt;<span class="kw">address</span><span class="ot"> type=</span><span class="st">&#39;pci&#39;</span><span class="ot"> domain=</span><span class="st">&#39;0x0000&#39;</span><span class="ot"> bus=</span><span class="st">&#39;0x05&#39;</span><span class="ot"> slot=</span><span class="st">&#39;0x00&#39;</span><span class="ot"> function=</span><span class="st">&#39;0x0&#39;</span>/&gt;</span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>      &lt;/<span class="kw">source</span>&gt;</span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>    &lt;/<span class="kw">interface</span>&gt;</span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">interface</span><span class="ot"> type=</span><span class="st">&#39;hostdev&#39;</span><span class="ot"> managed=</span><span class="st">&#39;yes&#39;</span>&gt;</span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>      &lt;<span class="kw">driver</span><span class="ot"> name=</span><span class="st">&#39;vfio&#39;</span>/&gt;</span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>      &lt;<span class="kw">source</span>&gt;</span>
+<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a>        &lt;<span class="kw">address</span><span class="ot"> type=</span><span class="st">&#39;pci&#39;</span><span class="ot"> domain=</span><span class="st">&#39;0x0000&#39;</span><span class="ot"> bus=</span><span class="st">&#39;0x05&#39;</span><span class="ot"> slot=</span><span class="st">&#39;0x00&#39;</span><span class="ot"> function=</span><span class="st">&#39;0x1&#39;</span>/&gt;</span>
+<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a>      &lt;/<span class="kw">source</span>&gt;</span>
+<span id="cb16-12"><a href="#cb16-12" aria-hidden="true" tabindex="-1"></a>    &lt;/<span class="kw">interface</span>&gt;</span></code></pre></div>
+        <div class="sourceCode" id="cb17"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="ex">virsh</span> edit ocp4-aHelper</span></code></pre></div>
+      </article>
+    </div>
+      </main>
+
+  <footer>
+    <p>
+      Licensed under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank"
+        rel="noopener">CC-BY-NC-SA 4.0</a>
+      &nbsp;·&nbsp;
+      <a href="https://github.com/wangzheng422/docker_env" target="_blank" rel="noopener">wangzheng422/docker_env</a>
+    </p>
+  </footer>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: false, theme: 'dark' });
+
+    const SITE_BUILD_ID = 'fbe91b569ae8';
+    const SITE_HOME_URL = '../../../index.html';
+
+    const getBuildIdFromHtml = (html) => {
+      const match = String(html).match(/<meta[^>]+name=["']site-build-id["'][^>]+content=["']([^"']+)["']/i)
+        || String(html).match(/<meta[^>]+content=["']([^"']+)["'][^>]+name=["']site-build-id["']/i);
+      return match ? match[1] : '';
+    };
+
+    const checkForSiteUpdate = async () => {
+      if (!SITE_BUILD_ID || window.location.protocol === 'file:') return;
+      try {
+        const probeUrl = new URL(SITE_HOME_URL || './index.html', window.location.href);
+        probeUrl.searchParams.set('site_cache_probe', Date.now().toString());
+        const response = await fetch(probeUrl.toString(), { cache: 'no-store' });
+        if (!response.ok) return;
+        const latestBuildId = getBuildIdFromHtml(await response.text());
+        if (!latestBuildId || latestBuildId === SITE_BUILD_ID) return;
+        if (sessionStorage.getItem('site-build-refresh') === latestBuildId) return;
+        sessionStorage.setItem('site-build-refresh', latestBuildId);
+        const freshUrl = new URL(window.location.href);
+        freshUrl.searchParams.set('v', latestBuildId);
+        window.location.replace(freshUrl.toString());
+      } catch (error) {
+        // Network errors should not block reading the current page.
+      }
+    };
+
+    const versionedLocalUrl = (rawUrl) => {
+      if (!rawUrl || /^(https?:)?\/\//i.test(rawUrl) || /^(data|blob|mailto):/i.test(rawUrl)) return rawUrl;
+      const url = new URL(rawUrl, window.location.href);
+      if (url.searchParams.has('v')) return rawUrl;
+      url.searchParams.set('v', SITE_BUILD_ID);
+      return url.toString();
+    };
+
+    const cacheBustPageAssets = () => {
+      document.querySelectorAll('img[src], video[src], audio[src], source[src]').forEach((node) => {
+        const src = node.getAttribute('src');
+        const versioned = versionedLocalUrl(src);
+        if (versioned !== src) node.setAttribute('src', versioned);
+      });
+    };
+
+    const updateReadingProgress = () => {
+      const progress = document.querySelector('.reading-progress');
+      if (!progress) return;
+      const scrollable = document.documentElement.scrollHeight - window.innerHeight;
+      const ratio = scrollable > 0 ? window.scrollY / scrollable : 0;
+      progress.style.transform = 'scaleX(' + Math.min(1, Math.max(0, ratio)) + ')';
+    };
+
+    const topicFor = (text, href) => {
+      const haystack = (text + ' ' + href).toLowerCase();
+      if (/developers\.redhat\.com|redhatquickcourses|github\.com\/redhatquickcourses/.test(haystack)) return 'Red Hat';
+      if (/ai|llm|gpu|vllm|llama|model|rhaiis/.test(haystack)) return 'AI';
+      if (/network|ovn|bgp|dns|egress|ingress|metallb|nic|route/.test(haystack)) return 'Network';
+      if (/cert|tls|sso|keycloak|rhbk|security|compliance/.test(haystack)) return 'Security';
+      if (/perf|profile|throttling|heap|debug/.test(haystack)) return 'Performance';
+      if (/install|ipi|upi|sno|disconnected|bootstrap/.test(haystack)) return 'Install';
+      if (/rhel|coreos|rhcos|kernel|rpm|ostree/.test(haystack)) return 'RHEL';
+      if (/backup|storage|nfs|odf|ocs|ceph|dr/.test(haystack)) return 'Storage';
+      if (/pipeline|gitops|ansible|aap|rhdh|devops/.test(haystack)) return 'DevOps';
+      return 'OpenShift';
+    };
+
+    const yearFor = (text, href) => {
+      const match = (text + ' ' + href).match(/20\d{2}/);
+      return match ? match[0] : 'Notes';
+    };
+
+    const importantExternal = (href) =>
+      /developers\.redhat\.com|redhatquickcourses\.github\.io/i.test(href);
+
+    const titleForLink = (link) => {
+      const href = link.getAttribute('href') || '';
+      const directText = link.textContent.trim().replace(/\s+/g, ' ');
+      if (!/^https?:\/\//.test(directText)) return directText;
+      const parentItem = link.closest('ul')?.parentElement;
+      if (parentItem) {
+        const clone = parentItem.cloneNode(true);
+        clone.querySelectorAll('ul').forEach((nested) => nested.remove());
+        const parentText = clone.textContent.trim().replace(/\s+/g, ' ');
+        if (parentText) {
+          return parentText;
+        }
+      }
+      return directText;
+    };
+
+    const escapeHtml = (value) => String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+
+    const enhanceHome = () => {
+      if (!document.body.classList.contains('page-index')) return;
+      const source = document.querySelector('.home-source');
+      const grid = document.getElementById('note-grid');
+      const stats = document.getElementById('console-stats');
+      const externalPanel = document.getElementById('external-panel');
+      const topicStrip = document.getElementById('topic-strip');
+      const search = document.getElementById('console-search');
+      if (!source || !grid || !stats || !externalPanel || !topicStrip || !search) return;
+
+      const seen = new Set();
+      const links = Array.from(source.querySelectorAll('a[href]'))
+        .map((link) => {
+          const href = link.getAttribute('href') || '';
+          const text = titleForLink(link);
+          return { text, href, topic: topicFor(text, href), year: yearFor(text, href) };
+        });
+      const notes = links
+        .filter((note) => note.text && !note.href.startsWith('http') && !seen.has(note.href) && seen.add(note.href));
+      const externalLinks = links
+        .filter((note) => note.text && importantExternal(note.href));
+
+      const topics = ['All', ...Array.from(new Set(notes.map((note) => note.topic))).sort()];
+      let activeTopic = 'All';
+
+      const renderStats = () => {
+        const years = notes.map((note) => note.year).filter((year) => year.length === 4 && /^\d{4}/.test(year));
+        const latest = years.length ? Math.max(...years.map(Number)) : 'N/A';
+        const oldest = years.length ? Math.min(...years.map(Number)) : 'N/A';
+        stats.innerHTML = [
+          ['Notes', notes.length],
+          ['Resources', externalLinks.length],
+          ['Topics', topics.length - 1],
+          ['Latest', latest],
+        ].map(([label, value]) => '<div class="stat-tile"><span>' + label + '</span><strong>' + value + '</strong></div>').join('');
+        const signal = document.getElementById('signal-count');
+        if (signal) signal.textContent = notes.length + ' links indexed';
+      };
+
+      const renderExternal = () => {
+        externalPanel.innerHTML =
+          '<div class="section-heading"><span>Published / Learning</span><strong>Red Hat resources</strong></div>' +
+          '<div class="external-grid">' +
+          externalLinks.map((note) =>
+            '<a class="resource-card" href="' + escapeHtml(note.href) + '" target="_blank" rel="noopener">' +
+            '<span class="note-meta"><span>' + escapeHtml(note.year) + '</span><span>' + escapeHtml(note.topic) + '</span></span>' +
+            '<strong>' + escapeHtml(note.text) + '</strong>' +
+            '<small>' + escapeHtml(note.href) + '</small>' +
+            '</a>'
+          ).join('') +
+          '</div>';
+      };
+
+      const renderTopics = () => {
+        topicStrip.innerHTML = topics.map((topic) => '<button class="topic-chip' + (topic === activeTopic ? ' active' : '') + '" type="button" data-topic="' + escapeHtml(topic) + '">' + escapeHtml(topic) + '</button>').join('');
+        topicStrip.querySelectorAll('button').forEach((button) => {
+          button.addEventListener('click', () => {
+            activeTopic = button.dataset.topic || 'All';
+            renderTopics();
+            renderCards();
+          });
+        });
+      };
+
+      const renderCards = () => {
+        const query = search.value.trim().toLowerCase();
+        const filtered = notes.filter((note) => {
+          const topicMatch = activeTopic === 'All' || note.topic === activeTopic;
+          const queryMatch = !query || (note.text + ' ' + note.href + ' ' + note.topic + ' ' + note.year).toLowerCase().includes(query);
+          return topicMatch && queryMatch;
+        });
+        grid.innerHTML = filtered.map((note) =>
+          '<a class="note-card" href="' + escapeHtml(note.href) + '">' +
+          '<span class="note-meta"><span>' + escapeHtml(note.year) + '</span><span>' + escapeHtml(note.topic) + '</span></span>' +
+          '<strong>' + escapeHtml(note.text) + '</strong>' +
+          '<small>' + escapeHtml(note.href) + '</small>' +
+          '</a>'
+        ).join('') || '<p class="empty-state">No matching notes.</p>';
+      };
+
+      const drawMap = () => {
+        const canvas = document.getElementById('knowledge-canvas');
+        if (!(canvas instanceof HTMLCanvasElement)) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        const width = canvas.width;
+        const height = canvas.height;
+        const nodes = notes.slice(0, 44).map((note, index) => {
+          const angle = (index / 44) * Math.PI * 2;
+          const ring = 90 + (index % 5) * 22;
+          return {
+            x: width / 2 + Math.cos(angle) * ring,
+            y: height / 2 + Math.sin(angle) * ring * 0.72,
+            topic: note.topic,
+          };
+        });
+        ctx.clearRect(0, 0, width, height);
+        ctx.strokeStyle = 'rgba(88, 166, 255, 0.14)';
+        ctx.lineWidth = 1;
+        nodes.forEach((node, index) => {
+          const next = nodes[(index + 7) % nodes.length];
+          ctx.beginPath();
+          ctx.moveTo(node.x, node.y);
+          ctx.lineTo(next.x, next.y);
+          ctx.stroke();
+        });
+        const palette = {
+          AI: '#a371f7',
+          Network: '#39d0d8',
+          Security: '#ff7b72',
+          Performance: '#f2cc60',
+          Install: '#7ee787',
+          RHEL: '#ff7b72',
+          Storage: '#d2a8ff',
+          DevOps: '#ffa657',
+          OpenShift: '#58a6ff',
+        };
+        nodes.forEach((node) => {
+          ctx.fillStyle = palette[node.topic] || '#58a6ff';
+          ctx.beginPath();
+          ctx.arc(node.x, node.y, 3.4, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      };
+
+      search.addEventListener('input', renderCards);
+      renderStats();
+      renderExternal();
+      renderTopics();
+      renderCards();
+      drawMap();
+      document.body.classList.add('home-enhanced');
+    };
+
+    const enhanceCodeBlocks = () => {
+      document.querySelectorAll('pre').forEach((pre) => {
+        if (pre.classList.contains('mermaid') || pre.querySelector('.copy-code')) return;
+        const button = document.createElement('button');
+        button.className = 'copy-code';
+        button.type = 'button';
+        button.textContent = 'Copy';
+        button.addEventListener('click', async () => {
+          await navigator.clipboard.writeText(pre.textContent || '');
+          button.textContent = 'Copied';
+          setTimeout(() => { button.textContent = 'Copy'; }, 1200);
+        });
+        pre.appendChild(button);
+      });
+    };
+
+    window.addEventListener('scroll', updateReadingProgress, { passive: true });
+    window.addEventListener('pageshow', (event) => {
+      if (event.persisted) checkForSiteUpdate();
+    });
+    document.addEventListener('DOMContentLoaded', async () => {
+      checkForSiteUpdate();
+      cacheBustPageAssets();
+      updateReadingProgress();
+      enhanceHome();
+      enhanceCodeBlocks();
+      // pandoc 输出 mermaid 为 <pre class="mermaid"><code>...</code></pre>
+      // 需要转成 <div class="mermaid">...</div> 供 mermaid.js 渲染
+      document.querySelectorAll('pre.mermaid').forEach(pre => {
+        const div = document.createElement('div');
+        div.classList.add('mermaid');
+        div.textContent = pre.textContent;
+        pre.replaceWith(div);
+      });
+      // 也处理 <pre><code class="language-mermaid"> 形式（备用）
+      document.querySelectorAll('pre code.language-mermaid').forEach(code => {
+        const div = document.createElement('div');
+        div.classList.add('mermaid');
+        div.textContent = code.textContent;
+        code.closest('pre').replaceWith(div);
+      });
+      await mermaid.run();
+    });
+  </script>
+</body>
+
+</html>

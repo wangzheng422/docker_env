@@ -1,0 +1,1193 @@
+<!DOCTYPE html>
+<html lang="zh" dir="ltr">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="generator" content="pandoc" />
+  <meta name="site-build-id" content="fbe91b569ae8" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <title>OpenShift Etcd Operator Certificate Rotation Analysis Report | wandering.star notes</title>
+  <meta name="description"
+    content="Wandering field notes on OpenShift, RHEL, AI infrastructure, and platform operations." />
+  <!-- Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-E3FRMDB7L2"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-E3FRMDB7L2');
+  </script>
+  <style>
+  html {
+    color: #1a1a1a;
+    background-color: #fdfdfd;
+  }
+  body {
+    margin: 0 auto;
+    max-width: 36em;
+    padding-left: 50px;
+    padding-right: 50px;
+    padding-top: 50px;
+    padding-bottom: 50px;
+    hyphens: auto;
+    overflow-wrap: break-word;
+    text-rendering: optimizeLegibility;
+    font-kerning: normal;
+  }
+  @media (max-width: 600px) {
+    body {
+      font-size: 0.9em;
+      padding: 12px;
+    }
+    h1 {
+      font-size: 1.8em;
+    }
+  }
+  @media print {
+    html {
+      background-color: white;
+    }
+    body {
+      background-color: transparent;
+      color: black;
+      font-size: 12pt;
+    }
+    p, h2, h3 {
+      orphans: 3;
+      widows: 3;
+    }
+    h2, h3, h4 {
+      page-break-after: avoid;
+    }
+  }
+  p {
+    margin: 1em 0;
+  }
+  a {
+    color: #1a1a1a;
+  }
+  a:visited {
+    color: #1a1a1a;
+  }
+  img {
+    max-width: 100%;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.4em;
+  }
+  h5, h6 {
+    font-size: 1em;
+    font-style: italic;
+  }
+  h6 {
+    font-weight: normal;
+  }
+  ol, ul {
+    padding-left: 1.7em;
+    margin-top: 1em;
+  }
+  li > ol, li > ul {
+    margin-top: 0;
+  }
+  blockquote {
+    margin: 1em 0 1em 1.7em;
+    padding-left: 1em;
+    border-left: 2px solid #e6e6e6;
+    color: #606060;
+  }
+  code {
+    font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+    font-size: 85%;
+    margin: 0;
+    hyphens: manual;
+  }
+  pre {
+    margin: 1em 0;
+    overflow: auto;
+  }
+  pre code {
+    padding: 0;
+    overflow: visible;
+    overflow-wrap: normal;
+  }
+  .sourceCode {
+   background-color: transparent;
+   overflow: visible;
+  }
+  hr {
+    background-color: #1a1a1a;
+    border: none;
+    height: 1px;
+    margin: 1em 0;
+  }
+  table {
+    margin: 1em 0;
+    border-collapse: collapse;
+    width: 100%;
+    overflow-x: auto;
+    display: block;
+    font-variant-numeric: lining-nums tabular-nums;
+  }
+  table caption {
+    margin-bottom: 0.75em;
+  }
+  tbody {
+    margin-top: 0.5em;
+    border-top: 1px solid #1a1a1a;
+    border-bottom: 1px solid #1a1a1a;
+  }
+  th {
+    border-top: 1px solid #1a1a1a;
+    padding: 0.25em 0.5em 0.25em 0.5em;
+  }
+  td {
+    padding: 0.125em 0.5em 0.25em 0.5em;
+  }
+  header {
+    margin-bottom: 4em;
+    text-align: center;
+  }
+  #TOC li {
+    list-style: none;
+  }
+  #TOC ul {
+    padding-left: 1.3em;
+  }
+  #TOC > ul {
+    padding-left: 0;
+  }
+  #TOC a:not(:hover) {
+    text-decoration: none;
+  }
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  div.columns{display: flex; gap: min(4vw, 1.5em);}
+  div.column{flex: auto; overflow-x: auto;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  /* The extra [class] is a hack that increases specificity enough to
+     override a similar rule in reveal.js */
+  ul.task-list[class]{list-style: none;}
+  ul.task-list li input[type="checkbox"] {
+    font-size: inherit;
+    width: 0.8em;
+    margin: 0 0.8em 0.2em -1.6em;
+    vertical-align: middle;
+  }
+  .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  /* CSS for syntax highlighting */
+  pre > code.sourceCode { white-space: pre; position: relative; }
+  pre > code.sourceCode > span { line-height: 1.25; }
+  pre > code.sourceCode > span:empty { height: 1.2em; }
+  .sourceCode { overflow: visible; }
+  code.sourceCode > span { color: inherit; text-decoration: inherit; }
+  div.sourceCode { margin: 1em 0; }
+  pre.sourceCode { margin: 0; }
+  @media screen {
+  div.sourceCode { overflow: auto; }
+  }
+  @media print {
+  pre > code.sourceCode { white-space: pre-wrap; }
+  pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+  }
+  pre.numberSource code
+    { counter-reset: source-line 0; }
+  pre.numberSource code > span
+    { position: relative; left: -4em; counter-increment: source-line; }
+  pre.numberSource code > span > a:first-child::before
+    { content: counter(source-line);
+      position: relative; left: -1em; text-align: right; vertical-align: baseline;
+      border: none; display: inline-block;
+      -webkit-touch-callout: none; -webkit-user-select: none;
+      -khtml-user-select: none; -moz-user-select: none;
+      -ms-user-select: none; user-select: none;
+      padding: 0 4px; width: 4em;
+    }
+  pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+  div.sourceCode
+    { color: #cccccc; background-color: #303030; }
+  @media screen {
+  pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+  }
+  code span.al { color: #ffcfaf; } /* Alert */
+  code span.an { color: #7f9f7f; font-weight: bold; } /* Annotation */
+  code span.at { } /* Attribute */
+  code span.bn { color: #dca3a3; } /* BaseN */
+  code span.bu { } /* BuiltIn */
+  code span.cf { color: #f0dfaf; } /* ControlFlow */
+  code span.ch { color: #dca3a3; } /* Char */
+  code span.cn { color: #dca3a3; font-weight: bold; } /* Constant */
+  code span.co { color: #7f9f7f; } /* Comment */
+  code span.cv { color: #7f9f7f; font-weight: bold; } /* CommentVar */
+  code span.do { color: #7f9f7f; } /* Documentation */
+  code span.dt { color: #dfdfbf; } /* DataType */
+  code span.dv { color: #dcdccc; } /* DecVal */
+  code span.er { color: #c3bf9f; } /* Error */
+  code span.ex { } /* Extension */
+  code span.fl { color: #c0bed1; } /* Float */
+  code span.fu { color: #efef8f; } /* Function */
+  code span.im { } /* Import */
+  code span.in { color: #7f9f7f; font-weight: bold; } /* Information */
+  code span.kw { color: #f0dfaf; } /* Keyword */
+  code span.op { color: #f0efd0; } /* Operator */
+  code span.ot { color: #efef8f; } /* Other */
+  code span.pp { color: #ffcfaf; font-weight: bold; } /* Preprocessor */
+  code span.sc { color: #dca3a3; } /* SpecialChar */
+  code span.ss { color: #cc9393; } /* SpecialString */
+  code span.st { color: #cc9393; } /* String */
+  code span.va { } /* Variable */
+  code span.vs { color: #cc9393; } /* VerbatimString */
+  code span.wa { color: #7f9f7f; font-weight: bold; } /* Warning */
+  </style>
+  <link rel="stylesheet" href="../../../style.css?v=fbe91b569ae8" />
+  </head>
+
+<body class="page-article">
+  <div class="reading-progress" aria-hidden="true"></div>
+  <div class="console-backdrop" aria-hidden="true"></div>
+  <nav class="site-nav">
+    <div class="nav-inner">
+      <a class="nav-brand" href="../../../index.html">wandering.star<span>notes</span></a>
+      <div class="nav-links">
+        <a href="https://github.com/wangzheng422/docker_env" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://www.youtube.com/@wangzheng422" target="_blank" rel="noopener">YouTube</a>
+      </div>
+    </div>
+  </nav>
+
+  <main>
+            <a class="back-link" href="../../../index.html">← Back to Index</a>
+        <div class="article-layout">
+            <aside class="toc-panel">
+        <div class="toc-title">ON THIS PAGE</div>
+        <ul>
+        <li><a
+        href="#openshift-etcd-operator-certificate-rotation-analysis-report"
+        id="toc-openshift-etcd-operator-certificate-rotation-analysis-report">OpenShift
+        Etcd Operator Certificate Rotation Analysis Report</a>
+        <ul>
+        <li><a href="#introduction" id="toc-introduction">1.
+        Introduction</a></li>
+        <li><a href="#core-components" id="toc-core-components">2. Core
+        Components</a></li>
+        <li><a href="#certificate-types" id="toc-certificate-types">3.
+        Certificate Types</a></li>
+        <li><a href="#certificate-rotation-mechanism"
+        id="toc-certificate-rotation-mechanism">4. Certificate Rotation
+        Mechanism</a></li>
+        <li><a href="#code-snippets" id="toc-code-snippets">5. Code
+        Snippets</a></li>
+        <li><a href="#logs-events-and-messages"
+        id="toc-logs-events-and-messages">6. Logs, Events, and
+        Messages</a></li>
+        <li><a href="#monitoring-metrics" id="toc-monitoring-metrics">7.
+        Monitoring Metrics</a></li>
+        <li><a href="#operational-perspective"
+        id="toc-operational-perspective">8. Operational
+        Perspective</a></li>
+        </ul></li>
+        </ul>
+      </aside>
+            <article class="markdown-body article-shell">
+        <h1
+        id="openshift-etcd-operator-certificate-rotation-analysis-report">OpenShift
+        Etcd Operator Certificate Rotation Analysis Report</h1>
+        <h2 id="introduction">1. Introduction</h2>
+        <p>Etcd, as a critical component of OpenShift clusters, requires
+        secure communications. The <a
+        href="https://github.com/openshift/cluster-etcd-operator">Cluster
+        Etcd Operator (CEO)</a> is responsible for managing the
+        lifecycle of the Etcd cluster, including the generation and
+        rotation of TLS certificates. This report aims to analyze the
+        implementation logic of certificate rotation in the OpenShift
+        Etcd Operator, related logs, monitoring metrics, and aspects
+        that operations personnel should pay attention to.</p>
+        <h2 id="core-components">2. Core Components</h2>
+        <p>Certificate rotation involves the following key
+        components:</p>
+        <ul>
+        <li><strong>EtcdCertSignerController:</strong> (located in
+        <code>pkg/operator/etcdcertsigner/</code>) This is the core
+        controller for certificate management. It is responsible for:
+        <ul>
+        <li>Creating and managing various certificates required by Etcd
+        (Signer CA, Peer, Serving, Client, Metrics-related
+        certificates).</li>
+        <li>Leveraging the capabilities provided by the
+        <code>library-go/pkg/operator/certrotation</code> library to
+        automatically trigger rotation based on certificate validity
+        periods.</li>
+        <li>Aggregating certificates from all nodes into a Secret named
+        <code>etcd-all-certs</code>.</li>
+        <li>Performing cluster health checks (Quorum Check) before
+        updating certificates.</li>
+        </ul></li>
+        <li><strong>StaticPodController:</strong> (from
+        <code>library-go</code>) Responsible for managing Etcd static
+        Pods. It monitors <code>RevisionSecrets</code> such as
+        <code>etcd-all-certs</code>. When these Secrets change (e.g.,
+        content updates due to certificate rotation), it creates a new
+        Revision and triggers a rolling update of Etcd Pods, thereby
+        deploying the new certificates to the nodes.</li>
+        <li><strong>CertSyncController:</strong> (from
+        <code>library-go</code>) Responsible for synchronizing
+        non-versioned certificates (such as CA Bundles) defined in
+        <code>CertConfigMaps</code> and <code>CertSecrets</code> to the
+        <code>/etc/kubernetes/static-pod-resources/etcd-certs</code>
+        directory on each node for use by static Pods.</li>
+        </ul>
+        <h2 id="certificate-types">3. Certificate Types</h2>
+        <p>The <code>EtcdCertSignerController</code> manages the
+        following main certificate/key pairs and CA Bundles:</p>
+        <ul>
+        <li><strong>Signer CA:</strong>
+        <ul>
+        <li><code>etcd-signer</code> (Secret): CA key pair that signs
+        Peer, Serving, and Client certificates.</li>
+        <li><code>etcd-ca-bundle</code> (ConfigMap): Contains the
+        current and (during rotation) next Signer CA certificates for
+        verification.</li>
+        </ul></li>
+        <li><strong>Metrics Signer CA:</strong>
+        <ul>
+        <li><code>etcd-metric-signer</code> (Secret): CA key pair that
+        signs Metrics-related certificates.</li>
+        <li><code>etcd-metric-ca-bundle</code> (ConfigMap): Contains the
+        Metrics Signer CA certificate.</li>
+        </ul></li>
+        <li><strong>Client Certificates:</strong>
+        <ul>
+        <li><code>etcd-client</code> (Secret): Etcd client
+        certificate.</li>
+        <li><code>etcd-metric-client</code> (Secret): Metrics Client
+        certificate.</li>
+        </ul></li>
+        <li><strong>Per-Node Certificates:</strong> (aggregated in the
+        <code>etcd-all-certs</code> Secret)
+        <ul>
+        <li><code>etcd-peer-&lt;nodeName&gt;</code>: Node-to-node
+        communication certificate.</li>
+        <li><code>etcd-serving-&lt;nodeName&gt;</code>: Etcd API server
+        certificate.</li>
+        <li><code>etcd-serving-metrics-&lt;nodeName&gt;</code>: Metrics
+        server certificate.</li>
+        </ul></li>
+        </ul>
+        <h2 id="certificate-rotation-mechanism">4. Certificate Rotation
+        Mechanism</h2>
+        <p>Certificate rotation is primarily driven by the
+        <code>EtcdCertSignerController</code> and relies on the
+        <code>certrotation</code> library from
+        <code>library-go</code>.</p>
+        <pre class="mermaid"><code>graph TD
+    subgraph &quot;EtcdCertSignerController Loop (Every Minute)&quot;
+        A[Start Sync] --&gt; B{Check Cluster Quorum}
+        B -- Quorum Insufficient --&gt; F[Skip Sync, Report Degraded]
+        B -- Quorum Normal --&gt; C[Process Signer CA]
+        C --&gt; D[Process Metrics Signer CA]
+        D --&gt; E[Process Client Certificates]
+        E --&gt; G[Process Peer/Serving/Metrics Certificates for each Control Plane Node]
+        G --&gt; H[Aggregate all certificates to etcd-all-certs Secret]
+        H --&gt; I{Check Quorum Again}
+        I -- Quorum Insufficient --&gt; F
+        I -- Quorum Normal --&gt; J[Apply etcd-all-certs Secret Update]
+        J --&gt; K[End Sync, Clear Degraded Status]
+    end
+
+    subgraph &quot;library-go/certrotation Logic&quot;
+        L[EnsureSigningCertKeyPair] --&gt; M{Is Signer Certificate Near Expiry?}
+        M -- Yes --&gt; N[Generate New Signer Key Pair]
+        M -- No --&gt; O[Return Existing Signer]
+        N --&gt; O
+        P[EnsureTargetCertKeyPair] --&gt; Q{Is Target Certificate Near Expiry?}
+        Q -- Yes --&gt; R[Sign New Certificate with Current Signer]
+        Q -- No --&gt; S[Return Existing Certificate]
+        R --&gt; S
+        T[EnsureConfigMapCABundle] --&gt; U{Is CA Certificate Already in Bundle?}
+        U -- No --&gt; V[Add CA Certificate to Bundle ConfigMap]
+        U -- Yes --&gt; W[Return Existing Bundle]
+        V --&gt; W
+    end
+
+    subgraph &quot;StaticPodController Watch&quot;
+        X[Monitor etcd-all-certs Secret] --&gt; Y{Has Secret Changed?}
+        Y -- Yes --&gt; Z[Create New Revision, Rolling Update Etcd Pods]
+        Y -- No --&gt; X
+    end
+
+    J --&gt; Y
+    C --&gt; L
+    C --&gt; T
+    D --&gt; L
+    D --&gt; T
+    E --&gt; P
+    G --&gt; P</code></pre>
+        <p><strong>Mechanism Details:</strong></p>
+        <ol type="1">
+        <li><strong>Periodic Check:</strong>
+        <code>EtcdCertSignerController</code> periodically (default
+        every minute) executes synchronization logic.</li>
+        <li><strong>Quorum Check:</strong> Before performing any
+        certificate operations and finally updating the
+        <code>etcd-all-certs</code> Secret, the Etcd cluster’s Quorum
+        status is checked. If Quorum is insufficient, synchronization is
+        skipped and the <code>EtcdCertSignerControllerDegraded</code>
+        status is set, preventing certificate changes that could cause
+        problems in an unhealthy cluster.</li>
+        <li><strong>Signer Rotation
+        (<code>EnsureSigningCertKeyPair</code>):</strong>
+        <ul>
+        <li>The controller checks the annotations of the
+        <code>etcd-signer</code> and <code>etcd-metric-signer</code>
+        Secrets to determine if the CA certificates are approaching
+        expiry (based on the default or configured advance period from
+        <code>library-go</code>).</li>
+        <li>If rotation is needed, a new CA key pair is generated and
+        the Secret is updated. <strong>Key point:</strong>
+        <code>library-go</code> logic preserves the old CA for a period
+        of time (recorded via annotations) rather than deleting it
+        immediately.</li>
+        <li><code>EnsureConfigMapCABundle</code> ensures that
+        certificates from <strong>both the old and new Signer
+        CAs</strong> are added to the corresponding CA Bundle ConfigMap
+        (<code>etcd-ca-bundle</code>,
+        <code>etcd-metric-ca-bundle</code>). This allows the cluster to
+        trust certificates issued by both the old and new CAs during the
+        rotation period, enabling a smooth transition.</li>
+        </ul></li>
+        <li><strong>Target Certificate Rotation
+        (<code>EnsureTargetCertKeyPair</code>):</strong>
+        <ul>
+        <li>The controller checks the Secret annotations for all target
+        certificates (Client, Peer, Serving, Metrics Serving) to
+        determine if they are approaching expiry.</li>
+        <li>If rotation is needed, a new certificate/key pair is issued
+        using the <strong>currently active</strong> Signer CA (read from
+        <code>etcd-signer</code> or <code>etcd-metric-signer</code>) and
+        the corresponding Secret is updated.</li>
+        </ul></li>
+        <li><strong>Aggregation and Deployment:</strong>
+        <ul>
+        <li>All target certificates for each node (Peer, Serving,
+        Metrics Serving) are collected and merged into the
+        <code>data</code> field of the <code>etcd-all-certs</code>
+        Secret.</li>
+        <li>The <code>StaticPodController</code> monitors
+        <code>etcd-all-certs</code>. When this Secret is updated
+        (whether due to indirect Signer rotation causing target
+        certificate updates, or target certificate rotation itself), the
+        <code>StaticPodController</code> detects the change.</li>
+        <li>After detecting the change, the
+        <code>StaticPodController</code> creates a new Revision for the
+        Etcd Pod and triggers a rolling update, deploying Pods with
+        references to the new certificates to all Control Plane
+        nodes.</li>
+        </ul></li>
+        </ol>
+        <h2 id="code-snippets">5. Code Snippets</h2>
+        <p><strong>pkg/operator/etcdcertsigner/etcdcertsignercontroller.go</strong>
+        <code>EtcdCertSignerController</code> periodically (default
+        every minute) executes synchronization logic.</p>
+        <div class="sourceCode" id="cb2"><pre
+        class="sourceCode go"><code class="sourceCode go"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">// pkg/operator/etcdcertsigner/etcdcertsignercontroller.go</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">func</span> NewEtcdCertSignerController<span class="op">(</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... parameters omitted ...</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="op">)</span> factory<span class="op">.</span>Controller <span class="op">{</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... initialization code omitted ...</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Create a health check wrapper that wraps the actual sync function</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    syncer <span class="op">:=</span> health<span class="op">.</span>NewDefaultCheckingSyncWrapper<span class="op">(</span>c<span class="op">.</span>sync<span class="op">)</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    livenessChecker<span class="op">.</span>Add<span class="op">(</span><span class="st">&quot;EtcdCertSignerController&quot;</span><span class="op">,</span> syncer<span class="op">)</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Key part: Set the controller to execute sync once per minute</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> factory<span class="op">.</span>New<span class="op">().</span>ResyncEvery<span class="op">(</span>time<span class="op">.</span>Minute<span class="op">).</span>WithInformers<span class="op">(</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>        masterNodeInformer<span class="op">,</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>        kubeInformers<span class="op">.</span>InformersFor<span class="op">(</span>operatorclient<span class="op">.</span>GlobalUserSpecifiedConfigNamespace<span class="op">).</span>Core<span class="op">().</span>V1<span class="op">().</span>Secrets<span class="op">().</span>Informer<span class="op">(),</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>        cmInformer<span class="op">.</span>Informer<span class="op">(),</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>        secretInformer<span class="op">.</span>Informer<span class="op">(),</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>        operatorClient<span class="op">.</span>Informer<span class="op">(),</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>    <span class="op">).</span>WithSync<span class="op">(</span>syncer<span class="op">.</span>Sync<span class="op">).</span>ToController<span class="op">(</span><span class="st">&quot;EtcdCertSignerController&quot;</span><span class="op">,</span> c<span class="op">.</span>eventRecorder<span class="op">)</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a><span class="co">// Main logic executed during each sync</span></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a><span class="kw">func</span> <span class="op">(</span>c <span class="op">*</span>EtcdCertSignerController<span class="op">)</span> sync<span class="op">(</span>ctx context<span class="op">.</span>Context<span class="op">,</span> syncCtx factory<span class="op">.</span>SyncContext<span class="op">)</span> <span class="dt">error</span> <span class="op">{</span></span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>    <span class="co">// First check if the cluster has sufficient Quorum to safely perform updates</span></span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>    safe<span class="op">,</span> err <span class="op">:=</span> c<span class="op">.</span>quorumChecker<span class="op">.</span>IsSafeToUpdateRevision<span class="op">()</span></span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> err <span class="op">!=</span> <span class="ot">nil</span> <span class="op">{</span></span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> fmt<span class="op">.</span>Errorf<span class="op">(</span><span class="st">&quot;EtcdCertSignerController can&#39;t evaluate whether quorum is safe: %w&quot;</span><span class="op">,</span> err<span class="op">)</span></span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="op">!</span>safe <span class="op">{</span></span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> fmt<span class="op">.</span>Errorf<span class="op">(</span><span class="st">&quot;skipping EtcdCertSignerController reconciliation due to insufficient quorum&quot;</span><span class="op">)</span></span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Execute synchronization logic for all certificates</span></span>
+<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> err <span class="op">:=</span> c<span class="op">.</span>syncAllMasterCertificates<span class="op">(</span>ctx<span class="op">,</span> syncCtx<span class="op">.</span>Recorder<span class="op">());</span> err <span class="op">!=</span> <span class="ot">nil</span> <span class="op">{</span></span>
+<span id="cb2-35"><a href="#cb2-35" aria-hidden="true" tabindex="-1"></a>        <span class="co">// If synchronization fails, set Degraded status condition</span></span>
+<span id="cb2-36"><a href="#cb2-36" aria-hidden="true" tabindex="-1"></a>        _<span class="op">,</span> _<span class="op">,</span> updateErr <span class="op">:=</span> v1helpers<span class="op">.</span>UpdateStatus<span class="op">(</span>ctx<span class="op">,</span> c<span class="op">.</span>operatorClient<span class="op">,</span> v1helpers<span class="op">.</span>UpdateConditionFn<span class="op">(</span>operatorv1<span class="op">.</span>OperatorCondition<span class="op">{</span></span>
+<span id="cb2-37"><a href="#cb2-37" aria-hidden="true" tabindex="-1"></a>            Type<span class="op">:</span>    <span class="st">&quot;EtcdCertSignerControllerDegraded&quot;</span><span class="op">,</span></span>
+<span id="cb2-38"><a href="#cb2-38" aria-hidden="true" tabindex="-1"></a>            Status<span class="op">:</span>  operatorv1<span class="op">.</span>ConditionTrue<span class="op">,</span></span>
+<span id="cb2-39"><a href="#cb2-39" aria-hidden="true" tabindex="-1"></a>            Reason<span class="op">:</span>  <span class="st">&quot;Error&quot;</span><span class="op">,</span></span>
+<span id="cb2-40"><a href="#cb2-40" aria-hidden="true" tabindex="-1"></a>            Message<span class="op">:</span> err<span class="op">.</span>Error<span class="op">(),</span></span>
+<span id="cb2-41"><a href="#cb2-41" aria-hidden="true" tabindex="-1"></a>        <span class="op">}))</span></span>
+<span id="cb2-42"><a href="#cb2-42" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> updateErr <span class="op">!=</span> <span class="ot">nil</span> <span class="op">{</span></span>
+<span id="cb2-43"><a href="#cb2-43" aria-hidden="true" tabindex="-1"></a>            syncCtx<span class="op">.</span>Recorder<span class="op">().</span>Warning<span class="op">(</span><span class="st">&quot;EtcdCertSignerControllerUpdatingStatus&quot;</span><span class="op">,</span> updateErr<span class="op">.</span>Error<span class="op">())</span></span>
+<span id="cb2-44"><a href="#cb2-44" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb2-45"><a href="#cb2-45" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> err</span>
+<span id="cb2-46"><a href="#cb2-46" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-47"><a href="#cb2-47" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-48"><a href="#cb2-48" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Synchronization successful, clear Degraded status</span></span>
+<span id="cb2-49"><a href="#cb2-49" aria-hidden="true" tabindex="-1"></a>    _<span class="op">,</span> _<span class="op">,</span> updateErr <span class="op">:=</span> v1helpers<span class="op">.</span>UpdateStatus<span class="op">(</span>ctx<span class="op">,</span> c<span class="op">.</span>operatorClient<span class="op">,</span></span>
+<span id="cb2-50"><a href="#cb2-50" aria-hidden="true" tabindex="-1"></a>        v1helpers<span class="op">.</span>UpdateConditionFn<span class="op">(</span>operatorv1<span class="op">.</span>OperatorCondition<span class="op">{</span></span>
+<span id="cb2-51"><a href="#cb2-51" aria-hidden="true" tabindex="-1"></a>            Type<span class="op">:</span>   <span class="st">&quot;EtcdCertSignerControllerDegraded&quot;</span><span class="op">,</span></span>
+<span id="cb2-52"><a href="#cb2-52" aria-hidden="true" tabindex="-1"></a>            Status<span class="op">:</span> operatorv1<span class="op">.</span>ConditionFalse<span class="op">,</span></span>
+<span id="cb2-53"><a href="#cb2-53" aria-hidden="true" tabindex="-1"></a>            Reason<span class="op">:</span> <span class="st">&quot;AsExpected&quot;</span><span class="op">,</span></span>
+<span id="cb2-54"><a href="#cb2-54" aria-hidden="true" tabindex="-1"></a>        <span class="op">}))</span></span>
+<span id="cb2-55"><a href="#cb2-55" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> updateErr</span>
+<span id="cb2-56"><a href="#cb2-56" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+        <p>This code demonstrates the periodic check mechanism of the
+        <code>EtcdCertSignerController</code>:</p>
+        <ol type="1">
+        <li>During controller initialization,
+        <code>ResyncEvery(time.Minute)</code> sets synchronization to
+        occur once per minute.</li>
+        <li>During each sync, <code>IsSafeToUpdateRevision()</code>
+        first checks if the Etcd cluster has sufficient Quorum for safe
+        updates.</li>
+        <li>If the Quorum check passes,
+        <code>syncAllMasterCertificates()</code> executes the actual
+        certificate management logic.</li>
+        <li>Based on the synchronization result, the controller’s status
+        condition <code>EtcdCertSignerControllerDegraded</code> is
+        updated to reflect the controller’s health status.</li>
+        </ol>
+        <p>This periodic check mechanism ensures that certificate
+        management logic is executed regularly, promptly detecting and
+        handling certificates that need rotation, while using Quorum
+        checks to avoid potentially risky operations when the cluster is
+        unhealthy.</p>
+        <p><strong>pkg/operator/starter.go:</strong> Defines which
+        Secrets/ConfigMaps contain certificates and which trigger
+        Revisions.</p>
+        <div class="sourceCode" id="cb3"><pre
+        class="sourceCode go"><code class="sourceCode go"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co">// RevisionConfigMaps is a list of configmaps that are directly copied for the current values.  A different actor/controller modifies these.</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="co">// the first element should be the configmap that contains the static pod manifest</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> RevisionConfigMaps <span class="op">=</span> <span class="op">[]</span>revision<span class="op">.</span>RevisionResource<span class="op">{</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span>Name<span class="op">:</span> <span class="st">&quot;etcd-pod&quot;</span><span class="op">},</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... CA Bundles ...</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span>Name<span class="op">:</span> <span class="st">&quot;etcd-serving-ca&quot;</span><span class="op">},</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span>Name<span class="op">:</span> <span class="st">&quot;etcd-peer-client-ca&quot;</span><span class="op">},</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span>Name<span class="op">:</span> <span class="st">&quot;etcd-metrics-proxy-serving-ca&quot;</span><span class="op">},</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span>Name<span class="op">:</span> <span class="st">&quot;etcd-metrics-proxy-client-ca&quot;</span><span class="op">},</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span>Name<span class="op">:</span> <span class="st">&quot;etcd-endpoints&quot;</span><span class="op">},</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a><span class="co">// RevisionSecrets is a list of secrets that are directly copied for the current values.  A different actor/controller modifies these.</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> RevisionSecrets <span class="op">=</span> <span class="op">[]</span>revision<span class="op">.</span>RevisionResource<span class="op">{</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span>Name<span class="op">:</span> <span class="st">&quot;etcd-all-certs&quot;</span><span class="op">},</span> <span class="co">// &lt;--- Aggregated certificates, changes trigger rolling updates</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a><span class="co">// CertConfigMaps defines non-revisioned ConfigMaps synced by CertSyncController</span></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> CertConfigMaps <span class="op">=</span> <span class="op">[]</span>installer<span class="op">.</span>UnrevisionedResource<span class="op">{</span></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... other CMs ...</span></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span>Name<span class="op">:</span> <span class="st">&quot;etcd-serving-ca&quot;</span><span class="op">},</span></span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span>Name<span class="op">:</span> <span class="st">&quot;etcd-peer-client-ca&quot;</span><span class="op">},</span></span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span>Name<span class="op">:</span> <span class="st">&quot;etcd-metrics-proxy-serving-ca&quot;</span><span class="op">},</span></span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span>Name<span class="op">:</span> <span class="st">&quot;etcd-metrics-proxy-client-ca&quot;</span><span class="op">},</span></span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a><span class="co">// CertSecrets defines non-revisioned Secrets synced by CertSyncController</span></span>
+<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> CertSecrets <span class="op">=</span> <span class="op">[]</span>installer<span class="op">.</span>UnrevisionedResource<span class="op">{</span></span>
+<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span>Name<span class="op">:</span> <span class="st">&quot;etcd-all-certs&quot;</span><span class="op">},</span> <span class="co">// Also synced directly for constant path access</span></span>
+<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb3-31"><a href="#cb3-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-32"><a href="#cb3-32" aria-hidden="true" tabindex="-1"></a><span class="co">// ... Controller Initialization ...</span></span>
+<span id="cb3-33"><a href="#cb3-33" aria-hidden="true" tabindex="-1"></a>    etcdCertSignerController <span class="op">:=</span> etcdcertsigner<span class="op">.</span>NewEtcdCertSignerController<span class="op">(</span></span>
+<span id="cb3-34"><a href="#cb3-34" aria-hidden="true" tabindex="-1"></a>        <span class="co">// ... dependencies ...</span></span>
+<span id="cb3-35"><a href="#cb3-35" aria-hidden="true" tabindex="-1"></a>    <span class="op">)</span></span>
+<span id="cb3-36"><a href="#cb3-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-37"><a href="#cb3-37" aria-hidden="true" tabindex="-1"></a>    staticPodControllers<span class="op">,</span> err <span class="op">:=</span> staticpod<span class="op">.</span>NewBuilder<span class="op">(</span>operatorClient<span class="op">,</span> kubeClient<span class="op">,</span> kubeInformersForNamespaces<span class="op">,</span> configInformers<span class="op">).</span></span>
+<span id="cb3-38"><a href="#cb3-38" aria-hidden="true" tabindex="-1"></a>        <span class="co">// ... other configurations ...</span></span>
+<span id="cb3-39"><a href="#cb3-39" aria-hidden="true" tabindex="-1"></a>        WithRevisionedResources<span class="op">(</span><span class="st">&quot;openshift-etcd&quot;</span><span class="op">,</span> <span class="st">&quot;etcd&quot;</span><span class="op">,</span> RevisionConfigMaps<span class="op">,</span> RevisionSecrets<span class="op">).</span> <span class="co">// &lt;--- Monitor RevisionSecrets</span></span>
+<span id="cb3-40"><a href="#cb3-40" aria-hidden="true" tabindex="-1"></a>        WithUnrevisionedCerts<span class="op">(</span><span class="st">&quot;etcd-certs&quot;</span><span class="op">,</span> CertConfigMaps<span class="op">,</span> CertSecrets<span class="op">).</span> <span class="co">// &lt;--- CertSyncController configuration</span></span>
+<span id="cb3-41"><a href="#cb3-41" aria-hidden="true" tabindex="-1"></a>        <span class="co">// ... other configurations ...</span></span>
+<span id="cb3-42"><a href="#cb3-42" aria-hidden="true" tabindex="-1"></a>        ToControllers<span class="op">()</span></span></code></pre></div>
+        <p><strong>pkg/operator/etcdcertsigner/etcdcertsignercontroller.go:</strong>
+        Core synchronization logic.</p>
+        <div class="sourceCode" id="cb4"><pre
+        class="sourceCode go"><code class="sourceCode go"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">func</span> <span class="op">(</span>c <span class="op">*</span>EtcdCertSignerController<span class="op">)</span> syncAllMasterCertificates<span class="op">(</span>ctx context<span class="op">.</span>Context<span class="op">,</span> recorder events<span class="op">.</span>Recorder<span class="op">)</span> <span class="dt">error</span> <span class="op">{</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">// --- Signer CA Handling ---</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    signerCaPair<span class="op">,</span> err <span class="op">:=</span> tlshelpers<span class="op">.</span>ReadConfigSignerCert<span class="op">(</span>ctx<span class="op">,</span> c<span class="op">.</span>secretClient<span class="op">)</span> <span class="co">// Read current signer</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... error handling ...</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    c<span class="op">.</span>reportExpirationMetric<span class="op">(</span>signerCaPair<span class="op">,</span> <span class="st">&quot;signer-ca&quot;</span><span class="op">)</span> <span class="co">// Report metric</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    _<span class="op">,</span> err <span class="op">=</span> c<span class="op">.</span>certConfig<span class="op">.</span>signerCaBundle<span class="op">.</span>EnsureConfigMapCABundle<span class="op">(</span>ctx<span class="op">,</span> signerCaPair<span class="op">)</span> <span class="co">// Add current CA to bundle</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... error handling ...</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Ensure the next signer exists (creates if needed, rotates based on expiry)</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>    newSignerCaPair<span class="op">,</span> _<span class="op">,</span> err <span class="op">:=</span> c<span class="op">.</span>certConfig<span class="op">.</span>signerCert<span class="op">.</span>EnsureSigningCertKeyPair<span class="op">(</span>ctx<span class="op">)</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... error handling ...</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>    signerBundle<span class="op">,</span> err <span class="op">:=</span> c<span class="op">.</span>certConfig<span class="op">.</span>signerCaBundle<span class="op">.</span>EnsureConfigMapCABundle<span class="op">(</span>ctx<span class="op">,</span> newSignerCaPair<span class="op">)</span> <span class="co">// Add next CA to bundle</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... error handling ...</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>    <span class="co">// --- Metrics Signer CA Handling (Similar logic) ---</span></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>    metricsSignerCaPair<span class="op">,</span> err <span class="op">:=</span> tlshelpers<span class="op">.</span>ReadConfigMetricsSignerCert<span class="op">(</span>ctx<span class="op">,</span> c<span class="op">.</span>secretClient<span class="op">)</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... error handling ...</span></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>    c<span class="op">.</span>reportExpirationMetric<span class="op">(</span>metricsSignerCaPair<span class="op">,</span> <span class="st">&quot;metrics-signer-ca&quot;</span><span class="op">)</span></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>    _<span class="op">,</span> err <span class="op">=</span> c<span class="op">.</span>certConfig<span class="op">.</span>metricsSignerCaBundle<span class="op">.</span>EnsureConfigMapCABundle<span class="op">(</span>ctx<span class="op">,</span> metricsSignerCaPair<span class="op">)</span></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... error handling ...</span></span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>    newMetricsSignerCaPair<span class="op">,</span> _<span class="op">,</span> err <span class="op">:=</span> c<span class="op">.</span>certConfig<span class="op">.</span>metricsSignerCert<span class="op">.</span>EnsureSigningCertKeyPair<span class="op">(</span>ctx<span class="op">)</span></span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... error handling ...</span></span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a>    metricsSignerBundle<span class="op">,</span> err <span class="op">:=</span> c<span class="op">.</span>certConfig<span class="op">.</span>metricsSignerCaBundle<span class="op">.</span>EnsureConfigMapCABundle<span class="op">(</span>ctx<span class="op">,</span> newMetricsSignerCaPair<span class="op">)</span></span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... error handling ...</span></span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a>    <span class="co">// --- Client Cert Handling ---</span></span>
+<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a>    _<span class="op">,</span> err <span class="op">=</span> c<span class="op">.</span>certConfig<span class="op">.</span>etcdClientCert<span class="op">.</span>EnsureTargetCertKeyPair<span class="op">(</span>ctx<span class="op">,</span> signerCaPair<span class="op">,</span> signerBundle<span class="op">)</span> <span class="co">// Ensure client cert signed by current signer</span></span>
+<span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... error handling ...</span></span>
+<span id="cb4-29"><a href="#cb4-29" aria-hidden="true" tabindex="-1"></a>    _<span class="op">,</span> err <span class="op">=</span> c<span class="op">.</span>certConfig<span class="op">.</span>metricsClientCert<span class="op">.</span>EnsureTargetCertKeyPair<span class="op">(</span>ctx<span class="op">,</span> metricsSignerCaPair<span class="op">,</span> metricsSignerBundle<span class="op">)</span> <span class="co">// Ensure metrics client cert</span></span>
+<span id="cb4-30"><a href="#cb4-30" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... error handling ...</span></span>
+<span id="cb4-31"><a href="#cb4-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-32"><a href="#cb4-32" aria-hidden="true" tabindex="-1"></a>    <span class="co">// --- Per-Node Cert Handling ---</span></span>
+<span id="cb4-33"><a href="#cb4-33" aria-hidden="true" tabindex="-1"></a>    nodeCfgs<span class="op">,</span> err <span class="op">:=</span> c<span class="op">.</span>createNodeCertConfigs<span class="op">()</span> <span class="co">// Get configs for all control plane nodes</span></span>
+<span id="cb4-34"><a href="#cb4-34" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... error handling ...</span></span>
+<span id="cb4-35"><a href="#cb4-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-36"><a href="#cb4-36" aria-hidden="true" tabindex="-1"></a>    allCerts <span class="op">:=</span> <span class="kw">map</span><span class="op">[</span><span class="dt">string</span><span class="op">][]</span><span class="dt">byte</span><span class="op">{}</span></span>
+<span id="cb4-37"><a href="#cb4-37" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> _<span class="op">,</span> cfg <span class="op">:=</span> <span class="kw">range</span> nodeCfgs <span class="op">{</span></span>
+<span id="cb4-38"><a href="#cb4-38" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Ensure Peer cert signed by current signer</span></span>
+<span id="cb4-39"><a href="#cb4-39" aria-hidden="true" tabindex="-1"></a>        secret<span class="op">,</span> err <span class="op">:=</span> cfg<span class="op">.</span>peerCert<span class="op">.</span>EnsureTargetCertKeyPair<span class="op">(</span>ctx<span class="op">,</span> signerCaPair<span class="op">,</span> signerBundle<span class="op">)</span></span>
+<span id="cb4-40"><a href="#cb4-40" aria-hidden="true" tabindex="-1"></a>        <span class="co">// ... error handling ...</span></span>
+<span id="cb4-41"><a href="#cb4-41" aria-hidden="true" tabindex="-1"></a>        allCerts <span class="op">=</span> addCertSecretToMap<span class="op">(</span>allCerts<span class="op">,</span> secret<span class="op">)</span> <span class="co">// Add to aggregation map</span></span>
+<span id="cb4-42"><a href="#cb4-42" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-43"><a href="#cb4-43" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Ensure Serving cert signed by current signer</span></span>
+<span id="cb4-44"><a href="#cb4-44" aria-hidden="true" tabindex="-1"></a>        secret<span class="op">,</span> err <span class="op">=</span> cfg<span class="op">.</span>servingCert<span class="op">.</span>EnsureTargetCertKeyPair<span class="op">(</span>ctx<span class="op">,</span> signerCaPair<span class="op">,</span> signerBundle<span class="op">)</span></span>
+<span id="cb4-45"><a href="#cb4-45" aria-hidden="true" tabindex="-1"></a>        <span class="co">// ... error handling ...</span></span>
+<span id="cb4-46"><a href="#cb4-46" aria-hidden="true" tabindex="-1"></a>        allCerts <span class="op">=</span> addCertSecretToMap<span class="op">(</span>allCerts<span class="op">,</span> secret<span class="op">)</span></span>
+<span id="cb4-47"><a href="#cb4-47" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-48"><a href="#cb4-48" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Ensure Metrics Serving cert signed by current metrics signer</span></span>
+<span id="cb4-49"><a href="#cb4-49" aria-hidden="true" tabindex="-1"></a>        secret<span class="op">,</span> err <span class="op">=</span> cfg<span class="op">.</span>metricsCert<span class="op">.</span>EnsureTargetCertKeyPair<span class="op">(</span>ctx<span class="op">,</span> metricsSignerCaPair<span class="op">,</span> metricsSignerBundle<span class="op">)</span></span>
+<span id="cb4-50"><a href="#cb4-50" aria-hidden="true" tabindex="-1"></a>        <span class="co">// ... error handling ...</span></span>
+<span id="cb4-51"><a href="#cb4-51" aria-hidden="true" tabindex="-1"></a>        allCerts <span class="op">=</span> addCertSecretToMap<span class="op">(</span>allCerts<span class="op">,</span> secret<span class="op">)</span></span>
+<span id="cb4-52"><a href="#cb4-52" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb4-53"><a href="#cb4-53" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-54"><a href="#cb4-54" aria-hidden="true" tabindex="-1"></a>    <span class="co">// --- Aggregate and Apply ---</span></span>
+<span id="cb4-55"><a href="#cb4-55" aria-hidden="true" tabindex="-1"></a>    secret <span class="op">:=</span> <span class="op">&amp;</span>corev1<span class="op">.</span>Secret<span class="op">{</span></span>
+<span id="cb4-56"><a href="#cb4-56" aria-hidden="true" tabindex="-1"></a>        ObjectMeta<span class="op">:</span> metav1<span class="op">.</span>ObjectMeta<span class="op">{</span></span>
+<span id="cb4-57"><a href="#cb4-57" aria-hidden="true" tabindex="-1"></a>            Namespace<span class="op">:</span> operatorclient<span class="op">.</span>TargetNamespace<span class="op">,</span></span>
+<span id="cb4-58"><a href="#cb4-58" aria-hidden="true" tabindex="-1"></a>            Name<span class="op">:</span>      tlshelpers<span class="op">.</span>EtcdAllCertsSecretName<span class="op">,</span> <span class="co">// &quot;etcd-all-certs&quot;</span></span>
+<span id="cb4-59"><a href="#cb4-59" aria-hidden="true" tabindex="-1"></a>            <span class="co">// ... annotations ...</span></span>
+<span id="cb4-60"><a href="#cb4-60" aria-hidden="true" tabindex="-1"></a>        <span class="op">},</span></span>
+<span id="cb4-61"><a href="#cb4-61" aria-hidden="true" tabindex="-1"></a>        Type<span class="op">:</span> corev1<span class="op">.</span>SecretTypeOpaque<span class="op">,</span></span>
+<span id="cb4-62"><a href="#cb4-62" aria-hidden="true" tabindex="-1"></a>        Data<span class="op">:</span> allCerts<span class="op">,</span> <span class="co">// Aggregated certs</span></span>
+<span id="cb4-63"><a href="#cb4-63" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb4-64"><a href="#cb4-64" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-65"><a href="#cb4-65" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Final Quorum Check before applying</span></span>
+<span id="cb4-66"><a href="#cb4-66" aria-hidden="true" tabindex="-1"></a>    safe<span class="op">,</span> err <span class="op">:=</span> c<span class="op">.</span>quorumChecker<span class="op">.</span>IsSafeToUpdateRevision<span class="op">()</span></span>
+<span id="cb4-67"><a href="#cb4-67" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... error handling ...</span></span>
+<span id="cb4-68"><a href="#cb4-68" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="op">!</span>safe <span class="op">{</span></span>
+<span id="cb4-69"><a href="#cb4-69" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> fmt<span class="op">.</span>Errorf<span class="op">(</span><span class="st">&quot;skipping EtcdCertSignerController reconciliation due to insufficient quorum&quot;</span><span class="op">)</span></span>
+<span id="cb4-70"><a href="#cb4-70" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb4-71"><a href="#cb4-71" aria-hidden="true" tabindex="-1"></a>    _<span class="op">,</span> _<span class="op">,</span> err <span class="op">=</span> resourceapply<span class="op">.</span>ApplySecret<span class="op">(</span>ctx<span class="op">,</span> c<span class="op">.</span>secretClient<span class="op">,</span> recorder<span class="op">,</span> secret<span class="op">)</span> <span class="co">// Apply the aggregated secret</span></span>
+<span id="cb4-72"><a href="#cb4-72" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-73"><a href="#cb4-73" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> err</span>
+<span id="cb4-74"><a href="#cb4-74" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb4-75"><a href="#cb4-75" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-76"><a href="#cb4-76" aria-hidden="true" tabindex="-1"></a><span class="co">// Quorum check before sync starts</span></span>
+<span id="cb4-77"><a href="#cb4-77" aria-hidden="true" tabindex="-1"></a><span class="kw">func</span> <span class="op">(</span>c <span class="op">*</span>EtcdCertSignerController<span class="op">)</span> sync<span class="op">(</span>ctx context<span class="op">.</span>Context<span class="op">,</span> syncCtx factory<span class="op">.</span>SyncContext<span class="op">)</span> <span class="dt">error</span> <span class="op">{</span></span>
+<span id="cb4-78"><a href="#cb4-78" aria-hidden="true" tabindex="-1"></a>    safe<span class="op">,</span> err <span class="op">:=</span> c<span class="op">.</span>quorumChecker<span class="op">.</span>IsSafeToUpdateRevision<span class="op">()</span></span>
+<span id="cb4-79"><a href="#cb4-79" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... error handling ...</span></span>
+<span id="cb4-80"><a href="#cb4-80" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="op">!</span>safe <span class="op">{</span></span>
+<span id="cb4-81"><a href="#cb4-81" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> fmt<span class="op">.</span>Errorf<span class="op">(</span><span class="st">&quot;skipping EtcdCertSignerController reconciliation due to insufficient quorum&quot;</span><span class="op">)</span></span>
+<span id="cb4-82"><a href="#cb4-82" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb4-83"><a href="#cb4-83" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... call syncAllMasterCertificates ...</span></span>
+<span id="cb4-84"><a href="#cb4-84" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+        <h2 id="logs-events-and-messages">6. Logs, Events, and
+        Messages</h2>
+        <p>Operations personnel can observe the certificate rotation
+        process and potential issues through the following channels:</p>
+        <ul>
+        <li><strong>Operator Status Conditions:</strong>
+        <ul>
+        <li>Check the status of <code>clusteroperator/etcd</code>.</li>
+        <li>Pay attention to the
+        <code>EtcdCertSignerControllerDegraded</code> condition. If it
+        is <code>True</code>, it indicates that the certificate signing
+        controller has encountered an error (such as insufficient
+        Quorum, API access failure, etc.), and rotation may be blocked.
+        The Message field will provide error information.
+        <code>bash     oc get clusteroperator/etcd     # NAME   VERSION   AVAILABLE   PROGRESSING   DEGRADED   SINCE   MESSAGE     # etcd   4.16.34   True        False         False      171d</code></li>
+        </ul></li>
+        <li><strong>Kubernetes Events:</strong>
+        <ul>
+        <li>Monitor events in the <code>openshift-etcd</code> and
+        <code>openshift-etcd-operator</code> namespaces.</li>
+        <li>The <code>EtcdCertSignerController</code> will record events
+        related to certificate operations, especially errors and
+        warnings.</li>
+        <li><code>library-go/certrotation</code> will generate the
+        following specific events:
+        <ul>
+        <li><code>SignerUpdateRequired</code>: Triggered when the
+        signing CA certificate needs to be rotated.</li>
+        <li><code>TargetUpdateRequired</code>: Triggered when target
+        certificates (such as peer, serving, client certificates) need
+        to be rotated.</li>
+        <li><code>CABundleUpdateRequired</code>: Triggered when the CA
+        Bundle needs to be updated.</li>
+        </ul></li>
+        <li><code>InstallerController</code> will record events related
+        to Revision creation and Pod rolling updates, such as:
+        <ul>
+        <li><code>NodeTargetRevisionChanged</code>: Triggered when the
+        node target version changes.</li>
+        <li><code>NodeCurrentRevisionChanged</code>: Triggered when the
+        node current version changes.</li>
+        <li><code>InstallerPodFailed</code>: Triggered when the
+        installer Pod fails.</li>
+        </ul></li>
+        </ul></li>
+        <li><strong>Operator Logs:</strong>
+        <ul>
+        <li>View the logs of the <code>cluster-etcd-operator-*</code>
+        Pod in the <code>openshift-etcd-operator</code> namespace.</li>
+        <li>Pay attention to the log output of the
+        <code>EtcdCertSignerController</code>, which shows the execution
+        of the synchronization loop, error messages, Quorum check
+        results, etc.</li>
+        <li>Search for keywords such as:
+        <ul>
+        <li><code>skipping EtcdCertSignerController reconciliation due to insufficient quorum</code>
+        (when Quorum is insufficient)</li>
+        <li><code>error on ensuring etcd-signer cert</code> (signing CA
+        certificate operation error)</li>
+        <li><code>error on ensuring etcd client cert</code> (client
+        certificate operation error)</li>
+        <li><code>error on peer cert sync for node</code> (node Peer
+        certificate synchronization error)</li>
+        <li><code>error on serving cert sync for node</code> (node
+        Serving certificate synchronization error)</li>
+        <li><code>error on serving metrics cert sync for node</code>
+        (node Metrics certificate synchronization error)</li>
+        <li><code>Updated ca-bundle.crt configmap</code> (CA Bundle
+        update)</li>
+        </ul></li>
+        </ul></li>
+        <li><strong>Secret/ConfigMap Annotations:</strong>
+        <ul>
+        <li><code>library-go/certrotation</code> adds annotations to the
+        Secrets and ConfigMaps it manages, recording information such as
+        certificate expiration time and last rotation time. Checking the
+        annotations of <code>etcd-signer</code>,
+        <code>etcd-metric-signer</code>, <code>etcd-ca-bundle</code>,
+        <code>etcd-metric-ca-bundle</code>, and the Secrets
+        corresponding to each certificate in <code>etcd-all-certs</code>
+        (such as <code>etcd-peer-*</code>, <code>etcd-serving-*</code>)
+        can provide insight into the rotation status.</li>
+        </ul></li>
+        </ul>
+        <h2 id="monitoring-metrics">7. Monitoring Metrics</h2>
+        <ul>
+        <li><strong><code>openshift_etcd_operator_signer_expiration_days</code>:</strong>
+        (Gauge) Exposed by the <code>EtcdCertSignerController</code>.
+        Shows how many days remain until the <code>signer-ca</code> and
+        <code>metrics-signer-ca</code> expire. This is a key metric for
+        monitoring Signer CA health. Alert rules should be set to
+        trigger an alarm when the expiration time is too close (e.g.,
+        less than 30 days).</li>
+        </ul>
+        <h2 id="operational-perspective">8. Operational Perspective</h2>
+        <ul>
+        <li><strong>Monitoring:</strong>
+        <ul>
+        <li><strong>Core:</strong> Monitor the
+        <code>openshift_etcd_operator_signer_expiration_days</code>
+        metric to ensure CA certificates have sufficient validity
+        period.</li>
+        <li>Monitor the status of <code>clusteroperator/etcd</code>,
+        especially the <code>EtcdCertSignerControllerDegraded</code>
+        condition.</li>
+        <li>Monitor Kubernetes Events in relevant namespaces.</li>
+        </ul></li>
+        <li><strong>Troubleshooting:</strong>
+        <ul>
+        <li>If <code>EtcdCertSignerControllerDegraded</code> is
+        <code>True</code>, check Operator logs and events for detailed
+        errors. Common causes include:
+        <ul>
+        <li><strong>Insufficient Quorum:</strong> The Etcd cluster is
+        unhealthy and needs to be restored to health first.</li>
+        <li><strong>API Access Issues:</strong> Operator RBAC permission
+        problems or API Server issues.</li>
+        <li><strong>Resource Write Failures:</strong> Unable to update
+        Secrets or ConfigMaps.</li>
+        </ul></li>
+        <li>If certificates have not been rotated for a long time
+        (determined by checking Secret annotations or metrics), check
+        Operator logs to confirm that the
+        <code>EtcdCertSignerController</code> is running normally and
+        not continuously reporting errors.</li>
+        <li>During Signer CA rotation, check the
+        <code>etcd-ca-bundle</code> and
+        <code>etcd-metric-ca-bundle</code> ConfigMaps to confirm that
+        they contain two CA certificates.</li>
+        <li>Check the update timestamp and content of the
+        <code>etcd-all-certs</code> Secret to confirm that certificates
+        are being aggregated as expected.</li>
+        <li>Check the rolling update status of Etcd Pods to confirm that
+        new Revisions are being successfully deployed.</li>
+        </ul></li>
+        <li><strong>Manual Intervention:</strong>
+        <ul>
+        <li>Certificate rotation is <strong>fully automatic</strong> and
+        typically does not require manual intervention.</li>
+        <li><strong>Forced Rotation:</strong>
+        <code>library-go/certrotation</code> can usually force rotation
+        during the next sync by deleting specific annotations from the
+        Secret, but this is an advanced operation and should be used
+        with caution. It’s better to first try to resolve the root cause
+        of automatic rotation failure. Manual triggering is not
+        recommended in routine operations.
+        <ul>
+        <li><strong>Specific steps for forced rotation:</strong> Based
+        on source code analysis, here are the specific steps to force
+        certificate rotation:
+        <ol type="1">
+        <li><p>Key annotations that need to be deleted:</p>
+        <ul>
+        <li><code>auth.openshift.io/certificate-not-before</code> -
+        Certificate effective time</li>
+        <li><code>auth.openshift.io/certificate-not-after</code> -
+        Certificate expiration time</li>
+        </ul></li>
+        <li><p>Operation example (using etcd-signer as an example):</p>
+        <div class="sourceCode" id="cb5"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># View current annotations of the certificate Secret</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> get secret etcd-signer <span class="at">-n</span> openshift-etcd <span class="at">-o</span> yaml</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Edit the Secret to delete annotations</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> edit secret etcd-signer <span class="at">-n</span> openshift-etcd</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="co"># In the editor, delete the auth.openshift.io/certificate-not-before or auth.openshift.io/certificate-not-after annotations</span></span></code></pre></div></li>
+        <li><p>After deleting these annotations, in the next sync cycle
+        (typically once per minute), the
+        <code>EtcdCertSignerController</code> will detect the missing
+        annotations and consider that a new certificate needs to be
+        generated.</p></li>
+        <li><p>Related logic in the source code (from
+        <code>library-go/pkg/operator/certrotation/signer.go</code>):
+        <code>go      func getValidityFromAnnotations(annotations map[string]string) (notBefore time.Time, notAfter time.Time, reason string) {          notAfterString := annotations[CertificateNotAfterAnnotation]          if len(notAfterString) == 0 {              return notBefore, notAfter, "missing notAfter"          }          // ...          notBeforeString := annotations[CertificateNotBeforeAnnotation]          if len(notAfterString) == 0 {              return notBefore, notAfter, "missing notBefore"          }          // ...      }</code>
+        When these annotations are missing, the controller will record
+        the reason as “missing notAfter” or “missing notBefore” and
+        trigger certificate rotation.</p></li>
+        </ol></li>
+        </ul></li>
+        <li>If long-term Operator failure leads to certificate
+        expiration, a more complex manual recovery process may be
+        required (potentially involving manual certificate generation,
+        Secret updates, manual Pod restarts, etc.). Refer to the
+        official OpenShift documentation or seek support.</li>
+        </ul></li>
+        <li><strong>Awareness:</strong>
+        <ul>
+        <li>Understand that certificate rotation depends on a healthy
+        Etcd cluster (Quorum).</li>
+        <li>Understand that Signer CA rotation is a smooth process, with
+        old and new CAs coexisting for a period of time.</li>
+        <li>Understand that certificate updates ultimately take effect
+        through Etcd Pod rolling updates triggered by changes to the
+        <code>etcd-all-certs</code> Secret.</li>
+        </ul></li>
+        </ul>
+      </article>
+    </div>
+      </main>
+
+  <footer>
+    <p>
+      Licensed under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank"
+        rel="noopener">CC-BY-NC-SA 4.0</a>
+      &nbsp;·&nbsp;
+      <a href="https://github.com/wangzheng422/docker_env" target="_blank" rel="noopener">wangzheng422/docker_env</a>
+    </p>
+  </footer>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: false, theme: 'dark' });
+
+    const SITE_BUILD_ID = 'fbe91b569ae8';
+    const SITE_HOME_URL = '../../../index.html';
+
+    const getBuildIdFromHtml = (html) => {
+      const match = String(html).match(/<meta[^>]+name=["']site-build-id["'][^>]+content=["']([^"']+)["']/i)
+        || String(html).match(/<meta[^>]+content=["']([^"']+)["'][^>]+name=["']site-build-id["']/i);
+      return match ? match[1] : '';
+    };
+
+    const checkForSiteUpdate = async () => {
+      if (!SITE_BUILD_ID || window.location.protocol === 'file:') return;
+      try {
+        const probeUrl = new URL(SITE_HOME_URL || './index.html', window.location.href);
+        probeUrl.searchParams.set('site_cache_probe', Date.now().toString());
+        const response = await fetch(probeUrl.toString(), { cache: 'no-store' });
+        if (!response.ok) return;
+        const latestBuildId = getBuildIdFromHtml(await response.text());
+        if (!latestBuildId || latestBuildId === SITE_BUILD_ID) return;
+        if (sessionStorage.getItem('site-build-refresh') === latestBuildId) return;
+        sessionStorage.setItem('site-build-refresh', latestBuildId);
+        const freshUrl = new URL(window.location.href);
+        freshUrl.searchParams.set('v', latestBuildId);
+        window.location.replace(freshUrl.toString());
+      } catch (error) {
+        // Network errors should not block reading the current page.
+      }
+    };
+
+    const versionedLocalUrl = (rawUrl) => {
+      if (!rawUrl || /^(https?:)?\/\//i.test(rawUrl) || /^(data|blob|mailto):/i.test(rawUrl)) return rawUrl;
+      const url = new URL(rawUrl, window.location.href);
+      if (url.searchParams.has('v')) return rawUrl;
+      url.searchParams.set('v', SITE_BUILD_ID);
+      return url.toString();
+    };
+
+    const cacheBustPageAssets = () => {
+      document.querySelectorAll('img[src], video[src], audio[src], source[src]').forEach((node) => {
+        const src = node.getAttribute('src');
+        const versioned = versionedLocalUrl(src);
+        if (versioned !== src) node.setAttribute('src', versioned);
+      });
+    };
+
+    const updateReadingProgress = () => {
+      const progress = document.querySelector('.reading-progress');
+      if (!progress) return;
+      const scrollable = document.documentElement.scrollHeight - window.innerHeight;
+      const ratio = scrollable > 0 ? window.scrollY / scrollable : 0;
+      progress.style.transform = 'scaleX(' + Math.min(1, Math.max(0, ratio)) + ')';
+    };
+
+    const topicFor = (text, href) => {
+      const haystack = (text + ' ' + href).toLowerCase();
+      if (/developers\.redhat\.com|redhatquickcourses|github\.com\/redhatquickcourses/.test(haystack)) return 'Red Hat';
+      if (/ai|llm|gpu|vllm|llama|model|rhaiis/.test(haystack)) return 'AI';
+      if (/network|ovn|bgp|dns|egress|ingress|metallb|nic|route/.test(haystack)) return 'Network';
+      if (/cert|tls|sso|keycloak|rhbk|security|compliance/.test(haystack)) return 'Security';
+      if (/perf|profile|throttling|heap|debug/.test(haystack)) return 'Performance';
+      if (/install|ipi|upi|sno|disconnected|bootstrap/.test(haystack)) return 'Install';
+      if (/rhel|coreos|rhcos|kernel|rpm|ostree/.test(haystack)) return 'RHEL';
+      if (/backup|storage|nfs|odf|ocs|ceph|dr/.test(haystack)) return 'Storage';
+      if (/pipeline|gitops|ansible|aap|rhdh|devops/.test(haystack)) return 'DevOps';
+      return 'OpenShift';
+    };
+
+    const yearFor = (text, href) => {
+      const match = (text + ' ' + href).match(/20\d{2}/);
+      return match ? match[0] : 'Notes';
+    };
+
+    const importantExternal = (href) =>
+      /developers\.redhat\.com|redhatquickcourses\.github\.io/i.test(href);
+
+    const titleForLink = (link) => {
+      const href = link.getAttribute('href') || '';
+      const directText = link.textContent.trim().replace(/\s+/g, ' ');
+      if (!/^https?:\/\//.test(directText)) return directText;
+      const parentItem = link.closest('ul')?.parentElement;
+      if (parentItem) {
+        const clone = parentItem.cloneNode(true);
+        clone.querySelectorAll('ul').forEach((nested) => nested.remove());
+        const parentText = clone.textContent.trim().replace(/\s+/g, ' ');
+        if (parentText) {
+          return parentText;
+        }
+      }
+      return directText;
+    };
+
+    const escapeHtml = (value) => String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+
+    const enhanceHome = () => {
+      if (!document.body.classList.contains('page-index')) return;
+      const source = document.querySelector('.home-source');
+      const grid = document.getElementById('note-grid');
+      const stats = document.getElementById('console-stats');
+      const externalPanel = document.getElementById('external-panel');
+      const topicStrip = document.getElementById('topic-strip');
+      const search = document.getElementById('console-search');
+      if (!source || !grid || !stats || !externalPanel || !topicStrip || !search) return;
+
+      const seen = new Set();
+      const links = Array.from(source.querySelectorAll('a[href]'))
+        .map((link) => {
+          const href = link.getAttribute('href') || '';
+          const text = titleForLink(link);
+          return { text, href, topic: topicFor(text, href), year: yearFor(text, href) };
+        });
+      const notes = links
+        .filter((note) => note.text && !note.href.startsWith('http') && !seen.has(note.href) && seen.add(note.href));
+      const externalLinks = links
+        .filter((note) => note.text && importantExternal(note.href));
+
+      const topics = ['All', ...Array.from(new Set(notes.map((note) => note.topic))).sort()];
+      let activeTopic = 'All';
+
+      const renderStats = () => {
+        const years = notes.map((note) => note.year).filter((year) => year.length === 4 && /^\d{4}/.test(year));
+        const latest = years.length ? Math.max(...years.map(Number)) : 'N/A';
+        const oldest = years.length ? Math.min(...years.map(Number)) : 'N/A';
+        stats.innerHTML = [
+          ['Notes', notes.length],
+          ['Resources', externalLinks.length],
+          ['Topics', topics.length - 1],
+          ['Latest', latest],
+        ].map(([label, value]) => '<div class="stat-tile"><span>' + label + '</span><strong>' + value + '</strong></div>').join('');
+        const signal = document.getElementById('signal-count');
+        if (signal) signal.textContent = notes.length + ' links indexed';
+      };
+
+      const renderExternal = () => {
+        externalPanel.innerHTML =
+          '<div class="section-heading"><span>Published / Learning</span><strong>Red Hat resources</strong></div>' +
+          '<div class="external-grid">' +
+          externalLinks.map((note) =>
+            '<a class="resource-card" href="' + escapeHtml(note.href) + '" target="_blank" rel="noopener">' +
+            '<span class="note-meta"><span>' + escapeHtml(note.year) + '</span><span>' + escapeHtml(note.topic) + '</span></span>' +
+            '<strong>' + escapeHtml(note.text) + '</strong>' +
+            '<small>' + escapeHtml(note.href) + '</small>' +
+            '</a>'
+          ).join('') +
+          '</div>';
+      };
+
+      const renderTopics = () => {
+        topicStrip.innerHTML = topics.map((topic) => '<button class="topic-chip' + (topic === activeTopic ? ' active' : '') + '" type="button" data-topic="' + escapeHtml(topic) + '">' + escapeHtml(topic) + '</button>').join('');
+        topicStrip.querySelectorAll('button').forEach((button) => {
+          button.addEventListener('click', () => {
+            activeTopic = button.dataset.topic || 'All';
+            renderTopics();
+            renderCards();
+          });
+        });
+      };
+
+      const renderCards = () => {
+        const query = search.value.trim().toLowerCase();
+        const filtered = notes.filter((note) => {
+          const topicMatch = activeTopic === 'All' || note.topic === activeTopic;
+          const queryMatch = !query || (note.text + ' ' + note.href + ' ' + note.topic + ' ' + note.year).toLowerCase().includes(query);
+          return topicMatch && queryMatch;
+        });
+        grid.innerHTML = filtered.map((note) =>
+          '<a class="note-card" href="' + escapeHtml(note.href) + '">' +
+          '<span class="note-meta"><span>' + escapeHtml(note.year) + '</span><span>' + escapeHtml(note.topic) + '</span></span>' +
+          '<strong>' + escapeHtml(note.text) + '</strong>' +
+          '<small>' + escapeHtml(note.href) + '</small>' +
+          '</a>'
+        ).join('') || '<p class="empty-state">No matching notes.</p>';
+      };
+
+      const drawMap = () => {
+        const canvas = document.getElementById('knowledge-canvas');
+        if (!(canvas instanceof HTMLCanvasElement)) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        const width = canvas.width;
+        const height = canvas.height;
+        const nodes = notes.slice(0, 44).map((note, index) => {
+          const angle = (index / 44) * Math.PI * 2;
+          const ring = 90 + (index % 5) * 22;
+          return {
+            x: width / 2 + Math.cos(angle) * ring,
+            y: height / 2 + Math.sin(angle) * ring * 0.72,
+            topic: note.topic,
+          };
+        });
+        ctx.clearRect(0, 0, width, height);
+        ctx.strokeStyle = 'rgba(88, 166, 255, 0.14)';
+        ctx.lineWidth = 1;
+        nodes.forEach((node, index) => {
+          const next = nodes[(index + 7) % nodes.length];
+          ctx.beginPath();
+          ctx.moveTo(node.x, node.y);
+          ctx.lineTo(next.x, next.y);
+          ctx.stroke();
+        });
+        const palette = {
+          AI: '#a371f7',
+          Network: '#39d0d8',
+          Security: '#ff7b72',
+          Performance: '#f2cc60',
+          Install: '#7ee787',
+          RHEL: '#ff7b72',
+          Storage: '#d2a8ff',
+          DevOps: '#ffa657',
+          OpenShift: '#58a6ff',
+        };
+        nodes.forEach((node) => {
+          ctx.fillStyle = palette[node.topic] || '#58a6ff';
+          ctx.beginPath();
+          ctx.arc(node.x, node.y, 3.4, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      };
+
+      search.addEventListener('input', renderCards);
+      renderStats();
+      renderExternal();
+      renderTopics();
+      renderCards();
+      drawMap();
+      document.body.classList.add('home-enhanced');
+    };
+
+    const enhanceCodeBlocks = () => {
+      document.querySelectorAll('pre').forEach((pre) => {
+        if (pre.classList.contains('mermaid') || pre.querySelector('.copy-code')) return;
+        const button = document.createElement('button');
+        button.className = 'copy-code';
+        button.type = 'button';
+        button.textContent = 'Copy';
+        button.addEventListener('click', async () => {
+          await navigator.clipboard.writeText(pre.textContent || '');
+          button.textContent = 'Copied';
+          setTimeout(() => { button.textContent = 'Copy'; }, 1200);
+        });
+        pre.appendChild(button);
+      });
+    };
+
+    window.addEventListener('scroll', updateReadingProgress, { passive: true });
+    window.addEventListener('pageshow', (event) => {
+      if (event.persisted) checkForSiteUpdate();
+    });
+    document.addEventListener('DOMContentLoaded', async () => {
+      checkForSiteUpdate();
+      cacheBustPageAssets();
+      updateReadingProgress();
+      enhanceHome();
+      enhanceCodeBlocks();
+      // pandoc 输出 mermaid 为 <pre class="mermaid"><code>...</code></pre>
+      // 需要转成 <div class="mermaid">...</div> 供 mermaid.js 渲染
+      document.querySelectorAll('pre.mermaid').forEach(pre => {
+        const div = document.createElement('div');
+        div.classList.add('mermaid');
+        div.textContent = pre.textContent;
+        pre.replaceWith(div);
+      });
+      // 也处理 <pre><code class="language-mermaid"> 形式（备用）
+      document.querySelectorAll('pre code.language-mermaid').forEach(code => {
+        const div = document.createElement('div');
+        div.classList.add('mermaid');
+        div.textContent = code.textContent;
+        code.closest('pre').replaceWith(div);
+      });
+      await mermaid.run();
+    });
+  </script>
+</body>
+
+</html>

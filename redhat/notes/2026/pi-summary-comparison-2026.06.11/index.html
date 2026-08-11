@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>1M Summary Agent Comparison Report</title>
+<style>
+:root { color-scheme: light; --text:#24292f; --muted:#57606a; --line:#d0d7de; --bg:#ffffff; --soft:#f6f8fa; --accent:#1f6feb; }
+body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; color:var(--text); background:var(--bg); line-height:1.55; }
+main { max-width:1120px; margin:0 auto; padding:32px 20px 56px; }
+h1 { font-size:32px; margin:0 0 8px; }
+h2 { font-size:22px; margin:34px 0 12px; }
+p { margin:10px 0; }
+.meta, .callout { background:var(--soft); border:1px solid var(--line); border-radius:8px; padding:14px 16px; }
+.callout { border-left:4px solid var(--accent); }
+figure { margin:22px 0; }
+figure img { width:100%; height:auto; border:1px solid var(--line); border-radius:8px; background:white; }
+figcaption { color:var(--muted); font-size:14px; margin-top:6px; }
+table { width:100%; border-collapse:collapse; margin:16px 0; font-size:14px; }
+th, td { border:1px solid var(--line); padding:8px 10px; vertical-align:top; }
+th { background:var(--soft); text-align:left; }
+.num { text-align:right; white-space:nowrap; }
+code { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:0.92em; }
+ul { padding-left:22px; }
+@media (max-width: 760px) { main { padding:20px 12px 40px; } h1 { font-size:26px; } table { display:block; overflow-x:auto; white-space:nowrap; } }
+</style>
+</head>
+<body>
+<main>
+<h1>1M Summary Agent Comparison Report</h1>
+<div class="meta">
+<strong>Package date:</strong> 2026-06-11<br>
+<strong>Input:</strong> Synthetic 1,000,000-character customer document<br>
+<strong>Agent:</strong> Python deterministic chunk-map-reduce pipeline, not <code>pi-agent-core</code>
+</div>
+<h2>Executive Conclusion</h2>
+<div class="callout">Across the completed scenarios, the summary-agent approach only wins when direct full-context input is impossible. Once the endpoint can accept direct 1M efficiently, direct is simpler and faster in these tests.</div>
+<p>The tuned L40S agent run improved from 194.22s to 93.26s after increasing <code>max_num_seqs</code>, but direct 1M on the same endpoint remained about 34.19s. On B200, direct 1M was 14.46s while the agent was 93.45s.</p>
+<h2>Latency Charts</h2>
+<figure><img src="assets/latency-trend.svg" alt="Line chart comparing full coverage latency across serving profiles"><figcaption>Full-coverage latency. The clipped line is partial coverage and should not be read as a full-summary substitute.</figcaption></figure>
+<figure><img src="assets/agent-direct-ratio.svg" alt="Bar chart showing agent elapsed divided by direct elapsed"><figcaption>Values above 1x mean the agent is slower than direct 1M.</figcaption></figure>
+<h2>Scenario Comparison</h2>
+<table>
+<thead><tr><th>Scenario</th><th>Hardware</th><th>Serving profile</th><th>Agent</th><th>Direct 1M</th><th>Direct clipped</th><th>Interpretation</th></tr></thead>
+<tbody>
+<tr><td>L4 32K</td><td>4x NVIDIA L4</td><td><code>max_model_len=32768</code></td><td class="num">168.40s</td><td class="num">N/A</td><td class="num">12.51s</td><td>direct full failed</td></tr>
+<tr><td>L4 1M</td><td>4x NVIDIA L4</td><td><code>max_model_len=1010000, YaRN/RoPE</code></td><td class="num">168.40s</td><td class="num">171.27s</td><td class="num">12.51s</td><td>agent faster, 0.98x direct time</td></tr>
+<tr><td>B200 1M</td><td>1x NVIDIA B200</td><td><code>max_model_len=1010000, max_num_seqs=1</code></td><td class="num">93.45s</td><td class="num">14.46s</td><td class="num">3.66s</td><td>agent slower, 6.46x direct time</td></tr>
+<tr><td>L40S seq1</td><td>4x NVIDIA L40S, PCIe only</td><td><code>max_model_len=1010000, max_num_seqs=1</code></td><td class="num">194.22s</td><td class="num">34.10s</td><td class="num">5.77s</td><td>agent slower, 5.70x direct time</td></tr>
+<tr><td>L40S seq4</td><td>4x NVIDIA L40S, PCIe only</td><td><code>max_model_len=1010000, max_num_seqs=4</code></td><td class="num">93.26s</td><td class="num">34.19s</td><td class="num">5.76s</td><td>agent slower, 2.73x direct time</td></tr>
+</tbody>
+</table>
+<h2>When The Agent Still Helps</h2>
+<ul>
+<li>The endpoint cannot accept the full input because of context, gateway, or KV cache limits.</li>
+<li>The workflow must prove source coverage and retain full request-body audit JSONL.</li>
+<li>The task needs structured per-section extraction before final reduction.</li>
+<li>The input exceeds the largest available model context.</li>
+</ul>
+<h2>Portable Evidence</h2>
+<p>This directory includes <code>metrics.csv</code>, <code>metrics.json</code>, local chart assets, copied source reports under <code>evidence/reports/</code>, and copied raw benchmark/log artifacts under <code>evidence/raw/</code>.</p>
+<h2>Caveats</h2>
+<ul>
+<li>The source document is synthetic and repetitive; this is a latency/context benchmark, not a quality benchmark.</li>
+<li>Hardware differs across scenarios, so this is not a controlled A/B test.</li>
+<li>Some model outputs contained reasoning-style text; production formatting would require stricter prompts or model settings.</li>
+</ul>
+</main>
+</body>
+</html>

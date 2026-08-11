@@ -1,0 +1,1602 @@
+<!DOCTYPE html>
+<html lang="zh" dir="ltr">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="generator" content="pandoc" />
+  <meta name="site-build-id" content="fbe91b569ae8" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <title>一个简单的端到端的CI/CD演示 a simple, working ci/cd process demo | wandering.star notes</title>
+  <meta name="description"
+    content="Wandering field notes on OpenShift, RHEL, AI infrastructure, and platform operations." />
+  <!-- Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-E3FRMDB7L2"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-E3FRMDB7L2');
+  </script>
+  <style>
+  html {
+    color: #1a1a1a;
+    background-color: #fdfdfd;
+  }
+  body {
+    margin: 0 auto;
+    max-width: 36em;
+    padding-left: 50px;
+    padding-right: 50px;
+    padding-top: 50px;
+    padding-bottom: 50px;
+    hyphens: auto;
+    overflow-wrap: break-word;
+    text-rendering: optimizeLegibility;
+    font-kerning: normal;
+  }
+  @media (max-width: 600px) {
+    body {
+      font-size: 0.9em;
+      padding: 12px;
+    }
+    h1 {
+      font-size: 1.8em;
+    }
+  }
+  @media print {
+    html {
+      background-color: white;
+    }
+    body {
+      background-color: transparent;
+      color: black;
+      font-size: 12pt;
+    }
+    p, h2, h3 {
+      orphans: 3;
+      widows: 3;
+    }
+    h2, h3, h4 {
+      page-break-after: avoid;
+    }
+  }
+  p {
+    margin: 1em 0;
+  }
+  a {
+    color: #1a1a1a;
+  }
+  a:visited {
+    color: #1a1a1a;
+  }
+  img {
+    max-width: 100%;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.4em;
+  }
+  h5, h6 {
+    font-size: 1em;
+    font-style: italic;
+  }
+  h6 {
+    font-weight: normal;
+  }
+  ol, ul {
+    padding-left: 1.7em;
+    margin-top: 1em;
+  }
+  li > ol, li > ul {
+    margin-top: 0;
+  }
+  blockquote {
+    margin: 1em 0 1em 1.7em;
+    padding-left: 1em;
+    border-left: 2px solid #e6e6e6;
+    color: #606060;
+  }
+  code {
+    font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+    font-size: 85%;
+    margin: 0;
+    hyphens: manual;
+  }
+  pre {
+    margin: 1em 0;
+    overflow: auto;
+  }
+  pre code {
+    padding: 0;
+    overflow: visible;
+    overflow-wrap: normal;
+  }
+  .sourceCode {
+   background-color: transparent;
+   overflow: visible;
+  }
+  hr {
+    background-color: #1a1a1a;
+    border: none;
+    height: 1px;
+    margin: 1em 0;
+  }
+  table {
+    margin: 1em 0;
+    border-collapse: collapse;
+    width: 100%;
+    overflow-x: auto;
+    display: block;
+    font-variant-numeric: lining-nums tabular-nums;
+  }
+  table caption {
+    margin-bottom: 0.75em;
+  }
+  tbody {
+    margin-top: 0.5em;
+    border-top: 1px solid #1a1a1a;
+    border-bottom: 1px solid #1a1a1a;
+  }
+  th {
+    border-top: 1px solid #1a1a1a;
+    padding: 0.25em 0.5em 0.25em 0.5em;
+  }
+  td {
+    padding: 0.125em 0.5em 0.25em 0.5em;
+  }
+  header {
+    margin-bottom: 4em;
+    text-align: center;
+  }
+  #TOC li {
+    list-style: none;
+  }
+  #TOC ul {
+    padding-left: 1.3em;
+  }
+  #TOC > ul {
+    padding-left: 0;
+  }
+  #TOC a:not(:hover) {
+    text-decoration: none;
+  }
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  div.columns{display: flex; gap: min(4vw, 1.5em);}
+  div.column{flex: auto; overflow-x: auto;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  /* The extra [class] is a hack that increases specificity enough to
+     override a similar rule in reveal.js */
+  ul.task-list[class]{list-style: none;}
+  ul.task-list li input[type="checkbox"] {
+    font-size: inherit;
+    width: 0.8em;
+    margin: 0 0.8em 0.2em -1.6em;
+    vertical-align: middle;
+  }
+  .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  /* CSS for syntax highlighting */
+  pre > code.sourceCode { white-space: pre; position: relative; }
+  pre > code.sourceCode > span { line-height: 1.25; }
+  pre > code.sourceCode > span:empty { height: 1.2em; }
+  .sourceCode { overflow: visible; }
+  code.sourceCode > span { color: inherit; text-decoration: inherit; }
+  div.sourceCode { margin: 1em 0; }
+  pre.sourceCode { margin: 0; }
+  @media screen {
+  div.sourceCode { overflow: auto; }
+  }
+  @media print {
+  pre > code.sourceCode { white-space: pre-wrap; }
+  pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+  }
+  pre.numberSource code
+    { counter-reset: source-line 0; }
+  pre.numberSource code > span
+    { position: relative; left: -4em; counter-increment: source-line; }
+  pre.numberSource code > span > a:first-child::before
+    { content: counter(source-line);
+      position: relative; left: -1em; text-align: right; vertical-align: baseline;
+      border: none; display: inline-block;
+      -webkit-touch-callout: none; -webkit-user-select: none;
+      -khtml-user-select: none; -moz-user-select: none;
+      -ms-user-select: none; user-select: none;
+      padding: 0 4px; width: 4em;
+    }
+  pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+  div.sourceCode
+    { color: #cccccc; background-color: #303030; }
+  @media screen {
+  pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+  }
+  code span.al { color: #ffcfaf; } /* Alert */
+  code span.an { color: #7f9f7f; font-weight: bold; } /* Annotation */
+  code span.at { } /* Attribute */
+  code span.bn { color: #dca3a3; } /* BaseN */
+  code span.bu { } /* BuiltIn */
+  code span.cf { color: #f0dfaf; } /* ControlFlow */
+  code span.ch { color: #dca3a3; } /* Char */
+  code span.cn { color: #dca3a3; font-weight: bold; } /* Constant */
+  code span.co { color: #7f9f7f; } /* Comment */
+  code span.cv { color: #7f9f7f; font-weight: bold; } /* CommentVar */
+  code span.do { color: #7f9f7f; } /* Documentation */
+  code span.dt { color: #dfdfbf; } /* DataType */
+  code span.dv { color: #dcdccc; } /* DecVal */
+  code span.er { color: #c3bf9f; } /* Error */
+  code span.ex { } /* Extension */
+  code span.fl { color: #c0bed1; } /* Float */
+  code span.fu { color: #efef8f; } /* Function */
+  code span.im { } /* Import */
+  code span.in { color: #7f9f7f; font-weight: bold; } /* Information */
+  code span.kw { color: #f0dfaf; } /* Keyword */
+  code span.op { color: #f0efd0; } /* Operator */
+  code span.ot { color: #efef8f; } /* Other */
+  code span.pp { color: #ffcfaf; font-weight: bold; } /* Preprocessor */
+  code span.sc { color: #dca3a3; } /* SpecialChar */
+  code span.ss { color: #cc9393; } /* SpecialString */
+  code span.st { color: #cc9393; } /* String */
+  code span.va { } /* Variable */
+  code span.vs { color: #cc9393; } /* VerbatimString */
+  code span.wa { color: #7f9f7f; font-weight: bold; } /* Warning */
+  </style>
+  <link rel="stylesheet" href="../../../style.css?v=fbe91b569ae8" />
+  </head>
+
+<body class="page-article">
+  <div class="reading-progress" aria-hidden="true"></div>
+  <div class="console-backdrop" aria-hidden="true"></div>
+  <nav class="site-nav">
+    <div class="nav-inner">
+      <a class="nav-brand" href="../../../index.html">wandering.star<span>notes</span></a>
+      <div class="nav-links">
+        <a href="https://github.com/wangzheng422/docker_env" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://www.youtube.com/@wangzheng422" target="_blank" rel="noopener">YouTube</a>
+      </div>
+    </div>
+  </nav>
+
+  <main>
+            <a class="back-link" href="../../../index.html">← Back to Index</a>
+        <div class="article-layout">
+            <aside class="toc-panel">
+        <div class="toc-title">ON THIS PAGE</div>
+        <ul>
+        <li><a
+        href="#一个简单的端到端的cicd演示-a-simple-working-cicd-process-demo"
+        id="toc-一个简单的端到端的cicd演示-a-simple-working-cicd-process-demo">一个简单的端到端的CI/CD演示
+        a simple, working ci/cd process demo</a></li>
+        <li><a href="#基础镜像-base-image"
+        id="toc-基础镜像-base-image">基础镜像 / base image</a>
+        <ul>
+        <li><a href="#quay.io" id="toc-quay.io">quay.io</a></li>
+        <li><a href="#github" id="toc-github">github</a></li>
+        <li><a href="#gitee" id="toc-gitee">gitee</a></li>
+        <li><a href="#http-proxy" id="toc-http-proxy">http
+        proxy</a></li>
+        </ul></li>
+        <li><a href="#quay" id="toc-quay">quay</a></li>
+        <li><a href="#openshift4" id="toc-openshift4">openshift4</a>
+        <ul>
+        <li><a href="#install-ocp4" id="toc-install-ocp4">install
+        ocp4</a></li>
+        <li><a href="#install-tektoncicd-pipeline"
+        id="toc-install-tektoncicd-pipeline">install tekton(ci/cd
+        pipeline)</a></li>
+        <li><a href="#install-argocdcicd-gitops"
+        id="toc-install-argocdcicd-gitops">install argocd(ci/cd
+        gitops)</a></li>
+        <li><a href="#install-hostpath-provisioner-from-kubevirt"
+        id="toc-install-hostpath-provisioner-from-kubevirt">install
+        hostpath-provisioner from kubevirt</a></li>
+        </ul></li>
+        <li><a href="#cicd-in-shell" id="toc-cicd-in-shell">CI/CD in
+        shell</a>
+        <ul>
+        <li><a href="#容器镜像版本号"
+        id="toc-容器镜像版本号">容器镜像版本号</a></li>
+        <li><a href="#build-image-sync-image"
+        id="toc-build-image-sync-image">build image &amp;&amp; sync
+        image</a>
+        <ul>
+        <li><a href="#for-vbbu-app" id="toc-for-vbbu-app">for vbbu
+        app</a></li>
+        <li><a href="#for-fpga-driver" id="toc-for-fpga-driver">for fpga
+        driver</a></li>
+        </ul></li>
+        <li><a href="#auto-deploy-to-openshift"
+        id="toc-auto-deploy-to-openshift">auto deploy to
+        openshift</a></li>
+        </ul></li>
+        <li><a href="#cicd-in-openshift4"
+        id="toc-cicd-in-openshift4">CI/CD in openshift4</a>
+        <ul>
+        <li><a href="#tekton-pipeline" id="toc-tekton-pipeline">tekton /
+        pipeline</a></li>
+        <li><a href="#argocd-gitops" id="toc-argocd-gitops">argocd /
+        gitops</a></li>
+        </ul></li>
+        <li><a href="#end" id="toc-end">end</a></li>
+        </ul>
+      </aside>
+            <article class="markdown-body article-shell">
+        <h1
+        id="一个简单的端到端的cicd演示-a-simple-working-cicd-process-demo">一个简单的端到端的CI/CD演示
+        a simple, working ci/cd process demo</h1>
+        <p>客户需求:</p>
+        <ol type="1">
+        <li>实现一个简单的ci/cd流程，因为现在容器的ci/cd流程还没有</li>
+        <li>不能影响已有的开发流程，也就是和现在的开发流程手动对接，从现在的开发流程里面，直接拿到二进制文件</li>
+        <li>可以使用公有云服务，包括github, quay.io</li>
+        <li>手动触发ci/cd流程，手动出发测试环境部署。</li>
+        </ol>
+        <p>客户现场的局限：</p>
+        <ol type="1">
+        <li>公网连接的网速比较慢，大概1MB/s</li>
+        <li>服务器硬盘资源相对有限</li>
+        <li>服务器性质是做实验的，所以可能被临时征用做为他用。</li>
+        </ol>
+        <p>架构设计： <img
+        src="./dia/4.9.ci.cd.design.drawio.svg" /></p>
+        <p>架构设计要点：</p>
+        <ol type="1">
+        <li>公网服务采用github,
+        quay.io，用途是持久化存储代码和镜像，避免内网服务器的不稳定或硬盘空间不足。同时在公网服务上编译基础镜像。</li>
+        <li>公司内网部署gitea, quay，并和公网服务同步。</li>
+        <li>采用openshift的pipeline, gitops功能，实现CI/CD流程。</li>
+        </ol>
+        <p>视频讲解:</p>
+        <p><a
+        href="https://www.bilibili.com/video/BV1wm4y1f7Gm"><kbd><img src="imgs/2022-01-25-09-18-10.png" width="600"></kbd></a></p>
+        <ul>
+        <li><a
+        href="https://www.bilibili.com/video/BV1wm4y1f7Gm">bilibili</a></li>
+        <li><a href="https://youtu.be/wKUtJH_T0uA">youtube</a></li>
+        </ul>
+        <h1 id="基础镜像-base-image">基础镜像 / base image</h1>
+        <p>我们先来配置公有云服务的基础镜像构建。我们用quay.io来作为容器镜像存储平台，用github的action功能，来编译镜像。</p>
+        <p>用github action的功能，是因为未来，我们会基于redhat
+        ubi来编译基础镜像，在这个过程中，需要导入redhat订阅文件，这个就对公有云上的ci/cd工具的灵活性有要求，那么我们就暂时用github的action来编译基础镜像。</p>
+        <h2 id="quay.io">quay.io</h2>
+        <p>在quay.io上，配置robot账号 <img
+        src="imgs/2022-01-13-16-49-21.png" /></p>
+        <p>查看和记录robot账号的用户密码 <img
+        src="imgs/2022-01-13-16-50-23.png" /></p>
+        <p>给robot账号分配权限 <img
+        src="imgs/2022-01-13-16-51-00.png" /></p>
+        <p>reference:</p>
+        <ol type="1">
+        <li>https://event-driven.io/en/how_to_buid_and_push_docker_image_with_github_actions/</li>
+        <li>https://github.com/docker/build-push-action</li>
+        <li>https://docs.github.com/cn/actions/publishing-packages/publishing-docker-images</li>
+        </ol>
+        <h2 id="github">github</h2>
+        <p>已经制作了<a
+        href="https://github.com/wangzheng422/container.build.demo">单独的github项目</a>，作为镜像编译的源文件项目，项目中centos7目录中，有一个docker
+        file文件，是基于centos7的镜像基础，并安装一些软件，最终结果打包，并上传
+        quay.io。不过，这个docker
+        file依赖另外一个镜像，主要是需要那个镜像里面的一个安装包，我们之所以这样设计，是因为找不到一个合适的在公网上免费存储安装包的地方，于是我们就把这个很大的安装包，打到镜像里面，上传到公网的镜像仓库里面，需要用的时候，就采用这种<a
+        href="https://docs.docker.com/develop/develop-images/multistage-build/">多阶段编译</a>的方式，来使用。</p>
+        <p>包含安装包的镜像如何制作，在<a
+        href="https://github.com/wangzheng422/container.build.demo/blob/main/README.md">项目文档中</a>，有详细描述。</p>
+        <div class="sourceCode" id="cb1"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">buildah</span> from <span class="at">--name</span> onbuild-container scratch</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="ex">buildah</span> copy onbuild-container nr5g_19.10.03.bz2 /</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="ex">buildah</span> umount onbuild-container </span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="ex">buildah</span> commit <span class="at">--rm</span> onbuild-container quay.io/baicell/nr5g:latest</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="ex">buildah</span> push quay.io/baicell/nr5g:latest</span></code></pre></div>
+        <p>项目中的.github/workflow目录下的main.yml文件，描述了激活github
+        action，并且ci/cd的步骤。可以参考这个文件看公有云上，如何编译镜像。</p>
+        <p>github
+        action里面，需要quay.io的robot账号信息，我们使用github的secret功能来实现。</p>
+        <p><img src="imgs/2022-01-13-17-14-01.png" /></p>
+        <h2 id="gitee">gitee</h2>
+        <p>由于不可描述的原因，国内访问github很不稳定，所以我们就用gitee来克隆github
+        repo，让gitee变相做一个git代理。github clone to <a
+        href="https://gitee.com/wangzheng422/container.build.demo">gitee</a></p>
+        <h2 id="http-proxy">http proxy</h2>
+        <p>由于我们的openshift环境是模拟的全离线环境，而我们的实验/方案，有一些操作是需要联网的，那么我们就需要部署一个http
+        proxy，来模拟企业内部常有的访问互联网的代理。</p>
+        <div class="sourceCode" id="cb2"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">podman</span> run <span class="at">-d</span> <span class="at">--rm</span> <span class="at">--name</span> tinyproxy <span class="at">-p</span> 18080:8888 ghcr.io/wangzheng422/tinyproxy:latest</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="bu">export</span> <span class="va">http_proxy</span><span class="op">=</span><span class="st">&quot;http://192.168.7.1:18080&quot;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="bu">export</span> <span class="va">https_proxy</span><span class="op">=</span><span class="va">${http_proxy}</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="ex">curl</span> https://ifconfig.co</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="bu">unset</span> <span class="va">http_proxy</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="bu">unset</span> <span class="va">https_proxy</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a></span></code></pre></div>
+        <h1 id="quay">quay</h1>
+        <p>我们来部署一个quay服务，同时激活远程镜像同步功能。由于项目架构设计（基础镜像已经在公有云上扫描了）和服务器资源现状，我们就不开启镜像扫描了。</p>
+        <div class="sourceCode" id="cb3"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># on 103</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> <span class="op">&lt;&lt; EOF</span> <span class="op">&gt;&gt;</span> /etc/hosts</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="st">172.21.6.103 quaylab.infra.redhat.ren</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="op">EOF</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="bu">export</span> <span class="va">QUAY</span><span class="op">=</span>/data/quay</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="co"># generate cert for *.redhat.ren</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a><span class="co"># 配置registry</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a><span class="fu">mkdir</span> <span class="at">-p</span> /etc/crts/ <span class="kw">&amp;&amp;</span> <span class="bu">cd</span> /etc/crts</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a><span class="co"># https://access.redhat.com/documentation/en-us/red_hat_codeready_workspaces/2.1/html/installation_guide/installing-codeready-workspaces-in-tls-mode-with-self-signed-certificates_crw</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a><span class="ex">openssl</span> genrsa <span class="at">-out</span> /etc/crts/redhat.ren.ca.key 4096</span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a><span class="ex">openssl</span> req <span class="at">-x509</span> <span class="dt">\</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>  <span class="at">-new</span> <span class="at">-nodes</span> <span class="dt">\</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>  <span class="at">-key</span> /etc/crts/redhat.ren.ca.key <span class="dt">\</span></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>  <span class="at">-sha256</span> <span class="dt">\</span></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>  <span class="at">-days</span> 36500 <span class="dt">\</span></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>  <span class="at">-out</span> /etc/crts/redhat.ren.ca.crt <span class="dt">\</span></span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>  <span class="at">-subj</span> /CN=<span class="st">&quot;Local Red Hat Ren Signer&quot;</span> <span class="dt">\</span></span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>  <span class="at">-reqexts</span> SAN <span class="dt">\</span></span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a>  <span class="at">-extensions</span> SAN <span class="dt">\</span></span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a>  <span class="at">-config</span> <span class="op">&lt;(</span><span class="fu">cat</span> /etc/pki/tls/openssl.cnf <span class="dt">\</span></span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a>      <span class="op">&lt;(</span><span class="bu">printf</span> <span class="st">&#39;[SAN]\nbasicConstraints=critical, CA:TRUE\nkeyUsage=keyCertSign, cRLSign, digitalSignature&#39;</span><span class="op">))</span></span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a><span class="ex">openssl</span> genrsa <span class="at">-out</span> /etc/crts/redhat.ren.key 2048</span>
+<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a><span class="ex">openssl</span> req <span class="at">-new</span> <span class="at">-sha256</span> <span class="dt">\</span></span>
+<span id="cb3-31"><a href="#cb3-31" aria-hidden="true" tabindex="-1"></a>    <span class="at">-key</span> /etc/crts/redhat.ren.key <span class="dt">\</span></span>
+<span id="cb3-32"><a href="#cb3-32" aria-hidden="true" tabindex="-1"></a>    <span class="at">-subj</span> <span class="st">&quot;/O=Local Red Hat Ren /CN=*.ocp4.redhat.ren&quot;</span> <span class="dt">\</span></span>
+<span id="cb3-33"><a href="#cb3-33" aria-hidden="true" tabindex="-1"></a>    <span class="at">-reqexts</span> SAN <span class="dt">\</span></span>
+<span id="cb3-34"><a href="#cb3-34" aria-hidden="true" tabindex="-1"></a>    <span class="at">-config</span> <span class="op">&lt;(</span><span class="fu">cat</span> /etc/pki/tls/openssl.cnf <span class="dt">\</span></span>
+<span id="cb3-35"><a href="#cb3-35" aria-hidden="true" tabindex="-1"></a>        <span class="op">&lt;(</span><span class="bu">printf</span> <span class="st">&quot;\n[SAN]\nsubjectAltName=DNS:*.ocp4.redhat.ren,DNS:*.apps.ocp4.redhat.ren,DNS:*.ocp4a.redhat.ren,DNS:*.apps.ocp4a.redhat.ren,DNS:*.ocp4b.redhat.ren,DNS:*.apps.ocp4b.redhat.ren,DNS:*.ocp4c.redhat.ren,DNS:*.apps.ocp4c.redhat.ren,DNS:*.ocp4s.redhat.ren,DNS:*.apps.ocp4s.redhat.ren,DNS:*.infra.redhat.ren,DNS:*.tool.redhat.ren,DNS:*.redhat.ren\nbasicConstraints=critical, CA:FALSE\nkeyUsage=digitalSignature, keyEncipherment, keyAgreement, dataEncipherment\nextendedKeyUsage=serverAuth&quot;</span><span class="op">))</span> <span class="dt">\</span></span>
+<span id="cb3-36"><a href="#cb3-36" aria-hidden="true" tabindex="-1"></a>    <span class="at">-out</span> /etc/crts/redhat.ren.csr</span>
+<span id="cb3-37"><a href="#cb3-37" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-38"><a href="#cb3-38" aria-hidden="true" tabindex="-1"></a><span class="ex">openssl</span> x509 <span class="dt">\</span></span>
+<span id="cb3-39"><a href="#cb3-39" aria-hidden="true" tabindex="-1"></a>    <span class="at">-req</span> <span class="dt">\</span></span>
+<span id="cb3-40"><a href="#cb3-40" aria-hidden="true" tabindex="-1"></a>    <span class="at">-sha256</span> <span class="dt">\</span></span>
+<span id="cb3-41"><a href="#cb3-41" aria-hidden="true" tabindex="-1"></a>    <span class="at">-extfile</span> <span class="op">&lt;(</span><span class="bu">printf</span> <span class="st">&quot;subjectAltName=DNS:*.ocp4.redhat.ren,DNS:*.apps.ocp4.redhat.ren,DNS:*.ocp4a.redhat.ren,DNS:*.apps.ocp4a.redhat.ren,DNS:*.ocp4b.redhat.ren,DNS:*.apps.ocp4b.redhat.ren,DNS:*.ocp4c.redhat.ren,DNS:*.apps.ocp4c.redhat.ren,DNS:*.ocp4s.redhat.ren,DNS:*.apps.ocp4s.redhat.ren,DNS:*.infra.redhat.ren,DNS:*.tool.redhat.ren,DNS:*.redhat.ren\nbasicConstraints=critical, CA:FALSE\nkeyUsage=digitalSignature, keyEncipherment, keyAgreement, dataEncipherment\nextendedKeyUsage=serverAuth&quot;</span><span class="op">)</span> <span class="dt">\</span></span>
+<span id="cb3-42"><a href="#cb3-42" aria-hidden="true" tabindex="-1"></a>    <span class="at">-days</span> 365 <span class="dt">\</span></span>
+<span id="cb3-43"><a href="#cb3-43" aria-hidden="true" tabindex="-1"></a>    <span class="at">-in</span> /etc/crts/redhat.ren.csr <span class="dt">\</span></span>
+<span id="cb3-44"><a href="#cb3-44" aria-hidden="true" tabindex="-1"></a>    <span class="at">-CA</span> /etc/crts/redhat.ren.ca.crt <span class="dt">\</span></span>
+<span id="cb3-45"><a href="#cb3-45" aria-hidden="true" tabindex="-1"></a>    <span class="at">-CAkey</span> /etc/crts/redhat.ren.ca.key <span class="dt">\</span></span>
+<span id="cb3-46"><a href="#cb3-46" aria-hidden="true" tabindex="-1"></a>    <span class="at">-CAcreateserial</span> <span class="at">-out</span> /etc/crts/redhat.ren.crt</span>
+<span id="cb3-47"><a href="#cb3-47" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-48"><a href="#cb3-48" aria-hidden="true" tabindex="-1"></a><span class="ex">openssl</span> x509 <span class="at">-in</span> /etc/crts/redhat.ren.crt <span class="at">-text</span></span>
+<span id="cb3-49"><a href="#cb3-49" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-50"><a href="#cb3-50" aria-hidden="true" tabindex="-1"></a><span class="ex">/bin/cp</span> <span class="at">-f</span> /etc/crts/redhat.ren.ca.crt /etc/pki/ca-trust/source/anchors/</span>
+<span id="cb3-51"><a href="#cb3-51" aria-hidden="true" tabindex="-1"></a><span class="ex">update-ca-trust</span> extract</span>
+<span id="cb3-52"><a href="#cb3-52" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-53"><a href="#cb3-53" aria-hidden="true" tabindex="-1"></a><span class="co"># first config quay</span></span>
+<span id="cb3-54"><a href="#cb3-54" aria-hidden="true" tabindex="-1"></a><span class="fu">mkdir</span> <span class="at">-p</span> <span class="va">$QUAY</span>/postgres-quay</span>
+<span id="cb3-55"><a href="#cb3-55" aria-hidden="true" tabindex="-1"></a><span class="ex">setfacl</span> <span class="at">-m</span> u:26:-wx <span class="va">$QUAY</span>/postgres-quay</span>
+<span id="cb3-56"><a href="#cb3-56" aria-hidden="true" tabindex="-1"></a><span class="ex">podman</span> run <span class="at">-d</span> <span class="at">--rm</span> <span class="at">--name</span> postgresql-quay <span class="dt">\</span></span>
+<span id="cb3-57"><a href="#cb3-57" aria-hidden="true" tabindex="-1"></a>  <span class="at">-e</span> POSTGRESQL_USER=quayuser <span class="dt">\</span></span>
+<span id="cb3-58"><a href="#cb3-58" aria-hidden="true" tabindex="-1"></a>  <span class="at">-e</span> POSTGRESQL_PASSWORD=quaypass <span class="dt">\</span></span>
+<span id="cb3-59"><a href="#cb3-59" aria-hidden="true" tabindex="-1"></a>  <span class="at">-e</span> POSTGRESQL_DATABASE=quay <span class="dt">\</span></span>
+<span id="cb3-60"><a href="#cb3-60" aria-hidden="true" tabindex="-1"></a>  <span class="at">-e</span> POSTGRESQL_ADMIN_PASSWORD=adminpass <span class="dt">\</span></span>
+<span id="cb3-61"><a href="#cb3-61" aria-hidden="true" tabindex="-1"></a>  <span class="at">-p</span> 5432:5432 <span class="dt">\</span></span>
+<span id="cb3-62"><a href="#cb3-62" aria-hidden="true" tabindex="-1"></a>  <span class="at">-v</span> <span class="va">$QUAY</span>/postgres-quay:/var/lib/pgsql/data:Z <span class="dt">\</span></span>
+<span id="cb3-63"><a href="#cb3-63" aria-hidden="true" tabindex="-1"></a>  registry.redhat.io/rhel8/postgresql-10:1</span>
+<span id="cb3-64"><a href="#cb3-64" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-65"><a href="#cb3-65" aria-hidden="true" tabindex="-1"></a><span class="co"># Ensure that the Postgres pg_trgm module is installed, as it is required by Quay</span></span>
+<span id="cb3-66"><a href="#cb3-66" aria-hidden="true" tabindex="-1"></a><span class="ex">podman</span> exec <span class="at">-it</span> postgresql-quay /bin/bash <span class="at">-c</span> <span class="st">&#39;echo &quot;CREATE EXTENSION IF NOT EXISTS pg_trgm&quot; | psql -d quay -U postgres&#39;</span>  </span>
+<span id="cb3-67"><a href="#cb3-67" aria-hidden="true" tabindex="-1"></a><span class="co"># CREATE EXTENSION</span></span>
+<span id="cb3-68"><a href="#cb3-68" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-69"><a href="#cb3-69" aria-hidden="true" tabindex="-1"></a><span class="ex">podman</span> run <span class="at">-d</span> <span class="at">--rm</span> <span class="at">--name</span> redis <span class="dt">\</span></span>
+<span id="cb3-70"><a href="#cb3-70" aria-hidden="true" tabindex="-1"></a>  <span class="at">-p</span> 6379:6379 <span class="dt">\</span></span>
+<span id="cb3-71"><a href="#cb3-71" aria-hidden="true" tabindex="-1"></a>  <span class="at">-e</span> REDIS_PASSWORD=strongpassword <span class="dt">\</span></span>
+<span id="cb3-72"><a href="#cb3-72" aria-hidden="true" tabindex="-1"></a>  registry.redhat.io/rhel8/redis-5:1</span>
+<span id="cb3-73"><a href="#cb3-73" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-74"><a href="#cb3-74" aria-hidden="true" tabindex="-1"></a><span class="ex">podman</span> run <span class="at">--rm</span> <span class="at">-it</span> <span class="at">--name</span> quay_config <span class="at">-p</span> 80:8080 <span class="at">-p</span> 443:8443 registry.redhat.io/quay/quay-rhel8:v3.6.2 config secret</span>
+<span id="cb3-75"><a href="#cb3-75" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-76"><a href="#cb3-76" aria-hidden="true" tabindex="-1"></a><span class="co"># go to http://quaylab.infra.redhat.ren</span></span>
+<span id="cb3-77"><a href="#cb3-77" aria-hidden="true" tabindex="-1"></a><span class="co"># Log in with the username quayconfig and password secret</span></span>
+<span id="cb3-78"><a href="#cb3-78" aria-hidden="true" tabindex="-1"></a><span class="co"># make config, and download the config</span></span></code></pre></div>
+        <p><img src="imgs/2022-01-14-14-08-43.png" /></p>
+        <pre><code>Database Type: Postgres
+Database Server: quaylab.infra.redhat.ren:5432
+Username: quayuser
+Password: quaypass
+Database Name: quay</code></pre>
+        <p><img src="imgs/2022-01-14-14-11-01.png" /></p>
+        <pre><code>Redis Hostname: quaylab.infra.redhat.ren
+Redis port: 6379 (default)
+Redis password: strongpassword</code></pre>
+        <p><img src="imgs/2022-01-14-13-53-33.png" /></p>
+        <p>log path: /logarchive</p>
+        <p><img src="imgs/2022-01-14-20-52-05.png" /></p>
+        <p>super user: quayadmin</p>
+        <p><img src="imgs/2022-01-14-14-28-12.png" /></p>
+        <p>ctrl-c exit the container</p>
+        <div class="sourceCode" id="cb6"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># then run the quay</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="fu">mkdir</span> <span class="va">$QUAY</span>/config</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="fu">cp</span> ~/Downloads/quay-config.tar.gz <span class="va">$QUAY</span>/config</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> <span class="va">$QUAY</span>/config</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="fu">tar</span> xvf quay-config.tar.gz</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a><span class="fu">mkdir</span> <span class="va">$QUAY</span>/storage</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a><span class="ex">setfacl</span> <span class="at">-m</span> u:1001:-wx <span class="va">$QUAY</span>/storage</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a><span class="ex">podman</span> run <span class="at">-d</span> <span class="at">--rm</span> <span class="at">-p</span> 80:8080 <span class="at">-p</span> 443:8443  <span class="dt">\</span></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>   <span class="at">--name</span><span class="op">=</span>quay <span class="dt">\</span></span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>   <span class="at">-v</span> <span class="va">$QUAY</span>/config:/conf/stack:Z <span class="dt">\</span></span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>   <span class="at">-v</span> <span class="va">$QUAY</span>/storage:/datastorage:Z <span class="dt">\</span></span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>   registry.redhat.io/quay/quay-rhel8:v3.6.2</span></code></pre></div>
+        <p>访问 http://quaylab.infra.redhat.ren <img
+        src="imgs/2022-01-14-14-20-03.png" /></p>
+        <p>第一次使用，直接创建用户，我们创建quayadmin这个用户，因为之前在配置的时候，quayadmin这个用户是超级管理员。
+        <img src="imgs/2022-01-14-14-20-58.png" /></p>
+        <div class="sourceCode" id="cb7"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># try it out</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="ex">podman</span> login quaylab.infra.redhat.ren</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Username: quayadmin</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Password: password</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a><span class="ex">/bin/cp</span> <span class="at">-f</span> /run/user/0/containers/auth.json /data/registry.auth.json</span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a><span class="co"># setup quay mirror</span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a><span class="ex">podman</span> run <span class="at">-d</span> <span class="at">--name</span> mirroring-worker <span class="dt">\</span></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">-v</span> <span class="va">$QUAY</span>/config:/conf/stack:Z <span class="dt">\</span></span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>  registry.redhat.io/quay/quay-rhel8:v3.6.2 repomirror</span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a><span class="co"># auto restart</span></span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> ~/</span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a><span class="ex">podman</span> generate systemd <span class="at">--new</span> <span class="at">--files</span> <span class="at">--name</span> redis</span>
+<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a><span class="ex">podman</span> generate systemd <span class="at">--new</span> <span class="at">--files</span> <span class="at">--name</span> postgresql-quay</span>
+<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a><span class="ex">podman</span> generate systemd <span class="at">--new</span> <span class="at">--files</span> <span class="at">--name</span> quay</span>
+<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a><span class="ex">podman</span> generate systemd <span class="at">--new</span> <span class="at">--files</span> <span class="at">--name</span> mirroring-worker</span>
+<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a><span class="fu">cp</span> <span class="at">-Z</span> container-redis.service /usr/lib/systemd/system</span>
+<span id="cb7-21"><a href="#cb7-21" aria-hidden="true" tabindex="-1"></a><span class="fu">cp</span> <span class="at">-Z</span> container-postgresql-quay.service /usr/lib/systemd/system</span>
+<span id="cb7-22"><a href="#cb7-22" aria-hidden="true" tabindex="-1"></a><span class="fu">cp</span> <span class="at">-Z</span> container-quay.service /usr/lib/systemd/system</span>
+<span id="cb7-23"><a href="#cb7-23" aria-hidden="true" tabindex="-1"></a><span class="fu">cp</span> <span class="at">-Z</span> container-mirroring-worker.service /usr/lib/systemd/system</span>
+<span id="cb7-24"><a href="#cb7-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-25"><a href="#cb7-25" aria-hidden="true" tabindex="-1"></a><span class="ex">systemctl</span> daemon-reload</span>
+<span id="cb7-26"><a href="#cb7-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-27"><a href="#cb7-27" aria-hidden="true" tabindex="-1"></a><span class="ex">systemctl</span> enable <span class="at">--now</span> container-redis.service</span>
+<span id="cb7-28"><a href="#cb7-28" aria-hidden="true" tabindex="-1"></a><span class="ex">systemctl</span> enable <span class="at">--now</span> container-postgresql-quay.service</span>
+<span id="cb7-29"><a href="#cb7-29" aria-hidden="true" tabindex="-1"></a><span class="ex">systemctl</span> enable <span class="at">--now</span> container-quay.service</span>
+<span id="cb7-30"><a href="#cb7-30" aria-hidden="true" tabindex="-1"></a><span class="ex">systemctl</span> enable <span class="at">--now</span> container-mirroring-worker.service</span>
+<span id="cb7-31"><a href="#cb7-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-32"><a href="#cb7-32" aria-hidden="true" tabindex="-1"></a><span class="fu">rm</span> <span class="at">-f</span> container<span class="pp">*</span></span></code></pre></div>
+        <p>用我们新创建的quayadmin用户，登录 <img
+        src="imgs/2022-01-14-14-42-33.png" /> 创建一个组织 <img
+        src="imgs/2022-01-14-14-42-49.png" /> 组织创建成功以后是这样·
+        <img src="imgs/2022-01-14-14-43-07.png" />
+        我们在组织内部，创建镜像repo: base <img
+        src="imgs/2022-01-14-14-43-31.png" /> 创建成功了是这样 <img
+        src="imgs/2022-01-14-14-43-52.png" />
+        我们为了让这个repo能自动同步
+        quay.io，我们要把内网的这个repo设置成mirror类型。 <img
+        src="imgs/2022-01-14-14-45-52.png" />
+        然后我们要给sync操作，创建一个机器人账号 <img
+        src="imgs/2022-01-14-14-50-35.png" />
+        创建机器人账号很简单，起一个名字就好了。 <img
+        src="imgs/2022-01-14-14-50-57.png" />
+        给机器人账号分配repo的权限，由于我们是要从远端同步repo过来，所以这个机器人账号需要写权限。
+        <img src="imgs/2022-01-14-14-51-16.png" />
+        在repo中，配置同步参数，包括上级repo位置，repo版本，同步频率等。
+        <img src="imgs/2022-01-14-14-52-57.png" />
+        保存以后，能看到同步参数已经生效。点击sync
+        now，就可以手动开始同步。 <img
+        src="imgs/2022-01-14-14-54-10.png" /> 可以在 repo
+        的历史信息中，看到同步的进度。 <img
+        src="imgs/2022-01-14-15-09-10.png" /> 看repo
+        tag的信息，能看到远端的repo已经同步过来了。 <img
+        src="imgs/2022-01-14-15-09-26.png" /></p>
+        <p>参考资料：</p>
+        <ul>
+        <li><a
+        href="https://access.redhat.com/documentation/en-us/red_hat_quay/3.6/html-single/deploy_red_hat_quay_for_proof-of-concept_non-production_purposes/index">DEPLOY
+        RED HAT QUAY FOR PROOF-OF-CONCEPT (NON-PRODUCTION)
+        PURPOSES</a></li>
+        <li><a
+        href="https://access.redhat.com/documentation/en-us/red_hat_quay/3.6/html-single/manage_red_hat_quay/index#repo-mirroring-in-red-hat-quay">Chapter
+        10. Repository mirroring</a></li>
+        </ul>
+        <h1 id="openshift4">openshift4</h1>
+        <p>我们的演示，是围绕公司网络里面的容器平台openshift4的，所以我们要装一个openshift4，并且安装一些我们需要组件。</p>
+        <h2 id="install-ocp4">install ocp4</h2>
+        <p>我们装一个最小版本的openshift4，只有一个节点，也就是master/worker混合部署，并且这个节点是kvm。</p>
+        <p>除了openshift4本身的节点以外，我们还需要helper
+        kvm，这是因为openshift4的安装和运行，依赖云环境，比如load
+        balancer,
+        dns等，但是我们的实验室环境里面，这些都需要自己搭建提供，那么我们就创建一个helper
+        kvm，来模拟和承载这些云服务。</p>
+        <div class="sourceCode" id="cb8"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 配置openshift版本</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="co"># import openshift4 install images into quay</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a><span class="bu">export</span> <span class="va">BUILDNUMBER</span><span class="op">=</span>4.9.12</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="co"># 解压缩openshift 客户端软件</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a><span class="fu">tar</span> <span class="at">-xzf</span> /data/ocp4/<span class="va">${BUILDNUMBER}</span>/openshift-client-linux-<span class="va">${BUILDNUMBER}</span>.tar.gz <span class="at">-C</span> /usr/local/sbin/</span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a><span class="co"># 向内部的容器镜像仓库quay，导入openshift4安装介质。</span></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> image mirror <span class="at">-a</span> /data/registry.auth.json <span class="at">--from-dir</span><span class="op">=</span>/data/file.registry/ <span class="st">&#39;file://openshift/release:4.9.12-x86_64*&#39;</span> quaylab.infra.redhat.ren/ocp4/openshift4</span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a><span class="co"># 我们的openshift4是模拟离线模式，所以我们需要一个容器镜像proxy，来桥接下载容器镜像。</span></span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a><span class="co"># setup nexus</span></span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a><span class="fu">mkdir</span> <span class="at">-p</span> /data/ccn</span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> /data/ccn</span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a><span class="ex">podman</span> create <span class="at">--name</span> swap quay.io/wangzheng422/qimgs:nexus-fs-image-2022-01-14-2155 ls</span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a><span class="ex">podman</span> cp swap:/nexus-image.tgz <span class="at">-</span> <span class="op">&gt;</span> /data/ccn/nexus-image.tgz.tar</span>
+<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a><span class="ex">podman</span> rm <span class="at">-fv</span> swap</span>
+<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a><span class="fu">tar</span> vxf nexus-image.tgz.tar</span>
+<span id="cb8-20"><a href="#cb8-20" aria-hidden="true" tabindex="-1"></a><span class="fu">tar</span> zvxf nexus-image.tgz</span>
+<span id="cb8-21"><a href="#cb8-21" aria-hidden="true" tabindex="-1"></a><span class="fu">rm</span> <span class="at">-f</span> nexus-image.tgz<span class="pp">*</span></span>
+<span id="cb8-22"><a href="#cb8-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-23"><a href="#cb8-23" aria-hidden="true" tabindex="-1"></a><span class="fu">chown</span> <span class="at">-R</span> 200 /data/ccn/nexus-image</span>
+<span id="cb8-24"><a href="#cb8-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-25"><a href="#cb8-25" aria-hidden="true" tabindex="-1"></a><span class="ex">podman</span> run <span class="at">-d</span> <span class="at">-p</span> 8082:8081 <span class="at">-p</span> 8083:8083 <span class="at">-it</span> <span class="at">--name</span> nexus-image <span class="at">-v</span> /data/ccn/nexus-image:/nexus-data:Z docker.io/sonatype/nexus3:3.33.1</span>
+<span id="cb8-26"><a href="#cb8-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-27"><a href="#cb8-27" aria-hidden="true" tabindex="-1"></a><span class="co"># auto start nexus</span></span>
+<span id="cb8-28"><a href="#cb8-28" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> ~/</span>
+<span id="cb8-29"><a href="#cb8-29" aria-hidden="true" tabindex="-1"></a><span class="ex">podman</span> generate systemd <span class="at">--files</span> <span class="at">--name</span> nexus-image</span>
+<span id="cb8-30"><a href="#cb8-30" aria-hidden="true" tabindex="-1"></a><span class="fu">cp</span> <span class="at">-Z</span> container-nexus-image.service  /usr/lib/systemd/system</span>
+<span id="cb8-31"><a href="#cb8-31" aria-hidden="true" tabindex="-1"></a><span class="ex">systemctl</span> daemon-reload</span>
+<span id="cb8-32"><a href="#cb8-32" aria-hidden="true" tabindex="-1"></a><span class="ex">systemctl</span> enable <span class="at">--now</span> container-nexus-image.service</span>
+<span id="cb8-33"><a href="#cb8-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-34"><a href="#cb8-34" aria-hidden="true" tabindex="-1"></a><span class="co"># 我们准备安装helper节点</span></span>
+<span id="cb8-35"><a href="#cb8-35" aria-hidden="true" tabindex="-1"></a><span class="co"># we follow single node ocp4 deployment</span></span>
+<span id="cb8-36"><a href="#cb8-36" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> /data/kvm</span>
+<span id="cb8-37"><a href="#cb8-37" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-38"><a href="#cb8-38" aria-hidden="true" tabindex="-1"></a><span class="fu">wget</span> <span class="at">-O</span> rhel8.iso <span class="st">&#39;https://access.cdn.redhat.com/content/origin/files/sha256/1f/1f78e705cd1d8897a05afa060f77d81ed81ac141c2465d4763c0382aa96cadd0/rhel-8.5-x86_64-dvd.iso?user=a768b217cf6ae8041b67586bb4dd5c77&amp;_auth_=1642400208_d400d34f0d5e2caab120537d05b0b8c9&#39;</span></span>
+<span id="cb8-39"><a href="#cb8-39" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-40"><a href="#cb8-40" aria-hidden="true" tabindex="-1"></a><span class="fu">create_lv()</span> <span class="kw">{</span></span>
+<span id="cb8-41"><a href="#cb8-41" aria-hidden="true" tabindex="-1"></a>    <span class="va">var_vg</span><span class="op">=</span><span class="va">$1</span></span>
+<span id="cb8-42"><a href="#cb8-42" aria-hidden="true" tabindex="-1"></a>    <span class="va">var_lv</span><span class="op">=</span><span class="va">$2</span></span>
+<span id="cb8-43"><a href="#cb8-43" aria-hidden="true" tabindex="-1"></a>    <span class="va">var_size</span><span class="op">=</span><span class="va">$3</span></span>
+<span id="cb8-44"><a href="#cb8-44" aria-hidden="true" tabindex="-1"></a>    <span class="ex">lvremove</span> <span class="at">-f</span> <span class="va">$var_vg</span>/<span class="va">$var_lv</span></span>
+<span id="cb8-45"><a href="#cb8-45" aria-hidden="true" tabindex="-1"></a>    <span class="ex">lvcreate</span> <span class="at">-y</span> <span class="at">-L</span> <span class="va">$var_size</span> <span class="at">-n</span> <span class="va">$var_lv</span> <span class="va">$var_vg</span></span>
+<span id="cb8-46"><a href="#cb8-46" aria-hidden="true" tabindex="-1"></a>    <span class="ex">wipefs</span> <span class="at">--all</span> <span class="at">--force</span> /dev/<span class="va">$var_vg</span>/<span class="va">$var_lv</span></span>
+<span id="cb8-47"><a href="#cb8-47" aria-hidden="true" tabindex="-1"></a><span class="kw">}</span></span>
+<span id="cb8-48"><a href="#cb8-48" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-49"><a href="#cb8-49" aria-hidden="true" tabindex="-1"></a><span class="ex">create_lv</span> vgdata lvhelper 120G</span>
+<span id="cb8-50"><a href="#cb8-50" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-51"><a href="#cb8-51" aria-hidden="true" tabindex="-1"></a><span class="ex">create_lv</span> vgdata lvbootstrap 120G</span>
+<span id="cb8-52"><a href="#cb8-52" aria-hidden="true" tabindex="-1"></a><span class="ex">create_lv</span> vgdata lvmaster0 120G</span>
+<span id="cb8-53"><a href="#cb8-53" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-54"><a href="#cb8-54" aria-hidden="true" tabindex="-1"></a><span class="bu">export</span> <span class="va">http_proxy</span><span class="op">=</span><span class="st">&quot;http://192.168.195.54:5085&quot;</span></span>
+<span id="cb8-55"><a href="#cb8-55" aria-hidden="true" tabindex="-1"></a><span class="bu">export</span> <span class="va">https_proxy</span><span class="op">=</span><span class="va">${http_proxy}</span></span>
+<span id="cb8-56"><a href="#cb8-56" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-57"><a href="#cb8-57" aria-hidden="true" tabindex="-1"></a><span class="fu">wget</span> https://raw.githubusercontent.com/wangzheng422/docker_env/dev/redhat/ocp4/4.9/scripts/helper-ks-rhel8.cfg</span>
+<span id="cb8-58"><a href="#cb8-58" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-59"><a href="#cb8-59" aria-hidden="true" tabindex="-1"></a><span class="bu">unset</span> <span class="va">http_proxy</span></span>
+<span id="cb8-60"><a href="#cb8-60" aria-hidden="true" tabindex="-1"></a><span class="bu">unset</span> <span class="va">https_proxy</span></span>
+<span id="cb8-61"><a href="#cb8-61" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-62"><a href="#cb8-62" aria-hidden="true" tabindex="-1"></a><span class="fu">sed</span> <span class="at">-i</span> <span class="st">&#39;0,/^network.*/s/^network.*/network  --bootproto=static --device=enp1s0 --gateway=192.168.7.1 --ip=192.168.7.11  --netmask=255.255.255.0 --nameserver=192.168.7.11  --ipv6=auto --activate/&#39;</span> helper-ks-rhel8.cfg</span>
+<span id="cb8-63"><a href="#cb8-63" aria-hidden="true" tabindex="-1"></a><span class="co"># https://stackoverflow.com/questions/18620153/find-matching-text-and-replace-next-line</span></span>
+<span id="cb8-64"><a href="#cb8-64" aria-hidden="true" tabindex="-1"></a><span class="fu">sed</span> <span class="at">-i</span> <span class="st">&#39;/^network.*/{n;s/^network.*/network  --hostname=ocp4-helper/}&#39;</span> helper-ks-rhel8.cfg</span>
+<span id="cb8-65"><a href="#cb8-65" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-66"><a href="#cb8-66" aria-hidden="true" tabindex="-1"></a><span class="bu">export</span> <span class="va">KVM_DIRECTORY</span><span class="op">=</span>/data/kvm</span>
+<span id="cb8-67"><a href="#cb8-67" aria-hidden="true" tabindex="-1"></a><span class="ex">virt-install</span> <span class="at">--name</span><span class="op">=</span><span class="st">&quot;ocp4-Helper&quot;</span> <span class="at">--vcpus</span><span class="op">=</span>2 <span class="at">--ram</span><span class="op">=</span>4096 <span class="dt">\</span></span>
+<span id="cb8-68"><a href="#cb8-68" aria-hidden="true" tabindex="-1"></a>--cpu=host-model <span class="dt">\</span></span>
+<span id="cb8-69"><a href="#cb8-69" aria-hidden="true" tabindex="-1"></a>--disk path=/dev/vgdata/lvhelper,device=disk,bus=virtio,format=raw <span class="dt">\</span></span>
+<span id="cb8-70"><a href="#cb8-70" aria-hidden="true" tabindex="-1"></a>--os-variant rhel8.5 <span class="at">--network</span> bridge=baremetal,model=virtio <span class="dt">\</span></span>
+<span id="cb8-71"><a href="#cb8-71" aria-hidden="true" tabindex="-1"></a>--graphics vnc,port=59200 <span class="dt">\</span></span>
+<span id="cb8-72"><a href="#cb8-72" aria-hidden="true" tabindex="-1"></a>--boot menu=on <span class="dt">\</span></span>
+<span id="cb8-73"><a href="#cb8-73" aria-hidden="true" tabindex="-1"></a>--location <span class="va">${KVM_DIRECTORY}</span>/rhel8.iso <span class="dt">\</span></span>
+<span id="cb8-74"><a href="#cb8-74" aria-hidden="true" tabindex="-1"></a>--disk <span class="va">${KVM_DIRECTORY}</span>/rhel8.iso,device=cdrom <span class="dt">\</span></span>
+<span id="cb8-75"><a href="#cb8-75" aria-hidden="true" tabindex="-1"></a>--initrd-inject helper-ks-rhel8.cfg <span class="at">--extra-args</span> <span class="st">&quot;inst.ks=file:/helper-ks-rhel8.cfg&quot;</span> </span>
+<span id="cb8-76"><a href="#cb8-76" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-77"><a href="#cb8-77" aria-hidden="true" tabindex="-1"></a><span class="co"># 装好了helper vm，我们需要配置一下他</span></span>
+<span id="cb8-78"><a href="#cb8-78" aria-hidden="true" tabindex="-1"></a><span class="co"># config helper vm</span></span>
+<span id="cb8-79"><a href="#cb8-79" aria-hidden="true" tabindex="-1"></a><span class="fu">ssh</span> root@192.168.7.11</span>
+<span id="cb8-80"><a href="#cb8-80" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-81"><a href="#cb8-81" aria-hidden="true" tabindex="-1"></a><span class="bu">export</span> <span class="va">YUMIP</span><span class="op">=</span><span class="st">&quot;192.168.7.1&quot;</span></span>
+<span id="cb8-82"><a href="#cb8-82" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> <span class="op">&lt;&lt; EOF</span> <span class="op">&gt;</span> /etc/yum.repos.d/remote.repo</span>
+<span id="cb8-83"><a href="#cb8-83" aria-hidden="true" tabindex="-1"></a><span class="st">[BaseOS]</span></span>
+<span id="cb8-84"><a href="#cb8-84" aria-hidden="true" tabindex="-1"></a><span class="st">name=BaseOS</span></span>
+<span id="cb8-85"><a href="#cb8-85" aria-hidden="true" tabindex="-1"></a><span class="st">baseurl=ftp://</span><span class="va">$YUMIP</span><span class="st">/rhel/dnf/rhel-8-for-x86_64-baseos-rpms</span></span>
+<span id="cb8-86"><a href="#cb8-86" aria-hidden="true" tabindex="-1"></a><span class="st">enabled=1</span></span>
+<span id="cb8-87"><a href="#cb8-87" aria-hidden="true" tabindex="-1"></a><span class="st">gpgcheck=0</span></span>
+<span id="cb8-88"><a href="#cb8-88" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-89"><a href="#cb8-89" aria-hidden="true" tabindex="-1"></a><span class="st">[AppStream]</span></span>
+<span id="cb8-90"><a href="#cb8-90" aria-hidden="true" tabindex="-1"></a><span class="st">name=AppStream</span></span>
+<span id="cb8-91"><a href="#cb8-91" aria-hidden="true" tabindex="-1"></a><span class="st">baseurl=ftp://</span><span class="va">$YUMIP</span><span class="st">/rhel/dnf/rhel-8-for-x86_64-appstream-rpms</span></span>
+<span id="cb8-92"><a href="#cb8-92" aria-hidden="true" tabindex="-1"></a><span class="st">enabled=1</span></span>
+<span id="cb8-93"><a href="#cb8-93" aria-hidden="true" tabindex="-1"></a><span class="st">gpgcheck=0</span></span>
+<span id="cb8-94"><a href="#cb8-94" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-95"><a href="#cb8-95" aria-hidden="true" tabindex="-1"></a><span class="st">[Ansible]</span></span>
+<span id="cb8-96"><a href="#cb8-96" aria-hidden="true" tabindex="-1"></a><span class="st">name=Ansible</span></span>
+<span id="cb8-97"><a href="#cb8-97" aria-hidden="true" tabindex="-1"></a><span class="st">baseurl=ftp://</span><span class="va">$YUMIP</span><span class="st">/rhel/dnf/ansible-2.9-for-rhel-8-x86_64-rpms</span></span>
+<span id="cb8-98"><a href="#cb8-98" aria-hidden="true" tabindex="-1"></a><span class="st">enabled=1</span></span>
+<span id="cb8-99"><a href="#cb8-99" aria-hidden="true" tabindex="-1"></a><span class="st">gpgcheck=0</span></span>
+<span id="cb8-100"><a href="#cb8-100" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-101"><a href="#cb8-101" aria-hidden="true" tabindex="-1"></a><span class="op">EOF</span></span>
+<span id="cb8-102"><a href="#cb8-102" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-103"><a href="#cb8-103" aria-hidden="true" tabindex="-1"></a><span class="fu">sed</span> <span class="at">-i</span> <span class="st">&#39;s/#UseDNS yes/UseDNS no/g&#39;</span> /etc/ssh/sshd_config</span>
+<span id="cb8-104"><a href="#cb8-104" aria-hidden="true" tabindex="-1"></a><span class="ex">systemctl</span> restart sshd</span>
+<span id="cb8-105"><a href="#cb8-105" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-106"><a href="#cb8-106" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> <span class="op">&lt;&lt; EOF</span> <span class="op">&gt;</span> /root/.ssh/config</span>
+<span id="cb8-107"><a href="#cb8-107" aria-hidden="true" tabindex="-1"></a><span class="st">StrictHostKeyChecking no</span></span>
+<span id="cb8-108"><a href="#cb8-108" aria-hidden="true" tabindex="-1"></a><span class="st">UserKnownHostsFile=/dev/null</span></span>
+<span id="cb8-109"><a href="#cb8-109" aria-hidden="true" tabindex="-1"></a><span class="op">EOF</span></span>
+<span id="cb8-110"><a href="#cb8-110" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-111"><a href="#cb8-111" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="st">&quot;allow 192.0.0.0/8&quot;</span> <span class="op">&gt;&gt;</span> /etc/chrony.conf</span>
+<span id="cb8-112"><a href="#cb8-112" aria-hidden="true" tabindex="-1"></a><span class="ex">systemctl</span> enable <span class="at">--now</span> chronyd</span>
+<span id="cb8-113"><a href="#cb8-113" aria-hidden="true" tabindex="-1"></a><span class="co"># systemctl restart chronyd</span></span>
+<span id="cb8-114"><a href="#cb8-114" aria-hidden="true" tabindex="-1"></a><span class="ex">chronyc</span> tracking</span>
+<span id="cb8-115"><a href="#cb8-115" aria-hidden="true" tabindex="-1"></a><span class="ex">chronyc</span> sources <span class="at">-v</span></span>
+<span id="cb8-116"><a href="#cb8-116" aria-hidden="true" tabindex="-1"></a><span class="ex">chronyc</span> sourcestats <span class="at">-v</span></span>
+<span id="cb8-117"><a href="#cb8-117" aria-hidden="true" tabindex="-1"></a><span class="ex">chronyc</span> makestep</span>
+<span id="cb8-118"><a href="#cb8-118" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-119"><a href="#cb8-119" aria-hidden="true" tabindex="-1"></a><span class="ex">dnf</span> update <span class="at">-y</span></span>
+<span id="cb8-120"><a href="#cb8-120" aria-hidden="true" tabindex="-1"></a><span class="ex">reboot</span></span>
+<span id="cb8-121"><a href="#cb8-121" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-122"><a href="#cb8-122" aria-hidden="true" tabindex="-1"></a><span class="ex">dnf</span> <span class="at">-y</span> install ansible git unzip podman python3 buildah skopeo jq pigz</span>
+<span id="cb8-123"><a href="#cb8-123" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-124"><a href="#cb8-124" aria-hidden="true" tabindex="-1"></a><span class="co"># copy in the ocp installer</span></span>
+<span id="cb8-125"><a href="#cb8-125" aria-hidden="true" tabindex="-1"></a><span class="fu">mkdir</span> <span class="at">-p</span> /data/ocp4/</span>
+<span id="cb8-126"><a href="#cb8-126" aria-hidden="true" tabindex="-1"></a><span class="co"># scp ocp4.tgz to /data</span></span>
+<span id="cb8-127"><a href="#cb8-127" aria-hidden="true" tabindex="-1"></a><span class="co"># scp * root@192.168.7.11:/data/</span></span>
+<span id="cb8-128"><a href="#cb8-128" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> /data</span>
+<span id="cb8-129"><a href="#cb8-129" aria-hidden="true" tabindex="-1"></a><span class="fu">tar</span> zvxf ocp.<span class="pp">*</span>.tgz</span>
+<span id="cb8-130"><a href="#cb8-130" aria-hidden="true" tabindex="-1"></a><span class="fu">tar</span> zvxf registry.<span class="pp">*</span>.tgz</span>
+<span id="cb8-131"><a href="#cb8-131" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> /data/ocp4</span>
+<span id="cb8-132"><a href="#cb8-132" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-133"><a href="#cb8-133" aria-hidden="true" tabindex="-1"></a><span class="fu">rm</span> <span class="at">-f</span> /data/<span class="pp">*</span>.tgz</span>
+<span id="cb8-134"><a href="#cb8-134" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-135"><a href="#cb8-135" aria-hidden="true" tabindex="-1"></a><span class="co"># update the certification for quay</span></span>
+<span id="cb8-136"><a href="#cb8-136" aria-hidden="true" tabindex="-1"></a><span class="fu">mkdir</span> <span class="at">-p</span> /etc/crts/ <span class="kw">&amp;&amp;</span> <span class="bu">cd</span> /etc/crts</span>
+<span id="cb8-137"><a href="#cb8-137" aria-hidden="true" tabindex="-1"></a><span class="co"># scp * root@192.168.7.11:/etc/crts/</span></span>
+<span id="cb8-138"><a href="#cb8-138" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-139"><a href="#cb8-139" aria-hidden="true" tabindex="-1"></a><span class="ex">/bin/cp</span> <span class="at">-f</span> /etc/crts/redhat.ren.ca.crt /etc/pki/ca-trust/source/anchors/</span>
+<span id="cb8-140"><a href="#cb8-140" aria-hidden="true" tabindex="-1"></a><span class="ex">update-ca-trust</span> extract</span>
+<span id="cb8-141"><a href="#cb8-141" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-142"><a href="#cb8-142" aria-hidden="true" tabindex="-1"></a><span class="co"># create ssh key</span></span>
+<span id="cb8-143"><a href="#cb8-143" aria-hidden="true" tabindex="-1"></a><span class="fu">ssh-keygen</span></span>
+<span id="cb8-144"><a href="#cb8-144" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-145"><a href="#cb8-145" aria-hidden="true" tabindex="-1"></a><span class="co"># extract install ansible playbooks</span></span>
+<span id="cb8-146"><a href="#cb8-146" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> /data/ocp4</span>
+<span id="cb8-147"><a href="#cb8-147" aria-hidden="true" tabindex="-1"></a><span class="fu">unzip</span> ocp4-upi-helpernode.zip</span>
+<span id="cb8-148"><a href="#cb8-148" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> /data/ocp4/ocp4-upi-helpernode-master</span>
+<span id="cb8-149"><a href="#cb8-149" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-150"><a href="#cb8-150" aria-hidden="true" tabindex="-1"></a><span class="co"># 给ansible playbook配置参数文件</span></span>
+<span id="cb8-151"><a href="#cb8-151" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> <span class="op">&lt;&lt; &#39;EOF&#39;</span> <span class="op">&gt;</span> /data/ocp4/ocp4-upi-helpernode-master/vars.yaml</span>
+<span id="cb8-152"><a href="#cb8-152" aria-hidden="true" tabindex="-1"></a><span class="st">---</span></span>
+<span id="cb8-153"><a href="#cb8-153" aria-hidden="true" tabindex="-1"></a><span class="st">ocp_version: 4.9.12</span></span>
+<span id="cb8-154"><a href="#cb8-154" aria-hidden="true" tabindex="-1"></a><span class="st">ssh_gen_key: false</span></span>
+<span id="cb8-155"><a href="#cb8-155" aria-hidden="true" tabindex="-1"></a><span class="st">staticips: true</span></span>
+<span id="cb8-156"><a href="#cb8-156" aria-hidden="true" tabindex="-1"></a><span class="st">firewalld: false</span></span>
+<span id="cb8-157"><a href="#cb8-157" aria-hidden="true" tabindex="-1"></a><span class="st">dns_forward: yes</span></span>
+<span id="cb8-158"><a href="#cb8-158" aria-hidden="true" tabindex="-1"></a><span class="st">iso:</span></span>
+<span id="cb8-159"><a href="#cb8-159" aria-hidden="true" tabindex="-1"></a><span class="st">  iso_dl_url: &quot;/data/ocp4/rhcos-live.x86_64.iso&quot;</span></span>
+<span id="cb8-160"><a href="#cb8-160" aria-hidden="true" tabindex="-1"></a><span class="st">  my_iso: &quot;rhcos-live.iso&quot; # this is internal file, just leave as it.</span></span>
+<span id="cb8-161"><a href="#cb8-161" aria-hidden="true" tabindex="-1"></a><span class="st">helper:</span></span>
+<span id="cb8-162"><a href="#cb8-162" aria-hidden="true" tabindex="-1"></a><span class="st">  name: &quot;helper&quot;</span></span>
+<span id="cb8-163"><a href="#cb8-163" aria-hidden="true" tabindex="-1"></a><span class="st">  ipaddr: &quot;192.168.7.11&quot;</span></span>
+<span id="cb8-164"><a href="#cb8-164" aria-hidden="true" tabindex="-1"></a><span class="st">  networkifacename: &quot;enp1s0&quot;</span></span>
+<span id="cb8-165"><a href="#cb8-165" aria-hidden="true" tabindex="-1"></a><span class="st">  gateway: &quot;192.168.7.1&quot;</span></span>
+<span id="cb8-166"><a href="#cb8-166" aria-hidden="true" tabindex="-1"></a><span class="st">  netmask: &quot;255.255.255.0&quot;</span></span>
+<span id="cb8-167"><a href="#cb8-167" aria-hidden="true" tabindex="-1"></a><span class="st">dns:</span></span>
+<span id="cb8-168"><a href="#cb8-168" aria-hidden="true" tabindex="-1"></a><span class="st">  domain: &quot;redhat.ren&quot;</span></span>
+<span id="cb8-169"><a href="#cb8-169" aria-hidden="true" tabindex="-1"></a><span class="st">  clusterid: &quot;ocp4&quot;</span></span>
+<span id="cb8-170"><a href="#cb8-170" aria-hidden="true" tabindex="-1"></a><span class="st">  forwarder1: &quot;192.168.7.1&quot;</span></span>
+<span id="cb8-171"><a href="#cb8-171" aria-hidden="true" tabindex="-1"></a><span class="st">  forwarder2: &quot;192.168.7.1&quot;</span></span>
+<span id="cb8-172"><a href="#cb8-172" aria-hidden="true" tabindex="-1"></a><span class="st">bootstrap:</span></span>
+<span id="cb8-173"><a href="#cb8-173" aria-hidden="true" tabindex="-1"></a><span class="st">  name: &quot;bootstrap&quot;</span></span>
+<span id="cb8-174"><a href="#cb8-174" aria-hidden="true" tabindex="-1"></a><span class="st">  ipaddr: &quot;192.168.7.12&quot;</span></span>
+<span id="cb8-175"><a href="#cb8-175" aria-hidden="true" tabindex="-1"></a><span class="st">  interface: &quot;enp1s0&quot;</span></span>
+<span id="cb8-176"><a href="#cb8-176" aria-hidden="true" tabindex="-1"></a><span class="st">  install_drive: &quot;vda&quot;</span></span>
+<span id="cb8-177"><a href="#cb8-177" aria-hidden="true" tabindex="-1"></a><span class="st">  manual: false</span></span>
+<span id="cb8-178"><a href="#cb8-178" aria-hidden="true" tabindex="-1"></a><span class="st">masters:</span></span>
+<span id="cb8-179"><a href="#cb8-179" aria-hidden="true" tabindex="-1"></a><span class="st">  - name: &quot;master-0&quot;</span></span>
+<span id="cb8-180"><a href="#cb8-180" aria-hidden="true" tabindex="-1"></a><span class="st">    ipaddr: &quot;192.168.7.13&quot;</span></span>
+<span id="cb8-181"><a href="#cb8-181" aria-hidden="true" tabindex="-1"></a><span class="st">    interface: &quot;enp1s0&quot;</span></span>
+<span id="cb8-182"><a href="#cb8-182" aria-hidden="true" tabindex="-1"></a><span class="st">    install_drive: &quot;vda&quot;</span></span>
+<span id="cb8-183"><a href="#cb8-183" aria-hidden="true" tabindex="-1"></a><span class="st">    manual: false</span></span>
+<span id="cb8-184"><a href="#cb8-184" aria-hidden="true" tabindex="-1"></a><span class="st">  # - name: &quot;master-1&quot;</span></span>
+<span id="cb8-185"><a href="#cb8-185" aria-hidden="true" tabindex="-1"></a><span class="st">  #   ipaddr: &quot;192.168.7.14&quot;</span></span>
+<span id="cb8-186"><a href="#cb8-186" aria-hidden="true" tabindex="-1"></a><span class="st">  #   interface: &quot;enp1s0&quot;</span></span>
+<span id="cb8-187"><a href="#cb8-187" aria-hidden="true" tabindex="-1"></a><span class="st">  #   install_drive: &quot;vda&quot;    </span></span>
+<span id="cb8-188"><a href="#cb8-188" aria-hidden="true" tabindex="-1"></a><span class="st">  # - name: &quot;master-2&quot;</span></span>
+<span id="cb8-189"><a href="#cb8-189" aria-hidden="true" tabindex="-1"></a><span class="st">  #   ipaddr: &quot;192.168.7.15&quot;</span></span>
+<span id="cb8-190"><a href="#cb8-190" aria-hidden="true" tabindex="-1"></a><span class="st">  #   interface: &quot;enp1s0&quot;</span></span>
+<span id="cb8-191"><a href="#cb8-191" aria-hidden="true" tabindex="-1"></a><span class="st">  #   install_drive: &quot;vda&quot;    </span></span>
+<span id="cb8-192"><a href="#cb8-192" aria-hidden="true" tabindex="-1"></a><span class="st">workers:</span></span>
+<span id="cb8-193"><a href="#cb8-193" aria-hidden="true" tabindex="-1"></a><span class="st">  - name: &quot;worker-0&quot;</span></span>
+<span id="cb8-194"><a href="#cb8-194" aria-hidden="true" tabindex="-1"></a><span class="st">    ipaddr: &quot;192.168.7.16&quot;</span></span>
+<span id="cb8-195"><a href="#cb8-195" aria-hidden="true" tabindex="-1"></a><span class="st">    interface: &quot;eno1&quot;</span></span>
+<span id="cb8-196"><a href="#cb8-196" aria-hidden="true" tabindex="-1"></a><span class="st">    install_drive: &quot;sda&quot;</span></span>
+<span id="cb8-197"><a href="#cb8-197" aria-hidden="true" tabindex="-1"></a><span class="st">  # - name: &quot;worker-1&quot;</span></span>
+<span id="cb8-198"><a href="#cb8-198" aria-hidden="true" tabindex="-1"></a><span class="st">  #   ipaddr: &quot;192.168.7.17&quot;</span></span>
+<span id="cb8-199"><a href="#cb8-199" aria-hidden="true" tabindex="-1"></a><span class="st">  #   interface: &quot;enp1s0&quot;</span></span>
+<span id="cb8-200"><a href="#cb8-200" aria-hidden="true" tabindex="-1"></a><span class="st">  #   install_drive: &quot;sda&quot;</span></span>
+<span id="cb8-201"><a href="#cb8-201" aria-hidden="true" tabindex="-1"></a><span class="st">  # - name: &quot;worker-2&quot;</span></span>
+<span id="cb8-202"><a href="#cb8-202" aria-hidden="true" tabindex="-1"></a><span class="st">  #   ipaddr: &quot;192.168.7.18&quot;</span></span>
+<span id="cb8-203"><a href="#cb8-203" aria-hidden="true" tabindex="-1"></a><span class="st">  #   interface: &quot;enp1s0&quot;</span></span>
+<span id="cb8-204"><a href="#cb8-204" aria-hidden="true" tabindex="-1"></a><span class="st">  #   install_drive: &quot;vda&quot;</span></span>
+<span id="cb8-205"><a href="#cb8-205" aria-hidden="true" tabindex="-1"></a><span class="st">  # - name: &quot;infra-0&quot;</span></span>
+<span id="cb8-206"><a href="#cb8-206" aria-hidden="true" tabindex="-1"></a><span class="st">  #   ipaddr: &quot;192.168.7.19&quot;</span></span>
+<span id="cb8-207"><a href="#cb8-207" aria-hidden="true" tabindex="-1"></a><span class="st">  #   interface: &quot;enp1s0&quot;</span></span>
+<span id="cb8-208"><a href="#cb8-208" aria-hidden="true" tabindex="-1"></a><span class="st">  #   install_drive: &quot;vda&quot;</span></span>
+<span id="cb8-209"><a href="#cb8-209" aria-hidden="true" tabindex="-1"></a><span class="st">  # - name: &quot;infra-1&quot;</span></span>
+<span id="cb8-210"><a href="#cb8-210" aria-hidden="true" tabindex="-1"></a><span class="st">  #   ipaddr: &quot;192.168.7.20&quot;</span></span>
+<span id="cb8-211"><a href="#cb8-211" aria-hidden="true" tabindex="-1"></a><span class="st">  #   interface: &quot;enp1s0&quot;</span></span>
+<span id="cb8-212"><a href="#cb8-212" aria-hidden="true" tabindex="-1"></a><span class="st">  #   install_drive: &quot;vda&quot;</span></span>
+<span id="cb8-213"><a href="#cb8-213" aria-hidden="true" tabindex="-1"></a><span class="st">  # - name: &quot;worker-3&quot;</span></span>
+<span id="cb8-214"><a href="#cb8-214" aria-hidden="true" tabindex="-1"></a><span class="st">  #   ipaddr: &quot;192.168.7.21&quot;</span></span>
+<span id="cb8-215"><a href="#cb8-215" aria-hidden="true" tabindex="-1"></a><span class="st">  #   interface: &quot;enp1s0&quot;</span></span>
+<span id="cb8-216"><a href="#cb8-216" aria-hidden="true" tabindex="-1"></a><span class="st">  #   install_drive: &quot;vda&quot;</span></span>
+<span id="cb8-217"><a href="#cb8-217" aria-hidden="true" tabindex="-1"></a><span class="st">  # - name: &quot;worker-4&quot;</span></span>
+<span id="cb8-218"><a href="#cb8-218" aria-hidden="true" tabindex="-1"></a><span class="st">  #   ipaddr: &quot;192.168.7.22&quot;</span></span>
+<span id="cb8-219"><a href="#cb8-219" aria-hidden="true" tabindex="-1"></a><span class="st">  #   interface: &quot;enp1s0&quot;</span></span>
+<span id="cb8-220"><a href="#cb8-220" aria-hidden="true" tabindex="-1"></a><span class="st">  #   install_drive: &quot;vda&quot;</span></span>
+<span id="cb8-221"><a href="#cb8-221" aria-hidden="true" tabindex="-1"></a><span class="st">others:</span></span>
+<span id="cb8-222"><a href="#cb8-222" aria-hidden="true" tabindex="-1"></a><span class="st">  - name: &quot;registry&quot;</span></span>
+<span id="cb8-223"><a href="#cb8-223" aria-hidden="true" tabindex="-1"></a><span class="st">    ipaddr: &quot;192.168.7.1&quot;</span></span>
+<span id="cb8-224"><a href="#cb8-224" aria-hidden="true" tabindex="-1"></a><span class="st">  - name: &quot;yum&quot;</span></span>
+<span id="cb8-225"><a href="#cb8-225" aria-hidden="true" tabindex="-1"></a><span class="st">    ipaddr: &quot;192.168.7.1&quot;</span></span>
+<span id="cb8-226"><a href="#cb8-226" aria-hidden="true" tabindex="-1"></a><span class="st">  - name: &quot;quay&quot;</span></span>
+<span id="cb8-227"><a href="#cb8-227" aria-hidden="true" tabindex="-1"></a><span class="st">    ipaddr: &quot;192.168.7.1&quot;</span></span>
+<span id="cb8-228"><a href="#cb8-228" aria-hidden="true" tabindex="-1"></a><span class="st">  - name: &quot;nexus&quot;</span></span>
+<span id="cb8-229"><a href="#cb8-229" aria-hidden="true" tabindex="-1"></a><span class="st">    ipaddr: &quot;192.168.7.1&quot;</span></span>
+<span id="cb8-230"><a href="#cb8-230" aria-hidden="true" tabindex="-1"></a><span class="st">  - name: &quot;git&quot;</span></span>
+<span id="cb8-231"><a href="#cb8-231" aria-hidden="true" tabindex="-1"></a><span class="st">    ipaddr: &quot;192.168.7.1&quot;</span></span>
+<span id="cb8-232"><a href="#cb8-232" aria-hidden="true" tabindex="-1"></a><span class="st">otherdomains:</span></span>
+<span id="cb8-233"><a href="#cb8-233" aria-hidden="true" tabindex="-1"></a><span class="st">  - domain: &quot;rhv.redhat.ren&quot;</span></span>
+<span id="cb8-234"><a href="#cb8-234" aria-hidden="true" tabindex="-1"></a><span class="st">    hosts:</span></span>
+<span id="cb8-235"><a href="#cb8-235" aria-hidden="true" tabindex="-1"></a><span class="st">    - name: &quot;manager&quot;</span></span>
+<span id="cb8-236"><a href="#cb8-236" aria-hidden="true" tabindex="-1"></a><span class="st">      ipaddr: &quot;192.168.7.71&quot;</span></span>
+<span id="cb8-237"><a href="#cb8-237" aria-hidden="true" tabindex="-1"></a><span class="st">    - name: &quot;rhv01&quot;</span></span>
+<span id="cb8-238"><a href="#cb8-238" aria-hidden="true" tabindex="-1"></a><span class="st">      ipaddr: &quot;192.168.7.72&quot;</span></span>
+<span id="cb8-239"><a href="#cb8-239" aria-hidden="true" tabindex="-1"></a><span class="st">  - domain: &quot;others.redhat.ren&quot;</span></span>
+<span id="cb8-240"><a href="#cb8-240" aria-hidden="true" tabindex="-1"></a><span class="st">    hosts:</span></span>
+<span id="cb8-241"><a href="#cb8-241" aria-hidden="true" tabindex="-1"></a><span class="st">    - name: &quot;*&quot;</span></span>
+<span id="cb8-242"><a href="#cb8-242" aria-hidden="true" tabindex="-1"></a><span class="st">      ipaddr: &quot;192.168.7.71&quot;</span></span>
+<span id="cb8-243"><a href="#cb8-243" aria-hidden="true" tabindex="-1"></a><span class="st">    - name: &quot;*.apps&quot;</span></span>
+<span id="cb8-244"><a href="#cb8-244" aria-hidden="true" tabindex="-1"></a><span class="st">      ipaddr: &quot;192.168.7.71&quot;</span></span>
+<span id="cb8-245"><a href="#cb8-245" aria-hidden="true" tabindex="-1"></a><span class="st">  - domain: &quot;infra.redhat.ren&quot;</span></span>
+<span id="cb8-246"><a href="#cb8-246" aria-hidden="true" tabindex="-1"></a><span class="st">    hosts:</span></span>
+<span id="cb8-247"><a href="#cb8-247" aria-hidden="true" tabindex="-1"></a><span class="st">      - name: &quot;registry&quot;</span></span>
+<span id="cb8-248"><a href="#cb8-248" aria-hidden="true" tabindex="-1"></a><span class="st">        ipaddr: &quot;192.168.7.1&quot;</span></span>
+<span id="cb8-249"><a href="#cb8-249" aria-hidden="true" tabindex="-1"></a><span class="st">      - name: &quot;yum&quot;</span></span>
+<span id="cb8-250"><a href="#cb8-250" aria-hidden="true" tabindex="-1"></a><span class="st">        ipaddr: &quot;192.168.7.1&quot;</span></span>
+<span id="cb8-251"><a href="#cb8-251" aria-hidden="true" tabindex="-1"></a><span class="st">      - name: &quot;quaylab&quot;</span></span>
+<span id="cb8-252"><a href="#cb8-252" aria-hidden="true" tabindex="-1"></a><span class="st">        ipaddr: &quot;192.168.7.1&quot;</span></span>
+<span id="cb8-253"><a href="#cb8-253" aria-hidden="true" tabindex="-1"></a><span class="st">      - name: &quot;nexus&quot;</span></span>
+<span id="cb8-254"><a href="#cb8-254" aria-hidden="true" tabindex="-1"></a><span class="st">        ipaddr: &quot;192.168.7.1&quot;</span></span>
+<span id="cb8-255"><a href="#cb8-255" aria-hidden="true" tabindex="-1"></a><span class="st">      - name: &quot;git&quot;</span></span>
+<span id="cb8-256"><a href="#cb8-256" aria-hidden="true" tabindex="-1"></a><span class="st">        ipaddr: &quot;192.168.7.1&quot;</span></span>
+<span id="cb8-257"><a href="#cb8-257" aria-hidden="true" tabindex="-1"></a><span class="st">force_ocp_download: false</span></span>
+<span id="cb8-258"><a href="#cb8-258" aria-hidden="true" tabindex="-1"></a><span class="st">remove_old_config_files: false</span></span>
+<span id="cb8-259"><a href="#cb8-259" aria-hidden="true" tabindex="-1"></a><span class="st">ocp_client: &quot;file:///data/ocp4/{{ ocp_version }}/openshift-client-linux-{{ ocp_version }}.tar.gz&quot;</span></span>
+<span id="cb8-260"><a href="#cb8-260" aria-hidden="true" tabindex="-1"></a><span class="st">ocp_installer: &quot;file:///data/ocp4/{{ ocp_version }}/openshift-install-linux-{{ ocp_version }}.tar.gz&quot;</span></span>
+<span id="cb8-261"><a href="#cb8-261" aria-hidden="true" tabindex="-1"></a><span class="st">ocp_bios: &quot;file:///data/ocp4/rhcos-metal.x86_64.raw.gz&quot;</span></span>
+<span id="cb8-262"><a href="#cb8-262" aria-hidden="true" tabindex="-1"></a><span class="st">ppc64le: false</span></span>
+<span id="cb8-263"><a href="#cb8-263" aria-hidden="true" tabindex="-1"></a><span class="st">arch: &#39;x86_64&#39;</span></span>
+<span id="cb8-264"><a href="#cb8-264" aria-hidden="true" tabindex="-1"></a><span class="st">chronyconfig:</span></span>
+<span id="cb8-265"><a href="#cb8-265" aria-hidden="true" tabindex="-1"></a><span class="st">  enabled: true</span></span>
+<span id="cb8-266"><a href="#cb8-266" aria-hidden="true" tabindex="-1"></a><span class="st">  content:</span></span>
+<span id="cb8-267"><a href="#cb8-267" aria-hidden="true" tabindex="-1"></a><span class="st">    - server: &quot;192.168.7.11&quot;</span></span>
+<span id="cb8-268"><a href="#cb8-268" aria-hidden="true" tabindex="-1"></a><span class="st">      options: iburst</span></span>
+<span id="cb8-269"><a href="#cb8-269" aria-hidden="true" tabindex="-1"></a><span class="st">setup_registry: # don&#39;t worry about this, just leave it here</span></span>
+<span id="cb8-270"><a href="#cb8-270" aria-hidden="true" tabindex="-1"></a><span class="st">  deploy: false</span></span>
+<span id="cb8-271"><a href="#cb8-271" aria-hidden="true" tabindex="-1"></a><span class="st">  registry_image: docker.io/library/registry:2</span></span>
+<span id="cb8-272"><a href="#cb8-272" aria-hidden="true" tabindex="-1"></a><span class="st">  local_repo: &quot;ocp4/openshift4&quot;</span></span>
+<span id="cb8-273"><a href="#cb8-273" aria-hidden="true" tabindex="-1"></a><span class="st">  product_repo: &quot;openshift-release-dev&quot;</span></span>
+<span id="cb8-274"><a href="#cb8-274" aria-hidden="true" tabindex="-1"></a><span class="st">  release_name: &quot;ocp-release&quot;</span></span>
+<span id="cb8-275"><a href="#cb8-275" aria-hidden="true" tabindex="-1"></a><span class="st">  release_tag: &quot;4.6.1-x86_64&quot;</span></span>
+<span id="cb8-276"><a href="#cb8-276" aria-hidden="true" tabindex="-1"></a><span class="st">ocp_filetranspiler: &quot;file:///data/ocp4/filetranspiler.tgz&quot;</span></span>
+<span id="cb8-277"><a href="#cb8-277" aria-hidden="true" tabindex="-1"></a><span class="st">registry_server: &quot;registry.infra.redhat.ren:5443&quot;</span></span>
+<span id="cb8-278"><a href="#cb8-278" aria-hidden="true" tabindex="-1"></a><span class="op">EOF</span></span>
+<span id="cb8-279"><a href="#cb8-279" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-280"><a href="#cb8-280" aria-hidden="true" tabindex="-1"></a><span class="co"># ansible 脚本要运行很多次，这是第一次，主要是装云服务，配置他们</span></span>
+<span id="cb8-281"><a href="#cb8-281" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> /data/ocp4/ocp4-upi-helpernode-master</span>
+<span id="cb8-282"><a href="#cb8-282" aria-hidden="true" tabindex="-1"></a><span class="ex">ansible-playbook</span> <span class="at">-e</span> @vars.yaml tasks/main.yml</span>
+<span id="cb8-283"><a href="#cb8-283" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-284"><a href="#cb8-284" aria-hidden="true" tabindex="-1"></a><span class="fu">mkdir</span> <span class="at">-p</span> /data/install</span>
+<span id="cb8-285"><a href="#cb8-285" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> /data/install</span>
+<span id="cb8-286"><a href="#cb8-286" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-287"><a href="#cb8-287" aria-hidden="true" tabindex="-1"></a><span class="co"># vi install-config.yaml </span></span>
+<span id="cb8-288"><a href="#cb8-288" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> <span class="op">&lt;&lt; EOF</span> <span class="op">&gt;</span> /data/install/install-config.yaml </span>
+<span id="cb8-289"><a href="#cb8-289" aria-hidden="true" tabindex="-1"></a><span class="st">apiVersion: v1</span></span>
+<span id="cb8-290"><a href="#cb8-290" aria-hidden="true" tabindex="-1"></a><span class="st">baseDomain: redhat.ren</span></span>
+<span id="cb8-291"><a href="#cb8-291" aria-hidden="true" tabindex="-1"></a><span class="st">compute:</span></span>
+<span id="cb8-292"><a href="#cb8-292" aria-hidden="true" tabindex="-1"></a><span class="st">- hyperthreading: Enabled</span></span>
+<span id="cb8-293"><a href="#cb8-293" aria-hidden="true" tabindex="-1"></a><span class="st">  name: worker</span></span>
+<span id="cb8-294"><a href="#cb8-294" aria-hidden="true" tabindex="-1"></a><span class="st">  replicas: 0</span></span>
+<span id="cb8-295"><a href="#cb8-295" aria-hidden="true" tabindex="-1"></a><span class="st">controlPlane:</span></span>
+<span id="cb8-296"><a href="#cb8-296" aria-hidden="true" tabindex="-1"></a><span class="st">  hyperthreading: Enabled</span></span>
+<span id="cb8-297"><a href="#cb8-297" aria-hidden="true" tabindex="-1"></a><span class="st">  name: master</span></span>
+<span id="cb8-298"><a href="#cb8-298" aria-hidden="true" tabindex="-1"></a><span class="st">  replicas: 1</span></span>
+<span id="cb8-299"><a href="#cb8-299" aria-hidden="true" tabindex="-1"></a><span class="st">metadata:</span></span>
+<span id="cb8-300"><a href="#cb8-300" aria-hidden="true" tabindex="-1"></a><span class="st">  name: ocp4</span></span>
+<span id="cb8-301"><a href="#cb8-301" aria-hidden="true" tabindex="-1"></a><span class="st">networking:</span></span>
+<span id="cb8-302"><a href="#cb8-302" aria-hidden="true" tabindex="-1"></a><span class="st">  clusterNetworks:</span></span>
+<span id="cb8-303"><a href="#cb8-303" aria-hidden="true" tabindex="-1"></a><span class="st">  - cidr: 10.128.0.0/14</span></span>
+<span id="cb8-304"><a href="#cb8-304" aria-hidden="true" tabindex="-1"></a><span class="st">    hostPrefix: 23</span></span>
+<span id="cb8-305"><a href="#cb8-305" aria-hidden="true" tabindex="-1"></a><span class="st">  networkType: OVNKubernetes</span></span>
+<span id="cb8-306"><a href="#cb8-306" aria-hidden="true" tabindex="-1"></a><span class="st">  serviceNetwork:</span></span>
+<span id="cb8-307"><a href="#cb8-307" aria-hidden="true" tabindex="-1"></a><span class="st">  - 172.30.0.0/16</span></span>
+<span id="cb8-308"><a href="#cb8-308" aria-hidden="true" tabindex="-1"></a><span class="st">platform:</span></span>
+<span id="cb8-309"><a href="#cb8-309" aria-hidden="true" tabindex="-1"></a><span class="st">  none: {}</span></span>
+<span id="cb8-310"><a href="#cb8-310" aria-hidden="true" tabindex="-1"></a><span class="st">pullSecret: &#39;{&quot;auths&quot;:{&quot;registry.ocp4.redhat.ren:5443&quot;: {&quot;auth&quot;: &quot;ZHVtbXk6ZHVtbXk=&quot;,&quot;email&quot;: &quot;noemail@localhost&quot;},&quot;quaylab.infra.redhat.ren&quot;: {&quot;auth&quot;: &quot;cXVheWFkbWluOnBhc3N3b3Jk&quot;,&quot;email&quot;: &quot;noemail@localhost&quot;}}}&#39;</span></span>
+<span id="cb8-311"><a href="#cb8-311" aria-hidden="true" tabindex="-1"></a><span class="st">sshKey: |</span></span>
+<span id="cb8-312"><a href="#cb8-312" aria-hidden="true" tabindex="-1"></a><span class="va">$(</span> <span class="fu">cat</span> /root/.ssh/id_rsa.pub <span class="kw">|</span> <span class="fu">sed</span> <span class="st">&#39;s/^/   /g&#39;</span> <span class="va">)</span></span>
+<span id="cb8-313"><a href="#cb8-313" aria-hidden="true" tabindex="-1"></a><span class="st">additionalTrustBundle: |</span></span>
+<span id="cb8-314"><a href="#cb8-314" aria-hidden="true" tabindex="-1"></a><span class="va">$(</span> <span class="fu">cat</span> /etc/crts/redhat.ren.ca.crt <span class="kw">|</span> <span class="fu">sed</span> <span class="st">&#39;s/^/   /g&#39;</span> <span class="va">)</span></span>
+<span id="cb8-315"><a href="#cb8-315" aria-hidden="true" tabindex="-1"></a><span class="st">imageContentSources:</span></span>
+<span id="cb8-316"><a href="#cb8-316" aria-hidden="true" tabindex="-1"></a><span class="st">- mirrors:</span></span>
+<span id="cb8-317"><a href="#cb8-317" aria-hidden="true" tabindex="-1"></a><span class="st">  - quaylab.infra.redhat.ren/ocp4/openshift4</span></span>
+<span id="cb8-318"><a href="#cb8-318" aria-hidden="true" tabindex="-1"></a><span class="st">  source: quay.io/openshift-release-dev/ocp-release</span></span>
+<span id="cb8-319"><a href="#cb8-319" aria-hidden="true" tabindex="-1"></a><span class="st">- mirrors:</span></span>
+<span id="cb8-320"><a href="#cb8-320" aria-hidden="true" tabindex="-1"></a><span class="st">  - quaylab.infra.redhat.ren/ocp4/openshift4</span></span>
+<span id="cb8-321"><a href="#cb8-321" aria-hidden="true" tabindex="-1"></a><span class="st">  source: quay.io/openshift-release-dev/ocp-v4.0-art-dev</span></span>
+<span id="cb8-322"><a href="#cb8-322" aria-hidden="true" tabindex="-1"></a><span class="op">EOF</span></span>
+<span id="cb8-323"><a href="#cb8-323" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-324"><a href="#cb8-324" aria-hidden="true" tabindex="-1"></a><span class="co"># 清空之前的openshift安装缓存，并且创建新的ignition files</span></span>
+<span id="cb8-325"><a href="#cb8-325" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> /data/install/</span>
+<span id="cb8-326"><a href="#cb8-326" aria-hidden="true" tabindex="-1"></a><span class="ex">/bin/rm</span> <span class="at">-rf</span> <span class="pp">*</span>.ign .openshift_install_state.json auth bootstrap manifests master<span class="pp">*[</span><span class="ss">0</span><span class="pp">-</span><span class="ss">9</span><span class="pp">]</span> worker<span class="pp">*[</span><span class="ss">0</span><span class="pp">-</span><span class="ss">9</span><span class="pp">]</span> </span>
+<span id="cb8-327"><a href="#cb8-327" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-328"><a href="#cb8-328" aria-hidden="true" tabindex="-1"></a><span class="ex">openshift-install</span> create manifests <span class="at">--dir</span><span class="op">=</span>/data/install</span>
+<span id="cb8-329"><a href="#cb8-329" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-330"><a href="#cb8-330" aria-hidden="true" tabindex="-1"></a><span class="co"># 我们有一些自定义的ignition配置，把他们加进去</span></span>
+<span id="cb8-331"><a href="#cb8-331" aria-hidden="true" tabindex="-1"></a><span class="co"># copy ntp related config</span></span>
+<span id="cb8-332"><a href="#cb8-332" aria-hidden="true" tabindex="-1"></a><span class="ex">/bin/cp</span> <span class="at">-f</span>  /data/ocp4/ocp4-upi-helpernode-master/machineconfig/<span class="pp">*</span> /data/install/openshift/</span>
+<span id="cb8-333"><a href="#cb8-333" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-334"><a href="#cb8-334" aria-hidden="true" tabindex="-1"></a><span class="co"># copy image registry proxy related config</span></span>
+<span id="cb8-335"><a href="#cb8-335" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> /data/ocp4</span>
+<span id="cb8-336"><a href="#cb8-336" aria-hidden="true" tabindex="-1"></a><span class="fu">bash</span> image.registries.conf.sh nexus.infra.redhat.ren:8083</span>
+<span id="cb8-337"><a href="#cb8-337" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-338"><a href="#cb8-338" aria-hidden="true" tabindex="-1"></a><span class="ex">/bin/cp</span> <span class="at">-f</span> /data/ocp4/image.registries.conf /etc/containers/registries.conf.d/</span>
+<span id="cb8-339"><a href="#cb8-339" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-340"><a href="#cb8-340" aria-hidden="true" tabindex="-1"></a><span class="ex">/bin/cp</span> <span class="at">-f</span> /data/ocp4/99-worker-container-registries.yaml /data/install/openshift</span>
+<span id="cb8-341"><a href="#cb8-341" aria-hidden="true" tabindex="-1"></a><span class="ex">/bin/cp</span> <span class="at">-f</span> /data/ocp4/99-master-container-registries.yaml /data/install/openshift</span>
+<span id="cb8-342"><a href="#cb8-342" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-343"><a href="#cb8-343" aria-hidden="true" tabindex="-1"></a><span class="co"># 创建 ignition 文件</span></span>
+<span id="cb8-344"><a href="#cb8-344" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> /data/install/</span>
+<span id="cb8-345"><a href="#cb8-345" aria-hidden="true" tabindex="-1"></a><span class="ex">openshift-install</span> create ignition-configs <span class="at">--dir</span><span class="op">=</span>/data/install</span>
+<span id="cb8-346"><a href="#cb8-346" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-347"><a href="#cb8-347" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> /data/ocp4/ocp4-upi-helpernode-master</span>
+<span id="cb8-348"><a href="#cb8-348" aria-hidden="true" tabindex="-1"></a><span class="co"># 我们来为每个主机，复制自己版本的ign，并复制到 web server 的目录下</span></span>
+<span id="cb8-349"><a href="#cb8-349" aria-hidden="true" tabindex="-1"></a><span class="ex">ansible-playbook</span> <span class="at">-e</span> @vars.yaml tasks/ign.yml</span>
+<span id="cb8-350"><a href="#cb8-350" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-351"><a href="#cb8-351" aria-hidden="true" tabindex="-1"></a><span class="co"># 我们为每个节点创建各自的iso文件</span></span>
+<span id="cb8-352"><a href="#cb8-352" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> /data/ocp4/ocp4-upi-helpernode-master</span>
+<span id="cb8-353"><a href="#cb8-353" aria-hidden="true" tabindex="-1"></a><span class="ex">ansible-playbook</span> <span class="at">-e</span> @vars.yaml tasks/iso.yml</span>
+<span id="cb8-354"><a href="#cb8-354" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-355"><a href="#cb8-355" aria-hidden="true" tabindex="-1"></a><span class="co"># 接下来，我们把 master, worker 的启动iso复制到宿主机上</span></span>
+<span id="cb8-356"><a href="#cb8-356" aria-hidden="true" tabindex="-1"></a><span class="co"># 并启动kvm，将自动开始安装 master, worker 节点</span></span>
+<span id="cb8-357"><a href="#cb8-357" aria-hidden="true" tabindex="-1"></a><span class="co"># on kvm host 172.21.6.103</span></span>
+<span id="cb8-358"><a href="#cb8-358" aria-hidden="true" tabindex="-1"></a><span class="bu">export</span> <span class="va">KVM_DIRECTORY</span><span class="op">=</span>/data/kvm</span>
+<span id="cb8-359"><a href="#cb8-359" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-360"><a href="#cb8-360" aria-hidden="true" tabindex="-1"></a><span class="fu">mkdir</span> <span class="at">-p</span>  <span class="va">${KVM_DIRECTORY}</span></span>
+<span id="cb8-361"><a href="#cb8-361" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> <span class="va">${KVM_DIRECTORY}</span></span>
+<span id="cb8-362"><a href="#cb8-362" aria-hidden="true" tabindex="-1"></a><span class="fu">scp</span> root@192.168.7.11:/data/install/<span class="dt">{</span><span class="pp">*</span><span class="dt">boot</span><span class="pp">*</span><span class="op">,</span><span class="pp">*</span><span class="dt">master-0</span><span class="op">,</span><span class="pp">*</span><span class="dt">worker-0}</span>.iso <span class="va">${KVM_DIRECTORY}</span>/</span>
+<span id="cb8-363"><a href="#cb8-363" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-364"><a href="#cb8-364" aria-hidden="true" tabindex="-1"></a><span class="ex">virt-install</span> <span class="at">--name</span><span class="op">=</span>ocp4-bootstrap <span class="at">--vcpus</span><span class="op">=</span>4 <span class="at">--ram</span><span class="op">=</span>8192 <span class="dt">\</span></span>
+<span id="cb8-365"><a href="#cb8-365" aria-hidden="true" tabindex="-1"></a>--disk path=/dev/vgdata/lvbootstrap,device=disk,bus=virtio,format=raw <span class="dt">\</span></span>
+<span id="cb8-366"><a href="#cb8-366" aria-hidden="true" tabindex="-1"></a>--os-variant rhel8.5 <span class="at">--network</span> bridge=baremetal,model=virtio <span class="dt">\</span></span>
+<span id="cb8-367"><a href="#cb8-367" aria-hidden="true" tabindex="-1"></a>--graphics vnc,port=59001 <span class="dt">\</span></span>
+<span id="cb8-368"><a href="#cb8-368" aria-hidden="true" tabindex="-1"></a>--boot menu=on <span class="at">--cdrom</span> <span class="va">${KVM_DIRECTORY}</span>/rhcos_install-bootstrap.iso   </span>
+<span id="cb8-369"><a href="#cb8-369" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-370"><a href="#cb8-370" aria-hidden="true" tabindex="-1"></a><span class="ex">virt-install</span> <span class="at">--name</span><span class="op">=</span>ocp4-master-0 <span class="at">--vcpus</span><span class="op">=</span>16 <span class="at">--ram</span><span class="op">=</span>73728 <span class="dt">\</span></span>
+<span id="cb8-371"><a href="#cb8-371" aria-hidden="true" tabindex="-1"></a>--cpu=host-model <span class="dt">\</span></span>
+<span id="cb8-372"><a href="#cb8-372" aria-hidden="true" tabindex="-1"></a>--disk path=/dev/vgdata/lvmaster0,device=disk,bus=virtio,format=raw <span class="dt">\</span></span>
+<span id="cb8-373"><a href="#cb8-373" aria-hidden="true" tabindex="-1"></a>--os-variant rhel8.5 <span class="at">--network</span> bridge=baremetal,model=virtio <span class="dt">\</span></span>
+<span id="cb8-374"><a href="#cb8-374" aria-hidden="true" tabindex="-1"></a>--graphics vnc,port=59002 <span class="dt">\</span></span>
+<span id="cb8-375"><a href="#cb8-375" aria-hidden="true" tabindex="-1"></a>--boot menu=on <span class="at">--cdrom</span> <span class="va">${KVM_DIRECTORY}</span>/rhcos_install-master-0.iso </span>
+<span id="cb8-376"><a href="#cb8-376" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-377"><a href="#cb8-377" aria-hidden="true" tabindex="-1"></a><span class="co"># 回到helper vm上，等待安装结束</span></span>
+<span id="cb8-378"><a href="#cb8-378" aria-hidden="true" tabindex="-1"></a><span class="co"># back to helper vm</span></span>
+<span id="cb8-379"><a href="#cb8-379" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> /data/install</span>
+<span id="cb8-380"><a href="#cb8-380" aria-hidden="true" tabindex="-1"></a><span class="bu">export</span> <span class="va">KUBECONFIG</span><span class="op">=</span>/data/install/auth/kubeconfig</span>
+<span id="cb8-381"><a href="#cb8-381" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="st">&quot;export KUBECONFIG=/data/install/auth/kubeconfig&quot;</span> <span class="op">&gt;&gt;</span> ~/.bashrc</span>
+<span id="cb8-382"><a href="#cb8-382" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> completion bash <span class="kw">|</span> <span class="fu">sudo</span> tee /etc/bash_completion.d/openshift <span class="op">&gt;</span> /dev/null</span>
+<span id="cb8-383"><a href="#cb8-383" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-384"><a href="#cb8-384" aria-hidden="true" tabindex="-1"></a><span class="ex">dnf</span> <span class="at">-y</span> install jq</span>
+<span id="cb8-385"><a href="#cb8-385" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> get csr <span class="kw">|</span> <span class="fu">grep</span> <span class="at">-v</span> Approved</span>
+<span id="cb8-386"><a href="#cb8-386" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> get csr <span class="at">-ojson</span> <span class="kw">|</span> <span class="ex">jq</span> <span class="at">-r</span> <span class="st">&#39;.items[] | select(.status == {} ) | .metadata.name&#39;</span> <span class="kw">|</span> <span class="fu">xargs</span> oc adm certificate approve</span>
+<span id="cb8-387"><a href="#cb8-387" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-388"><a href="#cb8-388" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> /data/install</span>
+<span id="cb8-389"><a href="#cb8-389" aria-hidden="true" tabindex="-1"></a><span class="ex">openshift-install</span> wait-for bootstrap-complete <span class="at">--log-level</span> debug</span>
+<span id="cb8-390"><a href="#cb8-390" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-391"><a href="#cb8-391" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> /data/install</span>
+<span id="cb8-392"><a href="#cb8-392" aria-hidden="true" tabindex="-1"></a><span class="ex">openshift-install</span> wait-for install-complete <span class="at">--log-level</span> debug</span>
+<span id="cb8-393"><a href="#cb8-393" aria-hidden="true" tabindex="-1"></a><span class="co"># INFO To access the cluster as the system:admin user when using &#39;oc&#39;, run &#39;export KUBECONFIG=/data/install/auth/kubeconfig&#39;</span></span>
+<span id="cb8-394"><a href="#cb8-394" aria-hidden="true" tabindex="-1"></a><span class="co"># INFO Access the OpenShift web-console here: https://console-openshift-console.apps.ocp4.redhat.ren</span></span>
+<span id="cb8-395"><a href="#cb8-395" aria-hidden="true" tabindex="-1"></a><span class="co"># INFO Login to the console with user: &quot;kubeadmin&quot;, and password: &quot;eLVhg-TUx3X-fWYL9-dHepi&quot;</span></span></code></pre></div>
+        <h2 id="install-tektoncicd-pipeline">install tekton(ci/cd
+        pipeline)</h2>
+        <p><a
+        href="https://docs.openshift.com/container-platform/4.9/cicd/pipelines/installing-pipelines.html">openshift
+        pipeline
+        官方安装文档</a>写的很好，照着做，点一下鼠标就好了。</p>
+        <p><img src="imgs/2022-01-18-11-47-23.png" /></p>
+        <h2 id="install-argocdcicd-gitops">install argocd(ci/cd
+        gitops)</h2>
+        <p><a
+        href="https://docs.openshift.com/container-platform/4.9/cicd/gitops/installing-openshift-gitops.html">openshift
+        gitops官方安装文档</a>写的很好，照着做，点一下鼠标就好了。</p>
+        <p><img src="imgs/2022-01-18-11-56-10.png" /></p>
+        <h2 id="install-hostpath-provisioner-from-kubevirt">install
+        hostpath-provisioner from kubevirt</h2>
+        <p>我们需要在openshift上的简单存储方案，那么我们就借用<a
+        href="https://docs.openshift.com/container-platform/4.9/virt/virtual_machines/virtual_disks/virt-features-for-storage.html">openshift
+        virtulization</a>来搞，他里面有一个<a
+        href="https://docs.openshift.com/container-platform/4.9/virt/virtual_machines/virtual_disks/virt-features-for-storage.html">hostpath</a>组件</p>
+        <p>以下是配置要点</p>
+        <div class="sourceCode" id="cb9"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 在节点上创建对应目录，并设置selinux权限</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> <span class="op">&lt;&lt; EOF</span> <span class="op">&gt;</span> /data/install/host-path.yaml</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="st">---</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a><span class="st">apiVersion: machineconfiguration.openshift.io/v1</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="st">kind: MachineConfig</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a><span class="st">metadata:</span></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a><span class="st">  name: 50-set-selinux-for-hostpath-master</span></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a><span class="st">  labels:</span></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a><span class="st">    machineconfiguration.openshift.io/role: master</span></span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a><span class="st">spec:</span></span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a><span class="st">  config:</span></span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a><span class="st">    ignition:</span></span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a><span class="st">      version: 3.2.0</span></span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a><span class="st">    systemd:</span></span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a><span class="st">      units:</span></span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a><span class="st">        - contents: |</span></span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a><span class="st">            [Unit]</span></span>
+<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a><span class="st">            Description=Set SELinux chcon for hostpath baicell</span></span>
+<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a><span class="st">            Before=kubelet.service</span></span>
+<span id="cb9-20"><a href="#cb9-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-21"><a href="#cb9-21" aria-hidden="true" tabindex="-1"></a><span class="st">            [Service]</span></span>
+<span id="cb9-22"><a href="#cb9-22" aria-hidden="true" tabindex="-1"></a><span class="st">            Type=oneshot</span></span>
+<span id="cb9-23"><a href="#cb9-23" aria-hidden="true" tabindex="-1"></a><span class="st">            RemainAfterExit=yes</span></span>
+<span id="cb9-24"><a href="#cb9-24" aria-hidden="true" tabindex="-1"></a><span class="st">            ExecStartPre=-mkdir -p /var/hostpath</span></span>
+<span id="cb9-25"><a href="#cb9-25" aria-hidden="true" tabindex="-1"></a><span class="st">            ExecStart=chcon -Rt container_file_t /var/hostpath/</span></span>
+<span id="cb9-26"><a href="#cb9-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-27"><a href="#cb9-27" aria-hidden="true" tabindex="-1"></a><span class="st">            [Install]</span></span>
+<span id="cb9-28"><a href="#cb9-28" aria-hidden="true" tabindex="-1"></a><span class="st">            WantedBy=multi-user.target</span></span>
+<span id="cb9-29"><a href="#cb9-29" aria-hidden="true" tabindex="-1"></a><span class="st">          enabled: true</span></span>
+<span id="cb9-30"><a href="#cb9-30" aria-hidden="true" tabindex="-1"></a><span class="st">          name: hostpath-baicell.service</span></span>
+<span id="cb9-31"><a href="#cb9-31" aria-hidden="true" tabindex="-1"></a><span class="op">EOF</span></span>
+<span id="cb9-32"><a href="#cb9-32" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> create <span class="at">-f</span> /data/install/host-path.yaml</span>
+<span id="cb9-33"><a href="#cb9-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-34"><a href="#cb9-34" aria-hidden="true" tabindex="-1"></a><span class="co"># 创建hostpath配置</span></span>
+<span id="cb9-35"><a href="#cb9-35" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> <span class="op">&lt;&lt; EOF</span> <span class="op">&gt;</span> /data/install/host-path-provision.yaml</span>
+<span id="cb9-36"><a href="#cb9-36" aria-hidden="true" tabindex="-1"></a><span class="st">apiVersion: hostpathprovisioner.kubevirt.io/v1beta1</span></span>
+<span id="cb9-37"><a href="#cb9-37" aria-hidden="true" tabindex="-1"></a><span class="st">kind: HostPathProvisioner</span></span>
+<span id="cb9-38"><a href="#cb9-38" aria-hidden="true" tabindex="-1"></a><span class="st">metadata:</span></span>
+<span id="cb9-39"><a href="#cb9-39" aria-hidden="true" tabindex="-1"></a><span class="st">  name: hostpath-provisioner</span></span>
+<span id="cb9-40"><a href="#cb9-40" aria-hidden="true" tabindex="-1"></a><span class="st">spec:</span></span>
+<span id="cb9-41"><a href="#cb9-41" aria-hidden="true" tabindex="-1"></a><span class="st">  imagePullPolicy: IfNotPresent</span></span>
+<span id="cb9-42"><a href="#cb9-42" aria-hidden="true" tabindex="-1"></a><span class="st">  pathConfig:</span></span>
+<span id="cb9-43"><a href="#cb9-43" aria-hidden="true" tabindex="-1"></a><span class="st">    path: &quot;/var/hostpath&quot; </span></span>
+<span id="cb9-44"><a href="#cb9-44" aria-hidden="true" tabindex="-1"></a><span class="st">    useNamingPrefix: false </span></span>
+<span id="cb9-45"><a href="#cb9-45" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-46"><a href="#cb9-46" aria-hidden="true" tabindex="-1"></a><span class="op">EOF</span></span>
+<span id="cb9-47"><a href="#cb9-47" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> create <span class="at">-f</span> /data/install/host-path-provision.yaml <span class="at">-n</span> openshift-cnv</span>
+<span id="cb9-48"><a href="#cb9-48" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-49"><a href="#cb9-49" aria-hidden="true" tabindex="-1"></a><span class="co"># 创建storage class配置</span></span>
+<span id="cb9-50"><a href="#cb9-50" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> <span class="op">&lt;&lt; EOF</span> <span class="op">&gt;</span> /data/install/host-path-storage-class.yaml</span>
+<span id="cb9-51"><a href="#cb9-51" aria-hidden="true" tabindex="-1"></a><span class="st">apiVersion: storage.k8s.io/v1</span></span>
+<span id="cb9-52"><a href="#cb9-52" aria-hidden="true" tabindex="-1"></a><span class="st">kind: StorageClass</span></span>
+<span id="cb9-53"><a href="#cb9-53" aria-hidden="true" tabindex="-1"></a><span class="st">metadata:</span></span>
+<span id="cb9-54"><a href="#cb9-54" aria-hidden="true" tabindex="-1"></a><span class="st">  name: hostpath-provisioner </span></span>
+<span id="cb9-55"><a href="#cb9-55" aria-hidden="true" tabindex="-1"></a><span class="st">provisioner: kubevirt.io/hostpath-provisioner</span></span>
+<span id="cb9-56"><a href="#cb9-56" aria-hidden="true" tabindex="-1"></a><span class="st">reclaimPolicy: Delete </span></span>
+<span id="cb9-57"><a href="#cb9-57" aria-hidden="true" tabindex="-1"></a><span class="st">volumeBindingMode: WaitForFirstConsumer </span></span>
+<span id="cb9-58"><a href="#cb9-58" aria-hidden="true" tabindex="-1"></a><span class="op">EOF</span></span>
+<span id="cb9-59"><a href="#cb9-59" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> create <span class="at">-f</span> /data/install/host-path-storage-class.yaml</span></code></pre></div>
+        <h1 id="cicd-in-shell">CI/CD in shell</h1>
+        <p>CI/CD是一种理念，强调的是快速的从业务构想，到产品代码开发，到产品的上线以及后面的自动维护和升级。具体采用什么工具，各个团队和公司的情况不同，所以需要自己去研究。但是原则是，用自己熟悉的，能掌控的，能快速解决问题的就行。</p>
+        <p>根据我们的整体CI/CD设计，我们做2个版本的CI/CD，一个是用最简单的脚本实现，另外一个用openshift4的工具实现。这两个版本并没有谁好谁坏，只不过脚本的实现方式，更适合小团队，而openshift4的工具，更适合大团队。因为在大团队里面，沟通是一项成本非常高的活动，而openshift4中提供的这种工具，能很大程度的降低团队内部的沟通成本，同时简化和模版化的配置，降低配置错误的可能性，所以推荐团队使用。</p>
+        <h2 id="容器镜像版本号">容器镜像版本号</h2>
+        <p>容器镜像都版本，比如 quay.io/baicell/fpga-driver:set_ip.v06
+        ，set_ip.v06就是版本号，这个版本号可以根据公司和团队的需求，进行格式定义，一般会有软件版本，架构信息，构建日期等信息。我们这个演示，大部分都用日期时间戳的方式。有的时候，我们还会把构建者信息通过label的方式放到容器里面，不过这样并不直观，一般是把需要的信息，尽量压缩到镜像的版本号里面。</p>
+        <p>注意，版本号格式虽然是随意的，但是一旦在公司/团队内部定义下来，就要尽量贯彻执行遵循执行。</p>
+        <h2 id="build-image-sync-image">build image &amp;&amp; sync
+        image</h2>
+        <p>我们先来看看，怎么用脚本实现容器镜像的自动构建和自动上传/同步</p>
+        <h3 id="for-vbbu-app">for vbbu app</h3>
+        <p>先看看<a
+        href="https://github.com/wangzheng422/container.build.demo/blob/main/vbbu/Dockerfile">vBBU这个应用的容器镜像构建</a>，这个镜像的特点是非常大，我们已经在公有云上构建了他的编译基础版本，有6G大小，并使用quay的功能，把他异步的同步到公司内网中，接下来，我们就进行增量的构建。并把构建结果上传到公司内部的镜像仓库中。</p>
+        <div class="sourceCode" id="cb10"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co"># on helper vm</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="co"># get git repo from gitee, and copy to helper</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="fu">mkdir</span> <span class="at">-p</span> /data/cicd</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> /data/cicd</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a><span class="fu">wget</span> <span class="at">-O</span> main.zip https://gitee.com/wangzheng422/container.build.demo/repository/archive/main.zip</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a><span class="co"># scp main.zip root@192.168.7.11:/data/tmp/</span></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> /data/cicd</span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a><span class="fu">unzip</span> main.zip</span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> /data/cicd/container.build.demo-main/vbbu</span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a><span class="va">var_date</span><span class="op">=</span><span class="va">$(</span><span class="fu">date</span> <span class="st">&#39;+%Y-%m-%d-%H%M&#39;</span><span class="va">)</span></span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a><span class="ex">podman</span> build <span class="at">--no-cache</span> <span class="at">--build-arg</span> REGISTRY=quaylab.infra.redhat.ren <span class="at">-t</span> quaylab.infra.redhat.ren/baicell/vbbu:<span class="va">$var_date</span> .</span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a><span class="ex">podman</span> push quaylab.infra.redhat.ren/baicell/vbbu:<span class="va">$var_date</span></span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> quaylab.infra.redhat.ren/baicell/vbbu:<span class="va">$var_date</span></span>
+<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-18"><a href="#cb10-18" aria-hidden="true" tabindex="-1"></a><span class="co"># sync to public cloud</span></span>
+<span id="cb10-19"><a href="#cb10-19" aria-hidden="true" tabindex="-1"></a><span class="ex">podman</span> tag quaylab.infra.redhat.ren/baicell/vbbu:<span class="va">$var_date</span> quay.io/baicell/vbbu:<span class="va">$var_date</span></span>
+<span id="cb10-20"><a href="#cb10-20" aria-hidden="true" tabindex="-1"></a><span class="ex">podman</span> push quay.io/baicell/vbbu:<span class="va">$var_date</span></span></code></pre></div>
+        <h3 id="for-fpga-driver">for fpga driver</h3>
+        <p>接下来，我们看看如何构建<a
+        href="https://github.com/wangzheng422/container.build.demo/blob/main/fpga/driver.Dockerfile">fpga
+        driver的容器镜像</a>。这个进行很小，我们就直接在github上面，用action直接自动构建了。</p>
+        <p>以下是假设我们需要在公有云上，手动编译的步骤。</p>
+        <div class="sourceCode" id="cb11"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co"># on public cloud host (vultr)</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> clone https://github.com/wangzheng422/container.build.demo</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> container.build.demo/fpga</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a><span class="va">var_date</span><span class="op">=</span><span class="va">$(</span><span class="fu">date</span> <span class="st">&#39;+%Y-%m-%d-%H%M&#39;</span><span class="va">)</span></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a><span class="ex">podman</span> build <span class="at">--no-cache</span> <span class="at">-t</span> quay.io/baicell/fpga-driver:<span class="va">$var_date</span> <span class="at">-f</span> driver.Dockerfile .</span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a><span class="ex">podman</span> push quay.io/baicell/fpga-driver:<span class="va">$var_date</span></span></code></pre></div>
+        <h2 id="auto-deploy-to-openshift">auto deploy to openshift</h2>
+        <p>自动化部署，我们采用k8s原生支持的<a
+        href="https://kubernetes.io/zh/docs/tasks/manage-kubernetes-objects/kustomization/">kustomize</a>来做。用kustomize倒不是他多强大，只不过他很简单，可以整体上线和下线。</p>
+        <div class="sourceCode" id="cb12"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co"># on helper vm</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> new-project baicell</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> project baicell</span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> create sa demo</span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> adm policy add-scc-to-user privileged <span class="at">-z</span> demo</span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a><span class="fu">mkdir</span> <span class="at">-p</span> /data/cicd</span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> /data/cicd</span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a><span class="fu">wget</span> <span class="at">-O</span> main.zip https://gitee.com/wangzheng422/container.build.demo/repository/archive/main.zip</span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a><span class="fu">unzip</span> main.zip</span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> container.build.demo-main/deploy.demo/</span>
+<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a><span class="co"># oc new-project baicell</span></span>
+<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-17"><a href="#cb12-17" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> <span class="at">-n</span> baicell kustomize .</span>
+<span id="cb12-18"><a href="#cb12-18" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> <span class="at">-n</span> baicell apply <span class="at">-k</span> .</span>
+<span id="cb12-19"><a href="#cb12-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-20"><a href="#cb12-20" aria-hidden="true" tabindex="-1"></a><span class="co"># to restore</span></span>
+<span id="cb12-21"><a href="#cb12-21" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> <span class="at">-n</span> baicell delete <span class="at">-k</span> .</span></code></pre></div>
+        <h1 id="cicd-in-openshift4">CI/CD in openshift4</h1>
+        <p>现在我们来看看，如果用openshift4里面自带的功能，如何用开源的方式来实现ci/cd。</p>
+        <h2 id="tekton-pipeline">tekton / pipeline</h2>
+        <p>首先我们来看看pipeline/tekton。我们先把配置过程，用截屏的方式记录一下。</p>
+        <p>我们已经定义好了一个pipeline，这个pipeline有2步组成，一个是用git的方式，从远端clone一个项目，另外一个，是用buildah来编译镜像。
+        <img src="imgs/2022-01-23-23-11-41.png" /></p>
+        <p>我们点击编辑pipeline以后，进入了编辑流水线的页面，略过名称这里的配置，我们能看到一个流程图编辑界面，鼠标放到其中的步骤上，可以新增步骤/task，注意最后有一个workspace，这里面，我们需要配置一个存储，好让数据可以在不同task之间流动。
+        <img src="imgs/2022-01-23-23-14-48.png" /></p>
+        <p>点击某一个步骤/task以后，我们就可以配置这个步骤的参数，以buildah为例子，我们给他配置镜像名称等参数。
+        <img src="imgs/2022-01-23-23-16-24.png" /></p>
+        <p>pipeline的每次运行，都会有记录，叫pipeline
+        run，我们可以进入每个pipeline run，看那一次运行的日志。 <img
+        src="imgs/2022-01-23-23-17-40.png" /></p>
+        <p>pipeline会对所有属于自己的pipeline run，进行简单的统计。 <img
+        src="imgs/2022-01-23-23-19-09.png" /></p>
+        <p>接下来，我们看配置的一些点。</p>
+        <div class="sourceCode" id="cb13"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> new-project demo</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> project demo</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a><span class="co"># 要给service account创建push用的token</span></span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a><span class="co"># https://docs.openshift.com/container-platform/4.9/openshift_images/managing_images/using-image-pull-secrets.html</span></span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> create secret docker-registry pipeline-push-quaylab <span class="dt">\</span></span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">--docker-server</span><span class="op">=</span>quaylab.infra.redhat.ren <span class="dt">\</span></span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">--docker-username</span><span class="op">=</span>quayadmin <span class="dt">\</span></span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">--docker-password</span><span class="op">=</span>password <span class="dt">\</span></span>
+<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">--docker-email</span><span class="op">=</span>quayadmin@redhat.ren</span>
+<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> secrets link pipeline pipeline-push-quaylab <span class="at">--for</span><span class="op">=</span>pull,mount</span>
+<span id="cb13-14"><a href="#cb13-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-15"><a href="#cb13-15" aria-hidden="true" tabindex="-1"></a><span class="co"># 我们需要定义存储，给pipeline使用</span></span>
+<span id="cb13-16"><a href="#cb13-16" aria-hidden="true" tabindex="-1"></a><span class="co"># we define a pvc for the pipeline</span></span>
+<span id="cb13-17"><a href="#cb13-17" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> <span class="op">&lt;&lt; EOF</span> <span class="op">&gt;</span> /data/cicd/pipeline.pvc.yaml</span>
+<span id="cb13-18"><a href="#cb13-18" aria-hidden="true" tabindex="-1"></a><span class="st">kind: PersistentVolumeClaim</span></span>
+<span id="cb13-19"><a href="#cb13-19" aria-hidden="true" tabindex="-1"></a><span class="st">apiVersion: v1</span></span>
+<span id="cb13-20"><a href="#cb13-20" aria-hidden="true" tabindex="-1"></a><span class="st">metadata:</span></span>
+<span id="cb13-21"><a href="#cb13-21" aria-hidden="true" tabindex="-1"></a><span class="st">  name: pipeline-vbbu-image-build</span></span>
+<span id="cb13-22"><a href="#cb13-22" aria-hidden="true" tabindex="-1"></a><span class="st">  namespace: demo</span></span>
+<span id="cb13-23"><a href="#cb13-23" aria-hidden="true" tabindex="-1"></a><span class="st">spec:</span></span>
+<span id="cb13-24"><a href="#cb13-24" aria-hidden="true" tabindex="-1"></a><span class="st">  accessModes:</span></span>
+<span id="cb13-25"><a href="#cb13-25" aria-hidden="true" tabindex="-1"></a><span class="st">    - ReadWriteOnce</span></span>
+<span id="cb13-26"><a href="#cb13-26" aria-hidden="true" tabindex="-1"></a><span class="st">  resources:</span></span>
+<span id="cb13-27"><a href="#cb13-27" aria-hidden="true" tabindex="-1"></a><span class="st">    requests:</span></span>
+<span id="cb13-28"><a href="#cb13-28" aria-hidden="true" tabindex="-1"></a><span class="st">      storage: 1Gi</span></span>
+<span id="cb13-29"><a href="#cb13-29" aria-hidden="true" tabindex="-1"></a><span class="st">  storageClassName: hostpath-provisioner</span></span>
+<span id="cb13-30"><a href="#cb13-30" aria-hidden="true" tabindex="-1"></a><span class="st">  volumeMode: Filesystem</span></span>
+<span id="cb13-31"><a href="#cb13-31" aria-hidden="true" tabindex="-1"></a><span class="op">EOF</span></span>
+<span id="cb13-32"><a href="#cb13-32" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> create <span class="at">-f</span> /data/cicd/pipeline.pvc.yaml</span>
+<span id="cb13-33"><a href="#cb13-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-34"><a href="#cb13-34" aria-hidden="true" tabindex="-1"></a><span class="co"># 我们在界面上定义的pipeline，实际的yaml长这个样子，可以直接在命令行上创建。</span></span>
+<span id="cb13-35"><a href="#cb13-35" aria-hidden="true" tabindex="-1"></a><span class="co"># we define a pipeline</span></span>
+<span id="cb13-36"><a href="#cb13-36" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> <span class="op">&lt;&lt; EOF</span> <span class="op">&gt;</span> /data/cicd/pipeline.yaml</span>
+<span id="cb13-37"><a href="#cb13-37" aria-hidden="true" tabindex="-1"></a><span class="st">apiVersion: tekton.dev/v1beta1</span></span>
+<span id="cb13-38"><a href="#cb13-38" aria-hidden="true" tabindex="-1"></a><span class="st">kind: Pipeline</span></span>
+<span id="cb13-39"><a href="#cb13-39" aria-hidden="true" tabindex="-1"></a><span class="st">metadata:</span></span>
+<span id="cb13-40"><a href="#cb13-40" aria-hidden="true" tabindex="-1"></a><span class="st">  name: vbbu-build-image-pipeline</span></span>
+<span id="cb13-41"><a href="#cb13-41" aria-hidden="true" tabindex="-1"></a><span class="st">  namespace: demo</span></span>
+<span id="cb13-42"><a href="#cb13-42" aria-hidden="true" tabindex="-1"></a><span class="st">spec:</span></span>
+<span id="cb13-43"><a href="#cb13-43" aria-hidden="true" tabindex="-1"></a><span class="st">  params:</span></span>
+<span id="cb13-44"><a href="#cb13-44" aria-hidden="true" tabindex="-1"></a><span class="st">    - default: demo</span></span>
+<span id="cb13-45"><a href="#cb13-45" aria-hidden="true" tabindex="-1"></a><span class="st">      description: docker image tag</span></span>
+<span id="cb13-46"><a href="#cb13-46" aria-hidden="true" tabindex="-1"></a><span class="st">      name: image_tag</span></span>
+<span id="cb13-47"><a href="#cb13-47" aria-hidden="true" tabindex="-1"></a><span class="st">      type: string</span></span>
+<span id="cb13-48"><a href="#cb13-48" aria-hidden="true" tabindex="-1"></a><span class="st">  tasks:</span></span>
+<span id="cb13-49"><a href="#cb13-49" aria-hidden="true" tabindex="-1"></a><span class="st">    - name: git-clone</span></span>
+<span id="cb13-50"><a href="#cb13-50" aria-hidden="true" tabindex="-1"></a><span class="st">      params:</span></span>
+<span id="cb13-51"><a href="#cb13-51" aria-hidden="true" tabindex="-1"></a><span class="st">        - name: url</span></span>
+<span id="cb13-52"><a href="#cb13-52" aria-hidden="true" tabindex="-1"></a><span class="st">          value: &#39;https://gitee.com/wangzheng422/container.build.demo&#39;</span></span>
+<span id="cb13-53"><a href="#cb13-53" aria-hidden="true" tabindex="-1"></a><span class="st">        - name: httpProxy</span></span>
+<span id="cb13-54"><a href="#cb13-54" aria-hidden="true" tabindex="-1"></a><span class="st">          value: &#39;http://192.168.7.1:18080&#39;</span></span>
+<span id="cb13-55"><a href="#cb13-55" aria-hidden="true" tabindex="-1"></a><span class="st">        - name: httpsProxy</span></span>
+<span id="cb13-56"><a href="#cb13-56" aria-hidden="true" tabindex="-1"></a><span class="st">          value: &#39;http://192.168.7.1:18080&#39;</span></span>
+<span id="cb13-57"><a href="#cb13-57" aria-hidden="true" tabindex="-1"></a><span class="st">      taskRef:</span></span>
+<span id="cb13-58"><a href="#cb13-58" aria-hidden="true" tabindex="-1"></a><span class="st">        kind: ClusterTask</span></span>
+<span id="cb13-59"><a href="#cb13-59" aria-hidden="true" tabindex="-1"></a><span class="st">        name: git-clone</span></span>
+<span id="cb13-60"><a href="#cb13-60" aria-hidden="true" tabindex="-1"></a><span class="st">      workspaces:</span></span>
+<span id="cb13-61"><a href="#cb13-61" aria-hidden="true" tabindex="-1"></a><span class="st">        - name: output</span></span>
+<span id="cb13-62"><a href="#cb13-62" aria-hidden="true" tabindex="-1"></a><span class="st">          workspace: workspace-demo</span></span>
+<span id="cb13-63"><a href="#cb13-63" aria-hidden="true" tabindex="-1"></a><span class="st">    - name: buildah</span></span>
+<span id="cb13-64"><a href="#cb13-64" aria-hidden="true" tabindex="-1"></a><span class="st">      params:</span></span>
+<span id="cb13-65"><a href="#cb13-65" aria-hidden="true" tabindex="-1"></a><span class="st">        - name: IMAGE</span></span>
+<span id="cb13-66"><a href="#cb13-66" aria-hidden="true" tabindex="-1"></a><span class="st">          value: &#39;quaylab.infra.redhat.ren/baicell/vbbu:</span><span class="va">$(</span><span class="ex">params.image_tag</span><span class="va">)</span><span class="st">&#39;</span></span>
+<span id="cb13-67"><a href="#cb13-67" aria-hidden="true" tabindex="-1"></a><span class="st">        - name: DOCKERFILE</span></span>
+<span id="cb13-68"><a href="#cb13-68" aria-hidden="true" tabindex="-1"></a><span class="st">          value: vbbu/Dockerfile</span></span>
+<span id="cb13-69"><a href="#cb13-69" aria-hidden="true" tabindex="-1"></a><span class="st">        - name: CONTEXT</span></span>
+<span id="cb13-70"><a href="#cb13-70" aria-hidden="true" tabindex="-1"></a><span class="st">          value: vbbu/</span></span>
+<span id="cb13-71"><a href="#cb13-71" aria-hidden="true" tabindex="-1"></a><span class="st">        - name: TLSVERIFY</span></span>
+<span id="cb13-72"><a href="#cb13-72" aria-hidden="true" tabindex="-1"></a><span class="st">          value: &#39;false&#39;</span></span>
+<span id="cb13-73"><a href="#cb13-73" aria-hidden="true" tabindex="-1"></a><span class="st">        - name: BUILD_EXTRA_ARGS</span></span>
+<span id="cb13-74"><a href="#cb13-74" aria-hidden="true" tabindex="-1"></a><span class="st">          value: &#39;--build-arg REGISTRY=&#39;&#39;quaylab.infra.redhat.ren&#39;&#39;&#39;</span></span>
+<span id="cb13-75"><a href="#cb13-75" aria-hidden="true" tabindex="-1"></a><span class="st">      runAfter:</span></span>
+<span id="cb13-76"><a href="#cb13-76" aria-hidden="true" tabindex="-1"></a><span class="st">        - git-clone</span></span>
+<span id="cb13-77"><a href="#cb13-77" aria-hidden="true" tabindex="-1"></a><span class="st">      taskRef:</span></span>
+<span id="cb13-78"><a href="#cb13-78" aria-hidden="true" tabindex="-1"></a><span class="st">        kind: ClusterTask</span></span>
+<span id="cb13-79"><a href="#cb13-79" aria-hidden="true" tabindex="-1"></a><span class="st">        name: buildah</span></span>
+<span id="cb13-80"><a href="#cb13-80" aria-hidden="true" tabindex="-1"></a><span class="st">      workspaces:</span></span>
+<span id="cb13-81"><a href="#cb13-81" aria-hidden="true" tabindex="-1"></a><span class="st">        - name: source</span></span>
+<span id="cb13-82"><a href="#cb13-82" aria-hidden="true" tabindex="-1"></a><span class="st">          workspace: workspace-demo</span></span>
+<span id="cb13-83"><a href="#cb13-83" aria-hidden="true" tabindex="-1"></a><span class="st">  workspaces:</span></span>
+<span id="cb13-84"><a href="#cb13-84" aria-hidden="true" tabindex="-1"></a><span class="st">    - name: workspace-demo</span></span>
+<span id="cb13-85"><a href="#cb13-85" aria-hidden="true" tabindex="-1"></a><span class="op">EOF</span></span>
+<span id="cb13-86"><a href="#cb13-86" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> create <span class="at">-f</span> /data/cicd/pipeline.yaml</span></code></pre></div>
+        <h2 id="argocd-gitops">argocd / gitops</h2>
+        <p>接下来，我们来看看openshift4里面的gitops，他使用argocd做的。</p>
+        <p>gitops/argocd有专门的界面，在这里找登录位置，直接点击，用SSO登录就可以，默认operator都给你配置好了。
+        <img src="imgs/2022-01-23-23-22-38.png" /></p>
+        <p>接入gitops/argocd界面后，我们要配置git源 <img
+        src="imgs/2022-01-23-23-24-40.png" /></p>
+        <p>然后创建应用 <img src="imgs/2022-01-23-23-25-50.png" /></p>
+        <p>应用配置的关键信息，有git源，目标cluster(默认就好)，git里面的路径等。后面有yaml配置，可以直接使用。
+        <img src="imgs/2022-01-23-23-27-55.png" /></p>
+        <p>应用创建好以后，长这个样子 <img
+        src="imgs/2022-01-23-23-30-02.png" /></p>
+        <p>我们进入应用，看到了应用的结构图，很漂亮，我们点击同步，让gitops生效。这个时候，系统会根据git里面的yaml配置，来创建k8s对象。
+        <img src="imgs/2022-01-23-23-30-56.png" /></p>
+        <p>gitops成功以后，拓扑图更好看了，他把隐藏创建的一些系统对象，也显示出来了。
+        <img src="imgs/2022-01-23-23-32-18.png" /></p>
+        <p>回到概览页面，能看到，我们的应用已经正常了。 <img
+        src="imgs/2022-01-23-23-26-55.png" /></p>
+        <p>以下是一些用到的命令。</p>
+        <div class="sourceCode" id="cb14"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 给被管理project打标签，让这个project被gitops管理。</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> label namespace baicell argocd.argoproj.io/managed-by=openshift-gitops</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> api-resources  <span class="kw">|</span> <span class="fu">grep</span> argo</span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a><span class="co"># applications                          app,apps           argoproj.io/v1alpha1                           true         Application</span></span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a><span class="co"># applicationsets                       appset,appsets     argoproj.io/v1alpha1                           true         ApplicationSet</span></span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a><span class="co"># appprojects                           appproj,appprojs   argoproj.io/v1alpha1                           true         AppProject</span></span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a><span class="co"># argocds                                                  argoproj.io/v1alpha1                           true         ArgoCD</span></span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> project openshift-gitops</span>
+<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a><span class="co"># 创建我们的gitops应用，这个可以直接创建，剩的在界面上敲字了。</span></span>
+<span id="cb14-13"><a href="#cb14-13" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> <span class="op">&lt;&lt; EOF</span> <span class="op">&gt;</span> /data/cicd/gitops-app.yaml</span>
+<span id="cb14-14"><a href="#cb14-14" aria-hidden="true" tabindex="-1"></a><span class="st">apiVersion: argoproj.io/v1alpha1</span></span>
+<span id="cb14-15"><a href="#cb14-15" aria-hidden="true" tabindex="-1"></a><span class="st">kind: Application</span></span>
+<span id="cb14-16"><a href="#cb14-16" aria-hidden="true" tabindex="-1"></a><span class="st">metadata:</span></span>
+<span id="cb14-17"><a href="#cb14-17" aria-hidden="true" tabindex="-1"></a><span class="st">  name: demo</span></span>
+<span id="cb14-18"><a href="#cb14-18" aria-hidden="true" tabindex="-1"></a><span class="st">  namespace: openshift-gitops</span></span>
+<span id="cb14-19"><a href="#cb14-19" aria-hidden="true" tabindex="-1"></a><span class="st">spec:</span></span>
+<span id="cb14-20"><a href="#cb14-20" aria-hidden="true" tabindex="-1"></a><span class="st">  destination:</span></span>
+<span id="cb14-21"><a href="#cb14-21" aria-hidden="true" tabindex="-1"></a><span class="st">    namespace: baicell</span></span>
+<span id="cb14-22"><a href="#cb14-22" aria-hidden="true" tabindex="-1"></a><span class="st">    server: https://kubernetes.default.svc</span></span>
+<span id="cb14-23"><a href="#cb14-23" aria-hidden="true" tabindex="-1"></a><span class="st">  project: default</span></span>
+<span id="cb14-24"><a href="#cb14-24" aria-hidden="true" tabindex="-1"></a><span class="st">  source:</span></span>
+<span id="cb14-25"><a href="#cb14-25" aria-hidden="true" tabindex="-1"></a><span class="st">    path: deploy.demo</span></span>
+<span id="cb14-26"><a href="#cb14-26" aria-hidden="true" tabindex="-1"></a><span class="st">    repoURL: https://gitee.com/wangzheng422/container.build.demo</span></span>
+<span id="cb14-27"><a href="#cb14-27" aria-hidden="true" tabindex="-1"></a><span class="op">EOF</span></span>
+<span id="cb14-28"><a href="#cb14-28" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> create <span class="at">-f</span> /data/cicd/gitops-app.yaml</span>
+<span id="cb14-29"><a href="#cb14-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-30"><a href="#cb14-30" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> get applications</span>
+<span id="cb14-31"><a href="#cb14-31" aria-hidden="true" tabindex="-1"></a><span class="co"># NAME   SYNC STATUS   HEALTH STATUS</span></span>
+<span id="cb14-32"><a href="#cb14-32" aria-hidden="true" tabindex="-1"></a><span class="co"># demo   Synced        Healthy</span></span></code></pre></div>
+        <h1 id="end">end</h1>
+      </article>
+    </div>
+      </main>
+
+  <footer>
+    <p>
+      Licensed under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank"
+        rel="noopener">CC-BY-NC-SA 4.0</a>
+      &nbsp;·&nbsp;
+      <a href="https://github.com/wangzheng422/docker_env" target="_blank" rel="noopener">wangzheng422/docker_env</a>
+    </p>
+  </footer>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: false, theme: 'dark' });
+
+    const SITE_BUILD_ID = 'fbe91b569ae8';
+    const SITE_HOME_URL = '../../../index.html';
+
+    const getBuildIdFromHtml = (html) => {
+      const match = String(html).match(/<meta[^>]+name=["']site-build-id["'][^>]+content=["']([^"']+)["']/i)
+        || String(html).match(/<meta[^>]+content=["']([^"']+)["'][^>]+name=["']site-build-id["']/i);
+      return match ? match[1] : '';
+    };
+
+    const checkForSiteUpdate = async () => {
+      if (!SITE_BUILD_ID || window.location.protocol === 'file:') return;
+      try {
+        const probeUrl = new URL(SITE_HOME_URL || './index.html', window.location.href);
+        probeUrl.searchParams.set('site_cache_probe', Date.now().toString());
+        const response = await fetch(probeUrl.toString(), { cache: 'no-store' });
+        if (!response.ok) return;
+        const latestBuildId = getBuildIdFromHtml(await response.text());
+        if (!latestBuildId || latestBuildId === SITE_BUILD_ID) return;
+        if (sessionStorage.getItem('site-build-refresh') === latestBuildId) return;
+        sessionStorage.setItem('site-build-refresh', latestBuildId);
+        const freshUrl = new URL(window.location.href);
+        freshUrl.searchParams.set('v', latestBuildId);
+        window.location.replace(freshUrl.toString());
+      } catch (error) {
+        // Network errors should not block reading the current page.
+      }
+    };
+
+    const versionedLocalUrl = (rawUrl) => {
+      if (!rawUrl || /^(https?:)?\/\//i.test(rawUrl) || /^(data|blob|mailto):/i.test(rawUrl)) return rawUrl;
+      const url = new URL(rawUrl, window.location.href);
+      if (url.searchParams.has('v')) return rawUrl;
+      url.searchParams.set('v', SITE_BUILD_ID);
+      return url.toString();
+    };
+
+    const cacheBustPageAssets = () => {
+      document.querySelectorAll('img[src], video[src], audio[src], source[src]').forEach((node) => {
+        const src = node.getAttribute('src');
+        const versioned = versionedLocalUrl(src);
+        if (versioned !== src) node.setAttribute('src', versioned);
+      });
+    };
+
+    const updateReadingProgress = () => {
+      const progress = document.querySelector('.reading-progress');
+      if (!progress) return;
+      const scrollable = document.documentElement.scrollHeight - window.innerHeight;
+      const ratio = scrollable > 0 ? window.scrollY / scrollable : 0;
+      progress.style.transform = 'scaleX(' + Math.min(1, Math.max(0, ratio)) + ')';
+    };
+
+    const topicFor = (text, href) => {
+      const haystack = (text + ' ' + href).toLowerCase();
+      if (/developers\.redhat\.com|redhatquickcourses|github\.com\/redhatquickcourses/.test(haystack)) return 'Red Hat';
+      if (/ai|llm|gpu|vllm|llama|model|rhaiis/.test(haystack)) return 'AI';
+      if (/network|ovn|bgp|dns|egress|ingress|metallb|nic|route/.test(haystack)) return 'Network';
+      if (/cert|tls|sso|keycloak|rhbk|security|compliance/.test(haystack)) return 'Security';
+      if (/perf|profile|throttling|heap|debug/.test(haystack)) return 'Performance';
+      if (/install|ipi|upi|sno|disconnected|bootstrap/.test(haystack)) return 'Install';
+      if (/rhel|coreos|rhcos|kernel|rpm|ostree/.test(haystack)) return 'RHEL';
+      if (/backup|storage|nfs|odf|ocs|ceph|dr/.test(haystack)) return 'Storage';
+      if (/pipeline|gitops|ansible|aap|rhdh|devops/.test(haystack)) return 'DevOps';
+      return 'OpenShift';
+    };
+
+    const yearFor = (text, href) => {
+      const match = (text + ' ' + href).match(/20\d{2}/);
+      return match ? match[0] : 'Notes';
+    };
+
+    const importantExternal = (href) =>
+      /developers\.redhat\.com|redhatquickcourses\.github\.io/i.test(href);
+
+    const titleForLink = (link) => {
+      const href = link.getAttribute('href') || '';
+      const directText = link.textContent.trim().replace(/\s+/g, ' ');
+      if (!/^https?:\/\//.test(directText)) return directText;
+      const parentItem = link.closest('ul')?.parentElement;
+      if (parentItem) {
+        const clone = parentItem.cloneNode(true);
+        clone.querySelectorAll('ul').forEach((nested) => nested.remove());
+        const parentText = clone.textContent.trim().replace(/\s+/g, ' ');
+        if (parentText) {
+          return parentText;
+        }
+      }
+      return directText;
+    };
+
+    const escapeHtml = (value) => String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+
+    const enhanceHome = () => {
+      if (!document.body.classList.contains('page-index')) return;
+      const source = document.querySelector('.home-source');
+      const grid = document.getElementById('note-grid');
+      const stats = document.getElementById('console-stats');
+      const externalPanel = document.getElementById('external-panel');
+      const topicStrip = document.getElementById('topic-strip');
+      const search = document.getElementById('console-search');
+      if (!source || !grid || !stats || !externalPanel || !topicStrip || !search) return;
+
+      const seen = new Set();
+      const links = Array.from(source.querySelectorAll('a[href]'))
+        .map((link) => {
+          const href = link.getAttribute('href') || '';
+          const text = titleForLink(link);
+          return { text, href, topic: topicFor(text, href), year: yearFor(text, href) };
+        });
+      const notes = links
+        .filter((note) => note.text && !note.href.startsWith('http') && !seen.has(note.href) && seen.add(note.href));
+      const externalLinks = links
+        .filter((note) => note.text && importantExternal(note.href));
+
+      const topics = ['All', ...Array.from(new Set(notes.map((note) => note.topic))).sort()];
+      let activeTopic = 'All';
+
+      const renderStats = () => {
+        const years = notes.map((note) => note.year).filter((year) => year.length === 4 && /^\d{4}/.test(year));
+        const latest = years.length ? Math.max(...years.map(Number)) : 'N/A';
+        const oldest = years.length ? Math.min(...years.map(Number)) : 'N/A';
+        stats.innerHTML = [
+          ['Notes', notes.length],
+          ['Resources', externalLinks.length],
+          ['Topics', topics.length - 1],
+          ['Latest', latest],
+        ].map(([label, value]) => '<div class="stat-tile"><span>' + label + '</span><strong>' + value + '</strong></div>').join('');
+        const signal = document.getElementById('signal-count');
+        if (signal) signal.textContent = notes.length + ' links indexed';
+      };
+
+      const renderExternal = () => {
+        externalPanel.innerHTML =
+          '<div class="section-heading"><span>Published / Learning</span><strong>Red Hat resources</strong></div>' +
+          '<div class="external-grid">' +
+          externalLinks.map((note) =>
+            '<a class="resource-card" href="' + escapeHtml(note.href) + '" target="_blank" rel="noopener">' +
+            '<span class="note-meta"><span>' + escapeHtml(note.year) + '</span><span>' + escapeHtml(note.topic) + '</span></span>' +
+            '<strong>' + escapeHtml(note.text) + '</strong>' +
+            '<small>' + escapeHtml(note.href) + '</small>' +
+            '</a>'
+          ).join('') +
+          '</div>';
+      };
+
+      const renderTopics = () => {
+        topicStrip.innerHTML = topics.map((topic) => '<button class="topic-chip' + (topic === activeTopic ? ' active' : '') + '" type="button" data-topic="' + escapeHtml(topic) + '">' + escapeHtml(topic) + '</button>').join('');
+        topicStrip.querySelectorAll('button').forEach((button) => {
+          button.addEventListener('click', () => {
+            activeTopic = button.dataset.topic || 'All';
+            renderTopics();
+            renderCards();
+          });
+        });
+      };
+
+      const renderCards = () => {
+        const query = search.value.trim().toLowerCase();
+        const filtered = notes.filter((note) => {
+          const topicMatch = activeTopic === 'All' || note.topic === activeTopic;
+          const queryMatch = !query || (note.text + ' ' + note.href + ' ' + note.topic + ' ' + note.year).toLowerCase().includes(query);
+          return topicMatch && queryMatch;
+        });
+        grid.innerHTML = filtered.map((note) =>
+          '<a class="note-card" href="' + escapeHtml(note.href) + '">' +
+          '<span class="note-meta"><span>' + escapeHtml(note.year) + '</span><span>' + escapeHtml(note.topic) + '</span></span>' +
+          '<strong>' + escapeHtml(note.text) + '</strong>' +
+          '<small>' + escapeHtml(note.href) + '</small>' +
+          '</a>'
+        ).join('') || '<p class="empty-state">No matching notes.</p>';
+      };
+
+      const drawMap = () => {
+        const canvas = document.getElementById('knowledge-canvas');
+        if (!(canvas instanceof HTMLCanvasElement)) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        const width = canvas.width;
+        const height = canvas.height;
+        const nodes = notes.slice(0, 44).map((note, index) => {
+          const angle = (index / 44) * Math.PI * 2;
+          const ring = 90 + (index % 5) * 22;
+          return {
+            x: width / 2 + Math.cos(angle) * ring,
+            y: height / 2 + Math.sin(angle) * ring * 0.72,
+            topic: note.topic,
+          };
+        });
+        ctx.clearRect(0, 0, width, height);
+        ctx.strokeStyle = 'rgba(88, 166, 255, 0.14)';
+        ctx.lineWidth = 1;
+        nodes.forEach((node, index) => {
+          const next = nodes[(index + 7) % nodes.length];
+          ctx.beginPath();
+          ctx.moveTo(node.x, node.y);
+          ctx.lineTo(next.x, next.y);
+          ctx.stroke();
+        });
+        const palette = {
+          AI: '#a371f7',
+          Network: '#39d0d8',
+          Security: '#ff7b72',
+          Performance: '#f2cc60',
+          Install: '#7ee787',
+          RHEL: '#ff7b72',
+          Storage: '#d2a8ff',
+          DevOps: '#ffa657',
+          OpenShift: '#58a6ff',
+        };
+        nodes.forEach((node) => {
+          ctx.fillStyle = palette[node.topic] || '#58a6ff';
+          ctx.beginPath();
+          ctx.arc(node.x, node.y, 3.4, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      };
+
+      search.addEventListener('input', renderCards);
+      renderStats();
+      renderExternal();
+      renderTopics();
+      renderCards();
+      drawMap();
+      document.body.classList.add('home-enhanced');
+    };
+
+    const enhanceCodeBlocks = () => {
+      document.querySelectorAll('pre').forEach((pre) => {
+        if (pre.classList.contains('mermaid') || pre.querySelector('.copy-code')) return;
+        const button = document.createElement('button');
+        button.className = 'copy-code';
+        button.type = 'button';
+        button.textContent = 'Copy';
+        button.addEventListener('click', async () => {
+          await navigator.clipboard.writeText(pre.textContent || '');
+          button.textContent = 'Copied';
+          setTimeout(() => { button.textContent = 'Copy'; }, 1200);
+        });
+        pre.appendChild(button);
+      });
+    };
+
+    window.addEventListener('scroll', updateReadingProgress, { passive: true });
+    window.addEventListener('pageshow', (event) => {
+      if (event.persisted) checkForSiteUpdate();
+    });
+    document.addEventListener('DOMContentLoaded', async () => {
+      checkForSiteUpdate();
+      cacheBustPageAssets();
+      updateReadingProgress();
+      enhanceHome();
+      enhanceCodeBlocks();
+      // pandoc 输出 mermaid 为 <pre class="mermaid"><code>...</code></pre>
+      // 需要转成 <div class="mermaid">...</div> 供 mermaid.js 渲染
+      document.querySelectorAll('pre.mermaid').forEach(pre => {
+        const div = document.createElement('div');
+        div.classList.add('mermaid');
+        div.textContent = pre.textContent;
+        pre.replaceWith(div);
+      });
+      // 也处理 <pre><code class="language-mermaid"> 形式（备用）
+      document.querySelectorAll('pre code.language-mermaid').forEach(code => {
+        const div = document.createElement('div');
+        div.classList.add('mermaid');
+        div.textContent = code.textContent;
+        code.closest('pre').replaceWith(div);
+      });
+      await mermaid.run();
+    });
+  </script>
+</body>
+
+</html>

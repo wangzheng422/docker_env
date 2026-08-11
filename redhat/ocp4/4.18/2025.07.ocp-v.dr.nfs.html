@@ -1,0 +1,1317 @@
+<!DOCTYPE html>
+<html lang="zh" dir="ltr">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="generator" content="pandoc" />
+  <meta name="site-build-id" content="fbe91b569ae8" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <title>OpenShift Virtualization Disaster Recovery with Storage Replication | wandering.star notes</title>
+  <meta name="description"
+    content="Wandering field notes on OpenShift, RHEL, AI infrastructure, and platform operations." />
+  <!-- Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-E3FRMDB7L2"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-E3FRMDB7L2');
+  </script>
+  <style>
+  html {
+    color: #1a1a1a;
+    background-color: #fdfdfd;
+  }
+  body {
+    margin: 0 auto;
+    max-width: 36em;
+    padding-left: 50px;
+    padding-right: 50px;
+    padding-top: 50px;
+    padding-bottom: 50px;
+    hyphens: auto;
+    overflow-wrap: break-word;
+    text-rendering: optimizeLegibility;
+    font-kerning: normal;
+  }
+  @media (max-width: 600px) {
+    body {
+      font-size: 0.9em;
+      padding: 12px;
+    }
+    h1 {
+      font-size: 1.8em;
+    }
+  }
+  @media print {
+    html {
+      background-color: white;
+    }
+    body {
+      background-color: transparent;
+      color: black;
+      font-size: 12pt;
+    }
+    p, h2, h3 {
+      orphans: 3;
+      widows: 3;
+    }
+    h2, h3, h4 {
+      page-break-after: avoid;
+    }
+  }
+  p {
+    margin: 1em 0;
+  }
+  a {
+    color: #1a1a1a;
+  }
+  a:visited {
+    color: #1a1a1a;
+  }
+  img {
+    max-width: 100%;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.4em;
+  }
+  h5, h6 {
+    font-size: 1em;
+    font-style: italic;
+  }
+  h6 {
+    font-weight: normal;
+  }
+  ol, ul {
+    padding-left: 1.7em;
+    margin-top: 1em;
+  }
+  li > ol, li > ul {
+    margin-top: 0;
+  }
+  blockquote {
+    margin: 1em 0 1em 1.7em;
+    padding-left: 1em;
+    border-left: 2px solid #e6e6e6;
+    color: #606060;
+  }
+  code {
+    font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+    font-size: 85%;
+    margin: 0;
+    hyphens: manual;
+  }
+  pre {
+    margin: 1em 0;
+    overflow: auto;
+  }
+  pre code {
+    padding: 0;
+    overflow: visible;
+    overflow-wrap: normal;
+  }
+  .sourceCode {
+   background-color: transparent;
+   overflow: visible;
+  }
+  hr {
+    background-color: #1a1a1a;
+    border: none;
+    height: 1px;
+    margin: 1em 0;
+  }
+  table {
+    margin: 1em 0;
+    border-collapse: collapse;
+    width: 100%;
+    overflow-x: auto;
+    display: block;
+    font-variant-numeric: lining-nums tabular-nums;
+  }
+  table caption {
+    margin-bottom: 0.75em;
+  }
+  tbody {
+    margin-top: 0.5em;
+    border-top: 1px solid #1a1a1a;
+    border-bottom: 1px solid #1a1a1a;
+  }
+  th {
+    border-top: 1px solid #1a1a1a;
+    padding: 0.25em 0.5em 0.25em 0.5em;
+  }
+  td {
+    padding: 0.125em 0.5em 0.25em 0.5em;
+  }
+  header {
+    margin-bottom: 4em;
+    text-align: center;
+  }
+  #TOC li {
+    list-style: none;
+  }
+  #TOC ul {
+    padding-left: 1.3em;
+  }
+  #TOC > ul {
+    padding-left: 0;
+  }
+  #TOC a:not(:hover) {
+    text-decoration: none;
+  }
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  div.columns{display: flex; gap: min(4vw, 1.5em);}
+  div.column{flex: auto; overflow-x: auto;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  /* The extra [class] is a hack that increases specificity enough to
+     override a similar rule in reveal.js */
+  ul.task-list[class]{list-style: none;}
+  ul.task-list li input[type="checkbox"] {
+    font-size: inherit;
+    width: 0.8em;
+    margin: 0 0.8em 0.2em -1.6em;
+    vertical-align: middle;
+  }
+  .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  /* CSS for syntax highlighting */
+  pre > code.sourceCode { white-space: pre; position: relative; }
+  pre > code.sourceCode > span { line-height: 1.25; }
+  pre > code.sourceCode > span:empty { height: 1.2em; }
+  .sourceCode { overflow: visible; }
+  code.sourceCode > span { color: inherit; text-decoration: inherit; }
+  div.sourceCode { margin: 1em 0; }
+  pre.sourceCode { margin: 0; }
+  @media screen {
+  div.sourceCode { overflow: auto; }
+  }
+  @media print {
+  pre > code.sourceCode { white-space: pre-wrap; }
+  pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+  }
+  pre.numberSource code
+    { counter-reset: source-line 0; }
+  pre.numberSource code > span
+    { position: relative; left: -4em; counter-increment: source-line; }
+  pre.numberSource code > span > a:first-child::before
+    { content: counter(source-line);
+      position: relative; left: -1em; text-align: right; vertical-align: baseline;
+      border: none; display: inline-block;
+      -webkit-touch-callout: none; -webkit-user-select: none;
+      -khtml-user-select: none; -moz-user-select: none;
+      -ms-user-select: none; user-select: none;
+      padding: 0 4px; width: 4em;
+    }
+  pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+  div.sourceCode
+    { color: #cccccc; background-color: #303030; }
+  @media screen {
+  pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+  }
+  code span.al { color: #ffcfaf; } /* Alert */
+  code span.an { color: #7f9f7f; font-weight: bold; } /* Annotation */
+  code span.at { } /* Attribute */
+  code span.bn { color: #dca3a3; } /* BaseN */
+  code span.bu { } /* BuiltIn */
+  code span.cf { color: #f0dfaf; } /* ControlFlow */
+  code span.ch { color: #dca3a3; } /* Char */
+  code span.cn { color: #dca3a3; font-weight: bold; } /* Constant */
+  code span.co { color: #7f9f7f; } /* Comment */
+  code span.cv { color: #7f9f7f; font-weight: bold; } /* CommentVar */
+  code span.do { color: #7f9f7f; } /* Documentation */
+  code span.dt { color: #dfdfbf; } /* DataType */
+  code span.dv { color: #dcdccc; } /* DecVal */
+  code span.er { color: #c3bf9f; } /* Error */
+  code span.ex { } /* Extension */
+  code span.fl { color: #c0bed1; } /* Float */
+  code span.fu { color: #efef8f; } /* Function */
+  code span.im { } /* Import */
+  code span.in { color: #7f9f7f; font-weight: bold; } /* Information */
+  code span.kw { color: #f0dfaf; } /* Keyword */
+  code span.op { color: #f0efd0; } /* Operator */
+  code span.ot { color: #efef8f; } /* Other */
+  code span.pp { color: #ffcfaf; font-weight: bold; } /* Preprocessor */
+  code span.sc { color: #dca3a3; } /* SpecialChar */
+  code span.ss { color: #cc9393; } /* SpecialString */
+  code span.st { color: #cc9393; } /* String */
+  code span.va { } /* Variable */
+  code span.vs { color: #cc9393; } /* VerbatimString */
+  code span.wa { color: #7f9f7f; font-weight: bold; } /* Warning */
+  </style>
+  <link rel="stylesheet" href="../../../style.css?v=fbe91b569ae8" />
+  </head>
+
+<body class="page-article">
+  <div class="reading-progress" aria-hidden="true"></div>
+  <div class="console-backdrop" aria-hidden="true"></div>
+  <nav class="site-nav">
+    <div class="nav-inner">
+      <a class="nav-brand" href="../../../index.html">wandering.star<span>notes</span></a>
+      <div class="nav-links">
+        <a href="https://github.com/wangzheng422/docker_env" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://www.youtube.com/@wangzheng422" target="_blank" rel="noopener">YouTube</a>
+      </div>
+    </div>
+  </nav>
+
+  <main>
+            <a class="back-link" href="../../../index.html">← Back to Index</a>
+        <div class="article-layout">
+            <aside class="toc-panel">
+        <div class="toc-title">ON THIS PAGE</div>
+        <ul>
+        <li><a
+        href="#openshift-virtualization-disaster-recovery-with-storage-replication"
+        id="toc-openshift-virtualization-disaster-recovery-with-storage-replication">OpenShift
+        Virtualization Disaster Recovery with Storage Replication</a>
+        <ul>
+        <li><a href="#introduction-and-strategy"
+        id="toc-introduction-and-strategy">1. Introduction and
+        Strategy</a>
+        <ul>
+        <li><a href="#the-challenge" id="toc-the-challenge">The
+        Challenge</a></li>
+        <li><a href="#our-solution-oadp-storage-replication"
+        id="toc-our-solution-oadp-storage-replication">Our Solution:
+        OADP + Storage Replication</a></li>
+        <li><a href="#the-failover-process"
+        id="toc-the-failover-process">The Failover Process</a></li>
+        </ul></li>
+        <li><a href="#prerequisites-operator-installation"
+        id="toc-prerequisites-operator-installation">2. Prerequisites:
+        Operator Installation</a>
+        <ul>
+        <li><a href="#install-openshift-virtualization"
+        id="toc-install-openshift-virtualization">Install OpenShift
+        Virtualization</a></li>
+        <li><a href="#install-oadp-operator"
+        id="toc-install-oadp-operator">Install OADP Operator</a></li>
+        </ul></li>
+        <li><a href="#primary-site-performing-the-backup"
+        id="toc-primary-site-performing-the-backup">3. Primary Site:
+        Performing the Backup</a></li>
+        <li><a href="#dr-site-recovery-process"
+        id="toc-dr-site-recovery-process">4. DR Site: Recovery
+        Process</a>
+        <ul>
+        <li><a href="#step-1-synchronize-storage-data"
+        id="toc-step-1-synchronize-storage-data">Step 1: Synchronize
+        Storage Data</a></li>
+        <li><a href="#step-2-manually-create-pv-and-pvc-on-dr-cluster"
+        id="toc-step-2-manually-create-pv-and-pvc-on-dr-cluster">Step 2:
+        Manually Create PV and PVC on DR Cluster</a></li>
+        <li><a href="#step-3-restore-metadata-with-oadp"
+        id="toc-step-3-restore-metadata-with-oadp">Step 3: Restore
+        Metadata with OADP</a></li>
+        <li><a href="#troubleshooting-a-failed-restore"
+        id="toc-troubleshooting-a-failed-restore">Troubleshooting a
+        Failed Restore</a></li>
+        </ul></li>
+        <li><a href="#automating-backups-with-schedules"
+        id="toc-automating-backups-with-schedules">5. Automating Backups
+        with Schedules</a></li>
+        <li><a href="#advanced-scenario-testing-with-nfs-csi"
+        id="toc-advanced-scenario-testing-with-nfs-csi">6. Advanced
+        Scenario: Testing with NFS-CSI</a>
+        <ul>
+        <li><a href="#manual-failover-with-nfs-csi"
+        id="toc-manual-failover-with-nfs-csi">Manual Failover with
+        NFS-CSI</a></li>
+        </ul></li>
+        <li><a
+        href="#alternative-strategy-restore-snapshot-to-a-new-volume"
+        id="toc-alternative-strategy-restore-snapshot-to-a-new-volume">7.
+        Alternative Strategy: Restore Snapshot to a New Volume</a>
+        <ul>
+        <li><a href="#trade-offs"
+        id="toc-trade-offs">Trade-offs</a></li>
+        <li><a href="#implementation-steps"
+        id="toc-implementation-steps">Implementation Steps</a></li>
+        </ul></li>
+        <li><a href="#path-to-automation" id="toc-path-to-automation">8.
+        Path to Automation</a>
+        <ul>
+        <li><a href="#setting-up-ansible-automation-platform-aap"
+        id="toc-setting-up-ansible-automation-platform-aap">Setting up
+        Ansible Automation Platform (AAP)</a></li>
+        </ul></li>
+        </ul></li>
+        </ul>
+      </aside>
+            <article class="markdown-body article-shell">
+        <blockquote>
+        <p>[!NOTE] This document outlines a proof-of-concept for a
+        disaster recovery solution for OpenShift Virtualization. The
+        procedures and scripts are intended for demonstration and
+        require adaptation for production environments.</p>
+        </blockquote>
+        <h1
+        id="openshift-virtualization-disaster-recovery-with-storage-replication">OpenShift
+        Virtualization Disaster Recovery with Storage Replication</h1>
+        <h2 id="introduction-and-strategy">1. Introduction and
+        Strategy</h2>
+        <h3 id="the-challenge">The Challenge</h3>
+        <p>Red Hat OpenShift Virtualization (OCP-V) does not include a
+        native, built-in disaster recovery (DR) solution. The official
+        recommendation from Red Hat is to leverage the DR capabilities
+        of OpenShift Data Foundation (ODF), which provides robust,
+        integrated disaster recovery mechanisms. ODF typically uses Ceph
+        or IBM Flash Storage as its backend.</p>
+        <p>However, many enterprise environments utilize third-party
+        storage solutions from vendors like Dell, EMC, or Hitachi. In
+        these scenarios, a different approach is required to implement a
+        reliable DR strategy for virtual machines running on OpenShift
+        Virtualization.</p>
+        <h3 id="our-solution-oadp-storage-replication">Our Solution:
+        OADP + Storage Replication</h3>
+        <p>This document details a DR strategy that combines the
+        strengths of OpenShift’s native backup tools with the power of
+        underlying storage replication. The core components of this
+        solution are:</p>
+        <ol type="1">
+        <li><p><strong>OpenShift API for Data Protection
+        (OADP)</strong>: We use OADP (based on the upstream Velero
+        project) to perform metadata-only backups. This captures the
+        essential Kubernetes and OpenShift Virtualization object
+        configurations, such as Virtual Machine (VM) specifications,
+        Persistent Volume Claims (PVCs), and other related resources. We
+        deliberately exclude the actual volume data from the OADP backup
+        to avoid the slow process of data compression, transfer to S3,
+        and decompression during restore.</p></li>
+        <li><p><strong>Storage-Level Replication</strong>: The actual VM
+        disk data (contained within Persistent Volumes) is replicated
+        from the primary site to the DR site using the storage array’s
+        native remote replication capabilities. This method is highly
+        efficient and significantly faster for large volumes compared to
+        OADP’s data movers.</p></li>
+        </ol>
+        <h3 id="the-failover-process">The Failover Process</h3>
+        <p>In the event of a disaster at the primary site, a manual or
+        automated failover process is initiated:</p>
+        <ol type="1">
+        <li><strong>Quiesce Primary Site</strong>: VMs at the primary
+        site are shut down, and the underlying storage volumes are set
+        to a read-only state to ensure data consistency.</li>
+        <li><strong>Synchronize Storage</strong>: The storage
+        replication is finalized to ensure the DR site has the latest
+        copy of the data.</li>
+        <li><strong>Prepare DR Site Storage</strong>: The replicated
+        volumes (LUNs or NFS shares) are presented to the DR OpenShift
+        cluster.</li>
+        <li><strong>Re-map Persistent Volumes</strong>: A crucial step
+        involves manually creating or modifying the
+        <code>PersistentVolume</code> (PV) objects on the DR cluster.
+        The restored PV definitions are updated to point to the correct
+        storage resources at the DR site (e.g., new NFS server IP,
+        different LUN ID).</li>
+        <li><strong>Restore Metadata</strong>: The OADP metadata backup
+        is restored to the DR cluster.</li>
+        <li><strong>Start VMs</strong>: With the metadata restored and
+        the storage correctly mapped, the virtual machines can be
+        started on the DR cluster.</li>
+        </ol>
+        <p>The process for failing back from the DR site to the primary
+        site follows the same logic in reverse.</p>
+        <p>This document uses a simple NFS storage backend to simulate
+        the process, first demonstrating the manual steps and then
+        outlining a path toward full automation using Ansible.</p>
+        <p><img src="files/ocp-v.dr.01.drawio.png" /></p>
+        <h2 id="prerequisites-operator-installation">2. Prerequisites:
+        Operator Installation</h2>
+        <h3 id="install-openshift-virtualization">Install OpenShift
+        Virtualization</h3>
+        <p>This guide focuses on the disaster recovery of virtual
+        machines, so the <code>OpenShift Virtualization</code> operator
+        is a primary requirement. Install it from the OperatorHub in
+        your OpenShift cluster.</p>
+        <p><img src="imgs/2025.07.ocp-v.dr.nfs.md/2025-07-24-11-34-02.png" width="1024"></p>
+        <p><img src="imgs/2025.07.ocp-v.dr.nfs.md/2025-07-24-11-34-18.png" width="1024"></p>
+        <p><img src="imgs/2025.07.ocp-v.dr.nfs.md/2025-07-24-11-36-30.png" width="1024"></p>
+        <p>Since we are using a custom NFS storage solution, we must
+        create a <code>StorageProfile</code> to inform the Containerized
+        Data Importer (CDI) component of OpenShift Virtualization how to
+        interact with it. This profile defines the supported
+        <code>accessModes</code> and <code>volumeMode</code>.</p>
+        <div class="sourceCode" id="cb1"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> <span class="op">&lt;&lt; EOF</span> <span class="op">&gt;</span> <span class="va">$BASE_DIR</span>/data/install/cnv-sp.yaml</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="st">apiVersion: cdi.kubevirt.io/v1beta1</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="st">kind: StorageProfile</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="st">metadata:</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="st">  name: nfs-dynamic</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="st">spec:</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="st">  claimPropertySets:</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="st">  - accessModes:</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="st">    - ReadWriteMany</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="st">    volumeMode: Filesystem</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="op">EOF</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> apply <span class="at">-f</span> <span class="va">$BASE_DIR</span>/data/install/cnv-sp.yaml</span></code></pre></div>
+        <h3 id="install-oadp-operator">Install OADP Operator</h3>
+        <p>We use the
+        <code>OpenShift API for Data Protection (OADP)</code> operator
+        for metadata backup and restore. Install the OADP operator on
+        <strong>both</strong> the primary (cluster-01) and DR
+        (cluster-02) clusters.</p>
+        <p><img src="imgs/2025.07.ocp-v.dr.nfs.md/2025-07-24-15-56-54.png" width="1024"></p>
+        <p>Next, configure a Kubernetes <code>Secret</code> containing
+        the credentials for your S3-compatible object storage bucket,
+        which will store the metadata backups.</p>
+        <div class="sourceCode" id="cb2"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Create a credentials file for MinIO or any S3-compatible storage</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> <span class="op">&lt;&lt; EOF</span> <span class="op">&gt;</span> <span class="va">$BASE_DIR</span>/data/install/credentials-minio</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="st">[default]</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="st">aws_access_key_id = rustfsadmin</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="st">aws_secret_access_key = rustfsadmin</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="op">EOF</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Create the secret in the openshift-adp namespace</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> create secret generic minio-credentials <span class="dt">\</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>--from-file=cloud=<span class="va">$BASE_DIR</span>/data/install/credentials-minio <span class="dt">\</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>-n openshift-adp</span></code></pre></div>
+        <p>Finally, create a <code>DataProtectionApplication</code>
+        (DPA) custom resource. This configures the OADP instance,
+        specifying the S3 backup location and enabling the necessary
+        plugins for OpenShift, KubeVirt (for VMs), and CSI.</p>
+        <div class="sourceCode" id="cb3"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Define the OADP instance (DataProtectionApplication)</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> <span class="op">&lt;&lt; EOF</span> <span class="op">&gt;</span> <span class="va">$BASE_DIR</span>/data/install/oadp.yaml</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="st">apiVersion: oadp.openshift.io/v1alpha1</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="st">kind: DataProtectionApplication</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="st">metadata:</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="st">  name: velero-instance</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="st">  namespace: openshift-adp</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="st">spec:</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="st">  # 1. Define the S3 backup storage location</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="st">  backupLocations:</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a><span class="st">    - name: default</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a><span class="st">      velero:</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a><span class="st">        provider: aws</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a><span class="st">        default: true</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a><span class="st">        objectStorage:</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a><span class="st">          bucket: ocp</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a><span class="st">          prefix: velero # Backups will be stored under the &#39;velero/&#39; prefix</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a><span class="st">        config:</span></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a><span class="st">          # For non-AWS S3, provide the endpoint URL</span></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a><span class="st">          s3Url: http://192.168.99.1:9001</span></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a><span class="st">          region: us-east-1</span></span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a><span class="st">        # Reference the secret containing S3 credentials</span></span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a><span class="st">        credential:</span></span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a><span class="st">          name: minio-credentials</span></span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a><span class="st">          key: cloud</span></span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a><span class="st">  </span></span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a><span class="st">  # 2. Configure Velero plugins and features</span></span>
+<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a><span class="st">  configuration:</span></span>
+<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a><span class="st">    nodeAgent:</span></span>
+<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a><span class="st">      enable: true</span></span>
+<span id="cb3-31"><a href="#cb3-31" aria-hidden="true" tabindex="-1"></a><span class="st">      uploaderType: kopia </span></span>
+<span id="cb3-32"><a href="#cb3-32" aria-hidden="true" tabindex="-1"></a><span class="st">    velero:</span></span>
+<span id="cb3-33"><a href="#cb3-33" aria-hidden="true" tabindex="-1"></a><span class="st">      # Enable default plugins for OpenShift, KubeVirt, CSI, and AWS</span></span>
+<span id="cb3-34"><a href="#cb3-34" aria-hidden="true" tabindex="-1"></a><span class="st">      defaultPlugins:</span></span>
+<span id="cb3-35"><a href="#cb3-35" aria-hidden="true" tabindex="-1"></a><span class="st">        - openshift</span></span>
+<span id="cb3-36"><a href="#cb3-36" aria-hidden="true" tabindex="-1"></a><span class="st">        - kubevirt</span></span>
+<span id="cb3-37"><a href="#cb3-37" aria-hidden="true" tabindex="-1"></a><span class="st">        - csi</span></span>
+<span id="cb3-38"><a href="#cb3-38" aria-hidden="true" tabindex="-1"></a><span class="st">        - aws</span></span>
+<span id="cb3-39"><a href="#cb3-39" aria-hidden="true" tabindex="-1"></a><span class="st">      featureFlags:</span></span>
+<span id="cb3-40"><a href="#cb3-40" aria-hidden="true" tabindex="-1"></a><span class="st">        - EnableCSI</span></span>
+<span id="cb3-41"><a href="#cb3-41" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-42"><a href="#cb3-42" aria-hidden="true" tabindex="-1"></a><span class="st">    # 3. Configure volume snapshots and data movers (DataMover/Kopia) here</span></span>
+<span id="cb3-43"><a href="#cb3-43" aria-hidden="true" tabindex="-1"></a><span class="st">    # csi:</span></span>
+<span id="cb3-44"><a href="#cb3-44" aria-hidden="true" tabindex="-1"></a><span class="st">    #   enable: false</span></span>
+<span id="cb3-45"><a href="#cb3-45" aria-hidden="true" tabindex="-1"></a><span class="st">    # datamover:</span></span>
+<span id="cb3-46"><a href="#cb3-46" aria-hidden="true" tabindex="-1"></a><span class="st">    #   enable: false</span></span>
+<span id="cb3-47"><a href="#cb3-47" aria-hidden="true" tabindex="-1"></a><span class="op">EOF</span></span>
+<span id="cb3-48"><a href="#cb3-48" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-49"><a href="#cb3-49" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> apply <span class="at">-f</span> <span class="va">$BASE_DIR</span>/data/install/oadp.yaml</span></code></pre></div>
+        <h2 id="primary-site-performing-the-backup">3. Primary Site:
+        Performing the Backup</h2>
+        <p>Assume we have a project named <code>demo</code> on the
+        primary site (cluster-01) containing a running virtual
+        machine.</p>
+        <p><img src="imgs/2025.07.ocp-v.dr.nfs.md/2025-07-29-15-17-24.png" width="1024"></p>
+        <p>First, let’s identify the VM and its associated PVC and
+        PV.</p>
+        <div class="sourceCode" id="cb4"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Get the VM name</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> get vm <span class="at">-n</span> demo</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="co"># NAME                                AGE    STATUS    READY</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="co"># centos-stream10-aqua-spoonbill-10   3d5h   Running   True</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Get the PVC name associated with the VM</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> get vm centos-stream10-aqua-spoonbill-10 <span class="at">-n</span> demo <span class="at">-o</span> jsonpath=<span class="st">&#39;{.spec.template.spec.volumes[*].dataVolume.name}&#39;</span> <span class="kw">&amp;&amp;</span> <span class="bu">echo</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="co"># centos-stream10-aqua-spoonbill-10-volume</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Get the PV name bound to the PVC</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> get pvc centos-stream10-aqua-spoonbill-10-volume <span class="at">-n</span> demo <span class="at">-o</span> jsonpath=<span class="st">&#39;{.spec.volumeName}&#39;</span> <span class="kw">&amp;&amp;</span> <span class="bu">echo</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a><span class="co"># pvc-7147333f-2db5-4b3f-9320-aac8da5170e2</span></span></code></pre></div>
+        <p>Now, we create a Velero <code>Backup</code> object. The key
+        configuration here is <code>snapshotVolumes: false</code>, which
+        instructs OADP to back up only the resource definitions (YAML)
+        and not the data within the volumes.</p>
+        <div class="sourceCode" id="cb5"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> <span class="op">&lt;&lt; EOF</span> <span class="op">&gt;</span> <span class="va">$BASE_DIR</span>/data/install/oadp-backup.yaml</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="st">apiVersion: velero.io/v1</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="st">kind: Backup</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="st">metadata:</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="st">  name: vm-full-metadata-backup-03</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="st">  namespace: openshift-adp</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="st">spec:</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="st">  # 1. Specify the namespace to back up</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a><span class="st">  includedNamespaces:</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a><span class="st">    - demo</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a><span class="st">  # 2. Ensure cluster-scoped resources like PVs are included in the metadata backup</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a><span class="st">  # While Velero typically includes PVs linked to PVCs automatically, setting this</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a><span class="st">  # to &#39;true&#39; makes the behavior explicit.</span></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a><span class="st">  includeClusterResources: true</span></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a><span class="st">  # 3. CRITICAL: Disable volume snapshots</span></span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a><span class="st">  # This tells Velero to NOT create data snapshots of the PVs.</span></span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a><span class="st">  # It will only save the PV and PVC object definitions.</span></span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a><span class="st">  snapshotVolumes: false</span></span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a><span class="st">  snapshotMoveData: false</span></span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a><span class="st">  defaultVolumesToFsBackup: false</span></span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a><span class="st">  # 4. Specify the S3 storage location defined in the DPA</span></span>
+<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a><span class="st">  storageLocation: default</span></span>
+<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a><span class="st">  # 5. Set a Time-To-Live (TTL) for the backup object</span></span>
+<span id="cb5-28"><a href="#cb5-28" aria-hidden="true" tabindex="-1"></a><span class="st">  ttl: 720h0m0s # 30 days</span></span>
+<span id="cb5-29"><a href="#cb5-29" aria-hidden="true" tabindex="-1"></a><span class="op">EOF</span></span>
+<span id="cb5-30"><a href="#cb5-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-31"><a href="#cb5-31" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> apply <span class="at">-f</span> <span class="va">$BASE_DIR</span>/data/install/oadp-backup.yaml</span></code></pre></div>
+        <h2 id="dr-site-recovery-process">4. DR Site: Recovery
+        Process</h2>
+        <h3 id="step-1-synchronize-storage-data">Step 1: Synchronize
+        Storage Data</h3>
+        <p>At the DR site, the first action is to ensure the data is
+        synchronized. This is handled by the storage system. For our NFS
+        simulation, we use <code>rsync</code> to copy the volume data
+        from the primary NFS server to the DR NFS server.</p>
+        <div class="sourceCode" id="cb6"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Simulate storage replication by copying the PV directory</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> rsync <span class="at">-avh</span> <span class="at">--progress</span> /srv/nfs/openshift-01/demo-centos-stream10-aqua-spoonbill-10-volume-pvc-7147333f-2db5-4b3f-9320-aac8da5170e2 /srv/nfs/openshift-02/</span></code></pre></div>
+        <h3 id="step-2-manually-create-pv-and-pvc-on-dr-cluster">Step 2:
+        Manually Create PV and PVC on DR Cluster</h3>
+        <p>This is a critical manual step. We do not restore the PV and
+        PVC from the OADP backup because that would cause the DR cluster
+        to try and dynamically provision new, empty volumes. Instead, we
+        manually create the PV and PVC to map them to the pre-replicated
+        data.</p>
+        <p>First, define the <code>PersistentVolume</code>. The YAML is
+        based on the PV from the primary site, but the
+        <code>nfs.path</code> (or other storage-specific parameters) is
+        modified to point to the location on the DR site’s storage.</p>
+        <div class="sourceCode" id="cb7"><pre
+        class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># pv-dr.yaml</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="fu">kind</span><span class="kw">:</span><span class="at"> PersistentVolume</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="fu">apiVersion</span><span class="kw">:</span><span class="at"> v1</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a><span class="fu">metadata</span><span class="kw">:</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">name</span><span class="kw">:</span><span class="at"> pvc-7147333f-2db5-4b3f-9320-aac8da5170e2</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a><span class="fu">spec</span><span class="kw">:</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">capacity</span><span class="kw">:</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">storage</span><span class="kw">:</span><span class="at"> </span><span class="st">&#39;36071014400&#39;</span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">nfs</span><span class="kw">:</span></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">server</span><span class="kw">:</span><span class="at"> </span><span class="fl">192.168.99.1</span></span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a><span class="co">    # IMPORTANT: Path points to the replicated data on the DR NFS server</span></span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">path</span><span class="kw">:</span><span class="at"> /srv/nfs/openshift-02/demo-centos-stream10-aqua-spoonbill-10-volume-pvc-7147333f-2db5-4b3f-9320-aac8da5170e2</span></span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">accessModes</span><span class="kw">:</span></span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> ReadWriteMany</span></span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">persistentVolumeReclaimPolicy</span><span class="kw">:</span><span class="at"> Delete</span></span>
+<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">storageClassName</span><span class="kw">:</span><span class="at"> nfs-dynamic</span></span>
+<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">volumeMode</span><span class="kw">:</span><span class="at"> Filesystem</span></span></code></pre></div>
+        <p>Next, create the <code>PersistentVolumeClaim</code> that will
+        bind to this manually created PV.</p>
+        <div class="sourceCode" id="cb8"><pre
+        class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co"># pvc-dr.yaml</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="fu">kind</span><span class="kw">:</span><span class="at"> PersistentVolumeClaim</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a><span class="fu">apiVersion</span><span class="kw">:</span><span class="at"> v1</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a><span class="fu">metadata</span><span class="kw">:</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">name</span><span class="kw">:</span><span class="at"> centos-stream10-aqua-spoonbill-10-volume</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a><span class="fu">spec</span><span class="kw">:</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">accessModes</span><span class="kw">:</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> ReadWriteMany</span></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">resources</span><span class="kw">:</span></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">requests</span><span class="kw">:</span></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">storage</span><span class="kw">:</span><span class="at"> </span><span class="st">&#39;36071014400&#39;</span></span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a><span class="co">  # This explicitly binds the PVC to our manually created PV</span></span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">volumeName</span><span class="kw">:</span><span class="at"> pvc-7147333f-2db5-4b3f-9320-aac8da5170e2</span></span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">storageClassName</span><span class="kw">:</span><span class="at"> nfs-dynamic</span></span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">volumeMode</span><span class="kw">:</span><span class="at"> Filesystem</span></span></code></pre></div>
+        <p>Apply both YAML files to the DR cluster.</p>
+        <h3 id="step-3-restore-metadata-with-oadp">Step 3: Restore
+        Metadata with OADP</h3>
+        <p>Now, create a Velero <code>Restore</code> object on the DR
+        cluster. This restore will recreate the VM and other resources
+        from the backup. Crucially, we exclude PVs and PVCs from the
+        restore process, as we have already created them manually.</p>
+        <div class="sourceCode" id="cb9"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> <span class="op">&lt;&lt; EOF</span> <span class="op">&gt;</span> <span class="va">$BASE_DIR</span>/data/install/oadp-restore.yaml</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="st">apiVersion: velero.io/v1</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="st">kind: Restore</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a><span class="st">metadata:</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="st">  name: restore-metadata-excluding-pvs-03</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a><span class="st">  namespace: openshift-adp</span></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a><span class="st">spec:</span></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a><span class="st">  # 1. Specify the backup to restore from</span></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a><span class="st">  backupName: vm-full-metadata-backup-03</span></span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a><span class="st">  # 2. CRITICAL: Exclude PVs and PVCs from the restore</span></span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a><span class="st">  # This prevents Velero from overwriting our manually created volumes.</span></span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a><span class="st">  excludedResources:</span></span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a><span class="st">    - persistentvolumes</span></span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a><span class="st">    - persistentvolumeclaims</span></span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a><span class="st">    - snapshot</span></span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a><span class="st">    - snapshotcontent</span></span>
+<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a><span class="st">    - virtualMachineSnapshot</span></span>
+<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a><span class="st">    - virtualMachineSnapshotContent</span></span>
+<span id="cb9-20"><a href="#cb9-20" aria-hidden="true" tabindex="-1"></a><span class="st">    - VolumeSnapshot</span></span>
+<span id="cb9-21"><a href="#cb9-21" aria-hidden="true" tabindex="-1"></a><span class="st">    - VolumeSnapshotContent</span></span>
+<span id="cb9-22"><a href="#cb9-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-23"><a href="#cb9-23" aria-hidden="true" tabindex="-1"></a><span class="st">  # 3. Set the resource conflict policy</span></span>
+<span id="cb9-24"><a href="#cb9-24" aria-hidden="true" tabindex="-1"></a><span class="st">  # &#39;update&#39; will overwrite existing resources (like the VM definition if a restore is re-run).</span></span>
+<span id="cb9-25"><a href="#cb9-25" aria-hidden="true" tabindex="-1"></a><span class="st">  existingResourcePolicy: &#39;update&#39;</span></span>
+<span id="cb9-26"><a href="#cb9-26" aria-hidden="true" tabindex="-1"></a><span class="op">EOF</span></span>
+<span id="cb9-27"><a href="#cb9-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-28"><a href="#cb9-28" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> apply <span class="at">-f</span> <span class="va">$BASE_DIR</span>/data/install/oadp-restore.yaml</span></code></pre></div>
+        <p>After the restore completes, the VM will be created on the DR
+        cluster and connected to the replicated data. In our
+        resource-constrained demo environment, the VM may appear as
+        <code>Paused</code>, but the process is successful.</p>
+        <p><img src="imgs/2025.07.ocp-v.dr.nfs.md/2025-07-29-15-18-30.png" width="1024"></p>
+        <h3 id="troubleshooting-a-failed-restore">Troubleshooting a
+        Failed Restore</h3>
+        <p>If the VM fails to start correctly, a common recovery step is
+        to delete the restored VM object and then re-apply the
+        <code>Restore</code> manifest to try the metadata restoration
+        again.</p>
+        <div class="sourceCode" id="cb10"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Delete the problematic VM before re-running the restore</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> delete vm centos-stream10-aqua-spoonbill-10 <span class="at">-n</span> demo</span></code></pre></div>
+        <h2 id="automating-backups-with-schedules">5. Automating Backups
+        with Schedules</h2>
+        <p>In a production environment, backups should be performed
+        automatically on a regular schedule. OADP supports this via the
+        <code>Schedule</code> custom resource. The following example
+        creates a schedule to perform a metadata-only backup every hour
+        at 22 minutes past the hour.</p>
+        <div class="sourceCode" id="cb11"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> <span class="op">&lt;&lt; EOF</span> <span class="op">&gt;</span> <span class="va">$BASE_DIR</span>/data/install/oadp-schedule.yaml</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="st">apiVersion: velero.io/v1</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a><span class="st">kind: Schedule</span></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a><span class="st">metadata:</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a><span class="st">  name: daily-metadata-backup-schedule</span></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a><span class="st">  namespace: openshift-adp</span></span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a><span class="st">spec:</span></span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a><span class="st">  # 1. Define the backup schedule using a Cron expression</span></span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a><span class="st">  # This example runs at 22 minutes past every hour</span></span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a><span class="st">  schedule: 22 * * * *</span></span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a><span class="st">  # 2. Define the backup specification template</span></span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a><span class="st">  # This template is identical to the manual &#39;Backup&#39; object</span></span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a><span class="st">  template:</span></span>
+<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a><span class="st">    spec:</span></span>
+<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a><span class="st">      includedNamespaces:</span></span>
+<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a><span class="st">        - demo</span></span>
+<span id="cb11-18"><a href="#cb11-18" aria-hidden="true" tabindex="-1"></a><span class="st">      includeClusterResources: true</span></span>
+<span id="cb11-19"><a href="#cb11-19" aria-hidden="true" tabindex="-1"></a><span class="st">      # CRITICAL: Only back up metadata</span></span>
+<span id="cb11-20"><a href="#cb11-20" aria-hidden="true" tabindex="-1"></a><span class="st">      snapshotVolumes: false</span></span>
+<span id="cb11-21"><a href="#cb11-21" aria-hidden="true" tabindex="-1"></a><span class="st">      storageLocation: default</span></span>
+<span id="cb11-22"><a href="#cb11-22" aria-hidden="true" tabindex="-1"></a><span class="st">      # Set the retention policy for backups created by this schedule</span></span>
+<span id="cb11-23"><a href="#cb11-23" aria-hidden="true" tabindex="-1"></a><span class="st">      ttl: 720h0m0s # (30 days * 24 hours = 720 hours)</span></span>
+<span id="cb11-24"><a href="#cb11-24" aria-hidden="true" tabindex="-1"></a><span class="op">EOF</span></span>
+<span id="cb11-25"><a href="#cb11-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-26"><a href="#cb11-26" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> apply <span class="at">-f</span> <span class="va">$BASE_DIR</span>/data/install/oadp-schedule.yaml</span></code></pre></div>
+        <p>OADP will automatically create <code>Backup</code> objects
+        based on this schedule (e.g.,
+        <code>daily-metadata-backup-schedule-20250730012200</code>) and
+        delete them when their TTL expires.</p>
+        <h2 id="advanced-scenario-testing-with-nfs-csi">6. Advanced
+        Scenario: Testing with NFS-CSI</h2>
+        <p>The previous tests used a basic in-tree NFS provisioner. This
+        section documents the process using the more modern NFS-CSI
+        driver, which introduces complexities related to CSI
+        snapshots.</p>
+        <h3 id="manual-failover-with-nfs-csi">Manual Failover with
+        NFS-CSI</h3>
+        <p>During manual testing, restoring the VM and its PV/PVC was
+        successful, but <code>VirtualMachineSnapshot</code> objects
+        required special handling.</p>
+        <ol type="1">
+        <li><strong>Simulate Storage Replication</strong>: Copy both the
+        PV data and the snapshot data directories.</li>
+        </ol>
+        <div class="sourceCode" id="cb12"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Copy PV and snapshot data from primary to DR NFS server</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> rsync <span class="at">-avh</span> <span class="at">--progress</span> /srv/nfs/openshift-01/pvc-72c7d2e2-ab8e-46dc-887f-2f6d6e2d0343 /srv/nfs/openshift-02/</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> rsync <span class="at">-avh</span> <span class="at">--progress</span> /srv/nfs/openshift-01/snapshot-0bdcb6bd-2793-4760-b29a-2949980c34f9 /srv/nfs/openshift-02/</span></code></pre></div>
+        <ol start="2" type="1">
+        <li><strong>Create PV on DR Site</strong>: The PV definition for
+        CSI includes a <code>volumeHandle</code> and
+        <code>volumeAttributes</code> that must be updated to reflect
+        the DR site’s configuration. Set
+        <code>persistentVolumeReclaimPolicy</code> to
+        <code>Retain</code>.</li>
+        </ol>
+        <div class="sourceCode" id="cb13"><pre
+        class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="fu">kind</span><span class="kw">:</span><span class="at"> PersistentVolume</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="fu">apiVersion</span><span class="kw">:</span><span class="at"> v1</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a><span class="fu">metadata</span><span class="kw">:</span></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">name</span><span class="kw">:</span><span class="at"> pvc-72c7d2e2-ab8e-46dc-887f-2f6d6e2d0343</span></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a><span class="fu">spec</span><span class="kw">:</span></span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">capacity</span><span class="kw">:</span></span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">storage</span><span class="kw">:</span><span class="at"> 34400Mi</span></span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">csi</span><span class="kw">:</span></span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">driver</span><span class="kw">:</span><span class="at"> nfs.csi.k8s.io</span></span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a><span class="co">    # Update volumeHandle to point to the DR NFS server and share</span></span>
+<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">volumeHandle</span><span class="kw">:</span><span class="at"> 192.168.99.1</span><span class="co">#openshift-02#pvc-72c7d2e2-ab8e-46dc-887f-2f6d6e2d0343##</span></span>
+<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">volumeAttributes</span><span class="kw">:</span></span>
+<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">server</span><span class="kw">:</span><span class="at"> </span><span class="fl">192.168.99.1</span></span>
+<span id="cb13-14"><a href="#cb13-14" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">share</span><span class="kw">:</span><span class="at"> /openshift-02</span><span class="co"> # Update to DR share</span></span>
+<span id="cb13-15"><a href="#cb13-15" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">subdir</span><span class="kw">:</span><span class="at"> pvc-72c7d2e2-ab8e-46dc-887f-2f6d6e2d0343</span></span>
+<span id="cb13-16"><a href="#cb13-16" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">accessModes</span><span class="kw">:</span></span>
+<span id="cb13-17"><a href="#cb13-17" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> ReadWriteMany</span></span>
+<span id="cb13-18"><a href="#cb13-18" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">persistentVolumeReclaimPolicy</span><span class="kw">:</span><span class="at"> Retain</span><span class="co"> # IMPORTANT</span></span>
+<span id="cb13-19"><a href="#cb13-19" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">storageClassName</span><span class="kw">:</span><span class="at"> nfs-csi</span></span>
+<span id="cb13-20"><a href="#cb13-20" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">volumeMode</span><span class="kw">:</span><span class="at"> Filesystem</span></span></code></pre></div>
+        <ol start="3" type="1">
+        <li><strong>Create PVC on DR Site</strong>: Create the PVC to
+        bind to the PV.</li>
+        </ol>
+        <div class="sourceCode" id="cb14"><pre
+        class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="fu">kind</span><span class="kw">:</span><span class="at"> PersistentVolumeClaim</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="fu">apiVersion</span><span class="kw">:</span><span class="at"> v1</span></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a><span class="fu">metadata</span><span class="kw">:</span></span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">name</span><span class="kw">:</span><span class="at"> centos-stream10-gold-piranha-40-volume</span></span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">namespace</span><span class="kw">:</span><span class="at"> demo</span></span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a><span class="fu">spec</span><span class="kw">:</span></span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">accessModes</span><span class="kw">:</span></span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> ReadWriteMany</span></span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">resources</span><span class="kw">:</span></span>
+<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">requests</span><span class="kw">:</span></span>
+<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">storage</span><span class="kw">:</span><span class="at"> </span><span class="st">&#39;36071014400&#39;</span></span>
+<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">volumeName</span><span class="kw">:</span><span class="at"> pvc-72c7d2e2-ab8e-46dc-887f-2f6d6e2d0343</span></span>
+<span id="cb14-13"><a href="#cb14-13" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">storageClassName</span><span class="kw">:</span><span class="at"> nfs-csi</span></span>
+<span id="cb14-14"><a href="#cb14-14" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">volumeMode</span><span class="kw">:</span><span class="at"> Filesystem</span></span></code></pre></div>
+        <ol start="4" type="1">
+        <li><strong>Manually Recreate Snapshot Objects</strong>: The
+        most complex part is recreating the Kubernetes snapshot objects
+        (<code>VolumeSnapshot</code> and
+        <code>VolumeSnapshotContent</code>) on the DR site to point to
+        the replicated snapshot data. This requires updating handles and
+        references within the object specs.</li>
+        </ol>
+        <p>Create the snapshot.</p>
+        <div class="sourceCode" id="cb15"><pre
+        class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="fu">apiVersion</span><span class="kw">:</span><span class="at"> snapshot.storage.k8s.io/v1</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="fu">kind</span><span class="kw">:</span><span class="at"> VolumeSnapshot</span></span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a><span class="fu">metadata</span><span class="kw">:</span></span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">name</span><span class="kw">:</span><span class="at"> vmsnapshot-6f75ec40-ca02-4f3c-9d07-ab84fc73d446-volume-rootdisk</span></span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">namespace</span><span class="kw">:</span><span class="at"> demo</span></span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a><span class="fu">spec</span><span class="kw">:</span></span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">volumeSnapshotClassName</span><span class="kw">:</span><span class="at"> nfs-csi-snapclass </span></span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">source</span><span class="kw">:</span></span>
+<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">volumeSnapshotContentName</span><span class="kw">:</span><span class="at"> snapcontent-0bdcb6bd-2793-4760-b29a-2949980c34f9</span><span class="co"> # Point to the vsc name you plan to restore to</span></span></code></pre></div>
+        <p>Create the snapshot content.</p>
+        <div class="sourceCode" id="cb16"><pre
+        class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="fu">apiVersion</span><span class="kw">:</span><span class="at"> snapshot.storage.k8s.io/v1</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a><span class="fu">kind</span><span class="kw">:</span><span class="at"> VolumeSnapshotContent</span></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a><span class="fu">metadata</span><span class="kw">:</span></span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">name</span><span class="kw">:</span><span class="at"> snapcontent-0bdcb6bd-2793-4760-b29a-2949980c34f9</span></span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a><span class="fu">spec</span><span class="kw">:</span></span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">deletionPolicy</span><span class="kw">:</span><span class="at"> Retain</span><span class="co"> # Key point 1: Set to Retain</span></span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">driver</span><span class="kw">:</span><span class="at"> nfs.csi.k8s.io</span></span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">source</span><span class="kw">:</span></span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">snapshotHandle</span><span class="kw">:</span><span class="at"> 192.168.99.1</span><span class="co">#openshift-02#snapshot-0bdcb6bd-2793-4760-b29a-2949980c34f9#snapshot-0bdcb6bd-2793-4760-b29a-2949980c34f9#pvc-72c7d2e2-ab8e-46dc-887f-2f6d6e2d0343 # Make sure to point to nfs02</span></span>
+<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">sourceVolumeMode</span><span class="kw">:</span><span class="at"> Filesystem</span></span>
+<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">volumeSnapshotClassName</span><span class="kw">:</span><span class="at"> nfs-csi-snapclass</span><span class="co"> # Key point 2: ClassName must be specified</span></span>
+<span id="cb16-12"><a href="#cb16-12" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">volumeSnapshotRef</span><span class="kw">:</span></span>
+<span id="cb16-13"><a href="#cb16-13" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">apiVersion</span><span class="kw">:</span><span class="at"> snapshot.storage.k8s.io/v1</span></span>
+<span id="cb16-14"><a href="#cb16-14" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">kind</span><span class="kw">:</span><span class="at"> VolumeSnapshot</span></span>
+<span id="cb16-15"><a href="#cb16-15" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">name</span><span class="kw">:</span><span class="at"> vmsnapshot-6f75ec40-ca02-4f3c-9d07-ab84fc73d446-volume-rootdisk</span></span>
+<span id="cb16-16"><a href="#cb16-16" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">namespace</span><span class="kw">:</span><span class="at"> demo</span></span>
+<span id="cb16-17"><a href="#cb16-17" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">uid</span><span class="kw">:</span><span class="at"> c7f932c1-4083-49fe-8715-a4f12e2c88f2</span><span class="co"> # get uid after above vs object created</span></span></code></pre></div>
+        <ol start="5" type="1">
+        <li><strong>Restore and Fixup</strong>: After performing the
+        OADP restore (excluding PVs/PVCs/Snapshots), the
+        <code>VirtualMachineSnapshot</code> object may enter an error
+        state (e.g., <code>VolumeSnapshots missing</code>). This often
+        requires manually creating another set of
+        <code>VolumeSnapshot</code> and
+        <code>VolumeSnapshotContent</code> objects with corrected names
+        and UIDs to satisfy the restored
+        <code>VirtualMachineSnapshot</code>’s expectations.</li>
+        </ol>
+        <p><strong>Conclusion</strong>: Manually failing over CSI
+        snapshots is complex and error-prone. This highlights the need
+        for a more robust, automated solution or an alternative
+        strategy.</p>
+        <h2
+        id="alternative-strategy-restore-snapshot-to-a-new-volume">7.
+        Alternative Strategy: Restore Snapshot to a New Volume</h2>
+        <p>Given the complexities of replicating and restoring CSI
+        snapshots, an alternative workflow is to restore a VM snapshot
+        to a new PVC on the primary site <em>before</em> failover. This
+        new PVC can then be replicated and used for recovery.</p>
+        <h3 id="trade-offs">Trade-offs</h3>
+        <p>This approach presents significant trade-offs:</p>
+        <ul>
+        <li><strong>Pro</strong>: It simplifies the DR process by
+        converting a point-in-time snapshot into a standard, replicable
+        volume.</li>
+        <li><strong>Con</strong>: It requires additional storage space
+        on the primary site for the restored volume. Storage-level
+        deduplication can mitigate this, but it’s a key
+        consideration.</li>
+        <li><strong>Con</strong>: It changes the user experience.
+        Instead of restoring a “VM Snapshot” on the DR site, users would
+        need to attach the replicated disk (the restored PVC) to a new
+        or existing VM. This workflow must be clearly documented.</li>
+        </ul>
+        <h3 id="implementation-steps">Implementation Steps</h3>
+        <ol type="1">
+        <li><strong>Restore Snapshot to PVC on Primary Site</strong>:
+        Create a new <code>PersistentVolumeClaim</code> on the primary
+        cluster, using the desired <code>VolumeSnapshot</code> as its
+        <code>dataSource</code>.</li>
+        </ol>
+        <div class="sourceCode" id="cb17"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> <span class="op">&lt;&lt; EOF</span> <span class="op">&gt;</span> <span class="va">$BASE_DIR</span>/data/install/pv-restore.yaml</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a><span class="st">apiVersion: v1</span></span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a><span class="st">kind: PersistentVolumeClaim</span></span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a><span class="st">metadata:</span></span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a><span class="st">  name: restored-vm-disk-from-snapshot-demo-01</span></span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a><span class="st">  namespace: demo</span></span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a><span class="st">spec:</span></span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a><span class="st">  dataSource:</span></span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a><span class="st">    name: vmsnapshot-312f1d32-90d2-493a-81dc-ec3020eb10cb-volume-rootdisk</span></span>
+<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a><span class="st">    kind: VolumeSnapshot</span></span>
+<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a><span class="st">    apiGroup: snapshot.storage.k8s.io</span></span>
+<span id="cb17-12"><a href="#cb17-12" aria-hidden="true" tabindex="-1"></a><span class="st">  accessModes:</span></span>
+<span id="cb17-13"><a href="#cb17-13" aria-hidden="true" tabindex="-1"></a><span class="st">    - ReadWriteMany</span></span>
+<span id="cb17-14"><a href="#cb17-14" aria-hidden="true" tabindex="-1"></a><span class="st">  resources:</span></span>
+<span id="cb17-15"><a href="#cb17-15" aria-hidden="true" tabindex="-1"></a><span class="st">    requests:</span></span>
+<span id="cb17-16"><a href="#cb17-16" aria-hidden="true" tabindex="-1"></a><span class="st">      # Size must be &gt;= the original volume size</span></span>
+<span id="cb17-17"><a href="#cb17-17" aria-hidden="true" tabindex="-1"></a><span class="st">      # you can find the value from the snapshot, and find the referenced original pv -&gt; status: capacity: storage: &#39;1207078749&#39;</span></span>
+<span id="cb17-18"><a href="#cb17-18" aria-hidden="true" tabindex="-1"></a><span class="st">      # you can also get the value from referenced original pv -&gt; spec: resources: requests: storage: &#39;1207078749&#39;</span></span>
+<span id="cb17-19"><a href="#cb17-19" aria-hidden="true" tabindex="-1"></a><span class="st">      storage: 1207078749</span></span>
+<span id="cb17-20"><a href="#cb17-20" aria-hidden="true" tabindex="-1"></a><span class="st">  storageClassName: nfs-csi</span></span>
+<span id="cb17-21"><a href="#cb17-21" aria-hidden="true" tabindex="-1"></a><span class="op">EOF</span></span>
+<span id="cb17-22"><a href="#cb17-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-23"><a href="#cb17-23" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> apply <span class="at">-f</span> <span class="va">$BASE_DIR</span>/data/install/pv-restore.yaml</span></code></pre></div>
+        <ol start="2" type="1">
+        <li><strong>(Optional) Attach and Verify</strong>: Attach the
+        newly created PVC to the original VM as a second disk to verify
+        its contents. Set the new disk as bootable to confirm it works.
+        <img src="imgs/2025.07.ocp-v.dr.nfs.md/2025-09-08-20-42-36.png" width="1024"></li>
+        </ol>
+        <p><img src="imgs/2025.07.ocp-v.dr.nfs.md/2025-09-08-20-43-12.png" width="1024"></p>
+        <p><img src="imgs/2025.07.ocp-v.dr.nfs.md/2025-09-08-20-43-52.png" width="1024"></p>
+        <ol start="3" type="1">
+        <li><strong>Replicate and Recover</strong>: The new PVC
+        (<code>restored-vm-disk-from-snapshot-demo-01</code>) is now a
+        standard volume. Replicate its data to the DR site using storage
+        replication. Then, follow the standard manual recovery process:
+        create the corresponding PV and PVC on the DR cluster, and then
+        run the OADP metadata restore.</li>
+        </ol>
+        <div class="sourceCode" id="cb18"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a><span class="co"># first sync nfs data from nfs01 to nfs02</span></span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> rsync <span class="at">-avh</span> <span class="at">--progress</span> /srv/nfs/openshift-01/pvc-2d8cc130-07a8-45cd-8ee6-ef2d6908942d /srv/nfs/openshift-02/</span></code></pre></div>
+        <p>On the DR site, create the PV.</p>
+        <div class="sourceCode" id="cb19"><pre
+        class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="fu">kind</span><span class="kw">:</span><span class="at"> PersistentVolume</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a><span class="fu">apiVersion</span><span class="kw">:</span><span class="at"> v1</span></span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a><span class="fu">metadata</span><span class="kw">:</span></span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">name</span><span class="kw">:</span><span class="at"> pvc-2d8cc130-07a8-45cd-8ee6-ef2d6908942d</span></span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a><span class="fu">spec</span><span class="kw">:</span></span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">capacity</span><span class="kw">:</span></span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">storage</span><span class="kw">:</span><span class="at"> </span><span class="dv">1207078749</span></span>
+<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">csi</span><span class="kw">:</span></span>
+<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">driver</span><span class="kw">:</span><span class="at"> nfs.csi.k8s.io</span></span>
+<span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">volumeHandle</span><span class="kw">:</span><span class="at"> 192.168.99.1</span><span class="co">#openshift-02#pvc-2d8cc130-07a8-45cd-8ee6-ef2d6908942d## # Make sure to point to nfs02</span></span>
+<span id="cb19-11"><a href="#cb19-11" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">volumeAttributes</span><span class="kw">:</span></span>
+<span id="cb19-12"><a href="#cb19-12" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">server</span><span class="kw">:</span><span class="at"> </span><span class="fl">192.168.99.1</span></span>
+<span id="cb19-13"><a href="#cb19-13" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">share</span><span class="kw">:</span><span class="at"> /openshift-02</span><span class="co"> # Make sure to point to nfs02</span></span>
+<span id="cb19-14"><a href="#cb19-14" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">subdir</span><span class="kw">:</span><span class="at"> pvc-2d8cc130-07a8-45cd-8ee6-ef2d6908942d</span></span>
+<span id="cb19-15"><a href="#cb19-15" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">accessModes</span><span class="kw">:</span></span>
+<span id="cb19-16"><a href="#cb19-16" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> ReadWriteMany</span></span>
+<span id="cb19-17"><a href="#cb19-17" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">persistentVolumeReclaimPolicy</span><span class="kw">:</span><span class="at"> Retain</span><span class="co"> # Key point 1: Set to Retain</span></span>
+<span id="cb19-18"><a href="#cb19-18" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">storageClassName</span><span class="kw">:</span><span class="at"> nfs-csi</span></span>
+<span id="cb19-19"><a href="#cb19-19" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">mountOptions</span><span class="kw">:</span></span>
+<span id="cb19-20"><a href="#cb19-20" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> hard</span></span>
+<span id="cb19-21"><a href="#cb19-21" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> nfsvers=4.2</span></span>
+<span id="cb19-22"><a href="#cb19-22" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> rsize=1048576</span></span>
+<span id="cb19-23"><a href="#cb19-23" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> wsize=1048576</span></span>
+<span id="cb19-24"><a href="#cb19-24" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> noatime</span></span>
+<span id="cb19-25"><a href="#cb19-25" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> nodiratime</span></span>
+<span id="cb19-26"><a href="#cb19-26" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> actimeo=60</span></span>
+<span id="cb19-27"><a href="#cb19-27" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> timeo=600</span></span>
+<span id="cb19-28"><a href="#cb19-28" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> retrans=3</span></span>
+<span id="cb19-29"><a href="#cb19-29" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">volumeMode</span><span class="kw">:</span><span class="at"> Filesystem</span></span></code></pre></div>
+        <p>Create the PVC.</p>
+        <div class="sourceCode" id="cb20"><pre
+        class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="fu">kind</span><span class="kw">:</span><span class="at"> PersistentVolumeClaim</span></span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a><span class="fu">apiVersion</span><span class="kw">:</span><span class="at"> v1</span></span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a><span class="fu">metadata</span><span class="kw">:</span></span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">name</span><span class="kw">:</span><span class="at"> restored-vm-disk-from-snapshot-demo-01</span></span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">namespace</span><span class="kw">:</span><span class="at"> demo</span></span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a><span class="fu">spec</span><span class="kw">:</span></span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">accessModes</span><span class="kw">:</span></span>
+<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> ReadWriteMany</span></span>
+<span id="cb20-9"><a href="#cb20-9" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">resources</span><span class="kw">:</span></span>
+<span id="cb20-10"><a href="#cb20-10" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">requests</span><span class="kw">:</span></span>
+<span id="cb20-11"><a href="#cb20-11" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">storage</span><span class="kw">:</span><span class="at"> </span><span class="st">&#39;1207078749&#39;</span></span>
+<span id="cb20-12"><a href="#cb20-12" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">volumeName</span><span class="kw">:</span><span class="at"> pvc-2d8cc130-07a8-45cd-8ee6-ef2d6908942d</span></span>
+<span id="cb20-13"><a href="#cb20-13" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">storageClassName</span><span class="kw">:</span><span class="at"> nfs-csi</span></span>
+<span id="cb20-14"><a href="#cb20-14" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">volumeMode</span><span class="kw">:</span><span class="at"> Filesystem</span></span></code></pre></div>
+        <p>The restored VM will come back online using this replicated,
+        snapshot-restored disk.</p>
+        <p><img src="imgs/2025.07.ocp-v.dr.nfs.md/2025-09-08-23-41-57.png" width="1024"></p>
+        <h2 id="path-to-automation">8. Path to Automation</h2>
+        <p>The manual steps outlined in this document form the basis for
+        a fully automated disaster recovery workflow. The high-level
+        logic for an automation script (e.g., an Ansible playbook) would
+        be:</p>
+        <ol type="1">
+        <li><p><strong>Scheduled Metadata Backup</strong>: An OADP
+        <code>Schedule</code> runs on the primary cluster to regularly
+        back up VM metadata to S3.</p></li>
+        <li><p><strong>DR Site Sync Script</strong>: A scheduled job on
+        the DR site (or a central automation controller like AAP)
+        performs the following:</p>
+        <ul>
+        <li>Downloads the latest backup from S3.</li>
+        <li>Parses the backup contents to identify all PVs and their
+        associated storage details (e.g., NFS paths, LUN IDs).</li>
+        <li>For each PV, triggers the storage system’s API to
+        synchronize the data to the DR site.</li>
+        <li>Generates modified PV and PVC manifests with DR-specific
+        storage parameters.</li>
+        <li>Applies these manifests to the DR cluster, pre-staging the
+        volumes in a “ready” state.</li>
+        </ul></li>
+        <li><p><strong>Failover Execution</strong>: In a disaster, a
+        failover is triggered by running a final OADP
+        <code>Restore</code> on the DR cluster. This restore brings the
+        VMs online, connecting them to the already replicated and
+        pre-staged persistent volumes.</p></li>
+        </ol>
+        <h3 id="setting-up-ansible-automation-platform-aap">Setting up
+        Ansible Automation Platform (AAP)</h3>
+        <p>As a first step toward automation, we can install AAP on the
+        DR cluster.</p>
+        <p>Install the <code>Ansible Automation Platform</code> operator
+        from the OperatorHub.
+        <img src="imgs/2025.07.ocp-v.dr.nfs.md/2025-08-11-15-36-51.png" width="1024"></p>
+        <p>Create an <code>AutomationController</code> instance with
+        default settings.
+        <img src="imgs/2025.07.ocp-v.dr.nfs.md/2025-08-11-15-44-04.png" width="1024"></p>
+        <p><img src="imgs/2025.07.ocp-v.dr.nfs.md/2025-08-11-16-13-36.png" width="1024"></p>
+        <p><img src="imgs/2025.07.ocp-v.dr.nfs.md/2025-08-11-16-09-05.png" width="1024"></p>
+        <p><img src="imgs/2025.07.ocp-v.dr.nfs.md/2025-08-11-16-12-35.png" width="1024"></p>
+        <p>Retrieve the default admin password.</p>
+        <div class="sourceCode" id="cb21"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> get secret example-admin-password <span class="at">-n</span> aap <span class="at">-o</span> jsonpath=<span class="st">&#39;{.data.password}&#39;</span> <span class="kw">|</span> <span class="fu">base64</span> <span class="at">--decode</span> <span class="kw">&amp;&amp;</span> <span class="bu">echo</span></span></code></pre></div>
+        <p><img src="imgs/2025.07.ocp-v.dr.nfs.md/2025-08-11-16-27-03.png" width="1024"></p>
+        <p>To extend the session timeout for easier management, patch
+        the <code>AutomationController</code> resource: ```yaml spec:
+        extra_settings: - setting: SESSION_COOKIE_AGE value: ‘86400’ -
+        setting: AUTH_TOKEN_MAX_AGE value: ‘86400’</p>
+      </article>
+    </div>
+      </main>
+
+  <footer>
+    <p>
+      Licensed under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank"
+        rel="noopener">CC-BY-NC-SA 4.0</a>
+      &nbsp;·&nbsp;
+      <a href="https://github.com/wangzheng422/docker_env" target="_blank" rel="noopener">wangzheng422/docker_env</a>
+    </p>
+  </footer>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: false, theme: 'dark' });
+
+    const SITE_BUILD_ID = 'fbe91b569ae8';
+    const SITE_HOME_URL = '../../../index.html';
+
+    const getBuildIdFromHtml = (html) => {
+      const match = String(html).match(/<meta[^>]+name=["']site-build-id["'][^>]+content=["']([^"']+)["']/i)
+        || String(html).match(/<meta[^>]+content=["']([^"']+)["'][^>]+name=["']site-build-id["']/i);
+      return match ? match[1] : '';
+    };
+
+    const checkForSiteUpdate = async () => {
+      if (!SITE_BUILD_ID || window.location.protocol === 'file:') return;
+      try {
+        const probeUrl = new URL(SITE_HOME_URL || './index.html', window.location.href);
+        probeUrl.searchParams.set('site_cache_probe', Date.now().toString());
+        const response = await fetch(probeUrl.toString(), { cache: 'no-store' });
+        if (!response.ok) return;
+        const latestBuildId = getBuildIdFromHtml(await response.text());
+        if (!latestBuildId || latestBuildId === SITE_BUILD_ID) return;
+        if (sessionStorage.getItem('site-build-refresh') === latestBuildId) return;
+        sessionStorage.setItem('site-build-refresh', latestBuildId);
+        const freshUrl = new URL(window.location.href);
+        freshUrl.searchParams.set('v', latestBuildId);
+        window.location.replace(freshUrl.toString());
+      } catch (error) {
+        // Network errors should not block reading the current page.
+      }
+    };
+
+    const versionedLocalUrl = (rawUrl) => {
+      if (!rawUrl || /^(https?:)?\/\//i.test(rawUrl) || /^(data|blob|mailto):/i.test(rawUrl)) return rawUrl;
+      const url = new URL(rawUrl, window.location.href);
+      if (url.searchParams.has('v')) return rawUrl;
+      url.searchParams.set('v', SITE_BUILD_ID);
+      return url.toString();
+    };
+
+    const cacheBustPageAssets = () => {
+      document.querySelectorAll('img[src], video[src], audio[src], source[src]').forEach((node) => {
+        const src = node.getAttribute('src');
+        const versioned = versionedLocalUrl(src);
+        if (versioned !== src) node.setAttribute('src', versioned);
+      });
+    };
+
+    const updateReadingProgress = () => {
+      const progress = document.querySelector('.reading-progress');
+      if (!progress) return;
+      const scrollable = document.documentElement.scrollHeight - window.innerHeight;
+      const ratio = scrollable > 0 ? window.scrollY / scrollable : 0;
+      progress.style.transform = 'scaleX(' + Math.min(1, Math.max(0, ratio)) + ')';
+    };
+
+    const topicFor = (text, href) => {
+      const haystack = (text + ' ' + href).toLowerCase();
+      if (/developers\.redhat\.com|redhatquickcourses|github\.com\/redhatquickcourses/.test(haystack)) return 'Red Hat';
+      if (/ai|llm|gpu|vllm|llama|model|rhaiis/.test(haystack)) return 'AI';
+      if (/network|ovn|bgp|dns|egress|ingress|metallb|nic|route/.test(haystack)) return 'Network';
+      if (/cert|tls|sso|keycloak|rhbk|security|compliance/.test(haystack)) return 'Security';
+      if (/perf|profile|throttling|heap|debug/.test(haystack)) return 'Performance';
+      if (/install|ipi|upi|sno|disconnected|bootstrap/.test(haystack)) return 'Install';
+      if (/rhel|coreos|rhcos|kernel|rpm|ostree/.test(haystack)) return 'RHEL';
+      if (/backup|storage|nfs|odf|ocs|ceph|dr/.test(haystack)) return 'Storage';
+      if (/pipeline|gitops|ansible|aap|rhdh|devops/.test(haystack)) return 'DevOps';
+      return 'OpenShift';
+    };
+
+    const yearFor = (text, href) => {
+      const match = (text + ' ' + href).match(/20\d{2}/);
+      return match ? match[0] : 'Notes';
+    };
+
+    const importantExternal = (href) =>
+      /developers\.redhat\.com|redhatquickcourses\.github\.io/i.test(href);
+
+    const titleForLink = (link) => {
+      const href = link.getAttribute('href') || '';
+      const directText = link.textContent.trim().replace(/\s+/g, ' ');
+      if (!/^https?:\/\//.test(directText)) return directText;
+      const parentItem = link.closest('ul')?.parentElement;
+      if (parentItem) {
+        const clone = parentItem.cloneNode(true);
+        clone.querySelectorAll('ul').forEach((nested) => nested.remove());
+        const parentText = clone.textContent.trim().replace(/\s+/g, ' ');
+        if (parentText) {
+          return parentText;
+        }
+      }
+      return directText;
+    };
+
+    const escapeHtml = (value) => String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+
+    const enhanceHome = () => {
+      if (!document.body.classList.contains('page-index')) return;
+      const source = document.querySelector('.home-source');
+      const grid = document.getElementById('note-grid');
+      const stats = document.getElementById('console-stats');
+      const externalPanel = document.getElementById('external-panel');
+      const topicStrip = document.getElementById('topic-strip');
+      const search = document.getElementById('console-search');
+      if (!source || !grid || !stats || !externalPanel || !topicStrip || !search) return;
+
+      const seen = new Set();
+      const links = Array.from(source.querySelectorAll('a[href]'))
+        .map((link) => {
+          const href = link.getAttribute('href') || '';
+          const text = titleForLink(link);
+          return { text, href, topic: topicFor(text, href), year: yearFor(text, href) };
+        });
+      const notes = links
+        .filter((note) => note.text && !note.href.startsWith('http') && !seen.has(note.href) && seen.add(note.href));
+      const externalLinks = links
+        .filter((note) => note.text && importantExternal(note.href));
+
+      const topics = ['All', ...Array.from(new Set(notes.map((note) => note.topic))).sort()];
+      let activeTopic = 'All';
+
+      const renderStats = () => {
+        const years = notes.map((note) => note.year).filter((year) => year.length === 4 && /^\d{4}/.test(year));
+        const latest = years.length ? Math.max(...years.map(Number)) : 'N/A';
+        const oldest = years.length ? Math.min(...years.map(Number)) : 'N/A';
+        stats.innerHTML = [
+          ['Notes', notes.length],
+          ['Resources', externalLinks.length],
+          ['Topics', topics.length - 1],
+          ['Latest', latest],
+        ].map(([label, value]) => '<div class="stat-tile"><span>' + label + '</span><strong>' + value + '</strong></div>').join('');
+        const signal = document.getElementById('signal-count');
+        if (signal) signal.textContent = notes.length + ' links indexed';
+      };
+
+      const renderExternal = () => {
+        externalPanel.innerHTML =
+          '<div class="section-heading"><span>Published / Learning</span><strong>Red Hat resources</strong></div>' +
+          '<div class="external-grid">' +
+          externalLinks.map((note) =>
+            '<a class="resource-card" href="' + escapeHtml(note.href) + '" target="_blank" rel="noopener">' +
+            '<span class="note-meta"><span>' + escapeHtml(note.year) + '</span><span>' + escapeHtml(note.topic) + '</span></span>' +
+            '<strong>' + escapeHtml(note.text) + '</strong>' +
+            '<small>' + escapeHtml(note.href) + '</small>' +
+            '</a>'
+          ).join('') +
+          '</div>';
+      };
+
+      const renderTopics = () => {
+        topicStrip.innerHTML = topics.map((topic) => '<button class="topic-chip' + (topic === activeTopic ? ' active' : '') + '" type="button" data-topic="' + escapeHtml(topic) + '">' + escapeHtml(topic) + '</button>').join('');
+        topicStrip.querySelectorAll('button').forEach((button) => {
+          button.addEventListener('click', () => {
+            activeTopic = button.dataset.topic || 'All';
+            renderTopics();
+            renderCards();
+          });
+        });
+      };
+
+      const renderCards = () => {
+        const query = search.value.trim().toLowerCase();
+        const filtered = notes.filter((note) => {
+          const topicMatch = activeTopic === 'All' || note.topic === activeTopic;
+          const queryMatch = !query || (note.text + ' ' + note.href + ' ' + note.topic + ' ' + note.year).toLowerCase().includes(query);
+          return topicMatch && queryMatch;
+        });
+        grid.innerHTML = filtered.map((note) =>
+          '<a class="note-card" href="' + escapeHtml(note.href) + '">' +
+          '<span class="note-meta"><span>' + escapeHtml(note.year) + '</span><span>' + escapeHtml(note.topic) + '</span></span>' +
+          '<strong>' + escapeHtml(note.text) + '</strong>' +
+          '<small>' + escapeHtml(note.href) + '</small>' +
+          '</a>'
+        ).join('') || '<p class="empty-state">No matching notes.</p>';
+      };
+
+      const drawMap = () => {
+        const canvas = document.getElementById('knowledge-canvas');
+        if (!(canvas instanceof HTMLCanvasElement)) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        const width = canvas.width;
+        const height = canvas.height;
+        const nodes = notes.slice(0, 44).map((note, index) => {
+          const angle = (index / 44) * Math.PI * 2;
+          const ring = 90 + (index % 5) * 22;
+          return {
+            x: width / 2 + Math.cos(angle) * ring,
+            y: height / 2 + Math.sin(angle) * ring * 0.72,
+            topic: note.topic,
+          };
+        });
+        ctx.clearRect(0, 0, width, height);
+        ctx.strokeStyle = 'rgba(88, 166, 255, 0.14)';
+        ctx.lineWidth = 1;
+        nodes.forEach((node, index) => {
+          const next = nodes[(index + 7) % nodes.length];
+          ctx.beginPath();
+          ctx.moveTo(node.x, node.y);
+          ctx.lineTo(next.x, next.y);
+          ctx.stroke();
+        });
+        const palette = {
+          AI: '#a371f7',
+          Network: '#39d0d8',
+          Security: '#ff7b72',
+          Performance: '#f2cc60',
+          Install: '#7ee787',
+          RHEL: '#ff7b72',
+          Storage: '#d2a8ff',
+          DevOps: '#ffa657',
+          OpenShift: '#58a6ff',
+        };
+        nodes.forEach((node) => {
+          ctx.fillStyle = palette[node.topic] || '#58a6ff';
+          ctx.beginPath();
+          ctx.arc(node.x, node.y, 3.4, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      };
+
+      search.addEventListener('input', renderCards);
+      renderStats();
+      renderExternal();
+      renderTopics();
+      renderCards();
+      drawMap();
+      document.body.classList.add('home-enhanced');
+    };
+
+    const enhanceCodeBlocks = () => {
+      document.querySelectorAll('pre').forEach((pre) => {
+        if (pre.classList.contains('mermaid') || pre.querySelector('.copy-code')) return;
+        const button = document.createElement('button');
+        button.className = 'copy-code';
+        button.type = 'button';
+        button.textContent = 'Copy';
+        button.addEventListener('click', async () => {
+          await navigator.clipboard.writeText(pre.textContent || '');
+          button.textContent = 'Copied';
+          setTimeout(() => { button.textContent = 'Copy'; }, 1200);
+        });
+        pre.appendChild(button);
+      });
+    };
+
+    window.addEventListener('scroll', updateReadingProgress, { passive: true });
+    window.addEventListener('pageshow', (event) => {
+      if (event.persisted) checkForSiteUpdate();
+    });
+    document.addEventListener('DOMContentLoaded', async () => {
+      checkForSiteUpdate();
+      cacheBustPageAssets();
+      updateReadingProgress();
+      enhanceHome();
+      enhanceCodeBlocks();
+      // pandoc 输出 mermaid 为 <pre class="mermaid"><code>...</code></pre>
+      // 需要转成 <div class="mermaid">...</div> 供 mermaid.js 渲染
+      document.querySelectorAll('pre.mermaid').forEach(pre => {
+        const div = document.createElement('div');
+        div.classList.add('mermaid');
+        div.textContent = pre.textContent;
+        pre.replaceWith(div);
+      });
+      // 也处理 <pre><code class="language-mermaid"> 形式（备用）
+      document.querySelectorAll('pre code.language-mermaid').forEach(code => {
+        const div = document.createElement('div');
+        div.classList.add('mermaid');
+        div.textContent = code.textContent;
+        code.closest('pre').replaceWith(div);
+      });
+      await mermaid.run();
+    });
+  </script>
+</body>
+
+</html>

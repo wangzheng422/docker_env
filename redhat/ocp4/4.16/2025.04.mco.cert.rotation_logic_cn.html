@@ -1,0 +1,1214 @@
+<!DOCTYPE html>
+<html lang="zh" dir="ltr">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="generator" content="pandoc" />
+  <meta name="site-build-id" content="fbe91b569ae8" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <title>OpenShift Machine Config Operator 证书/密钥轮换逻辑 | wandering.star notes</title>
+  <meta name="description"
+    content="Wandering field notes on OpenShift, RHEL, AI infrastructure, and platform operations." />
+  <!-- Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-E3FRMDB7L2"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-E3FRMDB7L2');
+  </script>
+  <style>
+  html {
+    color: #1a1a1a;
+    background-color: #fdfdfd;
+  }
+  body {
+    margin: 0 auto;
+    max-width: 36em;
+    padding-left: 50px;
+    padding-right: 50px;
+    padding-top: 50px;
+    padding-bottom: 50px;
+    hyphens: auto;
+    overflow-wrap: break-word;
+    text-rendering: optimizeLegibility;
+    font-kerning: normal;
+  }
+  @media (max-width: 600px) {
+    body {
+      font-size: 0.9em;
+      padding: 12px;
+    }
+    h1 {
+      font-size: 1.8em;
+    }
+  }
+  @media print {
+    html {
+      background-color: white;
+    }
+    body {
+      background-color: transparent;
+      color: black;
+      font-size: 12pt;
+    }
+    p, h2, h3 {
+      orphans: 3;
+      widows: 3;
+    }
+    h2, h3, h4 {
+      page-break-after: avoid;
+    }
+  }
+  p {
+    margin: 1em 0;
+  }
+  a {
+    color: #1a1a1a;
+  }
+  a:visited {
+    color: #1a1a1a;
+  }
+  img {
+    max-width: 100%;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.4em;
+  }
+  h5, h6 {
+    font-size: 1em;
+    font-style: italic;
+  }
+  h6 {
+    font-weight: normal;
+  }
+  ol, ul {
+    padding-left: 1.7em;
+    margin-top: 1em;
+  }
+  li > ol, li > ul {
+    margin-top: 0;
+  }
+  blockquote {
+    margin: 1em 0 1em 1.7em;
+    padding-left: 1em;
+    border-left: 2px solid #e6e6e6;
+    color: #606060;
+  }
+  code {
+    font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+    font-size: 85%;
+    margin: 0;
+    hyphens: manual;
+  }
+  pre {
+    margin: 1em 0;
+    overflow: auto;
+  }
+  pre code {
+    padding: 0;
+    overflow: visible;
+    overflow-wrap: normal;
+  }
+  .sourceCode {
+   background-color: transparent;
+   overflow: visible;
+  }
+  hr {
+    background-color: #1a1a1a;
+    border: none;
+    height: 1px;
+    margin: 1em 0;
+  }
+  table {
+    margin: 1em 0;
+    border-collapse: collapse;
+    width: 100%;
+    overflow-x: auto;
+    display: block;
+    font-variant-numeric: lining-nums tabular-nums;
+  }
+  table caption {
+    margin-bottom: 0.75em;
+  }
+  tbody {
+    margin-top: 0.5em;
+    border-top: 1px solid #1a1a1a;
+    border-bottom: 1px solid #1a1a1a;
+  }
+  th {
+    border-top: 1px solid #1a1a1a;
+    padding: 0.25em 0.5em 0.25em 0.5em;
+  }
+  td {
+    padding: 0.125em 0.5em 0.25em 0.5em;
+  }
+  header {
+    margin-bottom: 4em;
+    text-align: center;
+  }
+  #TOC li {
+    list-style: none;
+  }
+  #TOC ul {
+    padding-left: 1.3em;
+  }
+  #TOC > ul {
+    padding-left: 0;
+  }
+  #TOC a:not(:hover) {
+    text-decoration: none;
+  }
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  div.columns{display: flex; gap: min(4vw, 1.5em);}
+  div.column{flex: auto; overflow-x: auto;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  /* The extra [class] is a hack that increases specificity enough to
+     override a similar rule in reveal.js */
+  ul.task-list[class]{list-style: none;}
+  ul.task-list li input[type="checkbox"] {
+    font-size: inherit;
+    width: 0.8em;
+    margin: 0 0.8em 0.2em -1.6em;
+    vertical-align: middle;
+  }
+  .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  /* CSS for syntax highlighting */
+  pre > code.sourceCode { white-space: pre; position: relative; }
+  pre > code.sourceCode > span { line-height: 1.25; }
+  pre > code.sourceCode > span:empty { height: 1.2em; }
+  .sourceCode { overflow: visible; }
+  code.sourceCode > span { color: inherit; text-decoration: inherit; }
+  div.sourceCode { margin: 1em 0; }
+  pre.sourceCode { margin: 0; }
+  @media screen {
+  div.sourceCode { overflow: auto; }
+  }
+  @media print {
+  pre > code.sourceCode { white-space: pre-wrap; }
+  pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+  }
+  pre.numberSource code
+    { counter-reset: source-line 0; }
+  pre.numberSource code > span
+    { position: relative; left: -4em; counter-increment: source-line; }
+  pre.numberSource code > span > a:first-child::before
+    { content: counter(source-line);
+      position: relative; left: -1em; text-align: right; vertical-align: baseline;
+      border: none; display: inline-block;
+      -webkit-touch-callout: none; -webkit-user-select: none;
+      -khtml-user-select: none; -moz-user-select: none;
+      -ms-user-select: none; user-select: none;
+      padding: 0 4px; width: 4em;
+    }
+  pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+  div.sourceCode
+    { color: #cccccc; background-color: #303030; }
+  @media screen {
+  pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+  }
+  code span.al { color: #ffcfaf; } /* Alert */
+  code span.an { color: #7f9f7f; font-weight: bold; } /* Annotation */
+  code span.at { } /* Attribute */
+  code span.bn { color: #dca3a3; } /* BaseN */
+  code span.bu { } /* BuiltIn */
+  code span.cf { color: #f0dfaf; } /* ControlFlow */
+  code span.ch { color: #dca3a3; } /* Char */
+  code span.cn { color: #dca3a3; font-weight: bold; } /* Constant */
+  code span.co { color: #7f9f7f; } /* Comment */
+  code span.cv { color: #7f9f7f; font-weight: bold; } /* CommentVar */
+  code span.do { color: #7f9f7f; } /* Documentation */
+  code span.dt { color: #dfdfbf; } /* DataType */
+  code span.dv { color: #dcdccc; } /* DecVal */
+  code span.er { color: #c3bf9f; } /* Error */
+  code span.ex { } /* Extension */
+  code span.fl { color: #c0bed1; } /* Float */
+  code span.fu { color: #efef8f; } /* Function */
+  code span.im { } /* Import */
+  code span.in { color: #7f9f7f; font-weight: bold; } /* Information */
+  code span.kw { color: #f0dfaf; } /* Keyword */
+  code span.op { color: #f0efd0; } /* Operator */
+  code span.ot { color: #efef8f; } /* Other */
+  code span.pp { color: #ffcfaf; font-weight: bold; } /* Preprocessor */
+  code span.sc { color: #dca3a3; } /* SpecialChar */
+  code span.ss { color: #cc9393; } /* SpecialString */
+  code span.st { color: #cc9393; } /* String */
+  code span.va { } /* Variable */
+  code span.vs { color: #cc9393; } /* VerbatimString */
+  code span.wa { color: #7f9f7f; font-weight: bold; } /* Warning */
+  </style>
+  <link rel="stylesheet" href="../../../style.css?v=fbe91b569ae8" />
+  </head>
+
+<body class="page-article">
+  <div class="reading-progress" aria-hidden="true"></div>
+  <div class="console-backdrop" aria-hidden="true"></div>
+  <nav class="site-nav">
+    <div class="nav-inner">
+      <a class="nav-brand" href="../../../index.html">wandering.star<span>notes</span></a>
+      <div class="nav-links">
+        <a href="https://github.com/wangzheng422/docker_env" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://www.youtube.com/@wangzheng422" target="_blank" rel="noopener">YouTube</a>
+      </div>
+    </div>
+  </nav>
+
+  <main>
+            <a class="back-link" href="../../../index.html">← Back to Index</a>
+        <div class="article-layout">
+            <aside class="toc-panel">
+        <div class="toc-title">ON THIS PAGE</div>
+        <ul>
+        <li><a
+        href="#openshift-machine-config-operator-证书密钥轮换逻辑"
+        id="toc-openshift-machine-config-operator-证书密钥轮换逻辑">OpenShift
+        Machine Config Operator 证书/密钥轮换逻辑</a>
+        <ul>
+        <li><a href="#概述" id="toc-概述">概述</a></li>
+        <li><a href="#关键组件和逻辑流程"
+        id="toc-关键组件和逻辑流程">关键组件和逻辑流程</a>
+        <ul>
+        <li><a href="#mco-operator-pkgoperatorsync.go"
+        id="toc-mco-operator-pkgoperatorsync.go">1. MCO Operator
+        (<code>pkg/operator/sync.go</code>)</a></li>
+        <li><a
+        href="#mco-daemon-pkgdaemoncertificate_writer.go-pkgdaemonupdate.go"
+        id="toc-mco-daemon-pkgdaemoncertificate_writer.go-pkgdaemonupdate.go">2.
+        MCO Daemon (<code>pkg/daemon/certificate_writer.go</code>,
+        <code>pkg/daemon/update.go</code>)</a></li>
+        </ul></li>
+        <li><a href="#结论" id="toc-结论">结论</a></li>
+        </ul></li>
+        </ul>
+      </aside>
+            <article class="markdown-body article-shell">
+        <h1
+        id="openshift-machine-config-operator-证书密钥轮换逻辑">OpenShift
+        Machine Config Operator 证书/密钥轮换逻辑</h1>
+        <p>本文档概述了 <a
+        href="https://github.com/openshift/machine-config-operator">Machine
+        Config Operator (MCO)</a> 及其相关组件（如 Machine Config Daemon
+        - MCD）用于处理证书、密钥和秘钥轮换并将其分发到 OpenShift
+        节点的逻辑（基于对 4.16 版本代码库的分析）。</p>
+        <h2 id="概述">概述</h2>
+        <p>MCO 通常不<em>直接生成</em>新的证书或密钥（这通常由其他
+        OpenShift 组件处理，如
+        <code>service-ca-operator</code>、<code>ingress-operator</code>
+        或管理员手动操作）。MCO 也不直接读取
+        <code>service-ca-operator</code> 等组件内部生成的
+        Secret。相反，MCO/MCD 系统依赖于一个解耦的机制，负责：</p>
+        <ol type="1">
+        <li><strong>检测</strong>包含相关数据（例如，CA
+        捆绑包、拉取密钥、云提供商配置）的源 ConfigMap 和 Secret
+        的更改。</li>
+        <li>通过 <code>ControllerConfig</code>
+        自定义资源将这些更改<strong>传播</strong>到节点。</li>
+        <li>通过将文件写入节点文件系统上的正确位置，在每个节点上<strong>应用</strong>这些更改。</li>
+        <li>如果更改需要（例如，重大的 CA 更新，通常通过
+        <code>ControllerConfig</code>
+        上的注解发出信号），则<strong>重启</strong>相关服务（如
+        <code>kubelet</code>）。</li>
+        </ol>
+        <h2 id="关键组件和逻辑流程">关键组件和逻辑流程</h2>
+        <p>该过程涉及两个主要参与者：集中运行的 MCO Operator
+        和在每个节点上作为 DaemonSet 运行的 MCD。</p>
+        <pre class="mermaid"><code>sequenceDiagram
+    participant 外部源
+    participant MCO Operator
+    participant ControllerConfig CR
+    participant MCO Daemon (节点)
+    participant 节点文件系统
+    participant Kubelet (节点服务)
+
+    外部源-&gt;&gt;MCO Operator: 更新 Secret/ConfigMap (例如, CA 捆绑包, pull-secret)
+    Note over MCO Operator: 或轮换注解添加到 ControllerConfig
+    MCO Operator-&gt;&gt;ControllerConfig CR: 读取源数据 (CAs, secrets 等)
+    MCO Operator-&gt;&gt;ControllerConfig CR: 更新 ControllerConfig CR (新数据, resourceVersion, 注解)
+    MCO Daemon (节点)-&gt;&gt;ControllerConfig CR: 监视更改 (基于 resourceVersion, 注解)
+    MCO Daemon (节点)--&gt;&gt;ControllerConfig CR: 检测到更新的 ControllerConfig
+    MCO Daemon (节点)-&gt;&gt;节点文件系统: 从 CR 读取新的证书/密钥数据
+    MCO Daemon (节点)-&gt;&gt;节点文件系统: 与磁盘上的现有文件比较
+    MCO Daemon (节点)-&gt;&gt;节点文件系统: 写入更新的文件 (例如, /etc/kubernetes/kubelet-ca.crt, /etc/mco/internal-registry-pull-secret.json, /home/core/.ssh/*)
+    alt 检测到 CA 轮换 (通过注解)
+        MCO Daemon (节点)-&gt;&gt;Kubelet (节点服务): 重启 Kubelet
+    end
+</code></pre>
+        <h3 id="mco-operator-pkgoperatorsync.go">1. MCO Operator
+        (<code>pkg/operator/sync.go</code>)</h3>
+        <ul>
+        <li>Operator 作为中央部署运行。</li>
+        <li>它监视集群中的各种源 ConfigMap 和 Secret，主要在
+        <code>openshift-config</code> 和
+        <code>openshift-config-managed</code> 命名空间中。示例包括：
+        <ul>
+        <li><code>pull-secret</code> (Secret)</li>
+        <li><code>kube-cloud-config</code> (用于云提供商详细信息的
+        ConfigMap)</li>
+        <li>CA 捆绑包 (例如, <code>*-ca-bundle</code> ConfigMaps)</li>
+        <li>与 MCO 服务帐户关联的镜像仓库拉取密钥。</li>
+        </ul></li>
+        <li>当在这些源中检测到更改时，Operator 会获取相关数据。</li>
+        <li>它在必要时合并数据（例如，合并多个 CA
+        捆绑包，将镜像仓库拉取密钥与全局拉取密钥合并）。</li>
+        <li>它使用最新的合并数据更新中央 <code>ControllerConfig</code>
+        自定义资源
+        (<code>machineconfiguration.openshift.io</code>)。此更新会更改
+        <code>ControllerConfig</code> 的
+        <code>resourceVersion</code>。</li>
+        <li>它还可能更新 <code>ControllerConfig</code> 上的注解，例如
+        <code>machineconfiguration.openshift.io/service-ca-rotate</code>
+        (由常量 <code>ServiceCARotateAnnotation</code>
+        定义)，以指示守护进程需要执行的特定操作。</li>
+        </ul>
+        <p><strong>与 <code>service-ca-operator</code>
+        的交互:</strong></p>
+        <p>需要强调的是，MCO 与 <code>service-ca-operator</code>
+        的交互是<strong>间接</strong>的。<code>service-ca-operator</code>
+        将其管理的 CA 证书发布到集群中<strong>众所周知的
+        ConfigMap</strong>（例如
+        <code>openshift-config-managed/kube-apiserver-client-ca</code>）。MCO
+        Operator 会<strong>监视</strong>这些 ConfigMap。当这些 ConfigMap
+        更新时，MCO Operator 读取新的数据，并将其填充到
+        <code>ControllerConfig</code> CR 中。随后，MCO Daemon 从
+        <code>ControllerConfig</code>
+        读取数据并将其应用到节点上。因此，MCO 代码中不会包含直接读取
+        <code>service-ca-operator</code> 内部 Secret
+        的逻辑，而是通过监视标准的 ConfigMap 和
+        <code>ControllerConfig</code> CR 来实现解耦。</p>
+        <p><strong>相关源代码片段:</strong></p>
+        <ul>
+        <li><p><code>pkg/operator/sync.go</code>: 包含用于准备渲染配置
+        (<code>syncRenderConfig</code>) 的逻辑，以及用于获取 CA
+        (<code>getCAsFromConfigMap</code>)、云配置
+        (<code>getCloudConfigFromConfigMap</code>) 和合并拉取密钥
+        (<code>getImageRegistryPullSecrets</code>)
+        的辅助函数。主同步循环由 <code>syncAll</code> 编排。</p>
+        <div class="sourceCode" id="cb2"><pre
+        class="sourceCode go"><code class="sourceCode go"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">// syncRenderConfig gathers all necessary configuration (infra, network, CAs, pull secrets, images, etc.)</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="co">// and populates the optr.renderConfig structure, which is then used to render various manifests.</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="kw">func</span> <span class="op">(</span>optr <span class="op">*</span>Operator<span class="op">)</span> syncRenderConfig<span class="op">(</span>_ <span class="op">*</span>renderConfig<span class="op">)</span> <span class="dt">error</span> <span class="op">{</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... check if inClusterBringup ...</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="co">// sync up the images used by operands.</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    imgsRaw<span class="op">,</span> err <span class="op">:=</span> os<span class="op">.</span>ReadFile<span class="op">(</span>optr<span class="op">.</span>imagesFile<span class="op">)</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... handle error &amp; unmarshal ...</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    <span class="co">// handle image registry certificates.</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    cfg<span class="op">,</span> err <span class="op">:=</span> optr<span class="op">.</span>imgLister<span class="op">.</span>Get<span class="op">(</span><span class="st">&quot;cluster&quot;</span><span class="op">)</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... handle error &amp; process AdditionalTrustedCA ...</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... process image-registry-ca ConfigMap ...</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... merge CAs and update/create merged-trusted-image-registry-ca ConfigMap ...</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>    <span class="co">// sync up CAs</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>    rootCA<span class="op">,</span> err <span class="op">:=</span> optr<span class="op">.</span>getCAsFromConfigMap<span class="op">(</span><span class="st">&quot;kube-system&quot;</span><span class="op">,</span> <span class="st">&quot;root-ca&quot;</span><span class="op">,</span> <span class="st">&quot;ca.crt&quot;</span><span class="op">)</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... handle error ...</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Determine if bootstrap is complete</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>    _<span class="op">,</span> err <span class="op">=</span> optr<span class="op">.</span>clusterCmLister<span class="op">.</span>ConfigMaps<span class="op">(</span><span class="st">&quot;kube-system&quot;</span><span class="op">).</span>Get<span class="op">(</span><span class="st">&quot;bootstrap&quot;</span><span class="op">)</span></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... handle bootstrap status ...</span></span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>    <span class="kw">var</span> kubeAPIServerServingCABytes <span class="op">[]</span><span class="dt">byte</span></span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>    <span class="kw">var</span> internalRegistryPullSecret <span class="op">[]</span><span class="dt">byte</span></span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> bootstrapComplete <span class="op">&amp;&amp;</span> <span class="op">!</span>optr<span class="op">.</span>inClusterBringup <span class="op">{</span></span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>        kubeAPIServerServingCABytes<span class="op">,</span> err <span class="op">=</span> optr<span class="op">.</span>getCAsFromConfigMap<span class="op">(</span><span class="st">&quot;openshift-config-managed&quot;</span><span class="op">,</span> <span class="st">&quot;kube-apiserver-client-ca&quot;</span><span class="op">,</span> <span class="st">&quot;ca-bundle.crt&quot;</span><span class="op">)</span></span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a>        <span class="co">// ... handle error ...</span></span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a>        internalRegistryPullSecret<span class="op">,</span> err <span class="op">=</span> optr<span class="op">.</span>getImageRegistryPullSecrets<span class="op">()</span></span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a>        <span class="co">// ... handle error ...</span></span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span> <span class="cf">else</span> <span class="op">{</span></span>
+<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a>        <span class="co">// ... logic for initial/bootstrap CA bundle ...</span></span>
+<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a>        internalRegistryPullSecret <span class="op">=</span> <span class="ot">nil</span></span>
+<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-35"><a href="#cb2-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-36"><a href="#cb2-36" aria-hidden="true" tabindex="-1"></a>    bundle <span class="op">:=</span> <span class="bu">make</span><span class="op">([]</span><span class="dt">byte</span><span class="op">,</span> <span class="dv">0</span><span class="op">)</span></span>
+<span id="cb2-37"><a href="#cb2-37" aria-hidden="true" tabindex="-1"></a>    bundle <span class="op">=</span> <span class="bu">append</span><span class="op">(</span>bundle<span class="op">,</span> rootCA<span class="op">...)</span></span>
+<span id="cb2-38"><a href="#cb2-38" aria-hidden="true" tabindex="-1"></a>    <span class="co">// bundle = append(bundle, kubeAPIServerServingCABytes...) // Note: This line seems commented out in the source</span></span>
+<span id="cb2-39"><a href="#cb2-39" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-40"><a href="#cb2-40" aria-hidden="true" tabindex="-1"></a>    <span class="co">// sync up os image url</span></span>
+<span id="cb2-41"><a href="#cb2-41" aria-hidden="true" tabindex="-1"></a>    oscontainer<span class="op">,</span> osextensionscontainer<span class="op">,</span> err <span class="op">:=</span> optr<span class="op">.</span>getOsImageURLs<span class="op">(</span>optr<span class="op">.</span>namespace<span class="op">)</span></span>
+<span id="cb2-42"><a href="#cb2-42" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... handle error &amp; update imgs struct ...</span></span>
+<span id="cb2-43"><a href="#cb2-43" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-44"><a href="#cb2-44" aria-hidden="true" tabindex="-1"></a>    <span class="co">// sync up the ControllerConfigSpec</span></span>
+<span id="cb2-45"><a href="#cb2-45" aria-hidden="true" tabindex="-1"></a>    infra<span class="op">,</span> network<span class="op">,</span> proxy<span class="op">,</span> dns<span class="op">,</span> err <span class="op">:=</span> optr<span class="op">.</span>getGlobalConfig<span class="op">()</span></span>
+<span id="cb2-46"><a href="#cb2-46" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... handle error ...</span></span>
+<span id="cb2-47"><a href="#cb2-47" aria-hidden="true" tabindex="-1"></a>    spec<span class="op">,</span> err <span class="op">:=</span> createDiscoveredControllerConfigSpec<span class="op">(</span>infra<span class="op">,</span> network<span class="op">,</span> proxy<span class="op">,</span> dns<span class="op">)</span></span>
+<span id="cb2-48"><a href="#cb2-48" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... handle error ...</span></span>
+<span id="cb2-49"><a href="#cb2-49" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-50"><a href="#cb2-50" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Process AdditionalTrustBundle and Proxy Trust Bundle</span></span>
+<span id="cb2-51"><a href="#cb2-51" aria-hidden="true" tabindex="-1"></a>    <span class="kw">var</span> trustBundle <span class="op">[]</span><span class="dt">byte</span></span>
+<span id="cb2-52"><a href="#cb2-52" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... logic to fetch and merge user-ca-bundle and proxy trustedCA ...</span></span>
+<span id="cb2-53"><a href="#cb2-53" aria-hidden="true" tabindex="-1"></a>    spec<span class="op">.</span>AdditionalTrustBundle <span class="op">=</span> trustBundle</span>
+<span id="cb2-54"><a href="#cb2-54" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-55"><a href="#cb2-55" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Sync cloud provider config if needed</span></span>
+<span id="cb2-56"><a href="#cb2-56" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> err <span class="op">:=</span> optr<span class="op">.</span>syncCloudConfig<span class="op">(</span>spec<span class="op">,</span> infra<span class="op">);</span> err <span class="op">!=</span> <span class="ot">nil</span> <span class="op">{</span></span>
+<span id="cb2-57"><a href="#cb2-57" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> err</span>
+<span id="cb2-58"><a href="#cb2-58" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-59"><a href="#cb2-59" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-60"><a href="#cb2-60" aria-hidden="true" tabindex="-1"></a>    spec<span class="op">.</span>KubeAPIServerServingCAData <span class="op">=</span> kubeAPIServerServingCABytes</span>
+<span id="cb2-61"><a href="#cb2-61" aria-hidden="true" tabindex="-1"></a>    spec<span class="op">.</span>RootCAData <span class="op">=</span> bundle <span class="co">// Note: Seems to only contain rootCA based on current source</span></span>
+<span id="cb2-62"><a href="#cb2-62" aria-hidden="true" tabindex="-1"></a>    spec<span class="op">.</span>ImageRegistryBundleData <span class="op">=</span> imgRegistryData</span>
+<span id="cb2-63"><a href="#cb2-63" aria-hidden="true" tabindex="-1"></a>    spec<span class="op">.</span>ImageRegistryBundleUserData <span class="op">=</span> imgRegistryUsrData</span>
+<span id="cb2-64"><a href="#cb2-64" aria-hidden="true" tabindex="-1"></a>    spec<span class="op">.</span>PullSecret <span class="op">=</span> <span class="op">&amp;</span>corev1<span class="op">.</span>ObjectReference<span class="op">{</span>Namespace<span class="op">:</span> <span class="st">&quot;openshift-config&quot;</span><span class="op">,</span> Name<span class="op">:</span> <span class="st">&quot;pull-secret&quot;</span><span class="op">}</span></span>
+<span id="cb2-65"><a href="#cb2-65" aria-hidden="true" tabindex="-1"></a>    spec<span class="op">.</span>InternalRegistryPullSecret <span class="op">=</span> internalRegistryPullSecret</span>
+<span id="cb2-66"><a href="#cb2-66" aria-hidden="true" tabindex="-1"></a>    spec<span class="op">.</span>BaseOSContainerImage <span class="op">=</span> imgs<span class="op">.</span>BaseOSContainerImage</span>
+<span id="cb2-67"><a href="#cb2-67" aria-hidden="true" tabindex="-1"></a>    spec<span class="op">.</span>BaseOSExtensionsContainerImage <span class="op">=</span> imgs<span class="op">.</span>BaseOSExtensionsContainerImage</span>
+<span id="cb2-68"><a href="#cb2-68" aria-hidden="true" tabindex="-1"></a>    spec<span class="op">.</span>Images <span class="op">=</span> <span class="kw">map</span><span class="op">[</span><span class="dt">string</span><span class="op">]</span><span class="dt">string</span><span class="op">{</span></span>
+<span id="cb2-69"><a href="#cb2-69" aria-hidden="true" tabindex="-1"></a>        <span class="co">// ... image mappings ...</span></span>
+<span id="cb2-70"><a href="#cb2-70" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-71"><a href="#cb2-71" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-72"><a href="#cb2-72" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Create pointer config</span></span>
+<span id="cb2-73"><a href="#cb2-73" aria-hidden="true" tabindex="-1"></a>    ignitionHost<span class="op">,</span> err <span class="op">:=</span> getIgnitionHost<span class="op">(&amp;</span>infra<span class="op">.</span>Status<span class="op">)</span></span>
+<span id="cb2-74"><a href="#cb2-74" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... handle error ...</span></span>
+<span id="cb2-75"><a href="#cb2-75" aria-hidden="true" tabindex="-1"></a>    pointerConfig<span class="op">,</span> err <span class="op">:=</span> ctrlcommon<span class="op">.</span>PointerConfig<span class="op">(</span>ignitionHost<span class="op">,</span> rootCA<span class="op">)</span></span>
+<span id="cb2-76"><a href="#cb2-76" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... handle error &amp; marshal ...</span></span>
+<span id="cb2-77"><a href="#cb2-77" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-78"><a href="#cb2-78" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Handle OnClusterBuild feature gate and MachineOSConfigs</span></span>
+<span id="cb2-79"><a href="#cb2-79" aria-hidden="true" tabindex="-1"></a>    isOnClusterBuildEnabled<span class="op">,</span> err <span class="op">:=</span> optr<span class="op">.</span>isOnClusterBuildFeatureGateEnabled<span class="op">()</span></span>
+<span id="cb2-80"><a href="#cb2-80" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... handle error ...</span></span>
+<span id="cb2-81"><a href="#cb2-81" aria-hidden="true" tabindex="-1"></a>    <span class="kw">var</span> moscs <span class="op">[]*</span>mcfgv1alpha1<span class="op">.</span>MachineOSConfig</span>
+<span id="cb2-82"><a href="#cb2-82" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> isOnClusterBuildEnabled <span class="op">{</span></span>
+<span id="cb2-83"><a href="#cb2-83" aria-hidden="true" tabindex="-1"></a>         moscs<span class="op">,</span> err <span class="op">=</span> optr<span class="op">.</span>getAndValidateMachineOSConfigs<span class="op">()</span></span>
+<span id="cb2-84"><a href="#cb2-84" aria-hidden="true" tabindex="-1"></a>         <span class="co">// ... handle error ...</span></span>
+<span id="cb2-85"><a href="#cb2-85" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-86"><a href="#cb2-86" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-87"><a href="#cb2-87" aria-hidden="true" tabindex="-1"></a>    <span class="co">// create renderConfig</span></span>
+<span id="cb2-88"><a href="#cb2-88" aria-hidden="true" tabindex="-1"></a>    optr<span class="op">.</span>renderConfig <span class="op">=</span> getRenderConfig<span class="op">(</span>optr<span class="op">.</span>namespace<span class="op">,</span> <span class="dt">string</span><span class="op">(</span>kubeAPIServerServingCABytes<span class="op">),</span> spec<span class="op">,</span> <span class="op">&amp;</span>imgs<span class="op">.</span>RenderConfigImages<span class="op">,</span> infra<span class="op">.</span>Status<span class="op">.</span>APIServerInternalURL<span class="op">,</span> pointerConfigData<span class="op">,</span> moscs<span class="op">)</span></span>
+<span id="cb2-89"><a href="#cb2-89" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-90"><a href="#cb2-90" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="ot">nil</span></span>
+<span id="cb2-91"><a href="#cb2-91" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb2-92"><a href="#cb2-92" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-93"><a href="#cb2-93" aria-hidden="true" tabindex="-1"></a><span class="co">// getCAsFromConfigMap fetches CA data from a given key within a ConfigMap.</span></span>
+<span id="cb2-94"><a href="#cb2-94" aria-hidden="true" tabindex="-1"></a><span class="co">// It checks BinaryData first, then Data (handling potential base64 encoding).</span></span>
+<span id="cb2-95"><a href="#cb2-95" aria-hidden="true" tabindex="-1"></a><span class="kw">func</span> getCAsFromConfigMap<span class="op">(</span>cm <span class="op">*</span>corev1<span class="op">.</span>ConfigMap<span class="op">,</span> key <span class="dt">string</span><span class="op">)</span> <span class="op">([]</span><span class="dt">byte</span><span class="op">,</span> <span class="dt">error</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb2-96"><a href="#cb2-96" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> bd<span class="op">,</span> bdok <span class="op">:=</span> cm<span class="op">.</span>BinaryData<span class="op">[</span>key<span class="op">];</span> bdok <span class="op">{</span></span>
+<span id="cb2-97"><a href="#cb2-97" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> bd<span class="op">,</span> <span class="ot">nil</span></span>
+<span id="cb2-98"><a href="#cb2-98" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span> <span class="cf">else</span> <span class="cf">if</span> d<span class="op">,</span> dok <span class="op">:=</span> cm<span class="op">.</span>Data<span class="op">[</span>key<span class="op">];</span> dok <span class="op">{</span></span>
+<span id="cb2-99"><a href="#cb2-99" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Handle potential base64 encoding</span></span>
+<span id="cb2-100"><a href="#cb2-100" aria-hidden="true" tabindex="-1"></a>        raw<span class="op">,</span> err <span class="op">:=</span> base64<span class="op">.</span>StdEncoding<span class="op">.</span>DecodeString<span class="op">(</span>d<span class="op">)</span></span>
+<span id="cb2-101"><a href="#cb2-101" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> err <span class="op">!=</span> <span class="ot">nil</span> <span class="op">{</span></span>
+<span id="cb2-102"><a href="#cb2-102" aria-hidden="true" tabindex="-1"></a>            <span class="co">// Assume it&#39;s not encoded if decode fails</span></span>
+<span id="cb2-103"><a href="#cb2-103" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span> <span class="op">[]</span><span class="dt">byte</span><span class="op">(</span>d<span class="op">),</span> <span class="ot">nil</span></span>
+<span id="cb2-104"><a href="#cb2-104" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb2-105"><a href="#cb2-105" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> raw<span class="op">,</span> <span class="ot">nil</span></span>
+<span id="cb2-106"><a href="#cb2-106" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span> <span class="cf">else</span> <span class="op">{</span></span>
+<span id="cb2-107"><a href="#cb2-107" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="ot">nil</span><span class="op">,</span> fmt<span class="op">.</span>Errorf<span class="op">(</span><span class="st">&quot;%s not found in %s/%s&quot;</span><span class="op">,</span> key<span class="op">,</span> cm<span class="op">.</span>Namespace<span class="op">,</span> cm<span class="op">.</span>Name<span class="op">)</span></span>
+<span id="cb2-108"><a href="#cb2-108" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-109"><a href="#cb2-109" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb2-110"><a href="#cb2-110" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-111"><a href="#cb2-111" aria-hidden="true" tabindex="-1"></a><span class="co">// getCloudConfigFromConfigMap fetches cloud provider config data from the &quot;cloud.conf&quot; key.</span></span>
+<span id="cb2-112"><a href="#cb2-112" aria-hidden="true" tabindex="-1"></a><span class="kw">func</span> getCloudConfigFromConfigMap<span class="op">(</span>cm <span class="op">*</span>corev1<span class="op">.</span>ConfigMap<span class="op">,</span> key <span class="dt">string</span><span class="op">)</span> <span class="op">(</span><span class="dt">string</span><span class="op">,</span> <span class="dt">error</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb2-113"><a href="#cb2-113" aria-hidden="true" tabindex="-1"></a>    <span class="co">// &#39;key&#39; parameter is usually &quot;cloud.conf&quot; when called by syncCloudConfig</span></span>
+<span id="cb2-114"><a href="#cb2-114" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> cc<span class="op">,</span> ok <span class="op">:=</span> cm<span class="op">.</span>Data<span class="op">[</span>key<span class="op">];</span> ok <span class="op">{</span></span>
+<span id="cb2-115"><a href="#cb2-115" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> cc<span class="op">,</span> <span class="ot">nil</span></span>
+<span id="cb2-116"><a href="#cb2-116" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-117"><a href="#cb2-117" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="st">&quot;&quot;</span><span class="op">,</span> fmt<span class="op">.</span>Errorf<span class="op">(</span><span class="st">&quot;%s not found in %s/%s&quot;</span><span class="op">,</span> key<span class="op">,</span> cm<span class="op">.</span>Namespace<span class="op">,</span> cm<span class="op">.</span>Name<span class="op">)</span></span>
+<span id="cb2-118"><a href="#cb2-118" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb2-119"><a href="#cb2-119" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-120"><a href="#cb2-120" aria-hidden="true" tabindex="-1"></a><span class="co">// getImageRegistryPullSecrets fetches image registry pull secrets from the</span></span>
+<span id="cb2-121"><a href="#cb2-121" aria-hidden="true" tabindex="-1"></a><span class="co">// machine-os-puller service account, merges them with the global pull-secret,</span></span>
+<span id="cb2-122"><a href="#cb2-122" aria-hidden="true" tabindex="-1"></a><span class="co">// and potentially adds a default route entry.</span></span>
+<span id="cb2-123"><a href="#cb2-123" aria-hidden="true" tabindex="-1"></a><span class="kw">func</span> <span class="op">(</span>optr <span class="op">*</span>Operator<span class="op">)</span> getImageRegistryPullSecrets<span class="op">()</span> <span class="op">([]</span><span class="dt">byte</span><span class="op">,</span> <span class="dt">error</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb2-124"><a href="#cb2-124" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Check if image registry operator exists</span></span>
+<span id="cb2-125"><a href="#cb2-125" aria-hidden="true" tabindex="-1"></a>    co<span class="op">,</span> err <span class="op">:=</span> optr<span class="op">.</span>mcoCOLister<span class="op">.</span>Get<span class="op">(</span><span class="st">&quot;image-registry&quot;</span><span class="op">)</span></span>
+<span id="cb2-126"><a href="#cb2-126" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... handle registry operator existence checks ...</span></span>
+<span id="cb2-127"><a href="#cb2-127" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-128"><a href="#cb2-128" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Get DNS cluster object for default route construction</span></span>
+<span id="cb2-129"><a href="#cb2-129" aria-hidden="true" tabindex="-1"></a>    dns<span class="op">,</span> err <span class="op">:=</span> optr<span class="op">.</span>dnsLister<span class="op">.</span>Get<span class="op">(</span><span class="st">&quot;cluster&quot;</span><span class="op">)</span></span>
+<span id="cb2-130"><a href="#cb2-130" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... handle error ...</span></span>
+<span id="cb2-131"><a href="#cb2-131" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-132"><a href="#cb2-132" aria-hidden="true" tabindex="-1"></a>    dockerConfigJSON <span class="op">:=</span> ctrlcommon<span class="op">.</span>DockerConfigJSON<span class="op">{</span></span>
+<span id="cb2-133"><a href="#cb2-133" aria-hidden="true" tabindex="-1"></a>        Auths<span class="op">:</span> <span class="kw">map</span><span class="op">[</span><span class="dt">string</span><span class="op">]</span>ctrlcommon<span class="op">.</span>DockerConfigEntry<span class="op">{},</span></span>
+<span id="cb2-134"><a href="#cb2-134" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-135"><a href="#cb2-135" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-136"><a href="#cb2-136" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Get secrets from machine-os-puller service account</span></span>
+<span id="cb2-137"><a href="#cb2-137" aria-hidden="true" tabindex="-1"></a>    imageRegistrySA<span class="op">,</span> err <span class="op">:=</span> optr<span class="op">.</span>mcoSALister<span class="op">.</span>ServiceAccounts<span class="op">(</span>optr<span class="op">.</span>namespace<span class="op">).</span>Get<span class="op">(</span><span class="st">&quot;machine-os-puller&quot;</span><span class="op">)</span></span>
+<span id="cb2-138"><a href="#cb2-138" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... handle error (e.g., SA not existing yet during upgrade) ...</span></span>
+<span id="cb2-139"><a href="#cb2-139" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-140"><a href="#cb2-140" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Loop through SA&#39;s ImagePullSecrets</span></span>
+<span id="cb2-141"><a href="#cb2-141" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> _<span class="op">,</span> imagePullSecret <span class="op">:=</span> <span class="kw">range</span> imageRegistrySA<span class="op">.</span>ImagePullSecrets <span class="op">{</span></span>
+<span id="cb2-142"><a href="#cb2-142" aria-hidden="true" tabindex="-1"></a>         secret<span class="op">,</span> err <span class="op">:=</span> optr<span class="op">.</span>mcoSecretLister<span class="op">.</span>Secrets<span class="op">(</span>optr<span class="op">.</span>namespace<span class="op">).</span>Get<span class="op">(</span>imagePullSecret<span class="op">.</span>Name<span class="op">)</span></span>
+<span id="cb2-143"><a href="#cb2-143" aria-hidden="true" tabindex="-1"></a>         <span class="co">// ... handle error ...</span></span>
+<span id="cb2-144"><a href="#cb2-144" aria-hidden="true" tabindex="-1"></a>         <span class="co">// Merge secret into dockerConfigJSON.Auths</span></span>
+<span id="cb2-145"><a href="#cb2-145" aria-hidden="true" tabindex="-1"></a>         <span class="cf">if</span> err <span class="op">:=</span> ctrlcommon<span class="op">.</span>MergeDockerConfigstoJSONMap<span class="op">(</span>secret<span class="op">.</span>Data<span class="op">[</span>corev1<span class="op">.</span>DockerConfigKey<span class="op">],</span> dockerConfigJSON<span class="op">.</span>Auths<span class="op">);</span> err <span class="op">!=</span> <span class="ot">nil</span> <span class="op">{</span></span>
+<span id="cb2-146"><a href="#cb2-146" aria-hidden="true" tabindex="-1"></a>             <span class="cf">return</span> <span class="ot">nil</span><span class="op">,</span> fmt<span class="op">.</span>Errorf<span class="op">(</span><span class="st">&quot;could not merge auths from secret %s: %w&quot;</span><span class="op">,</span> imagePullSecret<span class="op">.</span>Name<span class="op">,</span> err<span class="op">)</span></span>
+<span id="cb2-147"><a href="#cb2-147" aria-hidden="true" tabindex="-1"></a>         <span class="op">}</span></span>
+<span id="cb2-148"><a href="#cb2-148" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-149"><a href="#cb2-149" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-150"><a href="#cb2-150" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Fetch global pull-secret from openshift-config</span></span>
+<span id="cb2-151"><a href="#cb2-151" aria-hidden="true" tabindex="-1"></a>    clusterPullSecret<span class="op">,</span> err <span class="op">:=</span> optr<span class="op">.</span>ocSecretLister<span class="op">.</span>Secrets<span class="op">(</span><span class="st">&quot;openshift-config&quot;</span><span class="op">).</span>Get<span class="op">(</span><span class="st">&quot;pull-secret&quot;</span><span class="op">)</span></span>
+<span id="cb2-152"><a href="#cb2-152" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... handle error &amp; type check ...</span></span>
+<span id="cb2-153"><a href="#cb2-153" aria-hidden="true" tabindex="-1"></a>    clusterPullSecretRaw <span class="op">:=</span> clusterPullSecret<span class="op">.</span>Data<span class="op">[</span>corev1<span class="op">.</span>DockerConfigJsonKey<span class="op">]</span></span>
+<span id="cb2-154"><a href="#cb2-154" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-155"><a href="#cb2-155" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Convert global secret format if needed (dockerconfigjson -&gt; dockercfg)</span></span>
+<span id="cb2-156"><a href="#cb2-156" aria-hidden="true" tabindex="-1"></a>    clusterPullSecretRawOld<span class="op">,</span> err <span class="op">:=</span> ctrlcommon<span class="op">.</span>ConvertSecretTodockercfg<span class="op">(</span>clusterPullSecretRaw<span class="op">)</span></span>
+<span id="cb2-157"><a href="#cb2-157" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... handle error ...</span></span>
+<span id="cb2-158"><a href="#cb2-158" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-159"><a href="#cb2-159" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Merge converted global pull secret</span></span>
+<span id="cb2-160"><a href="#cb2-160" aria-hidden="true" tabindex="-1"></a>    err <span class="op">=</span> ctrlcommon<span class="op">.</span>MergeDockerConfigstoJSONMap<span class="op">(</span>clusterPullSecretRawOld<span class="op">,</span> dockerConfigJSON<span class="op">.</span>Auths<span class="op">)</span></span>
+<span id="cb2-161"><a href="#cb2-161" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> err <span class="op">!=</span> <span class="ot">nil</span> <span class="op">{</span></span>
+<span id="cb2-162"><a href="#cb2-162" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="ot">nil</span><span class="op">,</span> fmt<span class="op">.</span>Errorf<span class="op">(</span><span class="st">&quot;failed to merge global pull secret:  %w&quot;</span><span class="op">,</span> err<span class="op">)</span></span>
+<span id="cb2-163"><a href="#cb2-163" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-164"><a href="#cb2-164" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-165"><a href="#cb2-165" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Add default route entry if internal registry route exists</span></span>
+<span id="cb2-166"><a href="#cb2-166" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> entry<span class="op">,</span> ok <span class="op">:=</span> dockerConfigJSON<span class="op">.</span>Auths<span class="op">[</span><span class="st">&quot;image-registry.openshift-image-registry.svc:5000&quot;</span><span class="op">];</span> ok <span class="op">{</span></span>
+<span id="cb2-167"><a href="#cb2-167" aria-hidden="true" tabindex="-1"></a>        assembledDefaultRoute <span class="op">:=</span> <span class="st">&quot;default-route-openshift-image-registry.apps.&quot;</span> <span class="op">+</span> dns<span class="op">.</span>Spec<span class="op">.</span>BaseDomain</span>
+<span id="cb2-168"><a href="#cb2-168" aria-hidden="true" tabindex="-1"></a>        dockerConfigJSON<span class="op">.</span>Auths<span class="op">[</span>assembledDefaultRoute<span class="op">]</span> <span class="op">=</span> entry</span>
+<span id="cb2-169"><a href="#cb2-169" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-170"><a href="#cb2-170" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-171"><a href="#cb2-171" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Marshal the final merged secrets if Auths is not empty</span></span>
+<span id="cb2-172"><a href="#cb2-172" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="bu">len</span><span class="op">(</span>dockerConfigJSON<span class="op">.</span>Auths<span class="op">)</span> <span class="op">&gt;</span> <span class="dv">0</span> <span class="op">{</span></span>
+<span id="cb2-173"><a href="#cb2-173" aria-hidden="true" tabindex="-1"></a>        mergedPullSecrets<span class="op">,</span> err <span class="op">:=</span> json<span class="op">.</span>Marshal<span class="op">(</span>dockerConfigJSON<span class="op">)</span></span>
+<span id="cb2-174"><a href="#cb2-174" aria-hidden="true" tabindex="-1"></a>        <span class="co">// ... handle marshal error ...</span></span>
+<span id="cb2-175"><a href="#cb2-175" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> mergedPullSecrets<span class="op">,</span> <span class="ot">nil</span></span>
+<span id="cb2-176"><a href="#cb2-176" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-177"><a href="#cb2-177" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-178"><a href="#cb2-178" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="ot">nil</span><span class="op">,</span> <span class="ot">nil</span> <span class="co">// Return nil if no auths were merged</span></span>
+<span id="cb2-179"><a href="#cb2-179" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div></li>
+        </ul>
+        <h3
+        id="mco-daemon-pkgdaemoncertificate_writer.go-pkgdaemonupdate.go">2.
+        MCO Daemon (<code>pkg/daemon/certificate_writer.go</code>,
+        <code>pkg/daemon/update.go</code>)</h3>
+        <ul>
+        <li>Daemon 在每个由 machineconfig 管理的节点上运行。</li>
+        <li>它监视 <code>ControllerConfig</code> 自定义资源。</li>
+        <li>当它检测到 <code>ControllerConfig</code>
+        中的更改时（通过比较它上次处理的
+        <code>metadata.resourceVersion</code>（存储在 Node
+        对象的注解中）与当前版本），它会触发同步。</li>
+        <li><strong>证书处理
+        (<code>pkg/daemon/certificate_writer.go</code>):</strong>
+        <ul>
+        <li><code>syncControllerConfigHandler</code> 函数专门处理从
+        <code>ControllerConfig</code> 派生的证书更新。</li>
+        <li>它从 <code>ControllerConfig</code> 读取 CA 数据（如 kubelet
+        CA）。</li>
+        <li>它将接收到的 CA 与当前存在于
+        <code>/etc/kubernetes/kubelet-ca.crt</code> 中的 CA
+        进行比较。</li>
+        <li>如果发现差异，它会将新的捆绑包写入
+        <code>/etc/kubernetes/kubelet-ca.crt</code>。</li>
+        <li>如果检测到
+        <code>machineconfiguration.openshift.io/service-ca-rotate: "true"</code>
+        注解 (常量 <code>ServiceCARotateAnnotation</code> 的值) 并且 CA
+        已更改，它会触发 <code>kubelet</code> 重启
+        (<code>systemctl stop kubelet</code>)。</li>
+        <li>它还处理合并内部镜像仓库拉取密钥并将其写入
+        <code>/etc/mco/internal-registry-pull-secret.json</code>。</li>
+        </ul></li>
+        <li><strong>通用文件/更新处理
+        (<code>pkg/daemon/update.go</code>):</strong>
+        <ul>
+        <li>主节点同步循环 (<code>syncNode</code>) 将期望的配置（从
+        <code>ControllerConfig</code>
+        派生）与当前节点状态进行比较。</li>
+        <li><code>updateFiles</code> 函数处理写入 MachineConfig
+        中定义的通用文件，包括 SSH 密钥
+        (<code>/home/core/.ssh/authorized_keys</code> 或
+        <code>/home/core/.ssh/authorized_keys.d/ignition</code>)。对 SSH
+        密钥或主拉取密钥 (<code>/var/lib/kubelet/config.json</code>)
+        的更改通常被视为
+        <code>postConfigChangeActionNone</code>，这意味着它们通常不需要重启或驱逐节点，只需更新文件。</li>
+        </ul></li>
+        </ul>
+        <p><strong>相关源代码片段:</strong></p>
+        <ul>
+        <li><p><code>pkg/daemon/certificate_writer.go</code>: 包含
+        <code>syncControllerConfigHandler</code>，写入
+        <code>kubelet-ca.crt</code> 的逻辑，处理服务 CA 轮换注解 (常量
+        <code>ServiceCARotateAnnotation</code>，值为
+        <code>machineconfiguration.openshift.io/service-ca-rotate</code>)，以及写入内部仓库拉取密钥。包括
+        <code>mergeMountedSecretsWithControllerConfig</code>
+        等函数。</p>
+        <div class="sourceCode" id="cb3"><pre
+        class="sourceCode go"><code class="sourceCode go"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co">// syncControllerConfigHandler handles updates from the ControllerConfig object.</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">func</span> <span class="op">(</span>dn <span class="op">*</span>Daemon<span class="op">)</span> syncControllerConfigHandler<span class="op">(</span>key <span class="dt">string</span><span class="op">)</span> <span class="dt">error</span> <span class="op">{</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... initial checks ...</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    controllerConfig<span class="op">,</span> err <span class="op">:=</span> dn<span class="op">.</span>ccLister<span class="op">.</span>Get<span class="op">(</span>ctrlcommon<span class="op">.</span>ControllerConfigName<span class="op">)</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... handle error ...</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    currentNodeControllerConfigResource <span class="op">:=</span> dn<span class="op">.</span>node<span class="op">.</span>Annotations<span class="op">[</span>constants<span class="op">.</span>ControllerConfigResourceVersionKey<span class="op">]</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Check if the ControllerConfig has changed or if a rotation is explicitly requested</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> currentNodeControllerConfigResource <span class="op">!=</span> controllerConfig<span class="op">.</span>ObjectMeta<span class="op">.</span>ResourceVersion <span class="op">||</span> controllerConfig<span class="op">.</span>Annotations<span class="op">[</span>ctrlcommon<span class="op">.</span>ServiceCARotateAnnotation<span class="op">]</span> <span class="op">==</span> ctrlcommon<span class="op">.</span>ServiceCARotateTrue <span class="op">{</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>        pathToData <span class="op">:=</span> <span class="bu">make</span><span class="op">(</span><span class="kw">map</span><span class="op">[</span><span class="dt">string</span><span class="op">][]</span><span class="dt">byte</span><span class="op">)</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>        kubeAPIServerServingCABytes <span class="op">:=</span> controllerConfig<span class="op">.</span>Spec<span class="op">.</span>KubeAPIServerServingCAData</span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>        cloudCA <span class="op">:=</span> controllerConfig<span class="op">.</span>Spec<span class="op">.</span>CloudProviderCAData</span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>        pathToData<span class="op">[</span>caBundleFilePath<span class="op">]</span> <span class="op">=</span> kubeAPIServerServingCABytes <span class="co">// /etc/kubernetes/kubelet-ca.crt</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>        pathToData<span class="op">[</span>cloudCABundleFilePath<span class="op">]</span> <span class="op">=</span> cloudCA</span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>        <span class="co">// ... logic to handle kubeconfig CA rotation via kubeconfig-data ConfigMap ...</span></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>        <span class="co">// This involves comparing CM data with on-disk /etc/kubernetes/kubeconfig</span></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>        <span class="co">// and potentially adding the updated kubeconfig to pathToData</span></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Write CA bundles and potentially updated kubeconfig</span></span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> err <span class="op">:=</span> writeToDisk<span class="op">(</span>pathToData<span class="op">);</span> err <span class="op">!=</span> <span class="ot">nil</span> <span class="op">{</span></span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span> err</span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Sync image registry CAs</span></span>
+<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a>        mergedData <span class="op">:=</span> <span class="bu">append</span><span class="op">(</span>controllerConfig<span class="op">.</span>Spec<span class="op">.</span>ImageRegistryBundleData<span class="op">,</span> controllerConfig<span class="op">.</span>Spec<span class="op">.</span>ImageRegistryBundleUserData<span class="op">...)</span></span>
+<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a>        <span class="co">// ... logic to clean old certs from /etc/docker/certs.d ...</span></span>
+<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> _<span class="op">,</span> CA <span class="op">:=</span> <span class="kw">range</span> mergedData <span class="op">{</span></span>
+<span id="cb3-31"><a href="#cb3-31" aria-hidden="true" tabindex="-1"></a>             caFile <span class="op">:=</span> strings<span class="op">.</span>ReplaceAll<span class="op">(</span>CA<span class="op">.</span>File<span class="op">,</span> <span class="st">&quot;..&quot;</span><span class="op">,</span> <span class="st">&quot;:&quot;</span><span class="op">)</span></span>
+<span id="cb3-32"><a href="#cb3-32" aria-hidden="true" tabindex="-1"></a>             <span class="co">// ... create dir /etc/docker/certs.d/&lt;caFile&gt; ...</span></span>
+<span id="cb3-33"><a href="#cb3-33" aria-hidden="true" tabindex="-1"></a>             <span class="co">// ... write CA.Data to /etc/docker/certs.d/&lt;caFile&gt;/ca.crt ...</span></span>
+<span id="cb3-34"><a href="#cb3-34" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb3-35"><a href="#cb3-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-36"><a href="#cb3-36" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Sync internal registry pull secret</span></span>
+<span id="cb3-37"><a href="#cb3-37" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> err <span class="op">:=</span> dn<span class="op">.</span>syncOSImagePullSecrets<span class="op">(</span>controllerConfig<span class="op">);</span> err <span class="op">!=</span> <span class="ot">nil</span> <span class="op">{</span></span>
+<span id="cb3-38"><a href="#cb3-38" aria-hidden="true" tabindex="-1"></a>             <span class="cf">return</span> err</span>
+<span id="cb3-39"><a href="#cb3-39" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb3-40"><a href="#cb3-40" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb3-41"><a href="#cb3-41" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-42"><a href="#cb3-42" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... update node annotations with processed resourceVersion ...</span></span>
+<span id="cb3-43"><a href="#cb3-43" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-44"><a href="#cb3-44" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Check if rotation annotation is set and CA actually changed, then restart kubelet</span></span>
+<span id="cb3-45"><a href="#cb3-45" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> controllerConfig<span class="op">.</span>Annotations<span class="op">[</span>ctrlcommon<span class="op">.</span>ServiceCARotateAnnotation<span class="op">]</span> <span class="op">==</span> ctrlcommon<span class="op">.</span>ServiceCARotateTrue <span class="op">&amp;&amp;</span> <span class="co">/* kubeConfigDiff &amp;&amp; !allCertsThere &amp;&amp; */</span> <span class="op">!</span>dn<span class="op">.</span>deferKubeletRestart <span class="op">{</span></span>
+<span id="cb3-46"><a href="#cb3-46" aria-hidden="true" tabindex="-1"></a>         logSystem<span class="op">(</span><span class="st">&quot;restarting kubelet due to server-ca rotation&quot;</span><span class="op">)</span></span>
+<span id="cb3-47"><a href="#cb3-47" aria-hidden="true" tabindex="-1"></a>         <span class="cf">if</span> err <span class="op">:=</span> runCmdSync<span class="op">(</span><span class="st">&quot;systemctl&quot;</span><span class="op">,</span> <span class="st">&quot;stop&quot;</span><span class="op">,</span> <span class="st">&quot;kubelet&quot;</span><span class="op">);</span> err <span class="op">!=</span> <span class="ot">nil</span> <span class="op">{</span></span>
+<span id="cb3-48"><a href="#cb3-48" aria-hidden="true" tabindex="-1"></a>             <span class="cf">return</span> err</span>
+<span id="cb3-49"><a href="#cb3-49" aria-hidden="true" tabindex="-1"></a>         <span class="op">}</span></span>
+<span id="cb3-50"><a href="#cb3-50" aria-hidden="true" tabindex="-1"></a>         <span class="co">// ... update /var/lib/kubelet/kubeconfig with new CA data ...</span></span>
+<span id="cb3-51"><a href="#cb3-51" aria-hidden="true" tabindex="-1"></a>         <span class="cf">if</span> err <span class="op">:=</span> runCmdSync<span class="op">(</span><span class="st">&quot;systemctl&quot;</span><span class="op">,</span> <span class="st">&quot;daemon-reload&quot;</span><span class="op">);</span> err <span class="op">!=</span> <span class="ot">nil</span> <span class="op">{</span></span>
+<span id="cb3-52"><a href="#cb3-52" aria-hidden="true" tabindex="-1"></a>             <span class="cf">return</span> err</span>
+<span id="cb3-53"><a href="#cb3-53" aria-hidden="true" tabindex="-1"></a>         <span class="op">}</span></span>
+<span id="cb3-54"><a href="#cb3-54" aria-hidden="true" tabindex="-1"></a>         <span class="cf">if</span> err <span class="op">:=</span> runCmdSync<span class="op">(</span><span class="st">&quot;systemctl&quot;</span><span class="op">,</span> <span class="st">&quot;start&quot;</span><span class="op">,</span> <span class="st">&quot;kubelet&quot;</span><span class="op">);</span> err <span class="op">!=</span> <span class="ot">nil</span> <span class="op">{</span></span>
+<span id="cb3-55"><a href="#cb3-55" aria-hidden="true" tabindex="-1"></a>             <span class="cf">return</span> err</span>
+<span id="cb3-56"><a href="#cb3-56" aria-hidden="true" tabindex="-1"></a>         <span class="op">}</span></span>
+<span id="cb3-57"><a href="#cb3-57" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb3-58"><a href="#cb3-58" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="ot">nil</span></span>
+<span id="cb3-59"><a href="#cb3-59" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb3-60"><a href="#cb3-60" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-61"><a href="#cb3-61" aria-hidden="true" tabindex="-1"></a><span class="co">// syncOSImagePullSecrets merges internal registry pull secret with potential mounted secrets.</span></span>
+<span id="cb3-62"><a href="#cb3-62" aria-hidden="true" tabindex="-1"></a><span class="kw">func</span> <span class="op">(</span>dn <span class="op">*</span>Daemon<span class="op">)</span> syncOSImagePullSecrets<span class="op">(</span>controllerConfig <span class="op">*</span>mcfgv1<span class="op">.</span>ControllerConfig<span class="op">)</span> <span class="dt">error</span> <span class="op">{</span></span>
+<span id="cb3-63"><a href="#cb3-63" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... lock mutex ...</span></span>
+<span id="cb3-64"><a href="#cb3-64" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... get controllerConfig if nil ...</span></span>
+<span id="cb3-65"><a href="#cb3-65" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-66"><a href="#cb3-66" aria-hidden="true" tabindex="-1"></a>    merged<span class="op">,</span> err <span class="op">:=</span> reconcileOSImageRegistryPullSecretData<span class="op">(</span>dn<span class="op">.</span>node<span class="op">,</span> controllerConfig<span class="op">,</span> osImagePullSecretDir<span class="op">)</span></span>
+<span id="cb3-67"><a href="#cb3-67" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... handle error ...</span></span>
+<span id="cb3-68"><a href="#cb3-68" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-69"><a href="#cb3-69" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Writes to /etc/mco/internal-registry-pull-secret.json</span></span>
+<span id="cb3-70"><a href="#cb3-70" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> err <span class="op">:=</span> writeToDisk<span class="op">(</span><span class="kw">map</span><span class="op">[</span><span class="dt">string</span><span class="op">][]</span><span class="dt">byte</span><span class="op">{</span>imageRegistryAuthFile<span class="op">:</span> merged<span class="op">});</span> err <span class="op">!=</span> <span class="ot">nil</span> <span class="op">{</span></span>
+<span id="cb3-71"><a href="#cb3-71" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> fmt<span class="op">.</span>Errorf<span class="op">(</span><span class="st">&quot;could not write image pull secret data to node filesystem: %w&quot;</span><span class="op">,</span> err<span class="op">)</span></span>
+<span id="cb3-72"><a href="#cb3-72" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb3-73"><a href="#cb3-73" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... log success ...</span></span>
+<span id="cb3-74"><a href="#cb3-74" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="ot">nil</span></span>
+<span id="cb3-75"><a href="#cb3-75" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb3-76"><a href="#cb3-76" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-77"><a href="#cb3-77" aria-hidden="true" tabindex="-1"></a><span class="co">// reconcileOSImageRegistryPullSecretData merges secrets from ControllerConfig and mounted secrets.</span></span>
+<span id="cb3-78"><a href="#cb3-78" aria-hidden="true" tabindex="-1"></a><span class="kw">func</span> reconcileOSImageRegistryPullSecretData<span class="op">(</span>node <span class="op">*</span>corev1<span class="op">.</span>Node<span class="op">,</span> controllerCfg <span class="op">*</span>mcfgv1<span class="op">.</span>ControllerConfig<span class="op">,</span> secretDirPath <span class="dt">string</span><span class="op">)</span> <span class="op">([]</span><span class="dt">byte</span><span class="op">,</span> <span class="dt">error</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb3-79"><a href="#cb3-79" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... get node roles ...</span></span>
+<span id="cb3-80"><a href="#cb3-80" aria-hidden="true" tabindex="-1"></a>    mountedSecret<span class="op">,</span> err <span class="op">:=</span> readMountedSecretByNodeRole<span class="op">(</span>nodeRoles<span class="op">,</span> secretDirPath<span class="op">)</span></span>
+<span id="cb3-81"><a href="#cb3-81" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... handle error ...</span></span>
+<span id="cb3-82"><a href="#cb3-82" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-83"><a href="#cb3-83" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> mountedSecret <span class="op">==</span> <span class="ot">nil</span> <span class="op">{</span></span>
+<span id="cb3-84"><a href="#cb3-84" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> controllerCfg<span class="op">.</span>Spec<span class="op">.</span>InternalRegistryPullSecret<span class="op">,</span> <span class="ot">nil</span></span>
+<span id="cb3-85"><a href="#cb3-85" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb3-86"><a href="#cb3-86" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-87"><a href="#cb3-87" aria-hidden="true" tabindex="-1"></a>    merged<span class="op">,</span> err <span class="op">:=</span> mergeMountedSecretsWithControllerConfig<span class="op">(</span>mountedSecret<span class="op">,</span> controllerCfg<span class="op">)</span></span>
+<span id="cb3-88"><a href="#cb3-88" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... handle error ...</span></span>
+<span id="cb3-89"><a href="#cb3-89" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> merged<span class="op">,</span> <span class="ot">nil</span></span>
+<span id="cb3-90"><a href="#cb3-90" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb3-91"><a href="#cb3-91" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-92"><a href="#cb3-92" aria-hidden="true" tabindex="-1"></a><span class="co">// writeToDisk writes data to specified paths atomically.</span></span>
+<span id="cb3-93"><a href="#cb3-93" aria-hidden="true" tabindex="-1"></a><span class="kw">func</span> writeToDisk<span class="op">(</span>pathToData <span class="kw">map</span><span class="op">[</span><span class="dt">string</span><span class="op">][]</span><span class="dt">byte</span><span class="op">)</span> <span class="dt">error</span> <span class="op">{</span></span>
+<span id="cb3-94"><a href="#cb3-94" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> bundle<span class="op">,</span> data <span class="op">:=</span> <span class="kw">range</span> pathToData <span class="op">{</span></span>
+<span id="cb3-95"><a href="#cb3-95" aria-hidden="true" tabindex="-1"></a>        <span class="co">// ... ensure data ends with newline ...</span></span>
+<span id="cb3-96"><a href="#cb3-96" aria-hidden="true" tabindex="-1"></a>        <span class="co">// ... get existing file/dir modes ...</span></span>
+<span id="cb3-97"><a href="#cb3-97" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> err <span class="op">:=</span> writeFileAtomically<span class="op">(</span>bundle<span class="op">,</span> data<span class="op">,</span> <span class="co">/* dirMode */</span><span class="op">,</span> <span class="co">/* fileMode */</span><span class="op">,</span> <span class="op">-</span><span class="dv">1</span><span class="op">,</span> <span class="op">-</span><span class="dv">1</span><span class="op">);</span> err <span class="op">!=</span> <span class="ot">nil</span> <span class="op">{</span></span>
+<span id="cb3-98"><a href="#cb3-98" aria-hidden="true" tabindex="-1"></a>             <span class="cf">return</span> err</span>
+<span id="cb3-99"><a href="#cb3-99" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb3-100"><a href="#cb3-100" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb3-101"><a href="#cb3-101" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="ot">nil</span></span>
+<span id="cb3-102"><a href="#cb3-102" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div></li>
+        <li><p><code>pkg/daemon/update.go</code>: 包含
+        <code>syncNode</code>、<code>updateFiles</code> 以及处理 SSH
+        密钥更新 (<code>updateSSHKeys</code>,
+        <code>cleanSSHKeyPaths</code>) 的逻辑。定义了
+        <code>caBundleFilePath</code> (在 certificate_writer.go 中使用)
+        和 <code>postConfigChangeActionNone</code> 等常量。</p>
+        <div class="sourceCode" id="cb4"><pre
+        class="sourceCode go"><code class="sourceCode go"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co">// syncNode compares the current config to the desired config and triggers</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="co">// an update if necessary.</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="kw">func</span> <span class="op">(</span>dn <span class="op">*</span>Daemon<span class="op">)</span> syncNode<span class="op">()</span> <span class="dt">error</span> <span class="op">{</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... get current node state ...</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    state<span class="op">,</span> err <span class="op">:=</span> dn<span class="op">.</span>getStateAndConfigs<span class="op">()</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... handle error ...</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Check if we are already in the desired config</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> reflect<span class="op">.</span>DeepEqual<span class="op">(</span>state<span class="op">.</span>currentConfig<span class="op">,</span> state<span class="op">.</span>desiredConfig<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>        <span class="co">// ... handle already updated state ...</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="ot">nil</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Trigger the update process</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> dn<span class="op">.</span>triggerUpdateWithMachineConfig<span class="op">(</span>state<span class="op">.</span>currentConfig<span class="op">,</span> state<span class="op">.</span>desiredConfig<span class="op">,</span> <span class="ot">false</span><span class="op">)</span></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a><span class="co">// update is the main update function called by triggerUpdateWithMachineConfig.</span></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a><span class="kw">func</span> <span class="op">(</span>dn <span class="op">*</span>Daemon<span class="op">)</span> update<span class="op">(</span>oldConfig<span class="op">,</span> newConfig <span class="op">*</span>mcfgv1<span class="op">.</span>MachineConfig<span class="op">,</span> skipCertificateWrite <span class="dt">bool</span><span class="op">)</span> <span class="op">(</span>retErr <span class="dt">error</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... set node state to Working ...</span></span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... parse ignition configs ...</span></span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... check reconcilability ...</span></span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a>    diff<span class="op">,</span> _ <span class="op">:=</span> reconcilable<span class="op">(</span>oldConfig<span class="op">,</span> newConfig<span class="op">)</span> <span class="co">// Error already checked</span></span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... calculate postConfigChangeActions (legacy or NodeDisruptionPolicy based) ...</span></span>
+<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... perform drain if needed ...</span></span>
+<span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-29"><a href="#cb4-29" aria-hidden="true" tabindex="-1"></a>    <span class="co">// update files on disk that need updating</span></span>
+<span id="cb4-30"><a href="#cb4-30" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> err <span class="op">:=</span> dn<span class="op">.</span>updateFiles<span class="op">(</span>oldIgnConfig<span class="op">,</span> newIgnConfig<span class="op">,</span> skipCertificateWrite<span class="op">);</span> err <span class="op">!=</span> <span class="ot">nil</span> <span class="op">{</span></span>
+<span id="cb4-31"><a href="#cb4-31" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> err</span>
+<span id="cb4-32"><a href="#cb4-32" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb4-33"><a href="#cb4-33" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... defer rollback for updateFiles ...</span></span>
+<span id="cb4-34"><a href="#cb4-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-35"><a href="#cb4-35" aria-hidden="true" tabindex="-1"></a>    <span class="co">// update file permissions (kubeconfig)</span></span>
+<span id="cb4-36"><a href="#cb4-36" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> err <span class="op">:=</span> dn<span class="op">.</span>updateKubeConfigPermission<span class="op">();</span> err <span class="op">!=</span> <span class="ot">nil</span> <span class="op">{</span></span>
+<span id="cb4-37"><a href="#cb4-37" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> err</span>
+<span id="cb4-38"><a href="#cb4-38" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb4-39"><a href="#cb4-39" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-40"><a href="#cb4-40" aria-hidden="true" tabindex="-1"></a>    <span class="co">// only update passwd if it has changed</span></span>
+<span id="cb4-41"><a href="#cb4-41" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> diff<span class="op">.</span>passwd <span class="op">{</span></span>
+<span id="cb4-42"><a href="#cb4-42" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> err <span class="op">:=</span> dn<span class="op">.</span>updateSSHKeys<span class="op">(</span>newIgnConfig<span class="op">.</span>Passwd<span class="op">.</span>Users<span class="op">,</span> oldIgnConfig<span class="op">.</span>Passwd<span class="op">.</span>Users<span class="op">);</span> err <span class="op">!=</span> <span class="ot">nil</span> <span class="op">{</span></span>
+<span id="cb4-43"><a href="#cb4-43" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span> err</span>
+<span id="cb4-44"><a href="#cb4-44" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb4-45"><a href="#cb4-45" aria-hidden="true" tabindex="-1"></a>        <span class="co">// ... defer rollback for updateSSHKeys ...</span></span>
+<span id="cb4-46"><a href="#cb4-46" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb4-47"><a href="#cb4-47" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-48"><a href="#cb4-48" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Set password hash</span></span>
+<span id="cb4-49"><a href="#cb4-49" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> err <span class="op">:=</span> dn<span class="op">.</span>SetPasswordHash<span class="op">(</span>newIgnConfig<span class="op">.</span>Passwd<span class="op">.</span>Users<span class="op">,</span> oldIgnConfig<span class="op">.</span>Passwd<span class="op">.</span>Users<span class="op">);</span> err <span class="op">!=</span> <span class="ot">nil</span> <span class="op">{</span></span>
+<span id="cb4-50"><a href="#cb4-50" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> err</span>
+<span id="cb4-51"><a href="#cb4-51" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb4-52"><a href="#cb4-52" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... defer rollback for SetPasswordHash ...</span></span>
+<span id="cb4-53"><a href="#cb4-53" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-54"><a href="#cb4-54" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Apply OS changes (rpm-ostree rebase, kargs, kernel type, extensions) if CoreOS</span></span>
+<span id="cb4-55"><a href="#cb4-55" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> dn<span class="op">.</span>os<span class="op">.</span>IsCoreOSVariant<span class="op">()</span> <span class="op">{</span></span>
+<span id="cb4-56"><a href="#cb4-56" aria-hidden="true" tabindex="-1"></a>         coreOSDaemon <span class="op">:=</span> CoreOSDaemon<span class="op">{</span>dn<span class="op">}</span></span>
+<span id="cb4-57"><a href="#cb4-57" aria-hidden="true" tabindex="-1"></a>         <span class="cf">if</span> err <span class="op">:=</span> coreOSDaemon<span class="op">.</span>applyOSChanges<span class="op">(*</span>diff<span class="op">,</span> oldConfig<span class="op">,</span> newConfig<span class="op">);</span> err <span class="op">!=</span> <span class="ot">nil</span> <span class="op">{</span></span>
+<span id="cb4-58"><a href="#cb4-58" aria-hidden="true" tabindex="-1"></a>             <span class="cf">return</span> err</span>
+<span id="cb4-59"><a href="#cb4-59" aria-hidden="true" tabindex="-1"></a>         <span class="op">}</span></span>
+<span id="cb4-60"><a href="#cb4-60" aria-hidden="true" tabindex="-1"></a>         <span class="co">// ... defer rollback for applyOSChanges ...</span></span>
+<span id="cb4-61"><a href="#cb4-61" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb4-62"><a href="#cb4-62" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-63"><a href="#cb4-63" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... update tuning args ...</span></span>
+<span id="cb4-64"><a href="#cb4-64" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-65"><a href="#cb4-65" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Store the new config as current on disk</span></span>
+<span id="cb4-66"><a href="#cb4-66" aria-hidden="true" tabindex="-1"></a>    odc <span class="op">:=</span> <span class="op">&amp;</span>onDiskConfig<span class="op">{</span>currentConfig<span class="op">:</span> newConfig<span class="op">}</span></span>
+<span id="cb4-67"><a href="#cb4-67" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> err <span class="op">:=</span> dn<span class="op">.</span>storeCurrentConfigOnDisk<span class="op">(</span>odc<span class="op">);</span> err <span class="op">!=</span> <span class="ot">nil</span> <span class="op">{</span></span>
+<span id="cb4-68"><a href="#cb4-68" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> err</span>
+<span id="cb4-69"><a href="#cb4-69" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb4-70"><a href="#cb4-70" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... defer rollback for storeCurrentConfigOnDisk ...</span></span>
+<span id="cb4-71"><a href="#cb4-71" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-72"><a href="#cb4-72" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Perform post-config change action (reboot, reload crio, none, etc.)</span></span>
+<span id="cb4-73"><a href="#cb4-73" aria-hidden="true" tabindex="-1"></a>    <span class="co">// This is where postConfigChangeActionNone is evaluated.</span></span>
+<span id="cb4-74"><a href="#cb4-74" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> fg <span class="op">!=</span> <span class="ot">nil</span> <span class="op">&amp;&amp;</span> fg<span class="op">.</span>Enabled<span class="op">(</span>features<span class="op">.</span>FeatureGateNodeDisruptionPolicy<span class="op">)</span> <span class="op">&amp;&amp;</span> nodeDisruptionError <span class="op">==</span> <span class="ot">nil</span> <span class="op">{</span></span>
+<span id="cb4-75"><a href="#cb4-75" aria-hidden="true" tabindex="-1"></a>         <span class="cf">return</span> dn<span class="op">.</span>performPostConfigChangeNodeDisruptionAction<span class="op">(</span>nodeDisruptionActions<span class="op">,</span> newConfig<span class="op">.</span>GetName<span class="op">())</span></span>
+<span id="cb4-76"><a href="#cb4-76" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb4-77"><a href="#cb4-77" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> dn<span class="op">.</span>performPostConfigChangeAction<span class="op">(</span>actions<span class="op">,</span> newConfig<span class="op">.</span>GetName<span class="op">())</span></span>
+<span id="cb4-78"><a href="#cb4-78" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb4-79"><a href="#cb4-79" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-80"><a href="#cb4-80" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-81"><a href="#cb4-81" aria-hidden="true" tabindex="-1"></a><span class="co">// updateFiles writes files specified by the nodeconfig to disk.</span></span>
+<span id="cb4-82"><a href="#cb4-82" aria-hidden="true" tabindex="-1"></a><span class="kw">func</span> <span class="op">(</span>dn <span class="op">*</span>Daemon<span class="op">)</span> updateFiles<span class="op">(</span>oldIgnConfig<span class="op">,</span> newIgnConfig ign3types<span class="op">.</span>Config<span class="op">,</span> skipCertificateWrite <span class="dt">bool</span><span class="op">)</span> <span class="dt">error</span> <span class="op">{</span></span>
+<span id="cb4-83"><a href="#cb4-83" aria-hidden="true" tabindex="-1"></a>    klog<span class="op">.</span>Info<span class="op">(</span><span class="st">&quot;Updating files&quot;</span><span class="op">)</span></span>
+<span id="cb4-84"><a href="#cb4-84" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Writes files from newIgnConfig.Storage.Files</span></span>
+<span id="cb4-85"><a href="#cb4-85" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> err <span class="op">:=</span> dn<span class="op">.</span>writeFiles<span class="op">(</span>newIgnConfig<span class="op">.</span>Storage<span class="op">.</span>Files<span class="op">,</span> skipCertificateWrite<span class="op">);</span> err <span class="op">!=</span> <span class="ot">nil</span> <span class="op">{</span></span>
+<span id="cb4-86"><a href="#cb4-86" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> err</span>
+<span id="cb4-87"><a href="#cb4-87" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb4-88"><a href="#cb4-88" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Writes systemd units from newIgnConfig.Systemd.Units</span></span>
+<span id="cb4-89"><a href="#cb4-89" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> err <span class="op">:=</span> dn<span class="op">.</span>writeUnits<span class="op">(</span>newIgnConfig<span class="op">.</span>Systemd<span class="op">.</span>Units<span class="op">);</span> err <span class="op">!=</span> <span class="ot">nil</span> <span class="op">{</span></span>
+<span id="cb4-90"><a href="#cb4-90" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> err</span>
+<span id="cb4-91"><a href="#cb4-91" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb4-92"><a href="#cb4-92" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Deletes files/units present in oldIgnConfig but not in newIgnConfig</span></span>
+<span id="cb4-93"><a href="#cb4-93" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> dn<span class="op">.</span>deleteStaleData<span class="op">(</span>oldIgnConfig<span class="op">,</span> newIgnConfig<span class="op">)</span></span>
+<span id="cb4-94"><a href="#cb4-94" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb4-95"><a href="#cb4-95" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-96"><a href="#cb4-96" aria-hidden="true" tabindex="-1"></a><span class="co">// Update a given PasswdUser&#39;s SSHKey</span></span>
+<span id="cb4-97"><a href="#cb4-97" aria-hidden="true" tabindex="-1"></a><span class="kw">func</span> <span class="op">(</span>dn <span class="op">*</span>Daemon<span class="op">)</span> updateSSHKeys<span class="op">(</span>newUsers<span class="op">,</span> oldUsers <span class="op">[]</span>ign3types<span class="op">.</span>PasswdUser<span class="op">)</span> <span class="dt">error</span> <span class="op">{</span></span>
+<span id="cb4-98"><a href="#cb4-98" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... check if core user exists ...</span></span>
+<span id="cb4-99"><a href="#cb4-99" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-100"><a href="#cb4-100" aria-hidden="true" tabindex="-1"></a>    <span class="kw">var</span> concatSSHKeys <span class="dt">string</span></span>
+<span id="cb4-101"><a href="#cb4-101" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> _<span class="op">,</span> u <span class="op">:=</span> <span class="kw">range</span> newUsers <span class="op">{</span></span>
+<span id="cb4-102"><a href="#cb4-102" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> _<span class="op">,</span> k <span class="op">:=</span> <span class="kw">range</span> u<span class="op">.</span>SSHAuthorizedKeys <span class="op">{</span></span>
+<span id="cb4-103"><a href="#cb4-103" aria-hidden="true" tabindex="-1"></a>            concatSSHKeys <span class="op">=</span> concatSSHKeys <span class="op">+</span> <span class="dt">string</span><span class="op">(</span>k<span class="op">)</span> <span class="op">+</span> <span class="st">&quot;</span><span class="ch">\n</span><span class="st">&quot;</span></span>
+<span id="cb4-104"><a href="#cb4-104" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb4-105"><a href="#cb4-105" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb4-106"><a href="#cb4-106" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-107"><a href="#cb4-107" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Determine correct path based on OS version (RHCOS 8 vs 9+)</span></span>
+<span id="cb4-108"><a href="#cb4-108" aria-hidden="true" tabindex="-1"></a>    authKeyPath <span class="op">:=</span> constants<span class="op">.</span>RHCOS8SSHKeyPath</span>
+<span id="cb4-109"><a href="#cb4-109" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> dn<span class="op">.</span>useNewSSHKeyPath<span class="op">()</span> <span class="op">{</span></span>
+<span id="cb4-110"><a href="#cb4-110" aria-hidden="true" tabindex="-1"></a>         authKeyPath <span class="op">=</span> constants<span class="op">.</span>RHCOS9SSHKeyPath</span>
+<span id="cb4-111"><a href="#cb4-111" aria-hidden="true" tabindex="-1"></a>         <span class="cf">if</span> err <span class="op">:=</span> cleanSSHKeyPaths<span class="op">();</span> err <span class="op">!=</span> <span class="ot">nil</span> <span class="op">{</span> <span class="co">// Removes old path if exists</span></span>
+<span id="cb4-112"><a href="#cb4-112" aria-hidden="true" tabindex="-1"></a>             <span class="cf">return</span> err</span>
+<span id="cb4-113"><a href="#cb4-113" aria-hidden="true" tabindex="-1"></a>         <span class="op">}</span></span>
+<span id="cb4-114"><a href="#cb4-114" aria-hidden="true" tabindex="-1"></a>         <span class="cf">if</span> err <span class="op">:=</span> removeNonIgnitionKeyPathFragments<span class="op">();</span> err <span class="op">!=</span> <span class="ot">nil</span> <span class="op">{</span> <span class="co">// Removes other fragments in .d dir</span></span>
+<span id="cb4-115"><a href="#cb4-115" aria-hidden="true" tabindex="-1"></a>             <span class="cf">return</span> err</span>
+<span id="cb4-116"><a href="#cb4-116" aria-hidden="true" tabindex="-1"></a>         <span class="op">}</span></span>
+<span id="cb4-117"><a href="#cb4-117" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb4-118"><a href="#cb4-118" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-119"><a href="#cb4-119" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Write the concatenated keys atomically to the determined path</span></span>
+<span id="cb4-120"><a href="#cb4-120" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> dn<span class="op">.</span>atomicallyWriteSSHKey<span class="op">(</span>authKeyPath<span class="op">,</span> concatSSHKeys<span class="op">)</span></span>
+<span id="cb4-121"><a href="#cb4-121" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb4-122"><a href="#cb4-122" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-123"><a href="#cb4-123" aria-hidden="true" tabindex="-1"></a><span class="co">// atomicallyWriteSSHKey writes SSH keys ensuring correct ownership and permissions.</span></span>
+<span id="cb4-124"><a href="#cb4-124" aria-hidden="true" tabindex="-1"></a><span class="kw">func</span> <span class="op">(</span>dn <span class="op">*</span>Daemon<span class="op">)</span> atomicallyWriteSSHKey<span class="op">(</span>authKeyPath<span class="op">,</span> keys <span class="dt">string</span><span class="op">)</span> <span class="dt">error</span> <span class="op">{</span></span>
+<span id="cb4-125"><a href="#cb4-125" aria-hidden="true" tabindex="-1"></a>    uid<span class="op">,</span> _ <span class="op">:=</span> lookupUID<span class="op">(</span>constants<span class="op">.</span>CoreUserName<span class="op">)</span></span>
+<span id="cb4-126"><a href="#cb4-126" aria-hidden="true" tabindex="-1"></a>    gid<span class="op">,</span> _ <span class="op">:=</span> lookupGID<span class="op">(</span>constants<span class="op">.</span>CoreGroupName<span class="op">)</span></span>
+<span id="cb4-127"><a href="#cb4-127" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-128"><a href="#cb4-128" aria-hidden="true" tabindex="-1"></a>    authKeyDir <span class="op">:=</span> filepath<span class="op">.</span>Dir<span class="op">(</span>authKeyPath<span class="op">)</span></span>
+<span id="cb4-129"><a href="#cb4-129" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> _<span class="op">,</span> err <span class="op">:=</span> os<span class="op">.</span>Stat<span class="op">(</span>authKeyDir<span class="op">);</span> os<span class="op">.</span>IsNotExist<span class="op">(</span>err<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb4-130"><a href="#cb4-130" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> err <span class="op">:=</span> createSSHKeyDir<span class="op">(</span>authKeyDir<span class="op">);</span> err <span class="op">!=</span> <span class="ot">nil</span> <span class="op">{</span> <span class="co">// Ensures dir exists with core:core 0700</span></span>
+<span id="cb4-131"><a href="#cb4-131" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span> err</span>
+<span id="cb4-132"><a href="#cb4-132" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb4-133"><a href="#cb4-133" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb4-134"><a href="#cb4-134" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-135"><a href="#cb4-135" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Writes the file with core:core 0600 permissions</span></span>
+<span id="cb4-136"><a href="#cb4-136" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> err <span class="op">:=</span> writeFileAtomically<span class="op">(</span>authKeyPath<span class="op">,</span> <span class="op">[]</span><span class="dt">byte</span><span class="op">(</span>keys<span class="op">),</span> os<span class="op">.</span>FileMode<span class="op">(</span><span class="bn">0o700</span><span class="op">),</span> os<span class="op">.</span>FileMode<span class="op">(</span><span class="bn">0o600</span><span class="op">),</span> uid<span class="op">,</span> gid<span class="op">);</span> err <span class="op">!=</span> <span class="ot">nil</span> <span class="op">{</span></span>
+<span id="cb4-137"><a href="#cb4-137" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> err</span>
+<span id="cb4-138"><a href="#cb4-138" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb4-139"><a href="#cb4-139" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... log success ...</span></span>
+<span id="cb4-140"><a href="#cb4-140" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="ot">nil</span></span>
+<span id="cb4-141"><a href="#cb4-141" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb4-142"><a href="#cb4-142" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-143"><a href="#cb4-143" aria-hidden="true" tabindex="-1"></a><span class="co">// calculatePostConfigChangeAction determines the action needed after applying config.</span></span>
+<span id="cb4-144"><a href="#cb4-144" aria-hidden="true" tabindex="-1"></a><span class="co">// postConfigChangeActionNone is used when only specific safe files change.</span></span>
+<span id="cb4-145"><a href="#cb4-145" aria-hidden="true" tabindex="-1"></a><span class="kw">func</span> calculatePostConfigChangeAction<span class="op">(</span>diff <span class="op">*</span>machineConfigDiff<span class="op">,</span> diffFileSet <span class="op">[]</span><span class="dt">string</span><span class="op">)</span> <span class="op">([]</span><span class="dt">string</span><span class="op">,</span> <span class="dt">error</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb4-146"><a href="#cb4-146" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... check for force file ...</span></span>
+<span id="cb4-147"><a href="#cb4-147" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... check for OS update, kargs, fips, units, kernelType, extensions (require reboot) ...</span></span>
+<span id="cb4-148"><a href="#cb4-148" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-149"><a href="#cb4-149" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Calculate actions based on file diffs</span></span>
+<span id="cb4-150"><a href="#cb4-150" aria-hidden="true" tabindex="-1"></a>    actions <span class="op">:=</span> calculatePostConfigChangeActionFromMCDiffs<span class="op">(</span>diffFileSet<span class="op">)</span></span>
+<span id="cb4-151"><a href="#cb4-151" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> actions<span class="op">,</span> <span class="ot">nil</span></span>
+<span id="cb4-152"><a href="#cb4-152" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb4-153"><a href="#cb4-153" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-154"><a href="#cb4-154" aria-hidden="true" tabindex="-1"></a><span class="co">// calculatePostConfigChangeActionFromMCDiffs checks changed files against known safe/reload/restart lists.</span></span>
+<span id="cb4-155"><a href="#cb4-155" aria-hidden="true" tabindex="-1"></a><span class="kw">func</span> calculatePostConfigChangeActionFromMCDiffs<span class="op">(</span>diffFileSet <span class="op">[]</span><span class="dt">string</span><span class="op">)</span> <span class="op">(</span>actions <span class="op">[]</span><span class="dt">string</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb4-156"><a href="#cb4-156" aria-hidden="true" tabindex="-1"></a>    filesPostConfigChangeActionNone <span class="op">:=</span> <span class="op">[]</span><span class="dt">string</span><span class="op">{</span></span>
+<span id="cb4-157"><a href="#cb4-157" aria-hidden="true" tabindex="-1"></a>        caBundleFilePath<span class="op">,</span> <span class="co">// /etc/kubernetes/kubelet-ca.crt</span></span>
+<span id="cb4-158"><a href="#cb4-158" aria-hidden="true" tabindex="-1"></a>        <span class="st">&quot;/var/lib/kubelet/config.json&quot;</span><span class="op">,</span></span>
+<span id="cb4-159"><a href="#cb4-159" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb4-160"><a href="#cb4-160" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... other lists for reload/restart ...</span></span>
+<span id="cb4-161"><a href="#cb4-161" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-162"><a href="#cb4-162" aria-hidden="true" tabindex="-1"></a>    actions <span class="op">=</span> <span class="op">[]</span><span class="dt">string</span><span class="op">{</span>postConfigChangeActionNone<span class="op">}</span> <span class="co">// Default to none</span></span>
+<span id="cb4-163"><a href="#cb4-163" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> _<span class="op">,</span> path <span class="op">:=</span> <span class="kw">range</span> diffFileSet <span class="op">{</span></span>
+<span id="cb4-164"><a href="#cb4-164" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> ctrlcommon<span class="op">.</span>InSlice<span class="op">(</span>path<span class="op">,</span> filesPostConfigChangeActionNone<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb4-165"><a href="#cb4-165" aria-hidden="true" tabindex="-1"></a>            <span class="cf">continue</span> <span class="co">// Safe file, action remains &#39;none&#39; unless overridden</span></span>
+<span id="cb4-166"><a href="#cb4-166" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span> <span class="cf">else</span> <span class="cf">if</span> <span class="co">/* check reload list */</span> <span class="op">{</span></span>
+<span id="cb4-167"><a href="#cb4-167" aria-hidden="true" tabindex="-1"></a>             actions <span class="op">=</span> <span class="op">[]</span><span class="dt">string</span><span class="op">{</span>postConfigChangeActionReloadCrio<span class="op">}</span></span>
+<span id="cb4-168"><a href="#cb4-168" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span> <span class="cf">else</span> <span class="cf">if</span> <span class="co">/* check restart list */</span> <span class="op">{</span></span>
+<span id="cb4-169"><a href="#cb4-169" aria-hidden="true" tabindex="-1"></a>             actions <span class="op">=</span> <span class="op">[]</span><span class="dt">string</span><span class="op">{</span>postConfigChangeActionRestartCrio<span class="op">}</span></span>
+<span id="cb4-170"><a href="#cb4-170" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span> <span class="cf">else</span> <span class="cf">if</span> <span class="co">/* check safe directories */</span> <span class="op">{</span></span>
+<span id="cb4-171"><a href="#cb4-171" aria-hidden="true" tabindex="-1"></a>             <span class="cf">continue</span></span>
+<span id="cb4-172"><a href="#cb4-172" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span> <span class="cf">else</span> <span class="op">{</span></span>
+<span id="cb4-173"><a href="#cb4-173" aria-hidden="true" tabindex="-1"></a>             actions <span class="op">=</span> <span class="op">[]</span><span class="dt">string</span><span class="op">{</span>postConfigChangeActionReboot<span class="op">}</span> <span class="co">// Unknown file change, require reboot</span></span>
+<span id="cb4-174"><a href="#cb4-174" aria-hidden="true" tabindex="-1"></a>             <span class="cf">return</span></span>
+<span id="cb4-175"><a href="#cb4-175" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb4-176"><a href="#cb4-176" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb4-177"><a href="#cb4-177" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span></span>
+<span id="cb4-178"><a href="#cb4-178" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div></li>
+        </ul>
+        <h2 id="结论">结论</h2>
+        <p>MCO
+        系统提供了一个强大的机制，用于将更新的证书和密钥分发到节点。Operator
+        集中收集数据并将其合并到 <code>ControllerConfig</code> CR
+        中，而每个节点上的 Daemon
+        则确保这些更改在本地应用于文件系统，并根据注解等特定信号触发必要的服务重启。这种分离允许在集群节点之间实现一致的配置。</p>
+      </article>
+    </div>
+      </main>
+
+  <footer>
+    <p>
+      Licensed under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank"
+        rel="noopener">CC-BY-NC-SA 4.0</a>
+      &nbsp;·&nbsp;
+      <a href="https://github.com/wangzheng422/docker_env" target="_blank" rel="noopener">wangzheng422/docker_env</a>
+    </p>
+  </footer>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: false, theme: 'dark' });
+
+    const SITE_BUILD_ID = 'fbe91b569ae8';
+    const SITE_HOME_URL = '../../../index.html';
+
+    const getBuildIdFromHtml = (html) => {
+      const match = String(html).match(/<meta[^>]+name=["']site-build-id["'][^>]+content=["']([^"']+)["']/i)
+        || String(html).match(/<meta[^>]+content=["']([^"']+)["'][^>]+name=["']site-build-id["']/i);
+      return match ? match[1] : '';
+    };
+
+    const checkForSiteUpdate = async () => {
+      if (!SITE_BUILD_ID || window.location.protocol === 'file:') return;
+      try {
+        const probeUrl = new URL(SITE_HOME_URL || './index.html', window.location.href);
+        probeUrl.searchParams.set('site_cache_probe', Date.now().toString());
+        const response = await fetch(probeUrl.toString(), { cache: 'no-store' });
+        if (!response.ok) return;
+        const latestBuildId = getBuildIdFromHtml(await response.text());
+        if (!latestBuildId || latestBuildId === SITE_BUILD_ID) return;
+        if (sessionStorage.getItem('site-build-refresh') === latestBuildId) return;
+        sessionStorage.setItem('site-build-refresh', latestBuildId);
+        const freshUrl = new URL(window.location.href);
+        freshUrl.searchParams.set('v', latestBuildId);
+        window.location.replace(freshUrl.toString());
+      } catch (error) {
+        // Network errors should not block reading the current page.
+      }
+    };
+
+    const versionedLocalUrl = (rawUrl) => {
+      if (!rawUrl || /^(https?:)?\/\//i.test(rawUrl) || /^(data|blob|mailto):/i.test(rawUrl)) return rawUrl;
+      const url = new URL(rawUrl, window.location.href);
+      if (url.searchParams.has('v')) return rawUrl;
+      url.searchParams.set('v', SITE_BUILD_ID);
+      return url.toString();
+    };
+
+    const cacheBustPageAssets = () => {
+      document.querySelectorAll('img[src], video[src], audio[src], source[src]').forEach((node) => {
+        const src = node.getAttribute('src');
+        const versioned = versionedLocalUrl(src);
+        if (versioned !== src) node.setAttribute('src', versioned);
+      });
+    };
+
+    const updateReadingProgress = () => {
+      const progress = document.querySelector('.reading-progress');
+      if (!progress) return;
+      const scrollable = document.documentElement.scrollHeight - window.innerHeight;
+      const ratio = scrollable > 0 ? window.scrollY / scrollable : 0;
+      progress.style.transform = 'scaleX(' + Math.min(1, Math.max(0, ratio)) + ')';
+    };
+
+    const topicFor = (text, href) => {
+      const haystack = (text + ' ' + href).toLowerCase();
+      if (/developers\.redhat\.com|redhatquickcourses|github\.com\/redhatquickcourses/.test(haystack)) return 'Red Hat';
+      if (/ai|llm|gpu|vllm|llama|model|rhaiis/.test(haystack)) return 'AI';
+      if (/network|ovn|bgp|dns|egress|ingress|metallb|nic|route/.test(haystack)) return 'Network';
+      if (/cert|tls|sso|keycloak|rhbk|security|compliance/.test(haystack)) return 'Security';
+      if (/perf|profile|throttling|heap|debug/.test(haystack)) return 'Performance';
+      if (/install|ipi|upi|sno|disconnected|bootstrap/.test(haystack)) return 'Install';
+      if (/rhel|coreos|rhcos|kernel|rpm|ostree/.test(haystack)) return 'RHEL';
+      if (/backup|storage|nfs|odf|ocs|ceph|dr/.test(haystack)) return 'Storage';
+      if (/pipeline|gitops|ansible|aap|rhdh|devops/.test(haystack)) return 'DevOps';
+      return 'OpenShift';
+    };
+
+    const yearFor = (text, href) => {
+      const match = (text + ' ' + href).match(/20\d{2}/);
+      return match ? match[0] : 'Notes';
+    };
+
+    const importantExternal = (href) =>
+      /developers\.redhat\.com|redhatquickcourses\.github\.io/i.test(href);
+
+    const titleForLink = (link) => {
+      const href = link.getAttribute('href') || '';
+      const directText = link.textContent.trim().replace(/\s+/g, ' ');
+      if (!/^https?:\/\//.test(directText)) return directText;
+      const parentItem = link.closest('ul')?.parentElement;
+      if (parentItem) {
+        const clone = parentItem.cloneNode(true);
+        clone.querySelectorAll('ul').forEach((nested) => nested.remove());
+        const parentText = clone.textContent.trim().replace(/\s+/g, ' ');
+        if (parentText) {
+          return parentText;
+        }
+      }
+      return directText;
+    };
+
+    const escapeHtml = (value) => String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+
+    const enhanceHome = () => {
+      if (!document.body.classList.contains('page-index')) return;
+      const source = document.querySelector('.home-source');
+      const grid = document.getElementById('note-grid');
+      const stats = document.getElementById('console-stats');
+      const externalPanel = document.getElementById('external-panel');
+      const topicStrip = document.getElementById('topic-strip');
+      const search = document.getElementById('console-search');
+      if (!source || !grid || !stats || !externalPanel || !topicStrip || !search) return;
+
+      const seen = new Set();
+      const links = Array.from(source.querySelectorAll('a[href]'))
+        .map((link) => {
+          const href = link.getAttribute('href') || '';
+          const text = titleForLink(link);
+          return { text, href, topic: topicFor(text, href), year: yearFor(text, href) };
+        });
+      const notes = links
+        .filter((note) => note.text && !note.href.startsWith('http') && !seen.has(note.href) && seen.add(note.href));
+      const externalLinks = links
+        .filter((note) => note.text && importantExternal(note.href));
+
+      const topics = ['All', ...Array.from(new Set(notes.map((note) => note.topic))).sort()];
+      let activeTopic = 'All';
+
+      const renderStats = () => {
+        const years = notes.map((note) => note.year).filter((year) => year.length === 4 && /^\d{4}/.test(year));
+        const latest = years.length ? Math.max(...years.map(Number)) : 'N/A';
+        const oldest = years.length ? Math.min(...years.map(Number)) : 'N/A';
+        stats.innerHTML = [
+          ['Notes', notes.length],
+          ['Resources', externalLinks.length],
+          ['Topics', topics.length - 1],
+          ['Latest', latest],
+        ].map(([label, value]) => '<div class="stat-tile"><span>' + label + '</span><strong>' + value + '</strong></div>').join('');
+        const signal = document.getElementById('signal-count');
+        if (signal) signal.textContent = notes.length + ' links indexed';
+      };
+
+      const renderExternal = () => {
+        externalPanel.innerHTML =
+          '<div class="section-heading"><span>Published / Learning</span><strong>Red Hat resources</strong></div>' +
+          '<div class="external-grid">' +
+          externalLinks.map((note) =>
+            '<a class="resource-card" href="' + escapeHtml(note.href) + '" target="_blank" rel="noopener">' +
+            '<span class="note-meta"><span>' + escapeHtml(note.year) + '</span><span>' + escapeHtml(note.topic) + '</span></span>' +
+            '<strong>' + escapeHtml(note.text) + '</strong>' +
+            '<small>' + escapeHtml(note.href) + '</small>' +
+            '</a>'
+          ).join('') +
+          '</div>';
+      };
+
+      const renderTopics = () => {
+        topicStrip.innerHTML = topics.map((topic) => '<button class="topic-chip' + (topic === activeTopic ? ' active' : '') + '" type="button" data-topic="' + escapeHtml(topic) + '">' + escapeHtml(topic) + '</button>').join('');
+        topicStrip.querySelectorAll('button').forEach((button) => {
+          button.addEventListener('click', () => {
+            activeTopic = button.dataset.topic || 'All';
+            renderTopics();
+            renderCards();
+          });
+        });
+      };
+
+      const renderCards = () => {
+        const query = search.value.trim().toLowerCase();
+        const filtered = notes.filter((note) => {
+          const topicMatch = activeTopic === 'All' || note.topic === activeTopic;
+          const queryMatch = !query || (note.text + ' ' + note.href + ' ' + note.topic + ' ' + note.year).toLowerCase().includes(query);
+          return topicMatch && queryMatch;
+        });
+        grid.innerHTML = filtered.map((note) =>
+          '<a class="note-card" href="' + escapeHtml(note.href) + '">' +
+          '<span class="note-meta"><span>' + escapeHtml(note.year) + '</span><span>' + escapeHtml(note.topic) + '</span></span>' +
+          '<strong>' + escapeHtml(note.text) + '</strong>' +
+          '<small>' + escapeHtml(note.href) + '</small>' +
+          '</a>'
+        ).join('') || '<p class="empty-state">No matching notes.</p>';
+      };
+
+      const drawMap = () => {
+        const canvas = document.getElementById('knowledge-canvas');
+        if (!(canvas instanceof HTMLCanvasElement)) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        const width = canvas.width;
+        const height = canvas.height;
+        const nodes = notes.slice(0, 44).map((note, index) => {
+          const angle = (index / 44) * Math.PI * 2;
+          const ring = 90 + (index % 5) * 22;
+          return {
+            x: width / 2 + Math.cos(angle) * ring,
+            y: height / 2 + Math.sin(angle) * ring * 0.72,
+            topic: note.topic,
+          };
+        });
+        ctx.clearRect(0, 0, width, height);
+        ctx.strokeStyle = 'rgba(88, 166, 255, 0.14)';
+        ctx.lineWidth = 1;
+        nodes.forEach((node, index) => {
+          const next = nodes[(index + 7) % nodes.length];
+          ctx.beginPath();
+          ctx.moveTo(node.x, node.y);
+          ctx.lineTo(next.x, next.y);
+          ctx.stroke();
+        });
+        const palette = {
+          AI: '#a371f7',
+          Network: '#39d0d8',
+          Security: '#ff7b72',
+          Performance: '#f2cc60',
+          Install: '#7ee787',
+          RHEL: '#ff7b72',
+          Storage: '#d2a8ff',
+          DevOps: '#ffa657',
+          OpenShift: '#58a6ff',
+        };
+        nodes.forEach((node) => {
+          ctx.fillStyle = palette[node.topic] || '#58a6ff';
+          ctx.beginPath();
+          ctx.arc(node.x, node.y, 3.4, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      };
+
+      search.addEventListener('input', renderCards);
+      renderStats();
+      renderExternal();
+      renderTopics();
+      renderCards();
+      drawMap();
+      document.body.classList.add('home-enhanced');
+    };
+
+    const enhanceCodeBlocks = () => {
+      document.querySelectorAll('pre').forEach((pre) => {
+        if (pre.classList.contains('mermaid') || pre.querySelector('.copy-code')) return;
+        const button = document.createElement('button');
+        button.className = 'copy-code';
+        button.type = 'button';
+        button.textContent = 'Copy';
+        button.addEventListener('click', async () => {
+          await navigator.clipboard.writeText(pre.textContent || '');
+          button.textContent = 'Copied';
+          setTimeout(() => { button.textContent = 'Copy'; }, 1200);
+        });
+        pre.appendChild(button);
+      });
+    };
+
+    window.addEventListener('scroll', updateReadingProgress, { passive: true });
+    window.addEventListener('pageshow', (event) => {
+      if (event.persisted) checkForSiteUpdate();
+    });
+    document.addEventListener('DOMContentLoaded', async () => {
+      checkForSiteUpdate();
+      cacheBustPageAssets();
+      updateReadingProgress();
+      enhanceHome();
+      enhanceCodeBlocks();
+      // pandoc 输出 mermaid 为 <pre class="mermaid"><code>...</code></pre>
+      // 需要转成 <div class="mermaid">...</div> 供 mermaid.js 渲染
+      document.querySelectorAll('pre.mermaid').forEach(pre => {
+        const div = document.createElement('div');
+        div.classList.add('mermaid');
+        div.textContent = pre.textContent;
+        pre.replaceWith(div);
+      });
+      // 也处理 <pre><code class="language-mermaid"> 形式（备用）
+      document.querySelectorAll('pre code.language-mermaid').forEach(code => {
+        const div = document.createElement('div');
+        div.classList.add('mermaid');
+        div.textContent = code.textContent;
+        code.closest('pre').replaceWith(div);
+      });
+      await mermaid.run();
+    });
+  </script>
+</body>
+
+</html>

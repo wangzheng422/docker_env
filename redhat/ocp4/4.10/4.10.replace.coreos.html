@@ -1,0 +1,1092 @@
+<!DOCTYPE html>
+<html lang="zh" dir="ltr">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="generator" content="pandoc" />
+  <meta name="site-build-id" content="fbe91b569ae8" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <title>customized coreos/rhcos for openshift4 / 定制 openshift4 的底层 coreos/rhcos 操作系统 | wandering.star notes</title>
+  <meta name="description"
+    content="Wandering field notes on OpenShift, RHEL, AI infrastructure, and platform operations." />
+  <!-- Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-E3FRMDB7L2"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-E3FRMDB7L2');
+  </script>
+  <style>
+  html {
+    color: #1a1a1a;
+    background-color: #fdfdfd;
+  }
+  body {
+    margin: 0 auto;
+    max-width: 36em;
+    padding-left: 50px;
+    padding-right: 50px;
+    padding-top: 50px;
+    padding-bottom: 50px;
+    hyphens: auto;
+    overflow-wrap: break-word;
+    text-rendering: optimizeLegibility;
+    font-kerning: normal;
+  }
+  @media (max-width: 600px) {
+    body {
+      font-size: 0.9em;
+      padding: 12px;
+    }
+    h1 {
+      font-size: 1.8em;
+    }
+  }
+  @media print {
+    html {
+      background-color: white;
+    }
+    body {
+      background-color: transparent;
+      color: black;
+      font-size: 12pt;
+    }
+    p, h2, h3 {
+      orphans: 3;
+      widows: 3;
+    }
+    h2, h3, h4 {
+      page-break-after: avoid;
+    }
+  }
+  p {
+    margin: 1em 0;
+  }
+  a {
+    color: #1a1a1a;
+  }
+  a:visited {
+    color: #1a1a1a;
+  }
+  img {
+    max-width: 100%;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.4em;
+  }
+  h5, h6 {
+    font-size: 1em;
+    font-style: italic;
+  }
+  h6 {
+    font-weight: normal;
+  }
+  ol, ul {
+    padding-left: 1.7em;
+    margin-top: 1em;
+  }
+  li > ol, li > ul {
+    margin-top: 0;
+  }
+  blockquote {
+    margin: 1em 0 1em 1.7em;
+    padding-left: 1em;
+    border-left: 2px solid #e6e6e6;
+    color: #606060;
+  }
+  code {
+    font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+    font-size: 85%;
+    margin: 0;
+    hyphens: manual;
+  }
+  pre {
+    margin: 1em 0;
+    overflow: auto;
+  }
+  pre code {
+    padding: 0;
+    overflow: visible;
+    overflow-wrap: normal;
+  }
+  .sourceCode {
+   background-color: transparent;
+   overflow: visible;
+  }
+  hr {
+    background-color: #1a1a1a;
+    border: none;
+    height: 1px;
+    margin: 1em 0;
+  }
+  table {
+    margin: 1em 0;
+    border-collapse: collapse;
+    width: 100%;
+    overflow-x: auto;
+    display: block;
+    font-variant-numeric: lining-nums tabular-nums;
+  }
+  table caption {
+    margin-bottom: 0.75em;
+  }
+  tbody {
+    margin-top: 0.5em;
+    border-top: 1px solid #1a1a1a;
+    border-bottom: 1px solid #1a1a1a;
+  }
+  th {
+    border-top: 1px solid #1a1a1a;
+    padding: 0.25em 0.5em 0.25em 0.5em;
+  }
+  td {
+    padding: 0.125em 0.5em 0.25em 0.5em;
+  }
+  header {
+    margin-bottom: 4em;
+    text-align: center;
+  }
+  #TOC li {
+    list-style: none;
+  }
+  #TOC ul {
+    padding-left: 1.3em;
+  }
+  #TOC > ul {
+    padding-left: 0;
+  }
+  #TOC a:not(:hover) {
+    text-decoration: none;
+  }
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  div.columns{display: flex; gap: min(4vw, 1.5em);}
+  div.column{flex: auto; overflow-x: auto;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  /* The extra [class] is a hack that increases specificity enough to
+     override a similar rule in reveal.js */
+  ul.task-list[class]{list-style: none;}
+  ul.task-list li input[type="checkbox"] {
+    font-size: inherit;
+    width: 0.8em;
+    margin: 0 0.8em 0.2em -1.6em;
+    vertical-align: middle;
+  }
+  .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  /* CSS for syntax highlighting */
+  pre > code.sourceCode { white-space: pre; position: relative; }
+  pre > code.sourceCode > span { line-height: 1.25; }
+  pre > code.sourceCode > span:empty { height: 1.2em; }
+  .sourceCode { overflow: visible; }
+  code.sourceCode > span { color: inherit; text-decoration: inherit; }
+  div.sourceCode { margin: 1em 0; }
+  pre.sourceCode { margin: 0; }
+  @media screen {
+  div.sourceCode { overflow: auto; }
+  }
+  @media print {
+  pre > code.sourceCode { white-space: pre-wrap; }
+  pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+  }
+  pre.numberSource code
+    { counter-reset: source-line 0; }
+  pre.numberSource code > span
+    { position: relative; left: -4em; counter-increment: source-line; }
+  pre.numberSource code > span > a:first-child::before
+    { content: counter(source-line);
+      position: relative; left: -1em; text-align: right; vertical-align: baseline;
+      border: none; display: inline-block;
+      -webkit-touch-callout: none; -webkit-user-select: none;
+      -khtml-user-select: none; -moz-user-select: none;
+      -ms-user-select: none; user-select: none;
+      padding: 0 4px; width: 4em;
+    }
+  pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+  div.sourceCode
+    { color: #cccccc; background-color: #303030; }
+  @media screen {
+  pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+  }
+  code span.al { color: #ffcfaf; } /* Alert */
+  code span.an { color: #7f9f7f; font-weight: bold; } /* Annotation */
+  code span.at { } /* Attribute */
+  code span.bn { color: #dca3a3; } /* BaseN */
+  code span.bu { } /* BuiltIn */
+  code span.cf { color: #f0dfaf; } /* ControlFlow */
+  code span.ch { color: #dca3a3; } /* Char */
+  code span.cn { color: #dca3a3; font-weight: bold; } /* Constant */
+  code span.co { color: #7f9f7f; } /* Comment */
+  code span.cv { color: #7f9f7f; font-weight: bold; } /* CommentVar */
+  code span.do { color: #7f9f7f; } /* Documentation */
+  code span.dt { color: #dfdfbf; } /* DataType */
+  code span.dv { color: #dcdccc; } /* DecVal */
+  code span.er { color: #c3bf9f; } /* Error */
+  code span.ex { } /* Extension */
+  code span.fl { color: #c0bed1; } /* Float */
+  code span.fu { color: #efef8f; } /* Function */
+  code span.im { } /* Import */
+  code span.in { color: #7f9f7f; font-weight: bold; } /* Information */
+  code span.kw { color: #f0dfaf; } /* Keyword */
+  code span.op { color: #f0efd0; } /* Operator */
+  code span.ot { color: #efef8f; } /* Other */
+  code span.pp { color: #ffcfaf; font-weight: bold; } /* Preprocessor */
+  code span.sc { color: #dca3a3; } /* SpecialChar */
+  code span.ss { color: #cc9393; } /* SpecialString */
+  code span.st { color: #cc9393; } /* String */
+  code span.va { } /* Variable */
+  code span.vs { color: #cc9393; } /* VerbatimString */
+  code span.wa { color: #7f9f7f; font-weight: bold; } /* Warning */
+  </style>
+  <link rel="stylesheet" href="../../../style.css?v=fbe91b569ae8" />
+  </head>
+
+<body class="page-article">
+  <div class="reading-progress" aria-hidden="true"></div>
+  <div class="console-backdrop" aria-hidden="true"></div>
+  <nav class="site-nav">
+    <div class="nav-inner">
+      <a class="nav-brand" href="../../../index.html">wandering.star<span>notes</span></a>
+      <div class="nav-links">
+        <a href="https://github.com/wangzheng422/docker_env" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://www.youtube.com/@wangzheng422" target="_blank" rel="noopener">YouTube</a>
+      </div>
+    </div>
+  </nav>
+
+  <main>
+            <a class="back-link" href="../../../index.html">← Back to Index</a>
+        <div class="article-layout">
+            <aside class="toc-panel">
+        <div class="toc-title">ON THIS PAGE</div>
+        <ul>
+        <li><a
+        href="#customized-coreosrhcos-for-openshift4-定制-openshift4-的底层-coreosrhcos-操作系统"
+        id="toc-customized-coreosrhcos-for-openshift4-定制-openshift4-的底层-coreosrhcos-操作系统">customized
+        coreos/rhcos for openshift4 / 定制 openshift4 的底层
+        coreos/rhcos 操作系统</a>
+        <ul>
+        <li><a href="#视频讲解-video-explanation"
+        id="toc-视频讲解-video-explanation">视频讲解 / Video
+        explanation</a></li>
+        </ul></li>
+        <li><a href="#准备-dnf-repo-源-prepare-the-dnf-repo-source"
+        id="toc-准备-dnf-repo-源-prepare-the-dnf-repo-source">准备 dnf
+        repo 源 / Prepare the dnf repo source</a></li>
+        <li><a href="#准备-build-服务器-prepare-the-build-server"
+        id="toc-准备-build-服务器-prepare-the-build-server">准备 build
+        服务器 / Prepare the build server</a></li>
+        <li><a href="#开始编译-rhcos-start-compiling-rhcos"
+        id="toc-开始编译-rhcos-start-compiling-rhcos">开始编译 rhcos /
+        Start compiling rhcos</a></li>
+        <li><a href="#应用到-openshift4-apply-to-openshift4"
+        id="toc-应用到-openshift4-apply-to-openshift4">应用到 openshift4
+        / Apply to openshift4</a>
+        <ul>
+        <li><a href="#直接强制升级-direct-forced-upgrade"
+        id="toc-直接强制升级-direct-forced-upgrade">直接强制升级 /
+        Direct forced upgrade</a></li>
+        </ul></li>
+        <li><a href="#analyze-the-content"
+        id="toc-analyze-the-content">analyze the content</a></li>
+        <li><a href="#end" id="toc-end">end</a></li>
+        </ul>
+      </aside>
+            <article class="markdown-body article-shell">
+        <h1
+        id="customized-coreosrhcos-for-openshift4-定制-openshift4-的底层-coreosrhcos-操作系统">customized
+        coreos/rhcos for openshift4 / 定制 openshift4 的底层
+        coreos/rhcos 操作系统</h1>
+        <p>我们做项目的时候，经常有对底层操作系统做修改的需求，比如</p>
+        <ul>
+        <li>添加一些顺手的工具，如 htop, tcpdump, iperf
+        等，都是系统出故障的时候，排查用的利器</li>
+        <li>添加一些内核驱动程序，特别是我们有特殊的硬件插了进来，比如
+        DPU，GPU</li>
+        <li>我们有一些特殊的软件方案，需要在操作系统一层进行启动。</li>
+        </ul>
+        <p>When we are working on projects, we often need to modify the
+        underlying operating system, such as</p>
+        <ul>
+        <li>Add some handy tools, such as htop, tcpdump, iperf, etc.,
+        which are all useful tools for troubleshooting when the system
+        fails</li>
+        <li>Add some kernel drivers, especially we have special hardware
+        plugged in, like DPU, GPU</li>
+        <li>We have some special software solutions that need to be
+        activated at the OS level.</li>
+        </ul>
+        <p>而 openshift4
+        设计的初衷，是云原生安全，于是把底层操作系统，使用 coreos /
+        rhcos 的方式提供，并且 rhcos
+        官方没有定制化方法和文档。这种方法确实提高了 openshift4
+        的安全性，稳定性，和全局的一致性，但是项目中也确实遇到了很多尴尬。</p>
+        <p>The original intention of openshift4 design is cloud-native
+        security, so the underlying operating system is provided in the
+        form of coreos / rhcos, and rhcos officially does not have
+        customized methods and documents. This approch does improve the
+        security, stability, and global consistency of openshift4, but
+        it does encounter a lot of embarrassment in the project.</p>
+        <p>本文就针对以上问题，摸索出了如何定制底层 rhcos ， 并且应用到
+        openshift4 之上的方法。其实这些方法，在 openshift 的 github
+        项目文档中都有，只不过之前没仔细研究罢了。</p>
+        <p>In view of the above problems, this article finds out how to
+        customize the underlying rhcos and apply it to openshift4. In
+        fact, these methods are available in the github project
+        documentation of openshift, but they have not been carefully
+        studied before.</p>
+        <p>⚠️⚠️⚠️注意，本文所述方法，涉及到了以下问题，不能使用在生产环境中，只能作为
+        PoC
+        应急，或者研究学习之用。如果确实是项目急需，请和红帽GPS部门沟(gěi)通(qián)，获得支持。</p>
+        <ul>
+        <li>⚠️编译需要多个 rhel 相关的特种源，而且还是 eus, tus
+        版本，这些都需要单独购买</li>
+        <li>⚠️编译需要一个红帽内部的 repo 源，属于红帽机密</li>
+        <li>⚠️自定义的 rhcos 不能得到红帽 CEE 支持</li>
+        </ul>
+        <p>⚠️⚠️⚠️ Note that the method described in this article
+        involves the following issues and cannot be used in a production
+        environment. It can only be used as a PoC emergency or for
+        research and learning. If it is really urgent for the project,
+        please communicate with the Red Hat GPS department for
+        support.</p>
+        <ul>
+        <li>⚠️ Compilation requires multiple rhel-related special
+        sources, and they are also eus and tus versions, which need to
+        be purchased separately</li>
+        <li>⚠️ Compilation requires a Red Hat internal repo source,
+        which is Red Hat Confidential</li>
+        <li>⚠️ Custom rhcos cannot be supported by Red Hat CEE</li>
+        </ul>
+        <p>本次实验的架构图如下： The architecture diagram of this
+        experiment is as follows:</p>
+        <p><img src="./dia/4.10.customize.rhcos.drawio.svg" /></p>
+        <p>过程中，重度使用了 cosa , 这个是 coreos-assembler
+        工具集中的命令，他封装了一系列的工具，根据一个配置文件项目，来自动化的编译出来
+        coreos/rhcos 镜像。</p>
+        <p>In the process, cosa is heavily used, which is a command in
+        the coreos-assembler tool set. It encapsulates a series of tools
+        and automatically compiles the coreos/rhcos image according to a
+        configuration file project.</p>
+        <h2 id="视频讲解-video-explanation">视频讲解 / Video
+        explanation</h2>
+        <p><a
+        href="https://www.bilibili.com/video/BV1ud4y1d74C/"><kbd><img src="imgs/2022-08-23-11-57-12.png" width="600"></kbd></a></p>
+        <ul>
+        <li><a
+        href="https://www.bilibili.com/video/BV1ud4y1d74C/">bilibili</a></li>
+        <li><a href="https://youtu.be/cxS4l1fJcOM">youtube</a></li>
+        </ul>
+        <h1 id="准备-dnf-repo-源-prepare-the-dnf-repo-source">准备 dnf
+        repo 源 / Prepare the dnf repo source</h1>
+        <p>注意，这些 repo
+        源都是需要特殊单独购买，请联系红帽销售和GPS服务部门。</p>
+        <p>Note that these repo sources are required to be purchased
+        separately, please contact Red Hat Sales and GPS Services.</p>
+        <div class="sourceCode" id="cb1"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="co"># install a rhel on vultr</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co"># disable user/passwd login</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="co"># ChallengeResponseAuthentication no</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="co"># PasswordAuthentication no</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co"># UsePAM no</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="fu">sed</span> <span class="at">-i</span> <span class="st">&#39;s/PasswordAuthentication yes/PasswordAuthentication no/g&#39;</span> /etc/ssh/sshd_config</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co"># sed -i &#39;s/UsePAM yes/UsePAM no/g&#39; /etc/ssh/sshd_config</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="ex">systemctl</span> restart sshd</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="fu">ssh</span> root@v.redhat.ren <span class="at">-o</span> PubkeyAuthentication=no</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="co"># root@v.redhat.ren: Permission denied (publickey,gssapi-keyex,gssapi-with-mic).</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="ex">subscription-manager</span> register <span class="at">--auto-attach</span> <span class="at">--username</span> <span class="pp">********</span> <span class="at">--password</span> <span class="pp">********</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a><span class="co"># subscription-manager release --list</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a><span class="co"># subscription-manager release --set=8.4</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a><span class="co"># subscription-manager config --rhsm.baseurl=https://china.cdn.redhat.com</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a><span class="ex">subscription-manager</span> repos <span class="at">--list</span> <span class="op">&gt;</span> list</span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a><span class="ex">subscription-manager</span> repos <span class="dt">\</span></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>    <span class="at">--enable</span><span class="op">=</span><span class="st">&quot;rhel-8-for-x86_64-baseos-rpms&quot;</span> <span class="dt">\</span></span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>    <span class="at">--enable</span><span class="op">=</span><span class="st">&quot;rhel-8-for-x86_64-appstream-rpms&quot;</span> <span class="dt">\</span></span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>    <span class="at">--enable</span><span class="op">=</span><span class="st">&quot;codeready-builder-for-rhel-8-x86_64-rpms&quot;</span> <span class="dt">\</span></span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a>    <span class="co"># </span></span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a><span class="ex">dnf</span> <span class="at">-y</span> install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm</span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a><span class="ex">dnf</span> install <span class="at">-y</span> byobu htop</span>
+<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a><span class="co"># byobu</span></span>
+<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a><span class="ex">dnf</span> update <span class="at">-y</span></span>
+<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-38"><a href="#cb1-38" aria-hidden="true" tabindex="-1"></a><span class="ex">reboot</span></span>
+<span id="cb1-39"><a href="#cb1-39" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-40"><a href="#cb1-40" aria-hidden="true" tabindex="-1"></a><span class="fu">mkdir</span> <span class="at">-p</span> /data/dnf</span>
+<span id="cb1-41"><a href="#cb1-41" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-42"><a href="#cb1-42" aria-hidden="true" tabindex="-1"></a><span class="co"># Create new empty partitions, and filesystem</span></span>
+<span id="cb1-43"><a href="#cb1-43" aria-hidden="true" tabindex="-1"></a><span class="ex">parted</span> <span class="at">-s</span> /dev/vdb mklabel gpt</span>
+<span id="cb1-44"><a href="#cb1-44" aria-hidden="true" tabindex="-1"></a><span class="ex">parted</span> <span class="at">-s</span> /dev/vdb unit mib mkpart primary 0% 100%</span>
+<span id="cb1-45"><a href="#cb1-45" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-46"><a href="#cb1-46" aria-hidden="true" tabindex="-1"></a><span class="ex">mkfs.ext4</span> /dev/vdb1</span>
+<span id="cb1-47"><a href="#cb1-47" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-48"><a href="#cb1-48" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> <span class="op">&lt;&lt; EOF</span> <span class="op">&gt;&gt;</span> /etc/fstab</span>
+<span id="cb1-49"><a href="#cb1-49" aria-hidden="true" tabindex="-1"></a><span class="st">/dev/vdb1               /data/dnf      ext4    defaults,noatime,nofail 0 0</span></span>
+<span id="cb1-50"><a href="#cb1-50" aria-hidden="true" tabindex="-1"></a><span class="op">EOF</span></span>
+<span id="cb1-51"><a href="#cb1-51" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-52"><a href="#cb1-52" aria-hidden="true" tabindex="-1"></a><span class="fu">mount</span> /dev/vdb1 /data/dnf</span>
+<span id="cb1-53"><a href="#cb1-53" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-54"><a href="#cb1-54" aria-hidden="true" tabindex="-1"></a><span class="fu">mkdir</span> <span class="at">-p</span> /data/dnf/dnf-ocp-4.10</span>
+<span id="cb1-55"><a href="#cb1-55" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-56"><a href="#cb1-56" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> /data/dnf/dnf-ocp-4.10</span>
+<span id="cb1-57"><a href="#cb1-57" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-58"><a href="#cb1-58" aria-hidden="true" tabindex="-1"></a><span class="ex">subscription-manager</span> release <span class="at">--set</span><span class="op">=</span>8.4</span>
+<span id="cb1-59"><a href="#cb1-59" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-60"><a href="#cb1-60" aria-hidden="true" tabindex="-1"></a><span class="ex">dnf</span> reposync <span class="at">--repoid</span> rhel-8-for-x86_64-baseos-eus-rpms <span class="at">-m</span> <span class="at">--download-metadata</span> <span class="at">--delete</span> <span class="at">-n</span></span>
+<span id="cb1-61"><a href="#cb1-61" aria-hidden="true" tabindex="-1"></a><span class="ex">dnf</span> reposync <span class="at">--repoid</span><span class="op">=</span>rhel-8-for-x86_64-appstream-eus-rpms <span class="at">-m</span> <span class="at">--download-metadata</span> <span class="at">--delete</span> <span class="at">-n</span></span>
+<span id="cb1-62"><a href="#cb1-62" aria-hidden="true" tabindex="-1"></a><span class="co"># dnf reposync --repoid=rhel-8-for-x86_64-nfv-tus-rpms -m --download-metadata --delete -n</span></span>
+<span id="cb1-63"><a href="#cb1-63" aria-hidden="true" tabindex="-1"></a><span class="ex">dnf</span> reposync <span class="at">--repoid</span><span class="op">=</span>rhel-8-for-x86_64-nfv-rpms <span class="at">-m</span> <span class="at">--download-metadata</span> <span class="at">--delete</span> <span class="at">-n</span></span>
+<span id="cb1-64"><a href="#cb1-64" aria-hidden="true" tabindex="-1"></a><span class="ex">dnf</span> reposync <span class="at">--repoid</span><span class="op">=</span>advanced-virt-for-rhel-8-x86_64-eus-rpms <span class="at">-m</span> <span class="at">--download-metadata</span> <span class="at">--delete</span> <span class="at">-n</span></span>
+<span id="cb1-65"><a href="#cb1-65" aria-hidden="true" tabindex="-1"></a><span class="ex">dnf</span> reposync <span class="at">--repoid</span><span class="op">=</span>fast-datapath-for-rhel-8-x86_64-rpms <span class="at">-m</span> <span class="at">--download-metadata</span> <span class="at">--delete</span> <span class="at">-n</span></span>
+<span id="cb1-66"><a href="#cb1-66" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-67"><a href="#cb1-67" aria-hidden="true" tabindex="-1"></a><span class="ex">subscription-manager</span> release <span class="at">--set</span><span class="op">=</span>8</span>
+<span id="cb1-68"><a href="#cb1-68" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-69"><a href="#cb1-69" aria-hidden="true" tabindex="-1"></a><span class="ex">dnf</span> <span class="at">-y</span> install vsftpd</span>
+<span id="cb1-70"><a href="#cb1-70" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-71"><a href="#cb1-71" aria-hidden="true" tabindex="-1"></a><span class="fu">mkdir</span> <span class="at">-p</span> /var/ftp/dnf</span>
+<span id="cb1-72"><a href="#cb1-72" aria-hidden="true" tabindex="-1"></a><span class="fu">mount</span> <span class="at">--bind</span> /data/dnf/dnf-ocp-4.10 /var/ftp/dnf</span>
+<span id="cb1-73"><a href="#cb1-73" aria-hidden="true" tabindex="-1"></a><span class="fu">chcon</span> <span class="at">-R</span> <span class="at">-t</span> public_content_t /var/ftp/dnf</span>
+<span id="cb1-74"><a href="#cb1-74" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-75"><a href="#cb1-75" aria-hidden="true" tabindex="-1"></a><span class="fu">sed</span> <span class="at">-i</span> <span class="st">&quot;s/anonymous_enable=NO/anonymous_enable=YES/&quot;</span> /etc/vsftpd/vsftpd.conf</span>
+<span id="cb1-76"><a href="#cb1-76" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-77"><a href="#cb1-77" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> <span class="op">&lt;&lt; EOF</span> <span class="op">&gt;&gt;</span> /etc/vsftpd/vsftpd.conf</span>
+<span id="cb1-78"><a href="#cb1-78" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-79"><a href="#cb1-79" aria-hidden="true" tabindex="-1"></a><span class="st">pasv_enable=YES</span></span>
+<span id="cb1-80"><a href="#cb1-80" aria-hidden="true" tabindex="-1"></a><span class="st">pasv_max_port=10100</span></span>
+<span id="cb1-81"><a href="#cb1-81" aria-hidden="true" tabindex="-1"></a><span class="st">pasv_min_port=10090</span></span>
+<span id="cb1-82"><a href="#cb1-82" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-83"><a href="#cb1-83" aria-hidden="true" tabindex="-1"></a><span class="op">EOF</span></span>
+<span id="cb1-84"><a href="#cb1-84" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-85"><a href="#cb1-85" aria-hidden="true" tabindex="-1"></a><span class="ex">systemctl</span> disable <span class="at">--now</span> firewalld</span>
+<span id="cb1-86"><a href="#cb1-86" aria-hidden="true" tabindex="-1"></a><span class="ex">systemctl</span> enable <span class="at">--now</span> vsftpd</span></code></pre></div>
+        <h1 id="准备-build-服务器-prepare-the-build-server">准备 build
+        服务器 / Prepare the build server</h1>
+        <p>注意，build 服务器需要支持 kvm
+        ，如果选用的云平台，需要云平台支持嵌套虚拟化。</p>
+        <p>本次实验，我们选用了一台 centos stream 8 的云主机。</p>
+        <p>Note that the build server needs to support kvm. If you
+        choose a cloud platform, the cloud platform needs to support
+        nested virtualization.</p>
+        <p>In this experiment, we chose a cloud host of centos stream
+        8.</p>
+        <div class="sourceCode" id="cb2"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># install a centos stream 8 on digitalocean, </span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="co"># 2c 2G for ostree only</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="co"># 4c 8G for iso because it needs metal first</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="ex">dnf</span> install <span class="at">-y</span> epel-release</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="ex">dnf</span> install <span class="at">-y</span> byobu htop</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="ex">dnf</span> update <span class="at">-y</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="ex">reboot</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="ex">dnf</span> groupinstall <span class="at">-y</span> server</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a><span class="ex">dnf</span> install <span class="at">-y</span> lftp podman</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a><span class="ex">dnf</span> <span class="at">-y</span> install qemu-kvm libvirt libguestfs-tools virt-install virt-viewer virt-manager tigervnc-server</span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a><span class="ex">systemctl</span> disable <span class="at">--now</span> firewalld</span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a><span class="ex">systemctl</span> enable <span class="at">--now</span> libvirtd</span></code></pre></div>
+        <h1 id="开始编译-rhcos-start-compiling-rhcos">开始编译 rhcos /
+        Start compiling rhcos</h1>
+        <p>cosa 的输入是一个配置文件项目，上游是
+        https://github.com/openshift/os ， 我们做了下游扩展，加入了 epel
+        源，并且把操作系统名字，加入了 wzh 的标记，并且添加了 htop,
+        tcpdump, iperf3 这几个常用的排错命令，作为演示。我们还从 epel
+        引入 pdns, pdns-recursor ， 支持离线环境 dns 内嵌。 同时，我们从
+        https://github.com/distribution/distribution/releases 下载
+        docker image registry
+        的二进制文件加入进来，支持镜像仓库内嵌。</p>
+        <p>The input of cosa is a configuration file project, and the
+        upstream is https://github.com/openshift/os. We made downstream
+        extensions, added the epel source, added the operating system
+        name, added the wzh mark, and added htop , tcpdump, iperf3 These
+        commonly used troubleshooting commands are used as
+        demonstrations.</p>
+        <div class="sourceCode" id="cb3"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># machine-os-images just copy a iso into container</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="co"># machine-os-content is our target</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="co"># follow coreos-assembler instruction</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="co"># https://github.com/coreos/coreos-assembler/blob/main/docs/building-fcos.md</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="co"># https://coreos.github.io/coreos-assembler/</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="co"># https://github.com/openshift/os/blob/master/docs/development-rhcos.md</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="co"># https://github.com/openshift/os/blob/master/docs/development.md</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="co"># https://github.com/openshift/os/blob/master/docs/development.md</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a><span class="co"># https://github.com/openshift/release/blob/master/core-services/release-controller/README.md#rpm-mirrors</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a><span class="bu">export</span> <span class="va">COREOS_ASSEMBLER_CONTAINER</span><span class="op">=</span>quay.io/coreos-assembler/coreos-assembler:rhcos-4.10</span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a><span class="co"># export COREOS_ASSEMBLER_CONTAINER=quay.io/coreos-assembler/coreos-assembler:latest</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a><span class="ex">podman</span> pull <span class="va">$COREOS_ASSEMBLER_CONTAINER</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a><span class="ex">podman</span> login <span class="pp">*************</span> quay.io</span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a><span class="fu">cosa()</span> <span class="kw">{</span></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>   <span class="fu">env</span> <span class="kw">|</span> <span class="fu">grep</span> COREOS_ASSEMBLER</span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>   <span class="bu">local</span> <span class="at">-r</span> <span class="va">COREOS_ASSEMBLER_CONTAINER_LATEST</span><span class="op">=</span><span class="st">&quot;quay.io/coreos-assembler/coreos-assembler:latest&quot;</span></span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>   <span class="cf">if</span> <span class="kw">[[</span> <span class="ot">-z</span> <span class="va">${COREOS_ASSEMBLER_CONTAINER}</span> <span class="kw">]]</span> <span class="kw">&amp;&amp;</span> <span class="va">$(</span><span class="ex">podman</span> image exists <span class="va">${COREOS_ASSEMBLER_CONTAINER_LATEST})</span><span class="kw">;</span> <span class="cf">then</span></span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>       <span class="bu">local</span> <span class="at">-r</span> <span class="va">cosa_build_date_str</span><span class="op">=</span><span class="st">&quot;</span><span class="va">$(</span><span class="ex">podman</span> inspect <span class="at">-f</span> <span class="st">&quot;{{.Created}}&quot;</span> <span class="va">${COREOS_ASSEMBLER_CONTAINER_LATEST}</span> <span class="kw">|</span> <span class="fu">awk</span> <span class="st">&#39;{print $1}&#39;</span><span class="va">)</span><span class="st">&quot;</span></span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a>       <span class="bu">local</span> <span class="at">-r</span> <span class="va">cosa_build_date</span><span class="op">=</span><span class="st">&quot;</span><span class="va">$(</span><span class="fu">date</span> <span class="at">-d</span> <span class="va">${cosa_build_date_str}</span> +%s<span class="va">)</span><span class="st">&quot;</span></span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a>       <span class="cf">if</span> <span class="kw">[[</span> <span class="va">$(</span><span class="fu">date</span> +%s<span class="va">)</span> <span class="ot">-ge</span> <span class="va">$((cosa_build_date</span> <span class="op">+</span> <span class="dv">60</span><span class="op">*</span><span class="dv">60</span><span class="op">*</span><span class="dv">24</span><span class="op">*</span><span class="dv">7</span><span class="va">))</span> <span class="kw">]]</span> <span class="kw">;</span> <span class="cf">then</span></span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a>         <span class="bu">echo</span> <span class="at">-e</span> <span class="st">&quot;\e[0;33m----&quot;</span> <span class="op">&gt;&amp;</span><span class="dv">2</span></span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a>         <span class="bu">echo</span> <span class="st">&quot;The COSA container image is more that a week old and likely outdated.&quot;</span> <span class="op">&gt;&amp;</span><span class="dv">2</span></span>
+<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a>         <span class="bu">echo</span> <span class="st">&quot;You should pull the latest version with:&quot;</span> <span class="op">&gt;&amp;</span><span class="dv">2</span></span>
+<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a>         <span class="bu">echo</span> <span class="st">&quot;podman pull </span><span class="va">${COREOS_ASSEMBLER_CONTAINER_LATEST}</span><span class="st">&quot;</span> <span class="op">&gt;&amp;</span><span class="dv">2</span></span>
+<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a>         <span class="bu">echo</span> <span class="at">-e</span> <span class="st">&quot;----\e[0m&quot;</span> <span class="op">&gt;&amp;</span><span class="dv">2</span></span>
+<span id="cb3-31"><a href="#cb3-31" aria-hidden="true" tabindex="-1"></a>         <span class="fu">sleep</span> 10</span>
+<span id="cb3-32"><a href="#cb3-32" aria-hidden="true" tabindex="-1"></a>       <span class="cf">fi</span></span>
+<span id="cb3-33"><a href="#cb3-33" aria-hidden="true" tabindex="-1"></a>   <span class="cf">fi</span></span>
+<span id="cb3-34"><a href="#cb3-34" aria-hidden="true" tabindex="-1"></a>   <span class="bu">set</span> <span class="at">-x</span></span>
+<span id="cb3-35"><a href="#cb3-35" aria-hidden="true" tabindex="-1"></a>   <span class="ex">podman</span> run <span class="at">--rm</span> <span class="at">-ti</span> <span class="at">--security-opt</span> label=disable <span class="at">--privileged</span>                                    <span class="dt">\</span></span>
+<span id="cb3-36"><a href="#cb3-36" aria-hidden="true" tabindex="-1"></a>              <span class="at">--uidmap</span><span class="op">=</span>1000:0:1 <span class="at">--uidmap</span><span class="op">=</span>0:1:1000 <span class="at">--uidmap</span> 1001:1001:64536                          <span class="dt">\</span></span>
+<span id="cb3-37"><a href="#cb3-37" aria-hidden="true" tabindex="-1"></a>              <span class="at">-v</span> <span class="va">${PWD}</span>:/srv/ <span class="at">--device</span> /dev/kvm <span class="at">--device</span> /dev/fuse                                  <span class="dt">\</span></span>
+<span id="cb3-38"><a href="#cb3-38" aria-hidden="true" tabindex="-1"></a>              <span class="at">-v</span> /run/user/0/containers/auth.json:/home/builder/.docker/config.json                      <span class="dt">\</span></span>
+<span id="cb3-39"><a href="#cb3-39" aria-hidden="true" tabindex="-1"></a>              <span class="at">--tmpfs</span> /tmp <span class="at">-v</span> /var/tmp:/var/tmp <span class="at">--name</span> cosa                                         <span class="dt">\</span></span>
+<span id="cb3-40"><a href="#cb3-40" aria-hidden="true" tabindex="-1"></a>              <span class="va">${COREOS_ASSEMBLER_CONFIG_GIT</span><span class="op">:+</span>-v <span class="va">$COREOS_ASSEMBLER_CONFIG_GIT</span>:/srv/src/config/:ro<span class="va">}</span>   <span class="dt">\</span></span>
+<span id="cb3-41"><a href="#cb3-41" aria-hidden="true" tabindex="-1"></a>              <span class="va">${COREOS_ASSEMBLER_GIT</span><span class="op">:+</span>-v <span class="va">$COREOS_ASSEMBLER_GIT</span>/src/:/usr/lib/coreos-assembler/:ro<span class="va">}</span>  <span class="dt">\</span></span>
+<span id="cb3-42"><a href="#cb3-42" aria-hidden="true" tabindex="-1"></a>              <span class="va">${COREOS_ASSEMBLER_CONTAINER_RUNTIME_ARGS}</span>                                            <span class="dt">\</span></span>
+<span id="cb3-43"><a href="#cb3-43" aria-hidden="true" tabindex="-1"></a>              <span class="va">${COREOS_ASSEMBLER_CONTAINER</span><span class="op">:-</span><span class="va">$COREOS_ASSEMBLER_CONTAINER_LATEST}</span> <span class="st">&quot;</span><span class="va">$@</span><span class="st">&quot;</span></span>
+<span id="cb3-44"><a href="#cb3-44" aria-hidden="true" tabindex="-1"></a>   <span class="va">rc</span><span class="op">=</span><span class="va">$?</span><span class="kw">;</span> <span class="bu">set</span> +x<span class="kw">;</span> <span class="cf">return</span> <span class="va">$rc</span></span>
+<span id="cb3-45"><a href="#cb3-45" aria-hidden="true" tabindex="-1"></a><span class="kw">}</span></span>
+<span id="cb3-46"><a href="#cb3-46" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-47"><a href="#cb3-47" aria-hidden="true" tabindex="-1"></a><span class="fu">rm</span> <span class="at">-rf</span> /data/rhcos</span>
+<span id="cb3-48"><a href="#cb3-48" aria-hidden="true" tabindex="-1"></a><span class="fu">mkdir</span> <span class="at">-p</span> /data/rhcos</span>
+<span id="cb3-49"><a href="#cb3-49" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> /data/rhcos</span>
+<span id="cb3-50"><a href="#cb3-50" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-51"><a href="#cb3-51" aria-hidden="true" tabindex="-1"></a><span class="ex">cosa</span> init <span class="at">--branch</span> wzh-ocp-4.10 https://github.com/wangzheng422/machine-os-content</span>
+<span id="cb3-52"><a href="#cb3-52" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-53"><a href="#cb3-53" aria-hidden="true" tabindex="-1"></a><span class="fu">sed</span> <span class="at">-i</span> <span class="st">&#39;s/REPO_IP/v.redhat.ren/g&#39;</span> /data/rhcos/src/config/wzh.repo</span>
+<span id="cb3-54"><a href="#cb3-54" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-55"><a href="#cb3-55" aria-hidden="true" tabindex="-1"></a><span class="fu">wget</span> <span class="at">-O</span> src/config/overlay.d/99wzh-pdns/usr/bin/registry.tgz https://github.com/distribution/distribution/releases/download/v2.8.1/registry_2.8.1_linux_amd64.tar.gz</span>
+<span id="cb3-56"><a href="#cb3-56" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-57"><a href="#cb3-57" aria-hidden="true" tabindex="-1"></a><span class="fu">tar</span> zvxf src/config/overlay.d/99wzh-pdns/usr/bin/registry.tgz <span class="at">-C</span> src/config/overlay.d/99wzh-pdns/usr/bin</span>
+<span id="cb3-58"><a href="#cb3-58" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-59"><a href="#cb3-59" aria-hidden="true" tabindex="-1"></a><span class="ex">/bin/rm</span> <span class="at">-f</span> src/config/overlay.d/99wzh-pdns/usr/bin/registry.tgz</span>
+<span id="cb3-60"><a href="#cb3-60" aria-hidden="true" tabindex="-1"></a><span class="ex">/bin/rm</span> <span class="at">-f</span> src/config/overlay.d/99wzh-pdns/usr/bin/LICENSE</span>
+<span id="cb3-61"><a href="#cb3-61" aria-hidden="true" tabindex="-1"></a><span class="ex">/bin/rm</span> <span class="at">-f</span> src/config/overlay.d/99wzh-pdns/usr/bin/README.md</span>
+<span id="cb3-62"><a href="#cb3-62" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-63"><a href="#cb3-63" aria-hidden="true" tabindex="-1"></a><span class="ex">cosa</span> fetch</span>
+<span id="cb3-64"><a href="#cb3-64" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-65"><a href="#cb3-65" aria-hidden="true" tabindex="-1"></a><span class="ex">cosa</span> build ostree</span>
+<span id="cb3-66"><a href="#cb3-66" aria-hidden="true" tabindex="-1"></a><span class="co"># ......</span></span>
+<span id="cb3-67"><a href="#cb3-67" aria-hidden="true" tabindex="-1"></a><span class="co"># Ignored user missing from new passwd file: root</span></span>
+<span id="cb3-68"><a href="#cb3-68" aria-hidden="true" tabindex="-1"></a><span class="co"># New passwd entries: clevis, dnsmasq, gluster, systemd-coredump, systemd-journal-remote, systemd-resolve, tcpdump, unbound</span></span>
+<span id="cb3-69"><a href="#cb3-69" aria-hidden="true" tabindex="-1"></a><span class="co"># Ignored group missing from new group file: root</span></span>
+<span id="cb3-70"><a href="#cb3-70" aria-hidden="true" tabindex="-1"></a><span class="co"># New group entries: clevis, dnsmasq, gluster, input, kvm, printadmin, render, systemd-coredump, systemd-journal-remote, systemd-resolve, tcpdump, unbound</span></span>
+<span id="cb3-71"><a href="#cb3-71" aria-hidden="true" tabindex="-1"></a><span class="co"># Committing... done</span></span>
+<span id="cb3-72"><a href="#cb3-72" aria-hidden="true" tabindex="-1"></a><span class="co"># Metadata Total: 10907</span></span>
+<span id="cb3-73"><a href="#cb3-73" aria-hidden="true" tabindex="-1"></a><span class="co"># Metadata Written: 3721</span></span>
+<span id="cb3-74"><a href="#cb3-74" aria-hidden="true" tabindex="-1"></a><span class="co"># Content Total: 6584</span></span>
+<span id="cb3-75"><a href="#cb3-75" aria-hidden="true" tabindex="-1"></a><span class="co"># Content Written: 1344</span></span>
+<span id="cb3-76"><a href="#cb3-76" aria-hidden="true" tabindex="-1"></a><span class="co"># Content Cache Hits: 22043</span></span>
+<span id="cb3-77"><a href="#cb3-77" aria-hidden="true" tabindex="-1"></a><span class="co"># Content Bytes Written: 328474751</span></span>
+<span id="cb3-78"><a href="#cb3-78" aria-hidden="true" tabindex="-1"></a><span class="co"># 3721 metadata, 24647 content objects imported; 2.4 GB content written</span></span>
+<span id="cb3-79"><a href="#cb3-79" aria-hidden="true" tabindex="-1"></a><span class="co"># Wrote commit: 12876365301ad8f07ecf89b4fbe184f000a0816c895c6659ebc6822ef9c18ff7</span></span>
+<span id="cb3-80"><a href="#cb3-80" aria-hidden="true" tabindex="-1"></a><span class="co"># New image input checksum: 05e3c499a794b62d22ba12d8d73404ce5970d24b4f7a664b71d17c5cf50ccd4c</span></span>
+<span id="cb3-81"><a href="#cb3-81" aria-hidden="true" tabindex="-1"></a><span class="co"># None</span></span>
+<span id="cb3-82"><a href="#cb3-82" aria-hidden="true" tabindex="-1"></a><span class="co"># New build ID: 410.84.wzh.202208220647-0</span></span>
+<span id="cb3-83"><a href="#cb3-83" aria-hidden="true" tabindex="-1"></a><span class="co"># sha256:fa305389ffa50b73e259000d8f21753049de7e4c217c12df470798d34bd4b209</span></span>
+<span id="cb3-84"><a href="#cb3-84" aria-hidden="true" tabindex="-1"></a><span class="co"># Total objects: 28612</span></span>
+<span id="cb3-85"><a href="#cb3-85" aria-hidden="true" tabindex="-1"></a><span class="co"># No unreachable objects</span></span>
+<span id="cb3-86"><a href="#cb3-86" aria-hidden="true" tabindex="-1"></a><span class="co"># Ignoring non-directory /srv/builds/.build-commit</span></span>
+<span id="cb3-87"><a href="#cb3-87" aria-hidden="true" tabindex="-1"></a><span class="co"># + rc=0</span></span>
+<span id="cb3-88"><a href="#cb3-88" aria-hidden="true" tabindex="-1"></a><span class="co"># + set +x</span></span>
+<span id="cb3-89"><a href="#cb3-89" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-90"><a href="#cb3-90" aria-hidden="true" tabindex="-1"></a><span class="co"># or build with default setting, ostree and qcow2</span></span>
+<span id="cb3-91"><a href="#cb3-91" aria-hidden="true" tabindex="-1"></a><span class="co"># cosa build</span></span>
+<span id="cb3-92"><a href="#cb3-92" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-93"><a href="#cb3-93" aria-hidden="true" tabindex="-1"></a><span class="ex">cosa</span> list</span>
+<span id="cb3-94"><a href="#cb3-94" aria-hidden="true" tabindex="-1"></a><span class="co"># 410.84.wzh.202208220647-0</span></span>
+<span id="cb3-95"><a href="#cb3-95" aria-hidden="true" tabindex="-1"></a><span class="co">#    Timestamp: 2022-08-22T06:59:55Z (0:02:49 ago)</span></span>
+<span id="cb3-96"><a href="#cb3-96" aria-hidden="true" tabindex="-1"></a><span class="co">#    Artifacts: ostree</span></span>
+<span id="cb3-97"><a href="#cb3-97" aria-hidden="true" tabindex="-1"></a><span class="co">#       Config: wzh-ocp-4.10 (16c263bb4b5c) (dirty)</span></span>
+<span id="cb3-98"><a href="#cb3-98" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-99"><a href="#cb3-99" aria-hidden="true" tabindex="-1"></a><span class="ex">cosa</span> upload-oscontainer <span class="at">--name</span> <span class="st">&quot;quay.io/wangzheng422/ocp&quot;</span></span>
+<span id="cb3-100"><a href="#cb3-100" aria-hidden="true" tabindex="-1"></a><span class="co"># quay.io/wangzheng422/ocp:410.84.202208220734-wzh-0 afbdcfab3ffa897842f181505897e6b448f40e961014f74d94996e0589934b7e</span></span>
+<span id="cb3-101"><a href="#cb3-101" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-102"><a href="#cb3-102" aria-hidden="true" tabindex="-1"></a><span class="co"># for pdns</span></span>
+<span id="cb3-103"><a href="#cb3-103" aria-hidden="true" tabindex="-1"></a><span class="co"># quay.io/wangzheng422/ocp:410.84.202208251115-wzh-0 75beaec896b43eaa910e04f9c405687419baff09eb627c984382698f67066e8a</span></span>
+<span id="cb3-104"><a href="#cb3-104" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-105"><a href="#cb3-105" aria-hidden="true" tabindex="-1"></a><span class="co"># for pdns, registry</span></span>
+<span id="cb3-106"><a href="#cb3-106" aria-hidden="true" tabindex="-1"></a><span class="co"># quay.io/wangzheng422/ocp:410.84.202208260926-wzh-0 13942b16d990b5934f8fc1dd344ffc2b7a009459a0af7d26624601b01a3ebe30</span></span>
+<span id="cb3-107"><a href="#cb3-107" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-108"><a href="#cb3-108" aria-hidden="true" tabindex="-1"></a><span class="ex">cosa</span> buildextend-metal</span>
+<span id="cb3-109"><a href="#cb3-109" aria-hidden="true" tabindex="-1"></a><span class="co"># ......</span></span>
+<span id="cb3-110"><a href="#cb3-110" aria-hidden="true" tabindex="-1"></a><span class="co"># + cosa meta --workdir /srv --build 410.84.202208221336-wzh-0 --artifact metal --artifact-json /srv/tmp/build.metal/meta.json.new</span></span>
+<span id="cb3-111"><a href="#cb3-111" aria-hidden="true" tabindex="-1"></a><span class="co"># /srv/builds/410.84.202208221336-wzh-0/x86_64/meta.json wrote with version stamp 1661176393037675276</span></span>
+<span id="cb3-112"><a href="#cb3-112" aria-hidden="true" tabindex="-1"></a><span class="co"># + /usr/lib/coreos-assembler/finalize-artifact rhcos-410.84.202208221336-wzh-0-metal.x86_64.raw /srv/builds/410.84.202208221336-wzh-0/x86_64/rhcos-410.84.202208221336-wzh-0-metal.x86_64.raw</span></span>
+<span id="cb3-113"><a href="#cb3-113" aria-hidden="true" tabindex="-1"></a><span class="co"># + set +x</span></span>
+<span id="cb3-114"><a href="#cb3-114" aria-hidden="true" tabindex="-1"></a><span class="co"># Successfully generated: rhcos-410.84.202208221336-wzh-0-metal.x86_64.raw</span></span>
+<span id="cb3-115"><a href="#cb3-115" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-116"><a href="#cb3-116" aria-hidden="true" tabindex="-1"></a><span class="ex">cosa</span> buildextend-metal4k</span>
+<span id="cb3-117"><a href="#cb3-117" aria-hidden="true" tabindex="-1"></a><span class="co"># ......</span></span>
+<span id="cb3-118"><a href="#cb3-118" aria-hidden="true" tabindex="-1"></a><span class="co"># + cosa meta --workdir /srv --build 410.84.202208221336-wzh-0 --artifact metal4k --artifact-json /srv/tmp/build.metal4k/meta.json.new</span></span>
+<span id="cb3-119"><a href="#cb3-119" aria-hidden="true" tabindex="-1"></a><span class="co"># /srv/builds/410.84.202208221336-wzh-0/x86_64/meta.json wrote with version stamp 1661176647683428498</span></span>
+<span id="cb3-120"><a href="#cb3-120" aria-hidden="true" tabindex="-1"></a><span class="co"># + /usr/lib/coreos-assembler/finalize-artifact rhcos-410.84.202208221336-wzh-0-metal4k.x86_64.raw /srv/builds/410.84.202208221336-wzh-0/x86_64/rhcos-410.84.202208221336-wzh-0-metal4k.x86_64.raw</span></span>
+<span id="cb3-121"><a href="#cb3-121" aria-hidden="true" tabindex="-1"></a><span class="co"># + set +x</span></span>
+<span id="cb3-122"><a href="#cb3-122" aria-hidden="true" tabindex="-1"></a><span class="co"># Successfully generated: rhcos-410.84.202208221336-wzh-0-metal4k.x86_64.raw</span></span>
+<span id="cb3-123"><a href="#cb3-123" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-124"><a href="#cb3-124" aria-hidden="true" tabindex="-1"></a><span class="ex">cosa</span> buildextend-live</span>
+<span id="cb3-125"><a href="#cb3-125" aria-hidden="true" tabindex="-1"></a><span class="co"># ......</span></span>
+<span id="cb3-126"><a href="#cb3-126" aria-hidden="true" tabindex="-1"></a><span class="co"># Writing:   Extension record                        Start Block 43</span></span>
+<span id="cb3-127"><a href="#cb3-127" aria-hidden="true" tabindex="-1"></a><span class="co"># Done with: Extension record                        Block(s)    1</span></span>
+<span id="cb3-128"><a href="#cb3-128" aria-hidden="true" tabindex="-1"></a><span class="co"># Writing:   The File(s)                             Start Block 44</span></span>
+<span id="cb3-129"><a href="#cb3-129" aria-hidden="true" tabindex="-1"></a><span class="co">#   9.70% done, estimate finish Mon Aug 22 14:14:12 2022</span></span>
+<span id="cb3-130"><a href="#cb3-130" aria-hidden="true" tabindex="-1"></a><span class="co">#  19.36% done, estimate finish Mon Aug 22 14:14:12 2022</span></span>
+<span id="cb3-131"><a href="#cb3-131" aria-hidden="true" tabindex="-1"></a><span class="co">#  29.05% done, estimate finish Mon Aug 22 14:14:12 2022</span></span>
+<span id="cb3-132"><a href="#cb3-132" aria-hidden="true" tabindex="-1"></a><span class="co">#  38.71% done, estimate finish Mon Aug 22 14:14:12 2022</span></span>
+<span id="cb3-133"><a href="#cb3-133" aria-hidden="true" tabindex="-1"></a><span class="co">#  48.40% done, estimate finish Mon Aug 22 14:14:12 2022</span></span>
+<span id="cb3-134"><a href="#cb3-134" aria-hidden="true" tabindex="-1"></a><span class="co">#  58.06% done, estimate finish Mon Aug 22 14:14:12 2022</span></span>
+<span id="cb3-135"><a href="#cb3-135" aria-hidden="true" tabindex="-1"></a><span class="co">#  67.75% done, estimate finish Mon Aug 22 14:14:12 2022</span></span>
+<span id="cb3-136"><a href="#cb3-136" aria-hidden="true" tabindex="-1"></a><span class="co">#  77.41% done, estimate finish Mon Aug 22 14:14:12 2022</span></span>
+<span id="cb3-137"><a href="#cb3-137" aria-hidden="true" tabindex="-1"></a><span class="co">#  87.10% done, estimate finish Mon Aug 22 14:14:12 2022</span></span>
+<span id="cb3-138"><a href="#cb3-138" aria-hidden="true" tabindex="-1"></a><span class="co">#  96.78% done, estimate finish Mon Aug 22 14:14:12 2022</span></span>
+<span id="cb3-139"><a href="#cb3-139" aria-hidden="true" tabindex="-1"></a><span class="co"># Total translation table size: 2048</span></span>
+<span id="cb3-140"><a href="#cb3-140" aria-hidden="true" tabindex="-1"></a><span class="co"># Total rockridge attributes bytes: 2838</span></span>
+<span id="cb3-141"><a href="#cb3-141" aria-hidden="true" tabindex="-1"></a><span class="co"># Total directory bytes: 12288</span></span>
+<span id="cb3-142"><a href="#cb3-142" aria-hidden="true" tabindex="-1"></a><span class="co"># Path table size(bytes): 96</span></span>
+<span id="cb3-143"><a href="#cb3-143" aria-hidden="true" tabindex="-1"></a><span class="co"># Done with: The File(s)                             Block(s)    51483</span></span>
+<span id="cb3-144"><a href="#cb3-144" aria-hidden="true" tabindex="-1"></a><span class="co"># Writing:   Ending Padblock                         Start Block 51527</span></span>
+<span id="cb3-145"><a href="#cb3-145" aria-hidden="true" tabindex="-1"></a><span class="co"># Done with: Ending Padblock                         Block(s)    150</span></span>
+<span id="cb3-146"><a href="#cb3-146" aria-hidden="true" tabindex="-1"></a><span class="co"># Max brk space used 24000</span></span>
+<span id="cb3-147"><a href="#cb3-147" aria-hidden="true" tabindex="-1"></a><span class="co"># 51677 extents written (100 MB)</span></span>
+<span id="cb3-148"><a href="#cb3-148" aria-hidden="true" tabindex="-1"></a><span class="co"># + /usr/bin/isohybrid --uefi /srv/tmp/buildpost-live/rhcos-410.84.202208221336-wzh-0-live.x86_64.iso.minimal</span></span>
+<span id="cb3-149"><a href="#cb3-149" aria-hidden="true" tabindex="-1"></a><span class="co"># + isoinfo -lR -i /srv/tmp/buildpost-live/rhcos-410.84.202208221336-wzh-0-live.x86_64.iso</span></span>
+<span id="cb3-150"><a href="#cb3-150" aria-hidden="true" tabindex="-1"></a><span class="co"># Embedded 262144 bytes Ignition config space at 4872192</span></span>
+<span id="cb3-151"><a href="#cb3-151" aria-hidden="true" tabindex="-1"></a><span class="co"># + coreos-installer iso extract pack-minimal-iso /srv/tmp/buildpost-live/rhcos-410.84.202208221336-wzh-0-live.x86_64.iso /srv/tmp/buildpost-live/rhcos-410.84.202208221336-wzh-0-live.x86_64.iso.minimal --consume</span></span>
+<span id="cb3-152"><a href="#cb3-152" aria-hidden="true" tabindex="-1"></a><span class="co"># Packing minimal ISO</span></span>
+<span id="cb3-153"><a href="#cb3-153" aria-hidden="true" tabindex="-1"></a><span class="co"># Matched 17 files of 17</span></span>
+<span id="cb3-154"><a href="#cb3-154" aria-hidden="true" tabindex="-1"></a><span class="co"># Total bytes skipped: 105419322</span></span>
+<span id="cb3-155"><a href="#cb3-155" aria-hidden="true" tabindex="-1"></a><span class="co"># Total bytes written: 486854</span></span>
+<span id="cb3-156"><a href="#cb3-156" aria-hidden="true" tabindex="-1"></a><span class="co"># Total bytes written (compressed): 2808</span></span>
+<span id="cb3-157"><a href="#cb3-157" aria-hidden="true" tabindex="-1"></a><span class="co"># Verifying that packed image matches digest</span></span>
+<span id="cb3-158"><a href="#cb3-158" aria-hidden="true" tabindex="-1"></a><span class="co"># Packing successful!</span></span>
+<span id="cb3-159"><a href="#cb3-159" aria-hidden="true" tabindex="-1"></a><span class="co"># Updated: builds/410.84.202208221336-wzh-0/x86_64/meta.json</span></span>
+<span id="cb3-160"><a href="#cb3-160" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-161"><a href="#cb3-161" aria-hidden="true" tabindex="-1"></a><span class="co"># Create a new release based on openshift 4.10.28 and override a single image</span></span>
+<span id="cb3-162"><a href="#cb3-162" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> adm release new <span class="at">-a</span> /data/pull-secret.json <span class="dt">\</span></span>
+<span id="cb3-163"><a href="#cb3-163" aria-hidden="true" tabindex="-1"></a>  <span class="at">--from-release</span> quay.io/openshift-release-dev/ocp-release@sha256:2127608ebd67a2470860c42368807a0de2308dba144ec4c298bec1c03d79cb52 <span class="dt">\</span></span>
+<span id="cb3-164"><a href="#cb3-164" aria-hidden="true" tabindex="-1"></a>  machine-os-content=quay.io/wangzheng422/ocp:410.84.202208260926-wzh-0 <span class="dt">\</span></span>
+<span id="cb3-165"><a href="#cb3-165" aria-hidden="true" tabindex="-1"></a>  <span class="at">--to-image</span> docker.io/wangzheng422/ocp:4.10-demo-pdns</span>
+<span id="cb3-166"><a href="#cb3-166" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-167"><a href="#cb3-167" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> image mirror docker.io/wangzheng422/ocp:4.10-demo-pdns quay.io/wangzheng422/ocp:4.10-demo-pdns</span>
+<span id="cb3-168"><a href="#cb3-168" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-169"><a href="#cb3-169" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> adm release info quay.io/wangzheng422/ocp:4.10-demo <span class="at">--commit-urls</span><span class="op">=</span>true</span>
+<span id="cb3-170"><a href="#cb3-170" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:      4.10.28</span></span>
+<span id="cb3-171"><a href="#cb3-171" aria-hidden="true" tabindex="-1"></a><span class="co"># Digest:    sha256:57add9e36d950ea7eacfe8704279573952cfbed3192449b7cdcc8a72c4d28921</span></span>
+<span id="cb3-172"><a href="#cb3-172" aria-hidden="true" tabindex="-1"></a><span class="co"># Created:   2022-08-22T08:13:38Z</span></span>
+<span id="cb3-173"><a href="#cb3-173" aria-hidden="true" tabindex="-1"></a><span class="co"># OS/Arch:   linux/amd64</span></span>
+<span id="cb3-174"><a href="#cb3-174" aria-hidden="true" tabindex="-1"></a><span class="co"># Manifests: 544</span></span>
+<span id="cb3-175"><a href="#cb3-175" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-176"><a href="#cb3-176" aria-hidden="true" tabindex="-1"></a><span class="co"># Pull From: quay.io/wangzheng422/ocp@sha256:57add9e36d950ea7eacfe8704279573952cfbed3192449b7cdcc8a72c4d28921</span></span>
+<span id="cb3-177"><a href="#cb3-177" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-178"><a href="#cb3-178" aria-hidden="true" tabindex="-1"></a><span class="co"># Release Metadata:</span></span>
+<span id="cb3-179"><a href="#cb3-179" aria-hidden="true" tabindex="-1"></a><span class="co">#   Version:  4.10.28</span></span>
+<span id="cb3-180"><a href="#cb3-180" aria-hidden="true" tabindex="-1"></a><span class="co">#   Upgrades: 4.9.19, 4.9.21, 4.9.22, 4.9.23, 4.9.24, 4.9.25, 4.9.26, 4.9.27, 4.9.28, 4.9.29, 4.9.30, 4.9.31, 4.9.32, 4.9.33, 4.9.34, 4.9.35, 4.9.36, 4.9.37, 4.9.38, 4.9.39, 4.9.40, 4.9.41, 4.9.42, 4.9.43, 4.9.44, 4.9.45, 4.9.46, 4.10.3, 4.10.4, 4.10.5, 4.10.6, 4.10.7, 4.10.8, 4.10.9, 4.10.10, 4.10.11, 4.10.12, 4.10.13, 4.10.14, 4.10.15, 4.10.16, 4.10.17, 4.10.18, 4.10.20, 4.10.21, 4.10.22, 4.10.23, 4.10.24, 4.10.25, 4.10.26, 4.10.27</span></span>
+<span id="cb3-181"><a href="#cb3-181" aria-hidden="true" tabindex="-1"></a><span class="co">#   Metadata:</span></span>
+<span id="cb3-182"><a href="#cb3-182" aria-hidden="true" tabindex="-1"></a><span class="co">#     url: https://access.redhat.com/errata/RHBA-2022:6095</span></span>
+<span id="cb3-183"><a href="#cb3-183" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-184"><a href="#cb3-184" aria-hidden="true" tabindex="-1"></a><span class="co"># Component Versions:</span></span>
+<span id="cb3-185"><a href="#cb3-185" aria-hidden="true" tabindex="-1"></a><span class="co">#   kubernetes 1.23.5</span></span>
+<span id="cb3-186"><a href="#cb3-186" aria-hidden="true" tabindex="-1"></a><span class="co">#   machine-os 410.84.202208220734-wzh-0 Red Hat Enterprise Linux CoreOS</span></span>
+<span id="cb3-187"><a href="#cb3-187" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-188"><a href="#cb3-188" aria-hidden="true" tabindex="-1"></a><span class="co"># Images:</span></span>
+<span id="cb3-189"><a href="#cb3-189" aria-hidden="true" tabindex="-1"></a><span class="co">#   NAME                                           URL</span></span>
+<span id="cb3-190"><a href="#cb3-190" aria-hidden="true" tabindex="-1"></a><span class="co">#   alibaba-cloud-controller-manager               https://github.com/openshift/cloud-provider-alibaba-cloud/commit/db2d118ad70ff62a2111e83a8d14c5b32e176b38</span></span>
+<span id="cb3-191"><a href="#cb3-191" aria-hidden="true" tabindex="-1"></a><span class="co">#   alibaba-cloud-csi-driver                       https://github.com/openshift/alibaba-cloud-csi-driver/commit/3ddbb2b9d4994206183b5ffd6a0872ad9a5ce193</span></span>
+<span id="cb3-192"><a href="#cb3-192" aria-hidden="true" tabindex="-1"></a><span class="co">#   alibaba-disk-csi-driver-operator               https://github.com/openshift/alibaba-disk-csi-driver-operator/commit/f0d6966321e3d416efec2ac7405494b057cb35f8</span></span>
+<span id="cb3-193"><a href="#cb3-193" aria-hidden="true" tabindex="-1"></a><span class="co">#   alibaba-machine-controllers                    https://github.com/openshift/cluster-api-provider-alibaba/commit/0206121348c9a0d220dd6805cea79d1eae7fd3e0</span></span>
+<span id="cb3-194"><a href="#cb3-194" aria-hidden="true" tabindex="-1"></a><span class="co"># ......</span></span>
+<span id="cb3-195"><a href="#cb3-195" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-196"><a href="#cb3-196" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> adm release info quay.io/wangzheng422/ocp:4.10-demo</span>
+<span id="cb3-197"><a href="#cb3-197" aria-hidden="true" tabindex="-1"></a><span class="co"># ......</span></span>
+<span id="cb3-198"><a href="#cb3-198" aria-hidden="true" tabindex="-1"></a><span class="co">#   machine-config-operator                        sha256:6f0daed53e44e6377b0ac440f6293949278b912051b933b2dddfce0e6af2c70b</span></span>
+<span id="cb3-199"><a href="#cb3-199" aria-hidden="true" tabindex="-1"></a><span class="co">#   machine-os-content                             quay.io/wangzheng422/ocp:410.84.202208220734-wzh-0</span></span>
+<span id="cb3-200"><a href="#cb3-200" aria-hidden="true" tabindex="-1"></a><span class="co">#   machine-os-images                              sha256:783daa259e91647dec5b3e82ce496f8733345d707910d7dbbbdcaadcd75d599b</span></span>
+<span id="cb3-201"><a href="#cb3-201" aria-hidden="true" tabindex="-1"></a><span class="co"># ......</span></span>
+<span id="cb3-202"><a href="#cb3-202" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-203"><a href="#cb3-203" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> adm release info quay.io/wangzheng422/ocp:4.10-demo-pdns</span>
+<span id="cb3-204"><a href="#cb3-204" aria-hidden="true" tabindex="-1"></a><span class="co"># ......</span></span>
+<span id="cb3-205"><a href="#cb3-205" aria-hidden="true" tabindex="-1"></a><span class="co">#   machine-config-operator                        sha256:6f0daed53e44e6377b0ac440f6293949278b912051b933b2dddfce0e6af2c70b</span></span>
+<span id="cb3-206"><a href="#cb3-206" aria-hidden="true" tabindex="-1"></a><span class="co">#   machine-os-content                             sha256:99bfb9b88cd8bddcea353d304032a59d0734b2ef10353e105dbe4b6538207b88</span></span>
+<span id="cb3-207"><a href="#cb3-207" aria-hidden="true" tabindex="-1"></a><span class="co">#   machine-os-images                              sha256:783daa259e91647dec5b3e82ce496f8733345d707910d7dbbbdcaadcd75d599b</span></span>
+<span id="cb3-208"><a href="#cb3-208" aria-hidden="true" tabindex="-1"></a><span class="co"># ......</span></span></code></pre></div>
+        <h1 id="应用到-openshift4-apply-to-openshift4">应用到 openshift4
+        / Apply to openshift4</h1>
+        <p>我们编译好了 rhcos， 那么怎么应用到 openshift4
+        集群上呢，一般来说，有3种办法，<a
+        href="https://github.com/openshift/os/blob/master/docs/faq.md#q-how-do-i-upgrade-the-os">github上有文章写</a>，笔者认为，直接集群级别强制升级最简单。当然，不同项目，不同情况，需要根据情况分析。</p>
+        <p>We have compiled rhcos, so how to apply it to the openshift4
+        cluster, generally speaking, there are 3 ways, <a
+        href="https://github.com/openshift/os/blob/master/docs/faq.md#q-how-do-i-upgrade-the-os">there
+        is an article on github</a>, the author believes that the direct
+        cluster level forced upgrade is the easiest. Of course,
+        different projects and different situations need to be analyzed
+        according to the situation.</p>
+        <h2 id="直接强制升级-direct-forced-upgrade">直接强制升级 /
+        Direct forced upgrade</h2>
+        <div class="sourceCode" id="cb4"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># test upgrade</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> adm upgrade <span class="dt">\</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">--to-image</span><span class="op">=</span>quay.io/wangzheng422/ocp@sha256:b6d6fd197df2acf3ceafe60a7cc1023e7b192dffb43c675ddfcdfb4322828ddb <span class="dt">\</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">--allow-explicit-upgrade</span> <span class="at">--allow-upgrade-with-warnings</span><span class="op">=</span>true <span class="at">--force</span><span class="op">=</span>true </span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="co"># after cluster upgrade</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="co"># check the os-release</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> /etc/os-release </span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a><span class="co"># NAME=&quot;Red Hat Enterprise Linux CoreOS&quot;</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="co"># VERSION=&quot;410.84.202208220734-wzh-0&quot;</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a><span class="co"># ID=&quot;rhcos&quot;</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a><span class="co"># ID_LIKE=&quot;rhel fedora&quot;</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a><span class="co"># VERSION_ID=&quot;4.10&quot;</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a><span class="co"># PLATFORM_ID=&quot;platform:el8&quot;</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a><span class="co"># PRETTY_NAME=&quot;Red Hat Enterprise Linux CoreOS 410.84.202208220734-wzh-0 (Ootpa)&quot;</span></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a><span class="co"># ANSI_COLOR=&quot;0;31&quot;</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a><span class="co"># CPE_NAME=&quot;cpe:/o:redhat:enterprise_linux:8::coreos&quot;</span></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a><span class="co"># HOME_URL=&quot;https://www.redhat.com/&quot;</span></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a><span class="co"># DOCUMENTATION_URL=&quot;https://docs.openshift.com/container-platform/4.10/&quot;</span></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a><span class="co"># BUG_REPORT_URL=&quot;https://bugzilla.redhat.com/&quot;</span></span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a><span class="co"># REDHAT_BUGZILLA_PRODUCT=&quot;OpenShift Container Platform&quot;</span></span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a><span class="co"># REDHAT_BUGZILLA_PRODUCT_VERSION=&quot;4.10&quot;</span></span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a><span class="co"># REDHAT_SUPPORT_PRODUCT=&quot;OpenShift Container Platform&quot;</span></span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a><span class="co"># REDHAT_SUPPORT_PRODUCT_VERSION=&quot;4.10&quot;</span></span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a><span class="co"># OPENSHIFT_VERSION=&quot;4.10&quot;</span></span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a><span class="co"># RHEL_VERSION=&quot;8.4&quot;</span></span>
+<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a><span class="co"># OSTREE_VERSION=&#39;410.84.202208220734-wzh-0&#39;</span></span></code></pre></div>
+        <p>以下是截屏，这里是 os-release， 可以看到有 wzh 的标记：</p>
+        <p><img src="imgs/2022-08-22-19-54-42.png" /></p>
+        <p>这里是在 rhcos 上直接运行 htop 的界面：</p>
+        <p><img src="imgs/2022-08-22-20-27-20.png" /></p>
+        <h1 id="analyze-the-content">analyze the content</h1>
+        <p>我们可以 dump 这个 machine-os-content
+        的内容出来仔细分析。</p>
+        <p>We can dump the contents of this machine-os-content and
+        analyze it carefully.</p>
+        <div class="sourceCode" id="cb5"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="bu">export</span> <span class="va">BUILDNUMBER</span><span class="op">=</span>4.10.28</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="fu">wget</span> <span class="at">-O</span> openshift-client-linux-<span class="va">${BUILDNUMBER}</span>.tar.gz https://mirror.openshift.com/pub/openshift-v4/clients/ocp/<span class="va">${BUILDNUMBER}</span>/openshift-client-linux-<span class="va">${BUILDNUMBER}</span>.tar.gz</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="fu">wget</span> <span class="at">-O</span> openshift-install-linux-<span class="va">${BUILDNUMBER}</span>.tar.gz https://mirror.openshift.com/pub/openshift-v4/clients/ocp/<span class="va">${BUILDNUMBER}</span>/openshift-install-linux-<span class="va">${BUILDNUMBER}</span>.tar.gz</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="fu">tar</span> <span class="at">-xzf</span> openshift-client-linux-<span class="va">${BUILDNUMBER}</span>.tar.gz <span class="at">-C</span> /usr/local/sbin/</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="fu">tar</span> <span class="at">-xzf</span> openshift-install-linux-<span class="va">${BUILDNUMBER}</span>.tar.gz <span class="at">-C</span> /usr/local/sbin/</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a><span class="fu">mkdir</span> <span class="at">-p</span> /data/ostree</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> /data/ostree</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> image extract <span class="at">--path</span> /:/data/ostree <span class="at">--registry-config</span> /run/user/0/containers/auth.json quay.io/wangzheng422/ocp:410.84.wzh.202208211552-0</span></code></pre></div>
+        <h1 id="end">end</h1>
+      </article>
+    </div>
+      </main>
+
+  <footer>
+    <p>
+      Licensed under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank"
+        rel="noopener">CC-BY-NC-SA 4.0</a>
+      &nbsp;·&nbsp;
+      <a href="https://github.com/wangzheng422/docker_env" target="_blank" rel="noopener">wangzheng422/docker_env</a>
+    </p>
+  </footer>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: false, theme: 'dark' });
+
+    const SITE_BUILD_ID = 'fbe91b569ae8';
+    const SITE_HOME_URL = '../../../index.html';
+
+    const getBuildIdFromHtml = (html) => {
+      const match = String(html).match(/<meta[^>]+name=["']site-build-id["'][^>]+content=["']([^"']+)["']/i)
+        || String(html).match(/<meta[^>]+content=["']([^"']+)["'][^>]+name=["']site-build-id["']/i);
+      return match ? match[1] : '';
+    };
+
+    const checkForSiteUpdate = async () => {
+      if (!SITE_BUILD_ID || window.location.protocol === 'file:') return;
+      try {
+        const probeUrl = new URL(SITE_HOME_URL || './index.html', window.location.href);
+        probeUrl.searchParams.set('site_cache_probe', Date.now().toString());
+        const response = await fetch(probeUrl.toString(), { cache: 'no-store' });
+        if (!response.ok) return;
+        const latestBuildId = getBuildIdFromHtml(await response.text());
+        if (!latestBuildId || latestBuildId === SITE_BUILD_ID) return;
+        if (sessionStorage.getItem('site-build-refresh') === latestBuildId) return;
+        sessionStorage.setItem('site-build-refresh', latestBuildId);
+        const freshUrl = new URL(window.location.href);
+        freshUrl.searchParams.set('v', latestBuildId);
+        window.location.replace(freshUrl.toString());
+      } catch (error) {
+        // Network errors should not block reading the current page.
+      }
+    };
+
+    const versionedLocalUrl = (rawUrl) => {
+      if (!rawUrl || /^(https?:)?\/\//i.test(rawUrl) || /^(data|blob|mailto):/i.test(rawUrl)) return rawUrl;
+      const url = new URL(rawUrl, window.location.href);
+      if (url.searchParams.has('v')) return rawUrl;
+      url.searchParams.set('v', SITE_BUILD_ID);
+      return url.toString();
+    };
+
+    const cacheBustPageAssets = () => {
+      document.querySelectorAll('img[src], video[src], audio[src], source[src]').forEach((node) => {
+        const src = node.getAttribute('src');
+        const versioned = versionedLocalUrl(src);
+        if (versioned !== src) node.setAttribute('src', versioned);
+      });
+    };
+
+    const updateReadingProgress = () => {
+      const progress = document.querySelector('.reading-progress');
+      if (!progress) return;
+      const scrollable = document.documentElement.scrollHeight - window.innerHeight;
+      const ratio = scrollable > 0 ? window.scrollY / scrollable : 0;
+      progress.style.transform = 'scaleX(' + Math.min(1, Math.max(0, ratio)) + ')';
+    };
+
+    const topicFor = (text, href) => {
+      const haystack = (text + ' ' + href).toLowerCase();
+      if (/developers\.redhat\.com|redhatquickcourses|github\.com\/redhatquickcourses/.test(haystack)) return 'Red Hat';
+      if (/ai|llm|gpu|vllm|llama|model|rhaiis/.test(haystack)) return 'AI';
+      if (/network|ovn|bgp|dns|egress|ingress|metallb|nic|route/.test(haystack)) return 'Network';
+      if (/cert|tls|sso|keycloak|rhbk|security|compliance/.test(haystack)) return 'Security';
+      if (/perf|profile|throttling|heap|debug/.test(haystack)) return 'Performance';
+      if (/install|ipi|upi|sno|disconnected|bootstrap/.test(haystack)) return 'Install';
+      if (/rhel|coreos|rhcos|kernel|rpm|ostree/.test(haystack)) return 'RHEL';
+      if (/backup|storage|nfs|odf|ocs|ceph|dr/.test(haystack)) return 'Storage';
+      if (/pipeline|gitops|ansible|aap|rhdh|devops/.test(haystack)) return 'DevOps';
+      return 'OpenShift';
+    };
+
+    const yearFor = (text, href) => {
+      const match = (text + ' ' + href).match(/20\d{2}/);
+      return match ? match[0] : 'Notes';
+    };
+
+    const importantExternal = (href) =>
+      /developers\.redhat\.com|redhatquickcourses\.github\.io/i.test(href);
+
+    const titleForLink = (link) => {
+      const href = link.getAttribute('href') || '';
+      const directText = link.textContent.trim().replace(/\s+/g, ' ');
+      if (!/^https?:\/\//.test(directText)) return directText;
+      const parentItem = link.closest('ul')?.parentElement;
+      if (parentItem) {
+        const clone = parentItem.cloneNode(true);
+        clone.querySelectorAll('ul').forEach((nested) => nested.remove());
+        const parentText = clone.textContent.trim().replace(/\s+/g, ' ');
+        if (parentText) {
+          return parentText;
+        }
+      }
+      return directText;
+    };
+
+    const escapeHtml = (value) => String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+
+    const enhanceHome = () => {
+      if (!document.body.classList.contains('page-index')) return;
+      const source = document.querySelector('.home-source');
+      const grid = document.getElementById('note-grid');
+      const stats = document.getElementById('console-stats');
+      const externalPanel = document.getElementById('external-panel');
+      const topicStrip = document.getElementById('topic-strip');
+      const search = document.getElementById('console-search');
+      if (!source || !grid || !stats || !externalPanel || !topicStrip || !search) return;
+
+      const seen = new Set();
+      const links = Array.from(source.querySelectorAll('a[href]'))
+        .map((link) => {
+          const href = link.getAttribute('href') || '';
+          const text = titleForLink(link);
+          return { text, href, topic: topicFor(text, href), year: yearFor(text, href) };
+        });
+      const notes = links
+        .filter((note) => note.text && !note.href.startsWith('http') && !seen.has(note.href) && seen.add(note.href));
+      const externalLinks = links
+        .filter((note) => note.text && importantExternal(note.href));
+
+      const topics = ['All', ...Array.from(new Set(notes.map((note) => note.topic))).sort()];
+      let activeTopic = 'All';
+
+      const renderStats = () => {
+        const years = notes.map((note) => note.year).filter((year) => year.length === 4 && /^\d{4}/.test(year));
+        const latest = years.length ? Math.max(...years.map(Number)) : 'N/A';
+        const oldest = years.length ? Math.min(...years.map(Number)) : 'N/A';
+        stats.innerHTML = [
+          ['Notes', notes.length],
+          ['Resources', externalLinks.length],
+          ['Topics', topics.length - 1],
+          ['Latest', latest],
+        ].map(([label, value]) => '<div class="stat-tile"><span>' + label + '</span><strong>' + value + '</strong></div>').join('');
+        const signal = document.getElementById('signal-count');
+        if (signal) signal.textContent = notes.length + ' links indexed';
+      };
+
+      const renderExternal = () => {
+        externalPanel.innerHTML =
+          '<div class="section-heading"><span>Published / Learning</span><strong>Red Hat resources</strong></div>' +
+          '<div class="external-grid">' +
+          externalLinks.map((note) =>
+            '<a class="resource-card" href="' + escapeHtml(note.href) + '" target="_blank" rel="noopener">' +
+            '<span class="note-meta"><span>' + escapeHtml(note.year) + '</span><span>' + escapeHtml(note.topic) + '</span></span>' +
+            '<strong>' + escapeHtml(note.text) + '</strong>' +
+            '<small>' + escapeHtml(note.href) + '</small>' +
+            '</a>'
+          ).join('') +
+          '</div>';
+      };
+
+      const renderTopics = () => {
+        topicStrip.innerHTML = topics.map((topic) => '<button class="topic-chip' + (topic === activeTopic ? ' active' : '') + '" type="button" data-topic="' + escapeHtml(topic) + '">' + escapeHtml(topic) + '</button>').join('');
+        topicStrip.querySelectorAll('button').forEach((button) => {
+          button.addEventListener('click', () => {
+            activeTopic = button.dataset.topic || 'All';
+            renderTopics();
+            renderCards();
+          });
+        });
+      };
+
+      const renderCards = () => {
+        const query = search.value.trim().toLowerCase();
+        const filtered = notes.filter((note) => {
+          const topicMatch = activeTopic === 'All' || note.topic === activeTopic;
+          const queryMatch = !query || (note.text + ' ' + note.href + ' ' + note.topic + ' ' + note.year).toLowerCase().includes(query);
+          return topicMatch && queryMatch;
+        });
+        grid.innerHTML = filtered.map((note) =>
+          '<a class="note-card" href="' + escapeHtml(note.href) + '">' +
+          '<span class="note-meta"><span>' + escapeHtml(note.year) + '</span><span>' + escapeHtml(note.topic) + '</span></span>' +
+          '<strong>' + escapeHtml(note.text) + '</strong>' +
+          '<small>' + escapeHtml(note.href) + '</small>' +
+          '</a>'
+        ).join('') || '<p class="empty-state">No matching notes.</p>';
+      };
+
+      const drawMap = () => {
+        const canvas = document.getElementById('knowledge-canvas');
+        if (!(canvas instanceof HTMLCanvasElement)) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        const width = canvas.width;
+        const height = canvas.height;
+        const nodes = notes.slice(0, 44).map((note, index) => {
+          const angle = (index / 44) * Math.PI * 2;
+          const ring = 90 + (index % 5) * 22;
+          return {
+            x: width / 2 + Math.cos(angle) * ring,
+            y: height / 2 + Math.sin(angle) * ring * 0.72,
+            topic: note.topic,
+          };
+        });
+        ctx.clearRect(0, 0, width, height);
+        ctx.strokeStyle = 'rgba(88, 166, 255, 0.14)';
+        ctx.lineWidth = 1;
+        nodes.forEach((node, index) => {
+          const next = nodes[(index + 7) % nodes.length];
+          ctx.beginPath();
+          ctx.moveTo(node.x, node.y);
+          ctx.lineTo(next.x, next.y);
+          ctx.stroke();
+        });
+        const palette = {
+          AI: '#a371f7',
+          Network: '#39d0d8',
+          Security: '#ff7b72',
+          Performance: '#f2cc60',
+          Install: '#7ee787',
+          RHEL: '#ff7b72',
+          Storage: '#d2a8ff',
+          DevOps: '#ffa657',
+          OpenShift: '#58a6ff',
+        };
+        nodes.forEach((node) => {
+          ctx.fillStyle = palette[node.topic] || '#58a6ff';
+          ctx.beginPath();
+          ctx.arc(node.x, node.y, 3.4, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      };
+
+      search.addEventListener('input', renderCards);
+      renderStats();
+      renderExternal();
+      renderTopics();
+      renderCards();
+      drawMap();
+      document.body.classList.add('home-enhanced');
+    };
+
+    const enhanceCodeBlocks = () => {
+      document.querySelectorAll('pre').forEach((pre) => {
+        if (pre.classList.contains('mermaid') || pre.querySelector('.copy-code')) return;
+        const button = document.createElement('button');
+        button.className = 'copy-code';
+        button.type = 'button';
+        button.textContent = 'Copy';
+        button.addEventListener('click', async () => {
+          await navigator.clipboard.writeText(pre.textContent || '');
+          button.textContent = 'Copied';
+          setTimeout(() => { button.textContent = 'Copy'; }, 1200);
+        });
+        pre.appendChild(button);
+      });
+    };
+
+    window.addEventListener('scroll', updateReadingProgress, { passive: true });
+    window.addEventListener('pageshow', (event) => {
+      if (event.persisted) checkForSiteUpdate();
+    });
+    document.addEventListener('DOMContentLoaded', async () => {
+      checkForSiteUpdate();
+      cacheBustPageAssets();
+      updateReadingProgress();
+      enhanceHome();
+      enhanceCodeBlocks();
+      // pandoc 输出 mermaid 为 <pre class="mermaid"><code>...</code></pre>
+      // 需要转成 <div class="mermaid">...</div> 供 mermaid.js 渲染
+      document.querySelectorAll('pre.mermaid').forEach(pre => {
+        const div = document.createElement('div');
+        div.classList.add('mermaid');
+        div.textContent = pre.textContent;
+        pre.replaceWith(div);
+      });
+      // 也处理 <pre><code class="language-mermaid"> 形式（备用）
+      document.querySelectorAll('pre code.language-mermaid').forEach(code => {
+        const div = document.createElement('div');
+        div.classList.add('mermaid');
+        div.textContent = code.textContent;
+        code.closest('pre').replaceWith(div);
+      });
+      await mermaid.run();
+    });
+  </script>
+</body>
+
+</html>

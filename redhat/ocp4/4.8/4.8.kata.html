@@ -1,0 +1,1628 @@
+<!DOCTYPE html>
+<html lang="zh" dir="ltr">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="generator" content="pandoc" />
+  <meta name="site-build-id" content="fbe91b569ae8" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <title>Kata / sandbox container in openshift 4.8 | wandering.star notes</title>
+  <meta name="description"
+    content="Wandering field notes on OpenShift, RHEL, AI infrastructure, and platform operations." />
+  <!-- Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-E3FRMDB7L2"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-E3FRMDB7L2');
+  </script>
+  <style>
+  html {
+    color: #1a1a1a;
+    background-color: #fdfdfd;
+  }
+  body {
+    margin: 0 auto;
+    max-width: 36em;
+    padding-left: 50px;
+    padding-right: 50px;
+    padding-top: 50px;
+    padding-bottom: 50px;
+    hyphens: auto;
+    overflow-wrap: break-word;
+    text-rendering: optimizeLegibility;
+    font-kerning: normal;
+  }
+  @media (max-width: 600px) {
+    body {
+      font-size: 0.9em;
+      padding: 12px;
+    }
+    h1 {
+      font-size: 1.8em;
+    }
+  }
+  @media print {
+    html {
+      background-color: white;
+    }
+    body {
+      background-color: transparent;
+      color: black;
+      font-size: 12pt;
+    }
+    p, h2, h3 {
+      orphans: 3;
+      widows: 3;
+    }
+    h2, h3, h4 {
+      page-break-after: avoid;
+    }
+  }
+  p {
+    margin: 1em 0;
+  }
+  a {
+    color: #1a1a1a;
+  }
+  a:visited {
+    color: #1a1a1a;
+  }
+  img {
+    max-width: 100%;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.4em;
+  }
+  h5, h6 {
+    font-size: 1em;
+    font-style: italic;
+  }
+  h6 {
+    font-weight: normal;
+  }
+  ol, ul {
+    padding-left: 1.7em;
+    margin-top: 1em;
+  }
+  li > ol, li > ul {
+    margin-top: 0;
+  }
+  blockquote {
+    margin: 1em 0 1em 1.7em;
+    padding-left: 1em;
+    border-left: 2px solid #e6e6e6;
+    color: #606060;
+  }
+  code {
+    font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+    font-size: 85%;
+    margin: 0;
+    hyphens: manual;
+  }
+  pre {
+    margin: 1em 0;
+    overflow: auto;
+  }
+  pre code {
+    padding: 0;
+    overflow: visible;
+    overflow-wrap: normal;
+  }
+  .sourceCode {
+   background-color: transparent;
+   overflow: visible;
+  }
+  hr {
+    background-color: #1a1a1a;
+    border: none;
+    height: 1px;
+    margin: 1em 0;
+  }
+  table {
+    margin: 1em 0;
+    border-collapse: collapse;
+    width: 100%;
+    overflow-x: auto;
+    display: block;
+    font-variant-numeric: lining-nums tabular-nums;
+  }
+  table caption {
+    margin-bottom: 0.75em;
+  }
+  tbody {
+    margin-top: 0.5em;
+    border-top: 1px solid #1a1a1a;
+    border-bottom: 1px solid #1a1a1a;
+  }
+  th {
+    border-top: 1px solid #1a1a1a;
+    padding: 0.25em 0.5em 0.25em 0.5em;
+  }
+  td {
+    padding: 0.125em 0.5em 0.25em 0.5em;
+  }
+  header {
+    margin-bottom: 4em;
+    text-align: center;
+  }
+  #TOC li {
+    list-style: none;
+  }
+  #TOC ul {
+    padding-left: 1.3em;
+  }
+  #TOC > ul {
+    padding-left: 0;
+  }
+  #TOC a:not(:hover) {
+    text-decoration: none;
+  }
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  div.columns{display: flex; gap: min(4vw, 1.5em);}
+  div.column{flex: auto; overflow-x: auto;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  /* The extra [class] is a hack that increases specificity enough to
+     override a similar rule in reveal.js */
+  ul.task-list[class]{list-style: none;}
+  ul.task-list li input[type="checkbox"] {
+    font-size: inherit;
+    width: 0.8em;
+    margin: 0 0.8em 0.2em -1.6em;
+    vertical-align: middle;
+  }
+  .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  /* CSS for syntax highlighting */
+  pre > code.sourceCode { white-space: pre; position: relative; }
+  pre > code.sourceCode > span { line-height: 1.25; }
+  pre > code.sourceCode > span:empty { height: 1.2em; }
+  .sourceCode { overflow: visible; }
+  code.sourceCode > span { color: inherit; text-decoration: inherit; }
+  div.sourceCode { margin: 1em 0; }
+  pre.sourceCode { margin: 0; }
+  @media screen {
+  div.sourceCode { overflow: auto; }
+  }
+  @media print {
+  pre > code.sourceCode { white-space: pre-wrap; }
+  pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+  }
+  pre.numberSource code
+    { counter-reset: source-line 0; }
+  pre.numberSource code > span
+    { position: relative; left: -4em; counter-increment: source-line; }
+  pre.numberSource code > span > a:first-child::before
+    { content: counter(source-line);
+      position: relative; left: -1em; text-align: right; vertical-align: baseline;
+      border: none; display: inline-block;
+      -webkit-touch-callout: none; -webkit-user-select: none;
+      -khtml-user-select: none; -moz-user-select: none;
+      -ms-user-select: none; user-select: none;
+      padding: 0 4px; width: 4em;
+    }
+  pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+  div.sourceCode
+    { color: #cccccc; background-color: #303030; }
+  @media screen {
+  pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+  }
+  code span.al { color: #ffcfaf; } /* Alert */
+  code span.an { color: #7f9f7f; font-weight: bold; } /* Annotation */
+  code span.at { } /* Attribute */
+  code span.bn { color: #dca3a3; } /* BaseN */
+  code span.bu { } /* BuiltIn */
+  code span.cf { color: #f0dfaf; } /* ControlFlow */
+  code span.ch { color: #dca3a3; } /* Char */
+  code span.cn { color: #dca3a3; font-weight: bold; } /* Constant */
+  code span.co { color: #7f9f7f; } /* Comment */
+  code span.cv { color: #7f9f7f; font-weight: bold; } /* CommentVar */
+  code span.do { color: #7f9f7f; } /* Documentation */
+  code span.dt { color: #dfdfbf; } /* DataType */
+  code span.dv { color: #dcdccc; } /* DecVal */
+  code span.er { color: #c3bf9f; } /* Error */
+  code span.ex { } /* Extension */
+  code span.fl { color: #c0bed1; } /* Float */
+  code span.fu { color: #efef8f; } /* Function */
+  code span.im { } /* Import */
+  code span.in { color: #7f9f7f; font-weight: bold; } /* Information */
+  code span.kw { color: #f0dfaf; } /* Keyword */
+  code span.op { color: #f0efd0; } /* Operator */
+  code span.ot { color: #efef8f; } /* Other */
+  code span.pp { color: #ffcfaf; font-weight: bold; } /* Preprocessor */
+  code span.sc { color: #dca3a3; } /* SpecialChar */
+  code span.ss { color: #cc9393; } /* SpecialString */
+  code span.st { color: #cc9393; } /* String */
+  code span.va { } /* Variable */
+  code span.vs { color: #cc9393; } /* VerbatimString */
+  code span.wa { color: #7f9f7f; font-weight: bold; } /* Warning */
+  </style>
+  <link rel="stylesheet" href="../../../style.css?v=fbe91b569ae8" />
+  </head>
+
+<body class="page-article">
+  <div class="reading-progress" aria-hidden="true"></div>
+  <div class="console-backdrop" aria-hidden="true"></div>
+  <nav class="site-nav">
+    <div class="nav-inner">
+      <a class="nav-brand" href="../../../index.html">wandering.star<span>notes</span></a>
+      <div class="nav-links">
+        <a href="https://github.com/wangzheng422/docker_env" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://www.youtube.com/@wangzheng422" target="_blank" rel="noopener">YouTube</a>
+      </div>
+    </div>
+  </nav>
+
+  <main>
+            <a class="back-link" href="../../../index.html">← Back to Index</a>
+        <div class="article-layout">
+            <aside class="toc-panel">
+        <div class="toc-title">ON THIS PAGE</div>
+        <ul>
+        <li><a href="#kata-sandbox-container-in-openshift-4.8"
+        id="toc-kata-sandbox-container-in-openshift-4.8">Kata / sandbox
+        container in openshift 4.8</a></li>
+        <li><a href="#try-to-debug" id="toc-try-to-debug">try to
+        debug</a></li>
+        <li><a href="#研究一下网络"
+        id="toc-研究一下网络">研究一下网络</a></li>
+        <li><a href="#qemu-kiwi-rpm-sourcing"
+        id="toc-qemu-kiwi-rpm-sourcing">qemu-kiwi rpm sourcing</a></li>
+        <li><a href="#end" id="toc-end">end</a></li>
+        </ul>
+      </aside>
+            <article class="markdown-body article-shell">
+        <h1 id="kata-sandbox-container-in-openshift-4.8">Kata / sandbox
+        container in openshift 4.8</h1>
+        <p>红帽 openshift 4.8 容器平台，最新支持了kata，或者叫沙盒容器,
+        是在物理机上启动vm，然后在vm里面启动容器进程的技术，初衷是为了进一步提高安全性，消除用户对容器是否存在逃逸问题的顾虑，虽然还是TP阶段，但是已经可以一探究竟啦。</p>
+        <p>https://docs.openshift.com/container-platform/4.8/sandboxed_containers/understanding-sandboxed-containers.html</p>
+        <p>视频讲解:</p>
+        <p><a
+        href="https://www.bilibili.com/video/BV1Mg411V7ZX/"><kbd><img src="imgs/2021-08-29-15-02-56.png" width="600"></kbd></a></p>
+        <ul>
+        <li><a
+        href="https://www.bilibili.com/video/BV1Mg411V7ZX/">bilibili</a></li>
+        <li><a href="https://youtu.be/ygvpGZXnIRs">youtube</a></li>
+        </ul>
+        <p>首先我们来安装它，在operator hub里面选择sandbox
+        container，点击安装。 <img
+        src="imgs/2021-08-26-13-07-15.png" /></p>
+        <p>然后在operator里面创建一个kata
+        config，默认就可以，现在是TP阶段，也没什么花活。 <img
+        src="imgs/2021-08-26-13-13-26.png" /></p>
+        <p>创建好了以后，kata
+        operator就会在系统里面创建一些配置，我们来一个一个看一下。</p>
+        <div class="sourceCode" id="cb1"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 首先是runtime class，这个是指出了pod可以使用kata作为runtime, </span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="co"># 注意礼貌的overhead，这个配置的意思，是kata有qemu作为虚拟机，所以会有一些额外的消耗，</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co"># 这些消耗在scheduling的时候，需要计算，这里就把这个计算量静态的配置进去。。。</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co"># 虽然我觉得这个不太灵活，但是目前就是这样的。</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> get runtimeclass/kata <span class="at">-o</span> yaml</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="co"># apiVersion: node.k8s.io/v1</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co"># handler: kata</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="co"># kind: RuntimeClass</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co"># metadata:</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="co">#   name: kata</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="co"># overhead:</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="co">#   podFixed:</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="co">#     cpu: 250m</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="co">#     memory: 350Mi</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="co"># scheduling:</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="co">#   nodeSelector:</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="co">#     node-role.kubernetes.io/worker: &quot;&quot;</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a><span class="co"># ocp会把kata通过machine config的方式，配置到节点里面去</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> get mc</span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a><span class="co"># NAME                                               GENERATEDBYCONTROLLER                      IGNITIONVERSION   AGE</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a><span class="co"># 00-master                                          723a8a4992f42530af95202e51e5a940d2a3d169   3.2.0             15h</span></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a><span class="co"># 00-worker                                          723a8a4992f42530af95202e51e5a940d2a3d169   3.2.0             15h</span></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a><span class="co"># 01-master-container-runtime                        723a8a4992f42530af95202e51e5a940d2a3d169   3.2.0             15h</span></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a><span class="co"># 01-master-kubelet                                  723a8a4992f42530af95202e51e5a940d2a3d169   3.2.0             15h</span></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a><span class="co"># 01-worker-container-runtime                        723a8a4992f42530af95202e51e5a940d2a3d169   3.2.0             15h</span></span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a><span class="co"># 01-worker-kubelet                                  723a8a4992f42530af95202e51e5a940d2a3d169   3.2.0             15h</span></span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a><span class="co"># 50-enable-sandboxed-containers-extension                                                      3.2.0             51m</span></span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a><span class="co"># 99-master-chrony-configuration                                                                2.2.0             15h</span></span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a><span class="co"># 99-master-container-registries                                                                3.1.0             15h</span></span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a><span class="co"># 99-master-generated-registries                     723a8a4992f42530af95202e51e5a940d2a3d169   3.2.0             15h</span></span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a><span class="co"># 99-master-ssh                                                                                 3.2.0             15h</span></span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a><span class="co"># 99-worker-chrony-configuration                                                                2.2.0             15h</span></span>
+<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a><span class="co"># 99-worker-container-registries                                                                3.1.0             15h</span></span>
+<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a><span class="co"># 99-worker-generated-registries                     723a8a4992f42530af95202e51e5a940d2a3d169   3.2.0             15h</span></span>
+<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a><span class="co"># 99-worker-ssh                                                                                 3.2.0             15h</span></span>
+<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a><span class="co"># rendered-master-8c1e34a69aa4b919b6f2eec350570491   723a8a4992f42530af95202e51e5a940d2a3d169   3.2.0             15h</span></span>
+<span id="cb1-38"><a href="#cb1-38" aria-hidden="true" tabindex="-1"></a><span class="co"># rendered-worker-4afd90ddf39588aae385def4519e8da9   723a8a4992f42530af95202e51e5a940d2a3d169   3.2.0             51m</span></span>
+<span id="cb1-39"><a href="#cb1-39" aria-hidden="true" tabindex="-1"></a><span class="co"># rendered-worker-5abff4814eef2f9bc7535e5cbb10564c   723a8a4992f42530af95202e51e5a940d2a3d169   3.2.0             15h</span></span>
+<span id="cb1-40"><a href="#cb1-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-41"><a href="#cb1-41" aria-hidden="true" tabindex="-1"></a><span class="co"># 那这个machine config里面是什么呢？我们看一看</span></span>
+<span id="cb1-42"><a href="#cb1-42" aria-hidden="true" tabindex="-1"></a><span class="co"># 原来是加了一个extension, </span></span>
+<span id="cb1-43"><a href="#cb1-43" aria-hidden="true" tabindex="-1"></a><span class="co"># 经过查看源代码，这个sandboxed-containers extension就是对应了kata-containers rpm</span></span>
+<span id="cb1-44"><a href="#cb1-44" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> get mc/50-enable-sandboxed-containers-extension <span class="at">-o</span> yaml</span>
+<span id="cb1-45"><a href="#cb1-45" aria-hidden="true" tabindex="-1"></a><span class="co"># apiVersion: machineconfiguration.openshift.io/v1</span></span>
+<span id="cb1-46"><a href="#cb1-46" aria-hidden="true" tabindex="-1"></a><span class="co"># kind: MachineConfig</span></span>
+<span id="cb1-47"><a href="#cb1-47" aria-hidden="true" tabindex="-1"></a><span class="co"># metadata:</span></span>
+<span id="cb1-48"><a href="#cb1-48" aria-hidden="true" tabindex="-1"></a><span class="co">#   labels:</span></span>
+<span id="cb1-49"><a href="#cb1-49" aria-hidden="true" tabindex="-1"></a><span class="co">#     app: example-kataconfig</span></span>
+<span id="cb1-50"><a href="#cb1-50" aria-hidden="true" tabindex="-1"></a><span class="co">#     machineconfiguration.openshift.io/role: worker</span></span>
+<span id="cb1-51"><a href="#cb1-51" aria-hidden="true" tabindex="-1"></a><span class="co">#   name: 50-enable-sandboxed-containers-extension</span></span>
+<span id="cb1-52"><a href="#cb1-52" aria-hidden="true" tabindex="-1"></a><span class="co"># spec:</span></span>
+<span id="cb1-53"><a href="#cb1-53" aria-hidden="true" tabindex="-1"></a><span class="co">#   config:</span></span>
+<span id="cb1-54"><a href="#cb1-54" aria-hidden="true" tabindex="-1"></a><span class="co">#     ignition:</span></span>
+<span id="cb1-55"><a href="#cb1-55" aria-hidden="true" tabindex="-1"></a><span class="co">#       version: 3.2.0</span></span>
+<span id="cb1-56"><a href="#cb1-56" aria-hidden="true" tabindex="-1"></a><span class="co">#   extensions:</span></span>
+<span id="cb1-57"><a href="#cb1-57" aria-hidden="true" tabindex="-1"></a><span class="co">#   - sandboxed-containers</span></span>
+<span id="cb1-58"><a href="#cb1-58" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-59"><a href="#cb1-59" aria-hidden="true" tabindex="-1"></a><span class="co"># 我们到worker-0上看看，发现确实是安装了一个新的kata-containers rpm</span></span>
+<span id="cb1-60"><a href="#cb1-60" aria-hidden="true" tabindex="-1"></a><span class="ex">rpm-ostree</span> status</span>
+<span id="cb1-61"><a href="#cb1-61" aria-hidden="true" tabindex="-1"></a><span class="co"># State: idle</span></span>
+<span id="cb1-62"><a href="#cb1-62" aria-hidden="true" tabindex="-1"></a><span class="co"># Deployments:</span></span>
+<span id="cb1-63"><a href="#cb1-63" aria-hidden="true" tabindex="-1"></a><span class="co"># ● pivot://quay.io/openshift-release-dev/ocp-v4.0-art-dev@sha256:6ddc94ab09a4807ea3d1f29a922fe15f0b4ee863529258c486a04e7fb7b95a4b</span></span>
+<span id="cb1-64"><a href="#cb1-64" aria-hidden="true" tabindex="-1"></a><span class="co">#               CustomOrigin: Managed by machine-config-operator</span></span>
+<span id="cb1-65"><a href="#cb1-65" aria-hidden="true" tabindex="-1"></a><span class="co">#                    Version: 48.84.202108161759-0 (2021-08-16T18:03:02Z)</span></span>
+<span id="cb1-66"><a href="#cb1-66" aria-hidden="true" tabindex="-1"></a><span class="co">#            LayeredPackages: kata-containers</span></span>
+<span id="cb1-67"><a href="#cb1-67" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-68"><a href="#cb1-68" aria-hidden="true" tabindex="-1"></a><span class="co">#   pivot://quay.io/openshift-release-dev/ocp-v4.0-art-dev@sha256:6ddc94ab09a4807ea3d1f29a922fe15f0b4ee863529258c486a04e7fb7b95a4b</span></span>
+<span id="cb1-69"><a href="#cb1-69" aria-hidden="true" tabindex="-1"></a><span class="co">#               CustomOrigin: Managed by machine-config-operator</span></span>
+<span id="cb1-70"><a href="#cb1-70" aria-hidden="true" tabindex="-1"></a><span class="co">#                    Version: 48.84.202108161759-0 (2021-08-16T18:03:02Z)</span></span>
+<span id="cb1-71"><a href="#cb1-71" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-72"><a href="#cb1-72" aria-hidden="true" tabindex="-1"></a><span class="co"># 我们看看这个kata-containers rpm里面都提供了什么文件</span></span>
+<span id="cb1-73"><a href="#cb1-73" aria-hidden="true" tabindex="-1"></a><span class="ex">rpm</span> <span class="at">-ql</span> kata-containers</span>
+<span id="cb1-74"><a href="#cb1-74" aria-hidden="true" tabindex="-1"></a><span class="co"># /etc/crio/crio.conf.d/50-kata</span></span>
+<span id="cb1-75"><a href="#cb1-75" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/bin/containerd-shim-kata-v2</span></span>
+<span id="cb1-76"><a href="#cb1-76" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/bin/kata-collect-data.sh</span></span>
+<span id="cb1-77"><a href="#cb1-77" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/bin/kata-monitor</span></span>
+<span id="cb1-78"><a href="#cb1-78" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/bin/kata-runtime</span></span>
+<span id="cb1-79"><a href="#cb1-79" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/lib/.build-id</span></span>
+<span id="cb1-80"><a href="#cb1-80" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/lib/.build-id/0f</span></span>
+<span id="cb1-81"><a href="#cb1-81" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/lib/.build-id/0f/dc6751937c4b54a2e10ed431f7969bfd85d2d7</span></span>
+<span id="cb1-82"><a href="#cb1-82" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/lib/.build-id/5e</span></span>
+<span id="cb1-83"><a href="#cb1-83" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/lib/.build-id/5e/ad1e1eca5ab8111a23bf094caf6acbd3b9d7af</span></span>
+<span id="cb1-84"><a href="#cb1-84" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/lib/.build-id/67</span></span>
+<span id="cb1-85"><a href="#cb1-85" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/lib/.build-id/67/e5107c68c0e147f24f6e8f4e96104564b8f223</span></span>
+<span id="cb1-86"><a href="#cb1-86" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/lib/.build-id/be</span></span>
+<span id="cb1-87"><a href="#cb1-87" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/lib/.build-id/be/0add7df48b5f06a305e95497355666a1e04e39</span></span>
+<span id="cb1-88"><a href="#cb1-88" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/lib/systemd/system/kata-osbuilder-generate.service</span></span>
+<span id="cb1-89"><a href="#cb1-89" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/libexec/kata-containers</span></span>
+<span id="cb1-90"><a href="#cb1-90" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/libexec/kata-containers/VERSION</span></span>
+<span id="cb1-91"><a href="#cb1-91" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/libexec/kata-containers/agent</span></span>
+<span id="cb1-92"><a href="#cb1-92" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/libexec/kata-containers/agent/usr</span></span>
+<span id="cb1-93"><a href="#cb1-93" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/libexec/kata-containers/agent/usr/bin</span></span>
+<span id="cb1-94"><a href="#cb1-94" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/libexec/kata-containers/agent/usr/bin/kata-agent</span></span>
+<span id="cb1-95"><a href="#cb1-95" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/libexec/kata-containers/agent/usr/lib</span></span>
+<span id="cb1-96"><a href="#cb1-96" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/libexec/kata-containers/agent/usr/lib/systemd</span></span>
+<span id="cb1-97"><a href="#cb1-97" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/libexec/kata-containers/agent/usr/lib/systemd/system</span></span>
+<span id="cb1-98"><a href="#cb1-98" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/libexec/kata-containers/agent/usr/lib/systemd/system/kata-agent.service</span></span>
+<span id="cb1-99"><a href="#cb1-99" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/libexec/kata-containers/agent/usr/lib/systemd/system/kata-containers.target</span></span>
+<span id="cb1-100"><a href="#cb1-100" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/libexec/kata-containers/kata-netmon</span></span>
+<span id="cb1-101"><a href="#cb1-101" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/libexec/kata-containers/osbuilder</span></span>
+<span id="cb1-102"><a href="#cb1-102" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/libexec/kata-containers/osbuilder/dracut</span></span>
+<span id="cb1-103"><a href="#cb1-103" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/libexec/kata-containers/osbuilder/dracut/dracut.conf.d</span></span>
+<span id="cb1-104"><a href="#cb1-104" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/libexec/kata-containers/osbuilder/dracut/dracut.conf.d/05-base.conf</span></span>
+<span id="cb1-105"><a href="#cb1-105" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/libexec/kata-containers/osbuilder/dracut/dracut.conf.d/15-dracut-rhel.conf</span></span>
+<span id="cb1-106"><a href="#cb1-106" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/libexec/kata-containers/osbuilder/initrd-builder</span></span>
+<span id="cb1-107"><a href="#cb1-107" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/libexec/kata-containers/osbuilder/initrd-builder/README.md</span></span>
+<span id="cb1-108"><a href="#cb1-108" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/libexec/kata-containers/osbuilder/initrd-builder/initrd_builder.sh</span></span>
+<span id="cb1-109"><a href="#cb1-109" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/libexec/kata-containers/osbuilder/kata-osbuilder.sh</span></span>
+<span id="cb1-110"><a href="#cb1-110" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/libexec/kata-containers/osbuilder/nsdax</span></span>
+<span id="cb1-111"><a href="#cb1-111" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/libexec/kata-containers/osbuilder/rootfs-builder</span></span>
+<span id="cb1-112"><a href="#cb1-112" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/libexec/kata-containers/osbuilder/rootfs-builder/README.md</span></span>
+<span id="cb1-113"><a href="#cb1-113" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/libexec/kata-containers/osbuilder/rootfs-builder/rootfs.sh</span></span>
+<span id="cb1-114"><a href="#cb1-114" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/libexec/kata-containers/osbuilder/scripts</span></span>
+<span id="cb1-115"><a href="#cb1-115" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/libexec/kata-containers/osbuilder/scripts/lib.sh</span></span>
+<span id="cb1-116"><a href="#cb1-116" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/share/bash-completion/completions/kata-runtime</span></span>
+<span id="cb1-117"><a href="#cb1-117" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/share/doc/kata-containers</span></span>
+<span id="cb1-118"><a href="#cb1-118" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/share/doc/kata-containers/CONTRIBUTING.md</span></span>
+<span id="cb1-119"><a href="#cb1-119" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/share/doc/kata-containers/README.md</span></span>
+<span id="cb1-120"><a href="#cb1-120" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/share/kata-containers</span></span>
+<span id="cb1-121"><a href="#cb1-121" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/share/kata-containers/defaults</span></span>
+<span id="cb1-122"><a href="#cb1-122" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/share/kata-containers/defaults/configuration.toml</span></span>
+<span id="cb1-123"><a href="#cb1-123" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/share/licenses/kata-containers</span></span>
+<span id="cb1-124"><a href="#cb1-124" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/share/licenses/kata-containers/LICENSE</span></span>
+<span id="cb1-125"><a href="#cb1-125" aria-hidden="true" tabindex="-1"></a><span class="co"># /var/cache/kata-containers</span></span>
+<span id="cb1-126"><a href="#cb1-126" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-127"><a href="#cb1-127" aria-hidden="true" tabindex="-1"></a><span class="co"># 我们看看kata-containers 使用的虚拟机镜像</span></span>
+<span id="cb1-128"><a href="#cb1-128" aria-hidden="true" tabindex="-1"></a><span class="fu">ls</span> <span class="at">-Rl</span> /var/cache/kata-containers</span>
+<span id="cb1-129"><a href="#cb1-129" aria-hidden="true" tabindex="-1"></a><span class="co"># /var/cache/kata-containers:</span></span>
+<span id="cb1-130"><a href="#cb1-130" aria-hidden="true" tabindex="-1"></a><span class="co"># total 0</span></span>
+<span id="cb1-131"><a href="#cb1-131" aria-hidden="true" tabindex="-1"></a><span class="co"># lrwxrwxrwx. 1 root root 121 Aug 26 05:22 kata-containers-initrd.img -&gt; &#39;/var/cache/kata-containers/osbuilder-images/4.18.0-305.12.1.el8_4.x86_64/&quot;rhcos&quot;-kata-4.18.0-305.12.1.el8_4.x86_64.initrd&#39;</span></span>
+<span id="cb1-132"><a href="#cb1-132" aria-hidden="true" tabindex="-1"></a><span class="co"># drwxr-xr-x. 3 root root  42 Aug 26 05:22 osbuilder-images</span></span>
+<span id="cb1-133"><a href="#cb1-133" aria-hidden="true" tabindex="-1"></a><span class="co"># lrwxrwxrwx. 1 root root  50 Aug 26 05:22 vmlinuz.container -&gt; /lib/modules/4.18.0-305.12.1.el8_4.x86_64//vmlinuz</span></span>
+<span id="cb1-134"><a href="#cb1-134" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-135"><a href="#cb1-135" aria-hidden="true" tabindex="-1"></a><span class="co"># /var/cache/kata-containers/osbuilder-images:</span></span>
+<span id="cb1-136"><a href="#cb1-136" aria-hidden="true" tabindex="-1"></a><span class="co"># total 0</span></span>
+<span id="cb1-137"><a href="#cb1-137" aria-hidden="true" tabindex="-1"></a><span class="co"># drwxr-xr-x. 2 root root 62 Aug 26 05:22 4.18.0-305.12.1.el8_4.x86_64</span></span>
+<span id="cb1-138"><a href="#cb1-138" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-139"><a href="#cb1-139" aria-hidden="true" tabindex="-1"></a><span class="co"># /var/cache/kata-containers/osbuilder-images/4.18.0-305.12.1.el8_4.x86_64:</span></span>
+<span id="cb1-140"><a href="#cb1-140" aria-hidden="true" tabindex="-1"></a><span class="co"># total 19224</span></span>
+<span id="cb1-141"><a href="#cb1-141" aria-hidden="true" tabindex="-1"></a><span class="co"># -rw-r--r--. 1 root root 19682871 Aug 26 05:22 &#39;&quot;rhcos&quot;-kata-4.18.0-305.12.1.el8_4.x86_64.initrd&#39;</span></span>
+<span id="cb1-142"><a href="#cb1-142" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-143"><a href="#cb1-143" aria-hidden="true" tabindex="-1"></a><span class="co"># 我们看看kata和crio的结合点，就是crios的配置文件里面</span></span>
+<span id="cb1-144"><a href="#cb1-144" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> /etc/crio/crio.conf.d/50-kata</span>
+<span id="cb1-145"><a href="#cb1-145" aria-hidden="true" tabindex="-1"></a><span class="co"># [crio.runtime.runtimes.kata]</span></span>
+<span id="cb1-146"><a href="#cb1-146" aria-hidden="true" tabindex="-1"></a><span class="co">#   runtime_path = &quot;/usr/bin/containerd-shim-kata-v2&quot;</span></span>
+<span id="cb1-147"><a href="#cb1-147" aria-hidden="true" tabindex="-1"></a><span class="co">#   runtime_type = &quot;vm&quot;</span></span>
+<span id="cb1-148"><a href="#cb1-148" aria-hidden="true" tabindex="-1"></a><span class="co">#   runtime_root = &quot;/run/vc&quot;</span></span>
+<span id="cb1-149"><a href="#cb1-149" aria-hidden="true" tabindex="-1"></a><span class="co">#   privileged_without_host_devices = true</span></span>
+<span id="cb1-150"><a href="#cb1-150" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-151"><a href="#cb1-151" aria-hidden="true" tabindex="-1"></a><span class="co"># 我们能看到，系统启动的时候，会根据当前操作系统，编译一个kata使用的虚拟机镜像。</span></span>
+<span id="cb1-152"><a href="#cb1-152" aria-hidden="true" tabindex="-1"></a><span class="co"># 后面如果项目上有需要，可以在这个步骤上，做定制，做一个客户需要的虚拟机镜像。</span></span>
+<span id="cb1-153"><a href="#cb1-153" aria-hidden="true" tabindex="-1"></a><span class="ex">systemctl</span> cat kata-osbuilder-generate.service</span>
+<span id="cb1-154"><a href="#cb1-154" aria-hidden="true" tabindex="-1"></a><span class="co"># # /usr/lib/systemd/system/kata-osbuilder-generate.service</span></span>
+<span id="cb1-155"><a href="#cb1-155" aria-hidden="true" tabindex="-1"></a><span class="co"># [Unit]</span></span>
+<span id="cb1-156"><a href="#cb1-156" aria-hidden="true" tabindex="-1"></a><span class="co"># Description=Generate Kata appliance image for host kernel</span></span>
+<span id="cb1-157"><a href="#cb1-157" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-158"><a href="#cb1-158" aria-hidden="true" tabindex="-1"></a><span class="co"># [Service]</span></span>
+<span id="cb1-159"><a href="#cb1-159" aria-hidden="true" tabindex="-1"></a><span class="co"># Type=oneshot</span></span>
+<span id="cb1-160"><a href="#cb1-160" aria-hidden="true" tabindex="-1"></a><span class="co"># ExecStart=/usr/libexec/kata-containers/osbuilder/kata-osbuilder.sh -c</span></span>
+<span id="cb1-161"><a href="#cb1-161" aria-hidden="true" tabindex="-1"></a><span class="co"># ExecReload=/usr/libexec/kata-containers/osbuilder/kata-osbuilder.sh</span></span>
+<span id="cb1-162"><a href="#cb1-162" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-163"><a href="#cb1-163" aria-hidden="true" tabindex="-1"></a><span class="co"># [Install]</span></span>
+<span id="cb1-164"><a href="#cb1-164" aria-hidden="true" tabindex="-1"></a><span class="co"># WantedBy=kubelet.service</span></span>
+<span id="cb1-165"><a href="#cb1-165" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-166"><a href="#cb1-166" aria-hidden="true" tabindex="-1"></a><span class="co"># 我们来搞一个pod，测试一下。</span></span>
+<span id="cb1-167"><a href="#cb1-167" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> <span class="op">&lt;&lt; EOF</span> <span class="op">&gt;</span> /data/install/kata.yaml</span>
+<span id="cb1-168"><a href="#cb1-168" aria-hidden="true" tabindex="-1"></a><span class="st">apiVersion: apps/v1</span></span>
+<span id="cb1-169"><a href="#cb1-169" aria-hidden="true" tabindex="-1"></a><span class="st">kind: Deployment</span></span>
+<span id="cb1-170"><a href="#cb1-170" aria-hidden="true" tabindex="-1"></a><span class="st">metadata:</span></span>
+<span id="cb1-171"><a href="#cb1-171" aria-hidden="true" tabindex="-1"></a><span class="st">  name: mypod</span></span>
+<span id="cb1-172"><a href="#cb1-172" aria-hidden="true" tabindex="-1"></a><span class="st">  labels:</span></span>
+<span id="cb1-173"><a href="#cb1-173" aria-hidden="true" tabindex="-1"></a><span class="st">    app: mypod</span></span>
+<span id="cb1-174"><a href="#cb1-174" aria-hidden="true" tabindex="-1"></a><span class="st">spec:</span></span>
+<span id="cb1-175"><a href="#cb1-175" aria-hidden="true" tabindex="-1"></a><span class="st">  replicas: 1</span></span>
+<span id="cb1-176"><a href="#cb1-176" aria-hidden="true" tabindex="-1"></a><span class="st">  selector:</span></span>
+<span id="cb1-177"><a href="#cb1-177" aria-hidden="true" tabindex="-1"></a><span class="st">    matchLabels:</span></span>
+<span id="cb1-178"><a href="#cb1-178" aria-hidden="true" tabindex="-1"></a><span class="st">      app: mypod</span></span>
+<span id="cb1-179"><a href="#cb1-179" aria-hidden="true" tabindex="-1"></a><span class="st">  template:</span></span>
+<span id="cb1-180"><a href="#cb1-180" aria-hidden="true" tabindex="-1"></a><span class="st">    metadata:</span></span>
+<span id="cb1-181"><a href="#cb1-181" aria-hidden="true" tabindex="-1"></a><span class="st">      labels:</span></span>
+<span id="cb1-182"><a href="#cb1-182" aria-hidden="true" tabindex="-1"></a><span class="st">        app: mypod</span></span>
+<span id="cb1-183"><a href="#cb1-183" aria-hidden="true" tabindex="-1"></a><span class="st">    spec:</span></span>
+<span id="cb1-184"><a href="#cb1-184" aria-hidden="true" tabindex="-1"></a><span class="st">      runtimeClassName: kata</span></span>
+<span id="cb1-185"><a href="#cb1-185" aria-hidden="true" tabindex="-1"></a><span class="st">      containers:</span></span>
+<span id="cb1-186"><a href="#cb1-186" aria-hidden="true" tabindex="-1"></a><span class="st">      - name: mypod</span></span>
+<span id="cb1-187"><a href="#cb1-187" aria-hidden="true" tabindex="-1"></a><span class="st">        image: quay.io/wangzheng422/qimgs:centos7-test</span></span>
+<span id="cb1-188"><a href="#cb1-188" aria-hidden="true" tabindex="-1"></a><span class="st">        command:</span></span>
+<span id="cb1-189"><a href="#cb1-189" aria-hidden="true" tabindex="-1"></a><span class="st">          - sleep</span></span>
+<span id="cb1-190"><a href="#cb1-190" aria-hidden="true" tabindex="-1"></a><span class="st">          - infinity</span></span>
+<span id="cb1-191"><a href="#cb1-191" aria-hidden="true" tabindex="-1"></a><span class="op">EOF</span></span>
+<span id="cb1-192"><a href="#cb1-192" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> create <span class="at">-f</span> /data/install/kata.yaml</span>
+<span id="cb1-193"><a href="#cb1-193" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-194"><a href="#cb1-194" aria-hidden="true" tabindex="-1"></a><span class="co"># to restore</span></span>
+<span id="cb1-195"><a href="#cb1-195" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> delete <span class="at">-f</span> /data/install/kata.yaml</span>
+<span id="cb1-196"><a href="#cb1-196" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-197"><a href="#cb1-197" aria-hidden="true" tabindex="-1"></a><span class="co"># 到worker-0上，可以看到qemu进程。</span></span>
+<span id="cb1-198"><a href="#cb1-198" aria-hidden="true" tabindex="-1"></a><span class="fu">ps</span> aufx ww <span class="kw">|</span> <span class="fu">grep</span> qemu</span>
+<span id="cb1-199"><a href="#cb1-199" aria-hidden="true" tabindex="-1"></a><span class="co"># root       99994  0.0  0.0  12816  1076 pts/0    S+   06:22   0:00                      \_ grep --color=auto qemu</span></span>
+<span id="cb1-200"><a href="#cb1-200" aria-hidden="true" tabindex="-1"></a><span class="co"># root       93561  1.3  0.9 2466300 326724 ?      Sl   06:19   0:03 /usr/libexec/qemu-kiwi -name sandbox-42f003b365352a71ab87e8a1f49b1c301b6c3c856ec5520b4986aa8b9e43151f -uuid 1cd86e5c-3f86-45e8-bce2-96b16dce635a -machine q35,accel=kvm,kernel_irqchip -cpu host,pmu=off -qmp unix:/run/vc/vm/42f003b365352a71ab87e8a1f49b1c301b6c3c856ec5520b4986aa8b9e43151f/qmp.sock,server=on,wait=off -m 2048M,slots=10,maxmem=33122M -device pci-bridge,bus=pcie.0,id=pci-bridge-0,chassis_nr=1,shpc=on,addr=2 -device virtio-serial-pci,disable-modern=false,id=serial0 -device virtconsole,chardev=charconsole0,id=console0 -chardev socket,id=charconsole0,path=/run/vc/vm/42f003b365352a71ab87e8a1f49b1c301b6c3c856ec5520b4986aa8b9e43151f/console.sock,server=on,wait=off -device virtio-scsi-pci,id=scsi0,disable-modern=false -object rng-random,id=rng0,filename=/dev/urandom -device virtio-rng-pci,rng=rng0 -device vhost-vsock-pci,disable-modern=false,vhostfd=3,id=vsock-976011602,guest-cid=976011602 -chardev socket,id=char-b4b86634faff36bb,path=/run/vc/vm/42f003b365352a71ab87e8a1f49b1c301b6c3c856ec5520b4986aa8b9e43151f/vhost-fs.sock -device vhost-user-fs-pci,chardev=char-b4b86634faff36bb,tag=kataShared -netdev tap,id=network-0,vhost=on,vhostfds=4,fds=5 -device driver=virtio-net-pci,netdev=network-0,mac=0a:58:0a:fe:01:1a,disable-modern=false,mq=on,vectors=4 -rtc base=utc,driftfix=slew,clock=host -global kvm-pit.lost_tick_policy=discard -vga none -no-user-config -nodefaults -nographic --no-reboot -daemonize -object memory-backend-file,id=dimm1,size=2048M,mem-path=/dev/shm,share=on -numa node,memdev=dimm1 -kernel /usr/lib/modules/4.18.0-305.12.1.el8_4.x86_64/vmlinuz -initrd /var/cache/kata-containers/osbuilder-images/4.18.0-305.12.1.el8_4.x86_64/&quot;rhcos&quot;-kata-4.18.0-305.12.1.el8_4.x86_64.initrd -append tsc=reliable no_timer_check rcupdate.rcu_expedited=1 i8042.direct=1 i8042.dumbkbd=1 i8042.nopnp=1 i8042.noaux=1 noreplace-smp reboot=k console=hvc0 console=hvc1 cryptomgr.notests net.ifnames=0 pci=lastbus=0 quiet panic=1 nr_cpus=24 scsi_mod.scan=none -pidfile /run/vc/vm/42f003b365352a71ab87e8a1f49b1c301b6c3c856ec5520b4986aa8b9e43151f/pid -smp 1,cores=1,threads=1,sockets=24,maxcpus=24</span></span>
+<span id="cb1-201"><a href="#cb1-201" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-202"><a href="#cb1-202" aria-hidden="true" tabindex="-1"></a><span class="co"># 我们很好奇kata的详细配置，那么我们看看kata的配置文件在哪里</span></span>
+<span id="cb1-203"><a href="#cb1-203" aria-hidden="true" tabindex="-1"></a><span class="ex">kata-runtime</span> <span class="at">--show-default-config-paths</span></span>
+<span id="cb1-204"><a href="#cb1-204" aria-hidden="true" tabindex="-1"></a><span class="co"># /etc/kata-containers/configuration.toml</span></span>
+<span id="cb1-205"><a href="#cb1-205" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/share/kata-containers/defaults/configuration.toml</span></span>
+<span id="cb1-206"><a href="#cb1-206" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-207"><a href="#cb1-207" aria-hidden="true" tabindex="-1"></a><span class="co"># 我们看看kata的配置文件内容</span></span>
+<span id="cb1-208"><a href="#cb1-208" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> /usr/share/kata-containers/defaults/configuration.toml</span></code></pre></div>
+        <p><a href="./files/configuration.toml">result check
+        here</a></p>
+        <div class="sourceCode" id="cb2"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 我们看看kata runtime感知到的配置内容</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="ex">kata-runtime</span> env</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="co"># [Meta]</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co">#   Version = &quot;1.0.25&quot;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="co"># [Runtime]</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="co">#   Debug = false</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="co">#   Trace = false</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="co">#   DisableGuestSeccomp = true</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="co">#   DisableNewNetNs = false</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="co">#   SandboxCgroupOnly = true</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="co">#   Path = &quot;/usr/bin/kata-runtime&quot;</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="co">#   [Runtime.Version]</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="co">#     OCI = &quot;1.0.1-dev&quot;</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a><span class="co">#     [Runtime.Version.Version]</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a><span class="co">#       Semver = &quot;2.1.0&quot;</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a><span class="co">#       Major = 2</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a><span class="co">#       Minor = 1</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a><span class="co">#       Patch = 0</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a><span class="co">#       Commit = &quot;fa7b9408555e863d0f36f7d0640134069b0c70c8&quot;</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a><span class="co">#   [Runtime.Config]</span></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a><span class="co">#     Path = &quot;/usr/share/kata-containers/defaults/configuration.toml&quot;</span></span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a><span class="co"># [Hypervisor]</span></span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a><span class="co">#   MachineType = &quot;q35&quot;</span></span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a><span class="co">#   Version = &quot;QEMU emulator version 5.2.0 (qemu-kvm-5.2.0-16.module+el8.4.0+11536+725e25d9.2)\nCopyright (c) 2003-2020 Fabrice Bellard and the QEMU Project developers&quot;</span></span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a><span class="co">#   Path = &quot;/usr/libexec/qemu-kiwi&quot;</span></span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a><span class="co">#   BlockDeviceDriver = &quot;virtio-scsi&quot;</span></span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a><span class="co">#   EntropySource = &quot;/dev/urandom&quot;</span></span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a><span class="co">#   SharedFS = &quot;virtio-fs&quot;</span></span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a><span class="co">#   VirtioFSDaemon = &quot;/usr/libexec/virtiofsd&quot;</span></span>
+<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a><span class="co">#   Msize9p = 8192</span></span>
+<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a><span class="co">#   MemorySlots = 10</span></span>
+<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a><span class="co">#   PCIeRootPort = 0</span></span>
+<span id="cb2-35"><a href="#cb2-35" aria-hidden="true" tabindex="-1"></a><span class="co">#   HotplugVFIOOnRootBus = false</span></span>
+<span id="cb2-36"><a href="#cb2-36" aria-hidden="true" tabindex="-1"></a><span class="co">#   Debug = false</span></span>
+<span id="cb2-37"><a href="#cb2-37" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-38"><a href="#cb2-38" aria-hidden="true" tabindex="-1"></a><span class="co"># [Image]</span></span>
+<span id="cb2-39"><a href="#cb2-39" aria-hidden="true" tabindex="-1"></a><span class="co">#   Path = &quot;&quot;</span></span>
+<span id="cb2-40"><a href="#cb2-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-41"><a href="#cb2-41" aria-hidden="true" tabindex="-1"></a><span class="co"># [Kernel]</span></span>
+<span id="cb2-42"><a href="#cb2-42" aria-hidden="true" tabindex="-1"></a><span class="co">#   Path = &quot;/usr/lib/modules/4.18.0-305.12.1.el8_4.x86_64/vmlinuz&quot;</span></span>
+<span id="cb2-43"><a href="#cb2-43" aria-hidden="true" tabindex="-1"></a><span class="co">#   Parameters = &quot;scsi_mod.scan=none&quot;</span></span>
+<span id="cb2-44"><a href="#cb2-44" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-45"><a href="#cb2-45" aria-hidden="true" tabindex="-1"></a><span class="co"># [Initrd]</span></span>
+<span id="cb2-46"><a href="#cb2-46" aria-hidden="true" tabindex="-1"></a><span class="co">#   Path = &quot;/var/cache/kata-containers/osbuilder-images/4.18.0-305.12.1.el8_4.x86_64/\&quot;rhcos\&quot;-kata-4.18.0-305.12.1.el8_4.x86_64.initrd&quot;</span></span>
+<span id="cb2-47"><a href="#cb2-47" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-48"><a href="#cb2-48" aria-hidden="true" tabindex="-1"></a><span class="co"># [Agent]</span></span>
+<span id="cb2-49"><a href="#cb2-49" aria-hidden="true" tabindex="-1"></a><span class="co">#   Debug = false</span></span>
+<span id="cb2-50"><a href="#cb2-50" aria-hidden="true" tabindex="-1"></a><span class="co">#   Trace = false</span></span>
+<span id="cb2-51"><a href="#cb2-51" aria-hidden="true" tabindex="-1"></a><span class="co">#   TraceMode = &quot;&quot;</span></span>
+<span id="cb2-52"><a href="#cb2-52" aria-hidden="true" tabindex="-1"></a><span class="co">#   TraceType = &quot;&quot;</span></span>
+<span id="cb2-53"><a href="#cb2-53" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-54"><a href="#cb2-54" aria-hidden="true" tabindex="-1"></a><span class="co"># [Host]</span></span>
+<span id="cb2-55"><a href="#cb2-55" aria-hidden="true" tabindex="-1"></a><span class="co">#   Kernel = &quot;4.18.0-305.12.1.el8_4.x86_64&quot;</span></span>
+<span id="cb2-56"><a href="#cb2-56" aria-hidden="true" tabindex="-1"></a><span class="co">#   Architecture = &quot;amd64&quot;</span></span>
+<span id="cb2-57"><a href="#cb2-57" aria-hidden="true" tabindex="-1"></a><span class="co">#   VMContainerCapable = true</span></span>
+<span id="cb2-58"><a href="#cb2-58" aria-hidden="true" tabindex="-1"></a><span class="co">#   SupportVSocks = true</span></span>
+<span id="cb2-59"><a href="#cb2-59" aria-hidden="true" tabindex="-1"></a><span class="co">#   [Host.Distro]</span></span>
+<span id="cb2-60"><a href="#cb2-60" aria-hidden="true" tabindex="-1"></a><span class="co">#     Name = &quot;Red Hat Enterprise Linux CoreOS&quot;</span></span>
+<span id="cb2-61"><a href="#cb2-61" aria-hidden="true" tabindex="-1"></a><span class="co">#     Version = &quot;4.8&quot;</span></span>
+<span id="cb2-62"><a href="#cb2-62" aria-hidden="true" tabindex="-1"></a><span class="co">#   [Host.CPU]</span></span>
+<span id="cb2-63"><a href="#cb2-63" aria-hidden="true" tabindex="-1"></a><span class="co">#     Vendor = &quot;GenuineIntel&quot;</span></span>
+<span id="cb2-64"><a href="#cb2-64" aria-hidden="true" tabindex="-1"></a><span class="co">#     Model = &quot;Intel(R) Xeon(R) CPU E5-2620 v2 @ 2.10GHz&quot;</span></span>
+<span id="cb2-65"><a href="#cb2-65" aria-hidden="true" tabindex="-1"></a><span class="co">#     CPUs = 24</span></span>
+<span id="cb2-66"><a href="#cb2-66" aria-hidden="true" tabindex="-1"></a><span class="co">#   [Host.Memory]</span></span>
+<span id="cb2-67"><a href="#cb2-67" aria-hidden="true" tabindex="-1"></a><span class="co">#     Total = 32868716</span></span>
+<span id="cb2-68"><a href="#cb2-68" aria-hidden="true" tabindex="-1"></a><span class="co">#     Free = 27704960</span></span>
+<span id="cb2-69"><a href="#cb2-69" aria-hidden="true" tabindex="-1"></a><span class="co">#     Available = 29880404</span></span>
+<span id="cb2-70"><a href="#cb2-70" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-71"><a href="#cb2-71" aria-hidden="true" tabindex="-1"></a><span class="co"># [Netmon]</span></span>
+<span id="cb2-72"><a href="#cb2-72" aria-hidden="true" tabindex="-1"></a><span class="co">#   Path = &quot;/usr/libexec/kata-containers/kata-netmon&quot;</span></span>
+<span id="cb2-73"><a href="#cb2-73" aria-hidden="true" tabindex="-1"></a><span class="co">#   Debug = false</span></span>
+<span id="cb2-74"><a href="#cb2-74" aria-hidden="true" tabindex="-1"></a><span class="co">#   Enable = false</span></span>
+<span id="cb2-75"><a href="#cb2-75" aria-hidden="true" tabindex="-1"></a><span class="co">#   [Netmon.Version]</span></span>
+<span id="cb2-76"><a href="#cb2-76" aria-hidden="true" tabindex="-1"></a><span class="co">#     Semver = &quot;2.1.0&quot;</span></span>
+<span id="cb2-77"><a href="#cb2-77" aria-hidden="true" tabindex="-1"></a><span class="co">#     Major = 2</span></span>
+<span id="cb2-78"><a href="#cb2-78" aria-hidden="true" tabindex="-1"></a><span class="co">#     Minor = 1</span></span>
+<span id="cb2-79"><a href="#cb2-79" aria-hidden="true" tabindex="-1"></a><span class="co">#     Patch = 0</span></span>
+<span id="cb2-80"><a href="#cb2-80" aria-hidden="true" tabindex="-1"></a><span class="co">#     Commit = &quot;&lt;&lt;unknown&gt;&gt;&quot;</span></span>
+<span id="cb2-81"><a href="#cb2-81" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-82"><a href="#cb2-82" aria-hidden="true" tabindex="-1"></a><span class="co"># 我们看看这个构建kata虚拟机镜像的脚本</span></span>
+<span id="cb2-83"><a href="#cb2-83" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> /usr/libexec/kata-containers/osbuilder/kata-osbuilder.sh</span></code></pre></div>
+        <p><a href="./files/kata-osbuilder.sh">result check here</a></p>
+        <h1 id="try-to-debug">try to debug</h1>
+        <div class="sourceCode" id="cb3"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># try to debug</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="co"># 为了能进入到kata虚拟机内部，我们需要修改一下kata的配置文件，激活debug console</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="fu">mkdir</span> <span class="at">-p</span> /etc/kata-containers/</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="fu">install</span> <span class="at">-o</span> root <span class="at">-g</span> root <span class="at">-m</span> 0640 /usr/share/kata-containers/defaults/configuration.toml /etc/kata-containers</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="fu">sed</span> <span class="at">-i</span> <span class="at">-e</span> <span class="st">&#39;s/^# *\(debug_console_enabled\).*=.*$/\1 = true/g&#39;</span> /etc/kata-containers/configuration.toml</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="co"># 然后重启pod，我们就能直接连进去kata虚拟机了。</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="co"># ps -ef | grep qemu-kiwi | sed &#39;s/.* sandbox-\([^ ]*\) .*/\1/p&#39; | grep -v qemu-kiwi</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="va">KATA_PID</span><span class="op">=</span><span class="kw">`</span><span class="fu">ps</span> <span class="at">-ef</span> <span class="kw">|</span> <span class="fu">grep</span> qemu-kiwi <span class="kw">|</span> <span class="fu">sed</span> <span class="st">&#39;s/.* sandbox-\([^ ]*\) .*/\1/g&#39;</span> <span class="kw">|</span> <span class="fu">grep</span> <span class="at">-v</span> qemu-kiwi<span class="kw">`</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="ex">kata-runtime</span> exec <span class="va">$KATA_PID</span></span></code></pre></div>
+        <p>in the kata vm</p>
+        <pre><code># 虚拟机里面，是个超级简化的系统，命令奇缺
+bash-4.4# cd /etc
+
+# ls都没有，只能echo * 代替。
+bash-4.4# echo *
+chrony.conf cmdline.d conf.d group ld.so.cache ld.so.conf ld.so.conf.d machine-id modules-load.d passwd resolv.conf systemd udev virc
+
+# 可以看到，操作系统和宿主机一样，因为启动的时候，用宿主机的内核构建出来的
+bash-4.4# uname -a
+Linux mypod-787d79b456-4f4xr 4.18.0-305.12.1.el8_4.x86_64 #1 SMP Mon Jul 26 08:06:24 EDT 2021 x86_64 x86_64 x86_64 GNU/Linux
+
+# 看看激活了什么内核模块
+bash-4.4# lsmod
+Module                  Size  Used by
+mcryptd                16384  0
+virtio_blk             20480  0
+virtio_console         36864  0
+virtio_net             53248  0
+net_failover           24576  1 virtio_net
+sg                     40960  0
+virtio_scsi            20480  0
+virtiofs               28672  1
+failover               16384  1 net_failover
+vmw_vsock_virtio_transport    16384  2
+vmw_vsock_virtio_transport_common    32768  1 vmw_vsock_virtio_transport
+vsock                  45056  10 vmw_vsock_virtio_transport_common,vmw_vsock_virtio_transport
+fuse                  151552  1 virtiofs
+
+# 看看挂载了什么分区
+bash-4.4# mount
+rootfs on / type rootfs (rw,size=964048k,nr_inodes=241012)
+sysfs on /sys type sysfs (rw,nosuid,nodev,noexec,relatime)
+proc on /proc type proc (rw,nosuid,nodev,noexec,relatime)
+devtmpfs on /dev type devtmpfs (rw,nosuid,size=964064k,nr_inodes=241016,mode=755)
+securityfs on /sys/kernel/security type securityfs (rw,nosuid,nodev,noexec,relatime)
+selinuxfs on /sys/fs/selinux type selinuxfs (rw,relatime)
+tmpfs on /dev/shm type tmpfs (rw,nosuid,nodev)
+devpts on /dev/pts type devpts (rw,nosuid,noexec,relatime,gid=5,mode=620,ptmxmode=000)
+tmpfs on /run type tmpfs (rw,nosuid,nodev,mode=755)
+tmpfs on /sys/fs/cgroup type tmpfs (ro,nosuid,nodev,noexec,mode=755)
+cgroup on /sys/fs/cgroup/systemd type cgroup (rw,nosuid,nodev,noexec,relatime,xattr,release_agent=/usr/lib/systemd/systemd-cgroups-agent,name=systemd)
+pstore on /sys/fs/pstore type pstore (rw,nosuid,nodev,noexec,relatime)
+bpf on /sys/fs/bpf type bpf (rw,nosuid,nodev,noexec,relatime,mode=700)
+cgroup on /sys/fs/cgroup/freezer type cgroup (rw,nosuid,nodev,noexec,relatime,freezer)
+cgroup on /sys/fs/cgroup/cpu,cpuacct type cgroup (rw,nosuid,nodev,noexec,relatime,cpu,cpuacct)
+cgroup on /sys/fs/cgroup/net_cls,net_prio type cgroup (rw,nosuid,nodev,noexec,relatime,net_cls,net_prio)
+cgroup on /sys/fs/cgroup/blkio type cgroup (rw,nosuid,nodev,noexec,relatime,blkio)
+cgroup on /sys/fs/cgroup/memory type cgroup (rw,nosuid,nodev,noexec,relatime,memory)
+cgroup on /sys/fs/cgroup/devices type cgroup (rw,nosuid,nodev,noexec,relatime,devices)
+cgroup on /sys/fs/cgroup/perf_event type cgroup (rw,nosuid,nodev,noexec,relatime,perf_event)
+cgroup on /sys/fs/cgroup/cpuset type cgroup (rw,nosuid,nodev,noexec,relatime,cpuset)
+cgroup on /sys/fs/cgroup/pids type cgroup (rw,nosuid,nodev,noexec,relatime,pids)
+cgroup on /sys/fs/cgroup/hugetlb type cgroup (rw,nosuid,nodev,noexec,relatime,hugetlb)
+cgroup on /sys/fs/cgroup/rdma type cgroup (rw,nosuid,nodev,noexec,relatime,rdma)
+tmpfs on /tmp type tmpfs (rw,nosuid,nodev)
+configfs on /sys/kernel/config type configfs (rw,relatime)
+nsfs on /run/sandbox-ns/ipc type nsfs (rw)
+nsfs on /run/sandbox-ns/uts type nsfs (rw)
+kataShared on /run/kata-containers/shared/containers type virtiofs (rw,relatime)
+shm on /run/kata-containers/sandbox/shm type tmpfs (rw,relatime)
+tmpfs on /etc/resolv.conf type tmpfs (rw,nosuid,nodev,mode=755)
+kataShared on /run/kata-containers/8330bf4c2a98360975ce16244af81c4a5dfa74d4ea3c8a520d9244f0c14e541b/rootfs type virtiofs (rw,relatime)
+kataShared on /run/kata-containers/bc201bf92ec8dcad3435ff4191912a41efb64a1e0fb463ad4a651b4dea94a8a5/rootfs type virtiofs (rw,relatime)
+b
+
+# 看看都有什么进程
+bash-4.4# ps efx ww
+    PID TTY      STAT   TIME COMMAND
+      2 ?        S      0:00 [kthreadd]
+      3 ?        I&lt;     0:00  \_ [rcu_gp]
+      4 ?        I&lt;     0:00  \_ [rcu_par_gp]
+      6 ?        I&lt;     0:00  \_ [kworker/0:0H-events_highpri]
+      7 ?        I      0:00  \_ [kworker/0:1-virtio_vsock]
+      8 ?        I      0:00  \_ [kworker/u48:0-events_unbound]
+      9 ?        I&lt;     0:00  \_ [mm_percpu_wq]
+     10 ?        S      0:00  \_ [ksoftirqd/0]
+     11 ?        I      0:00  \_ [rcu_sched]
+     12 ?        S      0:00  \_ [migration/0]
+     13 ?        S      0:00  \_ [watchdog/0]
+     14 ?        S      0:00  \_ [cpuhp/0]
+     16 ?        S      0:00  \_ [kdevtmpfs]
+     17 ?        I&lt;     0:00  \_ [netns]
+     18 ?        S      0:00  \_ [kauditd]
+     19 ?        S      0:00  \_ [khungtaskd]
+     20 ?        S      0:00  \_ [oom_reaper]
+     21 ?        I&lt;     0:00  \_ [writeback]
+     22 ?        S      0:00  \_ [kcompactd0]
+     23 ?        SN     0:00  \_ [ksmd]
+     24 ?        SN     0:00  \_ [khugepaged]
+     25 ?        I&lt;     0:00  \_ [crypto]
+     26 ?        I&lt;     0:00  \_ [kintegrityd]
+     27 ?        I&lt;     0:00  \_ [kblockd]
+     28 ?        I&lt;     0:00  \_ [blkcg_punt_bio]
+     29 ?        I&lt;     0:00  \_ [tpm_dev_wq]
+     30 ?        I&lt;     0:00  \_ [md]
+     31 ?        I&lt;     0:00  \_ [edac-poller]
+     32 ?        S      0:00  \_ [watchdogd]
+     33 ?        I&lt;     0:00  \_ [kworker/0:1H]
+     35 ?        I      0:00  \_ [kworker/u48:1]
+     49 ?        S      0:00  \_ [kswapd0]
+    132 ?        I&lt;     0:00  \_ [kthrotld]
+    133 ?        I&lt;     0:00  \_ [acpi_thermal_pm]
+    134 ?        S      0:00  \_ [hwrng]
+    135 ?        I&lt;     0:00  \_ [kmpath_rdacd]
+    136 ?        I&lt;     0:00  \_ [kaluad]
+    137 ?        I&lt;     0:00  \_ [ipv6_addrconf]
+    138 ?        I&lt;     0:00  \_ [kstrp]
+    203 ?        I      0:00  \_ [kworker/0:3-mm_percpu_wq]
+    206 ?        S      0:00  \_ [scsi_eh_0]
+    207 ?        I&lt;     0:00  \_ [scsi_tmf_0]
+    218 ?        S      0:00  \_ [khvcd]
+      1 ?        Ss     0:00 /init HOME=/ TERM=linux
+    193 ?        Ss     0:00 /usr/lib/systemd/systemd-journald PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin NOTIFY_SOCKET=/run/systemd/notify LISTEN_PID=193 LISTEN_FDS=3 LISTEN_FDNAMES=systemd-journald-dev-log.socket:systemd-journald.socket:systemd-journald.socket WATCHDOG_PID=193 WATCHDOG_USEC=180000000 INVOCATION_ID=00385279d7314bf5a02002d5f1e33050
+    201 ?        Ss     0:00 /usr/lib/systemd/systemd-udevd PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin NOTIFY_SOCKET=/run/systemd/notify LISTEN_PID=201 LISTEN_FDS=2 LISTEN_FDNAMES=systemd-udevd-kernel.socket:systemd-udevd-control.socket WATCHDOG_PID=201 WATCHDOG_USEC=180000000 INVOCATION_ID=b3e4a3cd29b34c91a192bc9527da10cf JOURNAL_STREAM=9:10719
+    225 ?        Ssl    0:02 /usr/bin/kata-agent PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin INVOCATION_ID=5683abfd11c542fe98c5f7ece1afa599 TERM=vt220
+    231 ?        S      0:00  \_ /usr/bin/pod PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin TERM=xterm HOME=/root
+    235 ?        S      0:00  \_ sleep infinity PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin TERM=xterm HOSTNAME=mypod-787d79b456-4f4xr NSS_SDB_USE_CACHE=no KUBERNETES_SERVICE_HOST=172.30.0.1 KUBERNETES_SERVICE_PORT=443 KUBERNETES_SERVICE_PORT_HTTPS=443 KUBERNETES_PORT=tcp://172.30.0.1:443 KUBERNETES_PORT_443_TCP=tcp://172.30.0.1:443 KUBERNETES_PORT_443_TCP_PROTO=tcp KUBERNETES_PORT_443_TCP_PORT=443 KUBERNETES_PORT_443_TCP_ADDR=172.30.0.1 HOME=/root
+    236 pts/0    Ss     0:00  \_ [bash] PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin INVOCATION_ID=5683abfd11c542fe98c5f7ece1afa599 TERM=vt220 RUST_BACKTRACE=full
+    268 pts/0    R+     0:00  |   \_ ps efx ww RUST_BACKTRACE=full INVOCATION_ID=5683abfd11c542fe98c5f7ece1afa599 PWD=/proc/net TERM=vt220 SHLVL=1 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin OLDPWD=/proc _=/usr/bin/ps
+    247 pts/1    Ss+    0:00  \_ /bin/sh TERM=screen-256color HOSTNAME=mypod-787d79b456-4f4xr KUBERNETES_PORT_443_TCP_PORT=443 KUBERNETES_PORT=tcp://172.30.0.1:443 KUBERNETES_SERVICE_PORT=443 KUBERNETES_SERVICE_HOST=172.30.0.1 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin PWD=/ SHLVL=1 HOME=/root KUBERNETES_PORT_443_TCP_PROTO=tcp KUBERNETES_SERVICE_PORT_HTTPS=443 NSS_SDB_USE_CACHE=no KUBERNETES_PORT_443_TCP_ADDR=172.30.0.1 KUBERNETES_PORT_443_TCP=tcp://172.30.0.1:443 _=/bin/sh
+
+# 看看有多少内存
+bash-4.4# free -h
+              total        used        free      shared  buff/cache   available
+Mem:          1.9Gi        30Mi       1.8Gi        58Mi        72Mi       1.7Gi
+Swap:            0B          0B          0B
+
+# 看看内核启动参数
+bash-4.4# cat cmdline
+tsc=reliable no_timer_check rcupdate.rcu_expedited=1 i8042.direct=1 i8042.dumbkbd=1 i8042.nopnp=1 i8042.noaux=1 noreplace-smp reboot=k console=hvc0 console=hvc1 cryptomgr.notests net.ifnames=0 pci=lastbus=0 quiet panic=1 nr_cpus=24 scsi_mod.scan=none agent.debug_console agent.debug_console_vport=1026
+
+# 没有ip命令，只能用内核接口，凑合看一下本机ip 地址
+bash-4.4# cat /proc/net/fib_trie
+Main:
+  +-- 0.0.0.0/0 3 0 4
+     +-- 0.0.0.0/4 2 0 2
+        |-- 0.0.0.0
+           /0 universe UNICAST
+        +-- 10.254.0.0/23 2 0 1
+           |-- 10.254.0.0
+              /16 universe UNICAST
+           +-- 10.254.1.0/28 2 0 2
+              |-- 10.254.1.0
+                 /32 link BROADCAST
+                 /24 link UNICAST
+              |-- 10.254.1.14
+                 /32 host LOCAL
+           |-- 10.254.1.255
+              /32 link BROADCAST
+     +-- 127.0.0.0/8 2 0 2
+        +-- 127.0.0.0/31 1 0 0
+           |-- 127.0.0.0
+              /32 link BROADCAST
+              /8 host LOCAL
+           |-- 127.0.0.1
+              /32 host LOCAL
+        |-- 127.255.255.255
+           /32 link BROADCAST
+     |-- 172.30.0.0
+        /16 universe UNICAST
+     |-- 224.0.0.0
+        /4 universe UNICAST
+Local:
+  +-- 0.0.0.0/0 3 0 4
+     +-- 0.0.0.0/4 2 0 2
+        |-- 0.0.0.0
+           /0 universe UNICAST
+        +-- 10.254.0.0/23 2 0 1
+           |-- 10.254.0.0
+              /16 universe UNICAST
+           +-- 10.254.1.0/28 2 0 2
+              |-- 10.254.1.0
+                 /32 link BROADCAST
+                 /24 link UNICAST
+              |-- 10.254.1.14
+                 /32 host LOCAL
+           |-- 10.254.1.255
+              /32 link BROADCAST
+     +-- 127.0.0.0/8 2 0 2
+        +-- 127.0.0.0/31 1 0 0
+           |-- 127.0.0.0
+              /32 link BROADCAST
+              /8 host LOCAL
+           |-- 127.0.0.1
+              /32 host LOCAL
+        |-- 127.255.255.255
+           /32 link BROADCAST
+     |-- 172.30.0.0
+        /16 universe UNICAST
+     |-- 224.0.0.0
+        /4 universe UNICAST
+
+# 看看systemctl的服务
+bash-4.4# systemctl list-units
+  UNIT                          LOAD   ACTIVE SUB     DESCRIPTION
+  sys-devices-pci0000:00-0000:00:01.0-virtio0-virtio\x2dports-vport0p0.device loaded active plugged /sys/devices/pci0000:00/0000:00:01.0/virtio0/virtio-ports/vport0p0
+  sys-devices-pci0000:00-0000:00:07.0-virtio5-net-eth0.device loaded active plugged /sys/devices/pci0000:00/0000:00:07.0/virtio5/net/eth0
+  sys-devices-platform-serial8250-tty-ttyS0.device loaded active plugged /sys/devices/platform/serial8250/tty/ttyS0
+  sys-devices-platform-serial8250-tty-ttyS1.device loaded active plugged /sys/devices/platform/serial8250/tty/ttyS1
+  sys-devices-platform-serial8250-tty-ttyS2.device loaded active plugged /sys/devices/platform/serial8250/tty/ttyS2
+  sys-devices-platform-serial8250-tty-ttyS3.device loaded active plugged /sys/devices/platform/serial8250/tty/ttyS3
+  sys-devices-virtual-tty-hvc0.device loaded active plugged /sys/devices/virtual/tty/hvc0
+  sys-devices-virtual-tty-hvc1.device loaded active plugged /sys/devices/virtual/tty/hvc1
+  sys-devices-virtual-tty-hvc2.device loaded active plugged /sys/devices/virtual/tty/hvc2
+  sys-devices-virtual-tty-hvc3.device loaded active plugged /sys/devices/virtual/tty/hvc3
+  sys-devices-virtual-tty-hvc4.device loaded active plugged /sys/devices/virtual/tty/hvc4
+  sys-devices-virtual-tty-hvc5.device loaded active plugged /sys/devices/virtual/tty/hvc5
+  sys-devices-virtual-tty-hvc6.device loaded active plugged /sys/devices/virtual/tty/hvc6
+  sys-devices-virtual-tty-hvc7.device loaded active plugged /sys/devices/virtual/tty/hvc7
+  sys-module-configfs.device    loaded active plugged /sys/module/configfs
+  sys-module-fuse.device        loaded active plugged /sys/module/fuse
+  sys-subsystem-net-devices-eth0.device loaded active plugged /sys/subsystem/net/devices/eth0
+  -.mount                       loaded active mounted Root Mount
+  etc-resolv.conf.mount         loaded active mounted /etc/resolv.conf
+  run-kata\x2dcontainers-3daea1739ff15b732a2a1e7cf76d64b49f128a5a55bb8807c5ddde96d378e5cd-rootfs.mount loaded active mounted /run/kata-containers/3daea1739ff15b732a2a1e7cf76d64b49f128a5a55bb8807c5ddde96d378e5cd/rootfs
+  run-kata\x2dcontainers-e47a609923ce835a252c87d71fc3ba92adb974f00fdae194576b3d388b1bc770-rootfs.mount loaded active mounted /run/kata-containers/e47a609923ce835a252c87d71fc3ba92adb974f00fdae194576b3d388b1bc770/rootfs
+  run-kata\x2dcontainers-sandbox-shm.mount loaded active mounted /run/kata-containers/sandbox/shm
+-containers/shared/containersed-containers.mount loaded active mounted /run/kata--More--
+  run-sandbox\x2dns-ipc.mount   loaded active mounted /run/sandbox-ns/ipc
+  run-sandbox\x2dns-uts.mount   loaded active mounted /run/sandbox-ns/uts
+  sys-kernel-config.mount       loaded active mounted Kernel Configuration File System
+  tmp.mount                     loaded active mounted Temporary Directory (/tmp)
+  systemd-ask-password-console.path loaded active waiting Dispatch Password Requests to Console Directory Watch
+  init.scope                    loaded active running System and Service Manager
+  kata-agent.service            loaded active running Kata Containers Agent
+  kmod-static-nodes.service     loaded active exited  Create list of required static device nodes for the current kernel
+  systemd-journald.service      loaded active running Journal Service
+● systemd-modules-load.service  loaded failed failed  Load Kernel Modules
+  systemd-sysctl.service        loaded active exited  Apply Kernel Variables
+  systemd-tmpfiles-setup-dev.service loaded active exited  Create Static Device Nodes in /dev
+  systemd-tmpfiles-setup.service loaded active exited  Create Volatile Files and Directories
+  systemd-udev-trigger.service  loaded active exited  udev Coldplug all Devices
+  systemd-udevd.service         loaded active running udev Kernel Device Manager
+  -.slice                       loaded active active  Root Slice
+  system.slice                  loaded active active  System Slice
+  systemd-journald-dev-log.socket loaded active running Journal Socket (/dev/log)
+  systemd-journald.socket       loaded active running Journal Socket
+  systemd-udevd-control.socket  loaded active running udev Control Socket
+  systemd-udevd-kernel.socket   loaded active running udev Kernel Socket
+  basic.target                  loaded active active  Basic System
+  kata-containers.target        loaded active active  Kata Containers Agent Target
+  local-fs.target               loaded active active  Local File Systems
+  multi-user.target             loaded active active  Multi-User System
+  paths.target                  loaded active active  Paths
+  slices.target                 loaded active active  Slices
+  sockets.target                loaded active active  Sockets
+  swap.target                   loaded active active  Swap
+  sysinit.target                loaded active active  System Initialization
+  timers.target                 loaded active active  Timers
+
+# 有一个kata-containers的服务，我们很感兴趣，看看什么内容。
+bash-4.4# systemctl cat kata-containers.target
+# /usr/lib/systemd/system/kata-containers.target
+#
+# Copyright (c) 2018-2019 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
+[Unit]
+Description=Kata Containers Agent Target
+Requires=basic.target
+Requires=tmp.mount
+Wants=chronyd.service
+Requires=kata-agent.service
+Conflicts=rescue.service rescue.target
+After=basic.target rescue.service rescue.target
+AllowIsolate=yes
+
+bash-4.4# systemctl cat kata-agent.service
+# /usr/lib/systemd/system/kata-agent.service
+#
+# Copyright (c) 2018-2019 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
+[Unit]
+Description=Kata Containers Agent
+Documentation=https://github.com/kata-containers/kata-containers
+Wants=kata-containers.target
+
+[Service]
+# Send agent output to tty to allow capture debug logs
+# from a VM vsock port
+StandardOutput=tty
+Type=simple
+ExecStart=/usr/bin/kata-agent
+LimitNOFILE=1048576
+# ExecStop is required for static agent tracing; in all other scenarios
+# the runtime handles shutting down the VM.
+ExecStop=/bin/sync ; /usr/bin/systemctl --force poweroff
+FailureAction=poweroff
+# Discourage OOM-killer from touching the agent
+OOMScoreAdjust=-997
+
+# 我们的容器都在哪里呢？找到了。
+bash-4.4# pwd
+/run/kata-containers/e47a609923ce835a252c87d71fc3ba92adb974f00fdae194576b3d388b1bc770/rootfs
+bash-4.4# echo *
+anaconda-post.log bin check.sh dev etc home lib lib64 media mnt opt proc root run sbin srv sys tmp usr var
+</code></pre>
+        <p>从helper登录到容器里面，看看什么情况。</p>
+        <pre><code>[root@helper ~]# oc rsh pod/mypod-787d79b456-4f4xr
+sh-4.2# ls
+anaconda-post.log  bin  dev  etc  home  lib  lib64  media  mnt  opt  proc  root  run  sbin  srv  sys  tmp  usr  var
+sh-4.2# ip a
+1: lo: &lt;LOOPBACK,UP,LOWER_UP&gt; mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    inet6 ::1/128 scope host
+       valid_lft forever preferred_lft forever
+2: eth0: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu 1450 qdisc fq_codel state UP group default qlen 1000
+    link/ether 0a:58:0a:fe:01:0e brd ff:ff:ff:ff:ff:ff
+    inet 10.254.1.14/24 brd 10.254.1.255 scope global eth0
+       valid_lft forever preferred_lft forever
+    inet6 fe80::858:aff:fefe:10e/64 scope link
+       valid_lft forever preferred_lft forever
+    inet6 fe80::5c25:c3ff:fe29:f429/64 scope link
+       valid_lft forever preferred_lft forever
+
+sh-4.2# ps efx ww
+    PID TTY      STAT   TIME COMMAND
+      2 ?        Ss     0:00 /bin/sh TERM=screen-256color HOSTNAME=mypod-787d79b456-4f4xr KUBERNETES_PORT_443_TCP_PORT=443 KUBERNETES_PORT=tcp://172.30.0.1:443 KUBERNETES_SERVICE_PORT=443 KUBERNETES_SERVICE_HOST=172.30.0.1 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin PWD=/ SHLVL=1 HOME=/root KUBERNETES_PORT_443_TCP_PROTO=tcp KUBERNETES_SERVICE_PORT_HTTPS=443 NSS_SDB_USE_CACHE=no KUBERNETES_PORT_443_TCP_ADDR=172.30.0.1 KUBERNETES_PORT_443_TCP=tcp://172.30.0.1:443 _=/bin/sh
+      9 ?        R+     0:00  \_ ps efx ww HOSTNAME=mypod-787d79b456-4f4xr KUBERNETES_PORT=tcp://172.30.0.1:443 KUBERNETES_PORT_443_TCP_PORT=443 TERM=screen-256color KUBERNETES_SERVICE_PORT=443 KUBERNETES_SERVICE_HOST=172.30.0.1 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin PWD=/ HOME=/root SHLVL=2 KUBERNETES_PORT_443_TCP_PROTO=tcp KUBERNETES_SERVICE_PORT_HTTPS=443 NSS_SDB_USE_CACHE=no KUBERNETES_PORT_443_TCP_ADDR=172.30.0.1 KUBERNETES_PORT_443_TCP=tcp://172.30.0.1:443 _=/usr/bin/ps
+      1 ?        S      0:00 sleep infinity PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin TERM=xterm HOSTNAME=mypod-787d79b456-4f4xr NSS_SDB_USE_CACHE=no KUBERNETES_SERVICE_HOST=172.30.0.1 KUBERNETES_SERVICE_PORT=443 KUBERNETES_SERVICE_PORT_HTTPS=443 KUBERNETES_PORT=tcp://172.30.0.1:443 KUBERNETES_PORT_443_TCP=tcp://172.30.0.1:443 KUBERNETES_PORT_443_TCP_PROTO=tcp KUBERNETES_PORT_443_TCP_PORT=443 KUBERNETES_PORT_443_TCP_ADDR=172.30.0.1 HOME=/root       </code></pre>
+        <h1 id="研究一下网络">研究一下网络</h1>
+        <p>kata的网络模型，我们很关心，<a
+        href="https://github.com/kata-containers/kata-containers/blob/51bf98073d0c2e7b83bf2320be827e0942b9316a/docs/design/architecture.md">官方有文档</a>。</p>
+        <p><img src="imgs/2021-08-28-19-32-57.png" /></p>
+        <pre><code># 我们在worker-0上，看看namespace情况
+[root@worker-0 ~]# lsns --output NS,TYPE,NETNSID,PID,COMMAND | grep qemu
+4026533791 net             5 20394 /usr/libexec/qemu-kiwi -name sandbox-0f60fb9af6dbf8c8e355b9e27a62debe8276aa76f4246857e46520fa677ce40e -uuid 0a101364-3814-42a4-91b9-c8a81fc377ef -machine q35,accel=kvm,kernel_irqchip -cpu host,pmu=off -qmp unix:/run/vc/vm/0f60fb9af6dbf8c8e355b9e27a62debe8276aa76f4246857e46520fa677ce40e/qmp.sock,server=on,wait=off -m 2048M,slots=10,maxmem=33122M -device pci-bridge,bus=pcie.0,id=pci-bridge-0,chassis_nr=1,shpc=on,addr=2 -device virtio-serial-pci,disable-modern=false,id=serial0 -device virtconsole,chardev=charconsole0,id=console0 -chardev socket,id=charconsole0,path=/run/vc/vm/0f60fb9af6dbf8c8e355b9e27a62debe8276aa76f4246857e46520fa677ce40e/console.sock,server=on,wait=off -device virtio-scsi-pci,id=scsi0,disable-modern=false -object rng-random,id=rng0,filename=/dev/urandom -device virtio-rng-pci,rng=rng0 -device vhost-vsock-pci,disable-modern=false,vhostfd=3,id=vsock-2809816003,guest-cid=2809816003 -chardev socket,id=char-3bb1f59f00a0b873,path=/run/vc/vm/0f60fb9af6dbf8c8e355b9e27a62debe8276aa76f4246857e46520fa677ce40e/vhost-fs.sock -device vhost-user-fs-pci,chardev=char-3bb1f59f00a0b873,tag=kataShared -netdev tap,id=network-0,vhost=on,vhostfds=4,fds=5 -device driver=virtio-net-pci,netdev=network-0,mac=0a:58:0a:81:00:12,disable-modern=false,mq=on,vectors=4 -rtc base=utc,driftfix=slew,clock=host -global kvm-pit.lost_tick_policy=discard -vga none -no-user-config -nodefaults -nographic --no-reboot -daemonize -object memory-backend-file,id=dimm1,size=2048M,mem-path=/dev/shm,share=on -numa node,memdev=dimm1 -kernel /usr/lib/modules/4.18.0-305.19.1.el8_4.x86_64/vmlinuz -initrd /var/cache/kata-containers/osbuilder-images/4.18.0-305.19.1.el8_4.x86_64/&quot;rhcos&quot;-kata-4.18.0-305.19.1.el8_4.x86_64.initrd -append tsc=reliable no_timer_check rcupdate.rcu_expedited=1 i8042.direct=1 i8042.dumbkbd=1 i8042.nopnp=1 i8042.noaux=1 noreplace-smp reboot=k console=hvc0 console=hvc1 cryptomgr.notests net.ifnames=0 pci=lastbus=0 quiet panic=1 nr_cpus=24 scsi_mod.scan=none agent.debug_console agent.debug_console_vport=1026 -pidfile /run/vc/vm/0f60fb9af6dbf8c8e355b9e27a62debe8276aa76f4246857e46520fa677ce40e/pid -smp 1,cores=1,threads=1,sockets=24,maxcpus=24
+
+# 我们到kata的netns里面去看看忘了情况， eth0后面的@if22，说的是在对端，是22号接口和本接口做了peer。
+[root@worker-0 ~]# nsenter -t 20394 -n ip a
+1: lo: &lt;LOOPBACK,UP,LOWER_UP&gt; mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    inet6 ::1/128 scope host
+       valid_lft forever preferred_lft forever
+3: eth0@if22: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu 1400 qdisc noqueue state UP group default qlen 1000
+    link/ether 0a:58:0a:81:00:12 brd ff:ff:ff:ff:ff:ff link-netns a4db0b05-2ff7-4a29-98da-1df2491622fb
+    inet 10.129.0.18/23 brd 10.129.1.255 scope global eth0
+       valid_lft forever preferred_lft forever
+    inet6 fe80::858:aff:fe81:12/64 scope link
+       valid_lft forever preferred_lft forever
+4: tap0_kata: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu 1400 qdisc mq state UNKNOWN group default qlen 1000
+    link/ether 56:51:b2:40:7c:56 brd ff:ff:ff:ff:ff:ff
+    inet6 fe80::5451:b2ff:fe40:7c56/64 scope link
+       valid_lft forever preferred_lft forever
+
+# 我们在worker-0上，能看到有28号接口，并且对应这kata里面的3好接口
+[root@worker-0 ~]# ip link | grep 22 -A3
+    link/ether 9e:88:4d:e5:55:80 brd ff:ff:ff:ff:ff:ff link-netns 7ccc8362-c042-4bf3-9ddc-fa4fef322134
+18: 6f53bb03a970cf7@if3: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu 1400 qdisc noqueue master ovs-system state UP mode DEFAULT group default
+    link/ether 8e:a7:85:94:de:7b brd ff:ff:ff:ff:ff:ff link-netns 5f33c5e4-1788-4ab6-883b-78bf7ab5372e
+22: 0f60fb9af6dbf8c@if3: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu 1400 qdisc noqueue master ovs-system state UP mode DEFAULT group default
+    link/ether 02:3c:63:91:ae:7f brd ff:ff:ff:ff:ff:ff link-netns 50226e1e-a0fd-48e3-b05c-7d5aa1d41acf
+
+# 我们看看kata netns里面有没有nftables
+[root@worker-0 ~]# nsenter -t 20394 -n nft list ruleset
+table ip filter {
+        chain INPUT {
+                type filter hook input priority filter; policy accept;
+        }
+
+        chain FORWARD {
+                type filter hook forward priority filter; policy accept;
+                meta l4proto tcp tcp dport 22623 tcp flags &amp; (fin|syn|rst|ack) == syn counter packets 0 bytes 0 reject
+                meta l4proto tcp tcp dport 22624 tcp flags &amp; (fin|syn|rst|ack) == syn counter packets 0 bytes 0 reject
+                meta l4proto tcp ip daddr 169.254.169.254 tcp dport != 53 counter packets 0 bytes 0 reject
+                meta l4proto udp ip daddr 169.254.169.254 udp dport 53 counter packets 0 bytes 0 reject
+        }
+
+        chain OUTPUT {
+                type filter hook output priority filter; policy accept;
+                meta l4proto tcp tcp dport 22623 tcp flags &amp; (fin|syn|rst|ack) == syn counter packets 0 bytes 0 reject
+                meta l4proto tcp tcp dport 22624 tcp flags &amp; (fin|syn|rst|ack) == syn counter packets 0 bytes 0 reject
+                meta l4proto tcp ip daddr 169.254.169.254 tcp dport != 53 counter packets 0 bytes 0 reject
+                meta l4proto udp ip daddr 169.254.169.254 udp dport 53 counter packets 0 bytes 0 reject
+        }
+}</code></pre>
+        <p>TC ( traffic control )
+        的配置还是需要好好学习的，命令行比较复杂，可以参考以下的一些内容</p>
+        <ul>
+        <li><a
+        href="https://people.netfilter.org/pablo/netdev0.1/papers/Linux-Traffic-Control-Classifier-Action-Subsystem-Architecture.pdf">很好的论文，解释了tc架构，以及stolen是怎么回事</a></li>
+        <li><a
+        href="https://medium.com/swlh/traffic-mirroring-with-linux-tc-df4d36116119">直接讲解了tc
+        mirror的配置和效果</a></li>
+        <li><a
+        href="https://gist.github.com/mcastelino/7d85f4164ffdaf48242f9281bb1d0f9b">解释了
+        ingress 和 ffff: 之间的关系</a></li>
+        </ul>
+        <p>可以使用的 man 命令</p>
+        <ul>
+        <li>man tc-mirred</li>
+        <li>man tc-ctinfo</li>
+        <li>man tc-u32</li>
+        <li>man tc-actions</li>
+        </ul>
+        <p>注意 action
+        里面有一个stolen，这个是说，命中以后，后续tc动作就中断了，进入netfilter等内核后续流程。</p>
+        <pre><code># 我们看看文档里面的tc配置，意思就是在eth0和tap0_kata之间mirror流量
+
+# 根据网上的文档，tc qdisc add dev eth0 handle ffff: ingress is equivalent to tc qdisc add dev eth0 ingress, and also equals to &#39;qdisc ingress ffff: dev enp0s31f6 parent ffff:fff1 ----------------&#39;
+
+[root@worker-0 ~]# nsenter -t 20394 -n tc -s -p qdisc show dev eth0
+qdisc noqueue 0: root refcnt 2
+ Sent 0 bytes 0 pkt (dropped 0, overlimits 0 requeues 0)
+ backlog 0b 0p requeues 0
+qdisc ingress ffff: parent ffff:fff1 ----------------
+ Sent 192 bytes 2 pkt (dropped 0, overlimits 0 requeues 0)
+ backlog 0b 0p requeues 0
+
+# 根据网上的文档，以下配置是 tc filter add dev eth0 parent ffff: protocol all u32 match u32 0 0 action mirred egress mirror dev tap0_kata 的结果
+
+[root@worker-0 ~]# nsenter -t 20394 -n tc -s -p filter show dev eth0 root
+filter parent ffff: protocol all pref 49152 u32 chain 0
+filter parent ffff: protocol all pref 49152 u32 chain 0 fh 800: ht divisor 1
+filter parent ffff: protocol all pref 49152 u32 chain 0 fh 800::800 order 2048 key ht 800 bkt 0 terminal flowid ??? not_in_hw  (rule hit 2 success 2)
+  match 00000000/00000000 at 0 (success 2 )
+        action order 1: mirred (Egress Redirect to device tap0_kata) stolen
+        index 1 ref 1 bind 1 installed 2310 sec used 2310 sec firstused 2310 sec
+        Action statistics:
+        Sent 192 bytes 2 pkt (dropped 0, overlimits 0 requeues 0)
+        backlog 0b 0p requeues 0
+
+[root@worker-0 ~]# nsenter -t 20394 -n tc -s -p filter show dev eth0 ingress
+filter parent ffff: protocol all pref 49152 u32 chain 0
+filter parent ffff: protocol all pref 49152 u32 chain 0 fh 800: ht divisor 1
+filter parent ffff: protocol all pref 49152 u32 chain 0 fh 800::800 order 2048 key ht 800 bkt 0 terminal flowid ??? not_in_hw  (rule hit 2 success 2)
+  match 00000000/00000000 at 0 (success 2 )
+        action order 1: mirred (Egress Redirect to device tap0_kata) stolen
+        index 1 ref 1 bind 1 installed 1797 sec used 1797 sec firstused 1797 sec
+        Action statistics:
+        Sent 192 bytes 2 pkt (dropped 0, overlimits 0 requeues 0)
+        backlog 0b 0p requeues 0
+
+[root@worker-0 ~]# nsenter -t 20394 -n tc -s -p filter show dev eth0 egress
+filter parent ffff: protocol all pref 49152 u32 chain 0
+filter parent ffff: protocol all pref 49152 u32 chain 0 fh 800: ht divisor 1
+filter parent ffff: protocol all pref 49152 u32 chain 0 fh 800::800 order 2048 key ht 800 bkt 0 terminal flowid ??? not_in_hw  (rule hit 2 success 2)
+  match 00000000/00000000 at 0 (success 2 )
+        action order 1: mirred (Egress Redirect to device tap0_kata) stolen
+        index 1 ref 1 bind 1 installed 2330 sec used 2330 sec firstused 2330 sec
+        Action statistics:
+        Sent 192 bytes 2 pkt (dropped 0, overlimits 0 requeues 0)
+        backlog 0b 0p requeues 0
+
+# 根据网上的文档，以下配置是 tc filter add dev tap0_kata parent ffff: protocol all u32 match u32 0 0 action mirred egress mirror dev eth0 的结果
+
+[root@worker-0 ~]# nsenter -t 20394 -n tc -s -p qdisc show dev tap0_kata
+qdisc mq 0: root
+ Sent 1296 bytes 16 pkt (dropped 0, overlimits 0 requeues 0)
+ backlog 0b 0p requeues 0
+qdisc fq_codel 0: parent :1 limit 10240p flows 1024 quantum 1414 target 5ms interval 100ms memory_limit 32Mb ecn drop_batch 64
+ Sent 1296 bytes 16 pkt (dropped 0, overlimits 0 requeues 0)
+ backlog 0b 0p requeues 0
+  maxpacket 0 drop_overlimit 0 new_flow_count 0 ecn_mark 0
+  new_flows_len 0 old_flows_len 0
+qdisc ingress ffff: parent ffff:fff1 ----------------
+ Sent 880 bytes 14 pkt (dropped 0, overlimits 0 requeues 0)
+ backlog 0b 0p requeues 0
+
+[root@worker-0 ~]# nsenter -t 20394 -n tc -s -p filter show dev tap0_kata root
+filter parent ffff: protocol all pref 49152 u32 chain 0
+filter parent ffff: protocol all pref 49152 u32 chain 0 fh 800: ht divisor 1
+filter parent ffff: protocol all pref 49152 u32 chain 0 fh 800::800 order 2048 key ht 800 bkt 0 terminal flowid ??? not_in_hw  (rule hit 15 success 15)
+  match 00000000/00000000 at 0 (success 15 )
+        action order 1: mirred (Egress Redirect to device eth0) stolen
+        index 2 ref 1 bind 1 installed 2383 sec used 247 sec firstused 2380 sec
+        Action statistics:
+        Sent 936 bytes 15 pkt (dropped 0, overlimits 0 requeues 0)
+        backlog 0b 0p requeues 0
+
+[root@worker-0 ~]# nsenter -t 20394 -n tc -s -p filter show dev tap0_kata ingress
+filter parent ffff: protocol all pref 49152 u32 chain 0
+filter parent ffff: protocol all pref 49152 u32 chain 0 fh 800: ht divisor 1
+filter parent ffff: protocol all pref 49152 u32 chain 0 fh 800::800 order 2048 key ht 800 bkt 0 terminal flowid ??? not_in_hw  (rule hit 14 success 14)
+  match 00000000/00000000 at 0 (success 14 )
+        action order 1: mirred (Egress Redirect to device eth0) stolen
+        index 2 ref 1 bind 1 installed 1690 sec used 636 sec firstused 1687 sec
+        Action statistics:
+        Sent 880 bytes 14 pkt (dropped 0, overlimits 0 requeues 0)
+        backlog 0b 0p requeues 0
+
+[root@worker-0 ~]# nsenter -t 20394 -n tc -s -p filter show dev tap0_kata egress
+filter parent ffff: protocol all pref 49152 u32 chain 0
+filter parent ffff: protocol all pref 49152 u32 chain 0 fh 800: ht divisor 1
+filter parent ffff: protocol all pref 49152 u32 chain 0 fh 800::800 order 2048 key ht 800 bkt 0 terminal flowid ??? not_in_hw  (rule hit 15 success 15)
+  match 00000000/00000000 at 0 (success 15 )
+        action order 1: mirred (Egress Redirect to device eth0) stolen
+        index 2 ref 1 bind 1 installed 2400 sec used 264 sec firstused 2397 sec
+        Action statistics:
+        Sent 936 bytes 15 pkt (dropped 0, overlimits 0 requeues 0)
+        backlog 0b 0p requeues 0
+</code></pre>
+        <h1 id="qemu-kiwi-rpm-sourcing">qemu-kiwi rpm sourcing</h1>
+        <p>我们来看看 qemu-kiwi 这个rpm是从哪里来的。<a
+        href="../../notes/2022/2022.01.rpm.belongs.html">红帽官网也有工具查</a>。答案是
+        <a
+        href="https://access.redhat.com/downloads/content/522/ver=/rhel---8/8/x86_64/packages">Red
+        Hat Enterprise Linux Advanced Virtualization 8 x86_64</a> (
+        advanced-virt-for-rhel-8-x86_64-rpms )</p>
+        <div class="sourceCode" id="cb8"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="ex">rpm</span> <span class="at">-qpi</span> kata-containers-2.1.0-6.el8.x86_64.rpm</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="co"># warning: kata-containers-2.1.0-6.el8.x86_64.rpm: Header V3 RSA/SHA256 Signature, key ID fd431d51: NOKEY</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Name        : kata-containers</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Version     : 2.1.0</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Release     : 6.el8</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Architecture: x86_64</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Install Date: (not installed)</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Group       : Unspecified</span></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Size        : 104672045</span></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a><span class="co"># License     : ASL 2.0</span></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Signature   : RSA/SHA256, Fri 13 Aug 2021 07:38:35 AM UTC, Key ID 199e2f91fd431d51</span></span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Source RPM  : kata-containers-2.1.0-6.el8.src.rpm</span></span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a><span class="co"># Build Date  : Thu 29 Jul 2021 08:43:06 PM UTC</span></span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a><span class="co"># Build Host  : x86-vm-56.build.eng.bos.redhat.com</span></span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Relocations : (not relocatable)</span></span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a><span class="co"># Packager    : Red Hat, Inc. &lt;http://bugzilla.redhat.com/bugzilla&gt;</span></span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a><span class="co"># Vendor      : Red Hat, Inc.</span></span>
+<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a><span class="co"># URL         : https://github.com/kata-containers/kata-containers</span></span>
+<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a><span class="co"># Summary     : Kata Containers version 2.x repository</span></span>
+<span id="cb8-20"><a href="#cb8-20" aria-hidden="true" tabindex="-1"></a><span class="co"># Description :</span></span>
+<span id="cb8-21"><a href="#cb8-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-22"><a href="#cb8-22" aria-hidden="true" tabindex="-1"></a><span class="co"># Kata Containers version 2.x repository. Kata Containers is an open source</span></span>
+<span id="cb8-23"><a href="#cb8-23" aria-hidden="true" tabindex="-1"></a><span class="co"># project and community working to build a standard implementation of lightweight</span></span>
+<span id="cb8-24"><a href="#cb8-24" aria-hidden="true" tabindex="-1"></a><span class="co"># Virtual Machines (VMs) that feel and perform like containers, but provide the</span></span>
+<span id="cb8-25"><a href="#cb8-25" aria-hidden="true" tabindex="-1"></a><span class="co"># workload isolation and security advantages of VMs. https://katacontainers.io/.</span></span>
+<span id="cb8-26"><a href="#cb8-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-27"><a href="#cb8-27" aria-hidden="true" tabindex="-1"></a><span class="co"># %gopkg</span></span>
+<span id="cb8-28"><a href="#cb8-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-29"><a href="#cb8-29" aria-hidden="true" tabindex="-1"></a><span class="ex">rpm</span> <span class="at">-qp</span> <span class="at">--fileprovide</span> kata-containers-2.1.0-6.el8.x86_64.rpm</span>
+<span id="cb8-30"><a href="#cb8-30" aria-hidden="true" tabindex="-1"></a><span class="co"># warning: kata-containers-2.1.0-6.el8.x86_64.rpm: Header V3 RSA/SHA256 Signature, key ID fd431d51: NOKEY</span></span>
+<span id="cb8-31"><a href="#cb8-31" aria-hidden="true" tabindex="-1"></a><span class="co"># /etc/crio/crio.conf.d/50-kata</span></span>
+<span id="cb8-32"><a href="#cb8-32" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/bin/containerd-shim-kata-v2</span></span>
+<span id="cb8-33"><a href="#cb8-33" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/bin/kata-collect-data.sh</span></span>
+<span id="cb8-34"><a href="#cb8-34" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/bin/kata-monitor</span></span>
+<span id="cb8-35"><a href="#cb8-35" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/bin/kata-runtime</span></span>
+<span id="cb8-36"><a href="#cb8-36" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/lib/.build-id</span></span>
+<span id="cb8-37"><a href="#cb8-37" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/lib/.build-id/05</span></span>
+<span id="cb8-38"><a href="#cb8-38" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/lib/.build-id/05/4f48f5aef5a7120fe76e8f41bc2e96fe82cb20</span></span>
+<span id="cb8-39"><a href="#cb8-39" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/lib/.build-id/50</span></span>
+<span id="cb8-40"><a href="#cb8-40" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/lib/.build-id/50/a5e84ca71250993215cb19c1fed802800fb358</span></span>
+<span id="cb8-41"><a href="#cb8-41" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/lib/.build-id/b1</span></span>
+<span id="cb8-42"><a href="#cb8-42" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/lib/.build-id/b1/b275acd0ff5df77c6f5abc9b6c8c5b2b4ac88e</span></span>
+<span id="cb8-43"><a href="#cb8-43" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/lib/.build-id/e7</span></span>
+<span id="cb8-44"><a href="#cb8-44" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/lib/.build-id/e7/6ecd091d646ac823c7292c65b2a186d40b8023</span></span>
+<span id="cb8-45"><a href="#cb8-45" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/lib/systemd/system/kata-osbuilder-generate.service</span></span>
+<span id="cb8-46"><a href="#cb8-46" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/libexec/kata-containers</span></span>
+<span id="cb8-47"><a href="#cb8-47" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/libexec/kata-containers/VERSION</span></span>
+<span id="cb8-48"><a href="#cb8-48" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/libexec/kata-containers/agent</span></span>
+<span id="cb8-49"><a href="#cb8-49" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/libexec/kata-containers/agent/usr</span></span>
+<span id="cb8-50"><a href="#cb8-50" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/libexec/kata-containers/agent/usr/bin</span></span>
+<span id="cb8-51"><a href="#cb8-51" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/libexec/kata-containers/agent/usr/bin/kata-agent</span></span>
+<span id="cb8-52"><a href="#cb8-52" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/libexec/kata-containers/agent/usr/lib</span></span>
+<span id="cb8-53"><a href="#cb8-53" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/libexec/kata-containers/agent/usr/lib/systemd</span></span>
+<span id="cb8-54"><a href="#cb8-54" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/libexec/kata-containers/agent/usr/lib/systemd/system</span></span>
+<span id="cb8-55"><a href="#cb8-55" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/libexec/kata-containers/agent/usr/lib/systemd/system/kata-agent.service</span></span>
+<span id="cb8-56"><a href="#cb8-56" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/libexec/kata-containers/agent/usr/lib/systemd/system/kata-containers.target</span></span>
+<span id="cb8-57"><a href="#cb8-57" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/libexec/kata-containers/kata-netmon</span></span>
+<span id="cb8-58"><a href="#cb8-58" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/libexec/kata-containers/osbuilder</span></span>
+<span id="cb8-59"><a href="#cb8-59" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/libexec/kata-containers/osbuilder/dracut</span></span>
+<span id="cb8-60"><a href="#cb8-60" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/libexec/kata-containers/osbuilder/dracut/dracut.conf.d</span></span>
+<span id="cb8-61"><a href="#cb8-61" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/libexec/kata-containers/osbuilder/dracut/dracut.conf.d/05-base.conf</span></span>
+<span id="cb8-62"><a href="#cb8-62" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/libexec/kata-containers/osbuilder/dracut/dracut.conf.d/15-dracut-rhel.conf</span></span>
+<span id="cb8-63"><a href="#cb8-63" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/libexec/kata-containers/osbuilder/initrd-builder</span></span>
+<span id="cb8-64"><a href="#cb8-64" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/libexec/kata-containers/osbuilder/initrd-builder/README.md</span></span>
+<span id="cb8-65"><a href="#cb8-65" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/libexec/kata-containers/osbuilder/initrd-builder/initrd_builder.sh</span></span>
+<span id="cb8-66"><a href="#cb8-66" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/libexec/kata-containers/osbuilder/kata-osbuilder.sh</span></span>
+<span id="cb8-67"><a href="#cb8-67" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/libexec/kata-containers/osbuilder/nsdax</span></span>
+<span id="cb8-68"><a href="#cb8-68" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/libexec/kata-containers/osbuilder/rootfs-builder</span></span>
+<span id="cb8-69"><a href="#cb8-69" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/libexec/kata-containers/osbuilder/rootfs-builder/README.md</span></span>
+<span id="cb8-70"><a href="#cb8-70" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/libexec/kata-containers/osbuilder/rootfs-builder/rootfs.sh</span></span>
+<span id="cb8-71"><a href="#cb8-71" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/libexec/kata-containers/osbuilder/scripts</span></span>
+<span id="cb8-72"><a href="#cb8-72" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/libexec/kata-containers/osbuilder/scripts/lib.sh</span></span>
+<span id="cb8-73"><a href="#cb8-73" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/share/bash-completion/completions/kata-runtime</span></span>
+<span id="cb8-74"><a href="#cb8-74" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/share/doc/kata-containers</span></span>
+<span id="cb8-75"><a href="#cb8-75" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/share/doc/kata-containers/CONTRIBUTING.md</span></span>
+<span id="cb8-76"><a href="#cb8-76" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/share/doc/kata-containers/README.md</span></span>
+<span id="cb8-77"><a href="#cb8-77" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/share/kata-containers</span></span>
+<span id="cb8-78"><a href="#cb8-78" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/share/kata-containers/defaults</span></span>
+<span id="cb8-79"><a href="#cb8-79" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/share/kata-containers/defaults/configuration.toml</span></span>
+<span id="cb8-80"><a href="#cb8-80" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/share/licenses/kata-containers</span></span>
+<span id="cb8-81"><a href="#cb8-81" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/share/licenses/kata-containers/LICENSE</span></span>
+<span id="cb8-82"><a href="#cb8-82" aria-hidden="true" tabindex="-1"></a><span class="co"># /var/cache/kata-containers</span></span>
+<span id="cb8-83"><a href="#cb8-83" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-84"><a href="#cb8-84" aria-hidden="true" tabindex="-1"></a><span class="ex">rpm</span> <span class="at">-qp</span> <span class="at">--requires</span> kata-containers-2.1.0-6.el8.x86_64.rpm</span>
+<span id="cb8-85"><a href="#cb8-85" aria-hidden="true" tabindex="-1"></a><span class="co"># warning: kata-containers-2.1.0-6.el8.x86_64.rpm: Header V3 RSA/SHA256 Signature, key ID fd431d51: NOKEY</span></span>
+<span id="cb8-86"><a href="#cb8-86" aria-hidden="true" tabindex="-1"></a><span class="co"># /bin/bash</span></span>
+<span id="cb8-87"><a href="#cb8-87" aria-hidden="true" tabindex="-1"></a><span class="co"># /bin/sh</span></span>
+<span id="cb8-88"><a href="#cb8-88" aria-hidden="true" tabindex="-1"></a><span class="co"># /bin/sh</span></span>
+<span id="cb8-89"><a href="#cb8-89" aria-hidden="true" tabindex="-1"></a><span class="co"># /bin/sh</span></span>
+<span id="cb8-90"><a href="#cb8-90" aria-hidden="true" tabindex="-1"></a><span class="co"># dracut</span></span>
+<span id="cb8-91"><a href="#cb8-91" aria-hidden="true" tabindex="-1"></a><span class="co"># kernel</span></span>
+<span id="cb8-92"><a href="#cb8-92" aria-hidden="true" tabindex="-1"></a><span class="co"># libc.so.6()(64bit)</span></span>
+<span id="cb8-93"><a href="#cb8-93" aria-hidden="true" tabindex="-1"></a><span class="co"># libc.so.6(GLIBC_2.10)(64bit)</span></span>
+<span id="cb8-94"><a href="#cb8-94" aria-hidden="true" tabindex="-1"></a><span class="co"># libc.so.6(GLIBC_2.14)(64bit)</span></span>
+<span id="cb8-95"><a href="#cb8-95" aria-hidden="true" tabindex="-1"></a><span class="co"># libc.so.6(GLIBC_2.15)(64bit)</span></span>
+<span id="cb8-96"><a href="#cb8-96" aria-hidden="true" tabindex="-1"></a><span class="co"># libc.so.6(GLIBC_2.17)(64bit)</span></span>
+<span id="cb8-97"><a href="#cb8-97" aria-hidden="true" tabindex="-1"></a><span class="co"># libc.so.6(GLIBC_2.18)(64bit)</span></span>
+<span id="cb8-98"><a href="#cb8-98" aria-hidden="true" tabindex="-1"></a><span class="co"># libc.so.6(GLIBC_2.2.5)(64bit)</span></span>
+<span id="cb8-99"><a href="#cb8-99" aria-hidden="true" tabindex="-1"></a><span class="co"># libc.so.6(GLIBC_2.3)(64bit)</span></span>
+<span id="cb8-100"><a href="#cb8-100" aria-hidden="true" tabindex="-1"></a><span class="co"># libc.so.6(GLIBC_2.3.2)(64bit)</span></span>
+<span id="cb8-101"><a href="#cb8-101" aria-hidden="true" tabindex="-1"></a><span class="co"># libc.so.6(GLIBC_2.3.4)(64bit)</span></span>
+<span id="cb8-102"><a href="#cb8-102" aria-hidden="true" tabindex="-1"></a><span class="co"># libc.so.6(GLIBC_2.4)(64bit)</span></span>
+<span id="cb8-103"><a href="#cb8-103" aria-hidden="true" tabindex="-1"></a><span class="co"># libc.so.6(GLIBC_2.7)(64bit)</span></span>
+<span id="cb8-104"><a href="#cb8-104" aria-hidden="true" tabindex="-1"></a><span class="co"># libc.so.6(GLIBC_2.9)(64bit)</span></span>
+<span id="cb8-105"><a href="#cb8-105" aria-hidden="true" tabindex="-1"></a><span class="co"># libdl.so.2()(64bit)</span></span>
+<span id="cb8-106"><a href="#cb8-106" aria-hidden="true" tabindex="-1"></a><span class="co"># libdl.so.2(GLIBC_2.2.5)(64bit)</span></span>
+<span id="cb8-107"><a href="#cb8-107" aria-hidden="true" tabindex="-1"></a><span class="co"># libgcc_s.so.1()(64bit)</span></span>
+<span id="cb8-108"><a href="#cb8-108" aria-hidden="true" tabindex="-1"></a><span class="co"># libgcc_s.so.1(GCC_3.0)(64bit)</span></span>
+<span id="cb8-109"><a href="#cb8-109" aria-hidden="true" tabindex="-1"></a><span class="co"># libgcc_s.so.1(GCC_3.3)(64bit)</span></span>
+<span id="cb8-110"><a href="#cb8-110" aria-hidden="true" tabindex="-1"></a><span class="co"># libgcc_s.so.1(GCC_4.2.0)(64bit)</span></span>
+<span id="cb8-111"><a href="#cb8-111" aria-hidden="true" tabindex="-1"></a><span class="co"># libm.so.6()(64bit)</span></span>
+<span id="cb8-112"><a href="#cb8-112" aria-hidden="true" tabindex="-1"></a><span class="co"># libm.so.6(GLIBC_2.2.5)(64bit)</span></span>
+<span id="cb8-113"><a href="#cb8-113" aria-hidden="true" tabindex="-1"></a><span class="co"># libpthread.so.0()(64bit)</span></span>
+<span id="cb8-114"><a href="#cb8-114" aria-hidden="true" tabindex="-1"></a><span class="co"># libpthread.so.0(GLIBC_2.2.5)(64bit)</span></span>
+<span id="cb8-115"><a href="#cb8-115" aria-hidden="true" tabindex="-1"></a><span class="co"># libpthread.so.0(GLIBC_2.3.2)(64bit)</span></span>
+<span id="cb8-116"><a href="#cb8-116" aria-hidden="true" tabindex="-1"></a><span class="co"># libpthread.so.0(GLIBC_2.3.3)(64bit)</span></span>
+<span id="cb8-117"><a href="#cb8-117" aria-hidden="true" tabindex="-1"></a><span class="co"># libutil.so.1()(64bit)</span></span>
+<span id="cb8-118"><a href="#cb8-118" aria-hidden="true" tabindex="-1"></a><span class="co"># libutil.so.1(GLIBC_2.2.5)(64bit)</span></span>
+<span id="cb8-119"><a href="#cb8-119" aria-hidden="true" tabindex="-1"></a><span class="co"># qemu-kiwi &gt;= 5.1.0-16</span></span>
+<span id="cb8-120"><a href="#cb8-120" aria-hidden="true" tabindex="-1"></a><span class="co"># rpmlib(CompressedFileNames) &lt;= 3.0.4-1</span></span>
+<span id="cb8-121"><a href="#cb8-121" aria-hidden="true" tabindex="-1"></a><span class="co"># rpmlib(FileDigests) &lt;= 4.6.0-1</span></span>
+<span id="cb8-122"><a href="#cb8-122" aria-hidden="true" tabindex="-1"></a><span class="co"># rpmlib(PayloadFilesHavePrefix) &lt;= 4.0-1</span></span>
+<span id="cb8-123"><a href="#cb8-123" aria-hidden="true" tabindex="-1"></a><span class="co"># rpmlib(PayloadIsXz) &lt;= 5.2-1</span></span>
+<span id="cb8-124"><a href="#cb8-124" aria-hidden="true" tabindex="-1"></a><span class="co"># rtld(GNU_HASH)</span></span>
+<span id="cb8-125"><a href="#cb8-125" aria-hidden="true" tabindex="-1"></a><span class="co"># systemd</span></span>
+<span id="cb8-126"><a href="#cb8-126" aria-hidden="true" tabindex="-1"></a><span class="co"># systemd</span></span>
+<span id="cb8-127"><a href="#cb8-127" aria-hidden="true" tabindex="-1"></a><span class="co"># systemd</span></span>
+<span id="cb8-128"><a href="#cb8-128" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-129"><a href="#cb8-129" aria-hidden="true" tabindex="-1"></a><span class="ex">rpm</span> <span class="at">-qpi</span> qemu-kiwi-5.2.0-16.module+el8.4.0+13460+2e130eec.13.x86_64.rpm</span>
+<span id="cb8-130"><a href="#cb8-130" aria-hidden="true" tabindex="-1"></a><span class="co"># warning: qemu-kiwi-5.2.0-16.module+el8.4.0+13460+2e130eec.13.x86_64.rpm: Header V3 RSA/SHA256 Signature, key ID fd431d51: NOKEY</span></span>
+<span id="cb8-131"><a href="#cb8-131" aria-hidden="true" tabindex="-1"></a><span class="co"># Name        : qemu-kiwi</span></span>
+<span id="cb8-132"><a href="#cb8-132" aria-hidden="true" tabindex="-1"></a><span class="co"># Epoch       : 15</span></span>
+<span id="cb8-133"><a href="#cb8-133" aria-hidden="true" tabindex="-1"></a><span class="co"># Version     : 5.2.0</span></span>
+<span id="cb8-134"><a href="#cb8-134" aria-hidden="true" tabindex="-1"></a><span class="co"># Release     : 16.module+el8.4.0+13460+2e130eec.13</span></span>
+<span id="cb8-135"><a href="#cb8-135" aria-hidden="true" tabindex="-1"></a><span class="co"># Architecture: x86_64</span></span>
+<span id="cb8-136"><a href="#cb8-136" aria-hidden="true" tabindex="-1"></a><span class="co"># Install Date: (not installed)</span></span>
+<span id="cb8-137"><a href="#cb8-137" aria-hidden="true" tabindex="-1"></a><span class="co"># Group       : Development/Tools</span></span>
+<span id="cb8-138"><a href="#cb8-138" aria-hidden="true" tabindex="-1"></a><span class="co"># Size        : 12941413</span></span>
+<span id="cb8-139"><a href="#cb8-139" aria-hidden="true" tabindex="-1"></a><span class="co"># License     : GPLv2 and GPLv2+ and CC-BY</span></span>
+<span id="cb8-140"><a href="#cb8-140" aria-hidden="true" tabindex="-1"></a><span class="co"># Signature   : RSA/SHA256, Tue 30 Nov 2021 10:43:30 PM UTC, Key ID 199e2f91fd431d51</span></span>
+<span id="cb8-141"><a href="#cb8-141" aria-hidden="true" tabindex="-1"></a><span class="co"># Source RPM  : qemu-kvm-5.2.0-16.module+el8.4.0+13460+2e130eec.13.src.rpm</span></span>
+<span id="cb8-142"><a href="#cb8-142" aria-hidden="true" tabindex="-1"></a><span class="co"># Build Date  : Fri 26 Nov 2021 09:59:08 PM UTC</span></span>
+<span id="cb8-143"><a href="#cb8-143" aria-hidden="true" tabindex="-1"></a><span class="co"># Build Host  : x86-037.build.eng.bos.redhat.com</span></span>
+<span id="cb8-144"><a href="#cb8-144" aria-hidden="true" tabindex="-1"></a><span class="co"># Relocations : (not relocatable)</span></span>
+<span id="cb8-145"><a href="#cb8-145" aria-hidden="true" tabindex="-1"></a><span class="co"># Packager    : Red Hat, Inc. &lt;http://bugzilla.redhat.com/bugzilla&gt;</span></span>
+<span id="cb8-146"><a href="#cb8-146" aria-hidden="true" tabindex="-1"></a><span class="co"># Vendor      : Red Hat, Inc.</span></span>
+<span id="cb8-147"><a href="#cb8-147" aria-hidden="true" tabindex="-1"></a><span class="co"># URL         : http://www.qemu.org/</span></span>
+<span id="cb8-148"><a href="#cb8-148" aria-hidden="true" tabindex="-1"></a><span class="co"># Summary     : qemu-kiwi components</span></span>
+<span id="cb8-149"><a href="#cb8-149" aria-hidden="true" tabindex="-1"></a><span class="co"># Description :</span></span>
+<span id="cb8-150"><a href="#cb8-150" aria-hidden="true" tabindex="-1"></a><span class="co"># qemu-kiwi is a version of qemu-kvm with a restricted set of features</span></span>
+<span id="cb8-151"><a href="#cb8-151" aria-hidden="true" tabindex="-1"></a><span class="co"># intended for use by specific applications.</span></span>
+<span id="cb8-152"><a href="#cb8-152" aria-hidden="true" tabindex="-1"></a><span class="co"># It&#39;s experimental and unsupported.</span></span>
+<span id="cb8-153"><a href="#cb8-153" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-154"><a href="#cb8-154" aria-hidden="true" tabindex="-1"></a><span class="ex">rpm</span> <span class="at">-qp</span> <span class="at">--fileprovide</span> qemu-kiwi-5.2.0-16.module+el8.4.0+13460+2e130eec.13.x86_64.rpm</span>
+<span id="cb8-155"><a href="#cb8-155" aria-hidden="true" tabindex="-1"></a><span class="co"># warning: qemu-kiwi-5.2.0-16.module+el8.4.0+13460+2e130eec.13.x86_64.rpm: Header V3 RSA/SHA256 Signature, key ID fd431d51: NOKEY</span></span>
+<span id="cb8-156"><a href="#cb8-156" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/lib/.build-id</span></span>
+<span id="cb8-157"><a href="#cb8-157" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/lib/.build-id/02</span></span>
+<span id="cb8-158"><a href="#cb8-158" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/lib/.build-id/02/3daf3e2bc89b7e0363ac89ea46bb70ddd74ae7</span></span>
+<span id="cb8-159"><a href="#cb8-159" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/libexec/qemu-kiwi</span></span>
+<span id="cb8-160"><a href="#cb8-160" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/share/systemtap/tapset/qemu-kiwi-log.stp</span></span>
+<span id="cb8-161"><a href="#cb8-161" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/share/systemtap/tapset/qemu-kiwi-simpletrace.stp</span></span>
+<span id="cb8-162"><a href="#cb8-162" aria-hidden="true" tabindex="-1"></a><span class="co"># /usr/share/systemtap/tapset/qemu-kiwi.stp</span></span>
+<span id="cb8-163"><a href="#cb8-163" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-164"><a href="#cb8-164" aria-hidden="true" tabindex="-1"></a><span class="ex">rpm</span> <span class="at">-qp</span> <span class="at">--requires</span> qemu-kiwi-5.2.0-16.module+el8.4.0+13460+2e130eec.13.x86_64.rpm</span>
+<span id="cb8-165"><a href="#cb8-165" aria-hidden="true" tabindex="-1"></a><span class="co"># warning: qemu-kiwi-5.2.0-16.module+el8.4.0+13460+2e130eec.13.x86_64.rpm: Header V3 RSA/SHA256 Signature, key ID fd431d51: NOKEY</span></span>
+<span id="cb8-166"><a href="#cb8-166" aria-hidden="true" tabindex="-1"></a><span class="co"># libaio.so.1()(64bit)</span></span>
+<span id="cb8-167"><a href="#cb8-167" aria-hidden="true" tabindex="-1"></a><span class="co"># libaio.so.1(LIBAIO_0.1)(64bit)</span></span>
+<span id="cb8-168"><a href="#cb8-168" aria-hidden="true" tabindex="-1"></a><span class="co"># libaio.so.1(LIBAIO_0.4)(64bit)</span></span>
+<span id="cb8-169"><a href="#cb8-169" aria-hidden="true" tabindex="-1"></a><span class="co"># libc.so.6()(64bit)</span></span>
+<span id="cb8-170"><a href="#cb8-170" aria-hidden="true" tabindex="-1"></a><span class="co"># libc.so.6(GLIBC_2.10)(64bit)</span></span>
+<span id="cb8-171"><a href="#cb8-171" aria-hidden="true" tabindex="-1"></a><span class="co"># libc.so.6(GLIBC_2.11)(64bit)</span></span>
+<span id="cb8-172"><a href="#cb8-172" aria-hidden="true" tabindex="-1"></a><span class="co"># libc.so.6(GLIBC_2.12)(64bit)</span></span>
+<span id="cb8-173"><a href="#cb8-173" aria-hidden="true" tabindex="-1"></a><span class="co"># libc.so.6(GLIBC_2.14)(64bit)</span></span>
+<span id="cb8-174"><a href="#cb8-174" aria-hidden="true" tabindex="-1"></a><span class="co"># libc.so.6(GLIBC_2.17)(64bit)</span></span>
+<span id="cb8-175"><a href="#cb8-175" aria-hidden="true" tabindex="-1"></a><span class="co"># libc.so.6(GLIBC_2.2.5)(64bit)</span></span>
+<span id="cb8-176"><a href="#cb8-176" aria-hidden="true" tabindex="-1"></a><span class="co"># libc.so.6(GLIBC_2.25)(64bit)</span></span>
+<span id="cb8-177"><a href="#cb8-177" aria-hidden="true" tabindex="-1"></a><span class="co"># libc.so.6(GLIBC_2.27)(64bit)</span></span>
+<span id="cb8-178"><a href="#cb8-178" aria-hidden="true" tabindex="-1"></a><span class="co"># libc.so.6(GLIBC_2.28)(64bit)</span></span>
+<span id="cb8-179"><a href="#cb8-179" aria-hidden="true" tabindex="-1"></a><span class="co"># libc.so.6(GLIBC_2.3)(64bit)</span></span>
+<span id="cb8-180"><a href="#cb8-180" aria-hidden="true" tabindex="-1"></a><span class="co"># libc.so.6(GLIBC_2.3.2)(64bit)</span></span>
+<span id="cb8-181"><a href="#cb8-181" aria-hidden="true" tabindex="-1"></a><span class="co"># libc.so.6(GLIBC_2.3.4)(64bit)</span></span>
+<span id="cb8-182"><a href="#cb8-182" aria-hidden="true" tabindex="-1"></a><span class="co"># libc.so.6(GLIBC_2.4)(64bit)</span></span>
+<span id="cb8-183"><a href="#cb8-183" aria-hidden="true" tabindex="-1"></a><span class="co"># libc.so.6(GLIBC_2.7)(64bit)</span></span>
+<span id="cb8-184"><a href="#cb8-184" aria-hidden="true" tabindex="-1"></a><span class="co"># libc.so.6(GLIBC_2.8)(64bit)</span></span>
+<span id="cb8-185"><a href="#cb8-185" aria-hidden="true" tabindex="-1"></a><span class="co"># libc.so.6(GLIBC_2.9)(64bit)</span></span>
+<span id="cb8-186"><a href="#cb8-186" aria-hidden="true" tabindex="-1"></a><span class="co"># libgcc_s.so.1()(64bit)</span></span>
+<span id="cb8-187"><a href="#cb8-187" aria-hidden="true" tabindex="-1"></a><span class="co"># libgcc_s.so.1(GCC_3.0)(64bit)</span></span>
+<span id="cb8-188"><a href="#cb8-188" aria-hidden="true" tabindex="-1"></a><span class="co"># libgcc_s.so.1(GCC_3.3.1)(64bit)</span></span>
+<span id="cb8-189"><a href="#cb8-189" aria-hidden="true" tabindex="-1"></a><span class="co"># libgcc_s.so.1(GCC_3.4)(64bit)</span></span>
+<span id="cb8-190"><a href="#cb8-190" aria-hidden="true" tabindex="-1"></a><span class="co"># libgcc_s.so.1(GCC_4.7.0)(64bit)</span></span>
+<span id="cb8-191"><a href="#cb8-191" aria-hidden="true" tabindex="-1"></a><span class="co"># libgio-2.0.so.0()(64bit)</span></span>
+<span id="cb8-192"><a href="#cb8-192" aria-hidden="true" tabindex="-1"></a><span class="co"># libglib-2.0.so.0()(64bit)</span></span>
+<span id="cb8-193"><a href="#cb8-193" aria-hidden="true" tabindex="-1"></a><span class="co"># libgobject-2.0.so.0()(64bit)</span></span>
+<span id="cb8-194"><a href="#cb8-194" aria-hidden="true" tabindex="-1"></a><span class="co"># libm.so.6()(64bit)</span></span>
+<span id="cb8-195"><a href="#cb8-195" aria-hidden="true" tabindex="-1"></a><span class="co"># libm.so.6(GLIBC_2.2.5)(64bit)</span></span>
+<span id="cb8-196"><a href="#cb8-196" aria-hidden="true" tabindex="-1"></a><span class="co"># libnuma.so.1()(64bit)</span></span>
+<span id="cb8-197"><a href="#cb8-197" aria-hidden="true" tabindex="-1"></a><span class="co"># libnuma.so.1(libnuma_1.1)(64bit)</span></span>
+<span id="cb8-198"><a href="#cb8-198" aria-hidden="true" tabindex="-1"></a><span class="co"># libpixman-1.so.0()(64bit)</span></span>
+<span id="cb8-199"><a href="#cb8-199" aria-hidden="true" tabindex="-1"></a><span class="co"># libpmem.so.1()(64bit)</span></span>
+<span id="cb8-200"><a href="#cb8-200" aria-hidden="true" tabindex="-1"></a><span class="co"># libpmem.so.1(LIBPMEM_1.0)(64bit)</span></span>
+<span id="cb8-201"><a href="#cb8-201" aria-hidden="true" tabindex="-1"></a><span class="co"># libpthread.so.0()(64bit)</span></span>
+<span id="cb8-202"><a href="#cb8-202" aria-hidden="true" tabindex="-1"></a><span class="co"># libpthread.so.0(GLIBC_2.12)(64bit)</span></span>
+<span id="cb8-203"><a href="#cb8-203" aria-hidden="true" tabindex="-1"></a><span class="co"># libpthread.so.0(GLIBC_2.2.5)(64bit)</span></span>
+<span id="cb8-204"><a href="#cb8-204" aria-hidden="true" tabindex="-1"></a><span class="co"># libpthread.so.0(GLIBC_2.3.2)(64bit)</span></span>
+<span id="cb8-205"><a href="#cb8-205" aria-hidden="true" tabindex="-1"></a><span class="co"># libseccomp.so.2()(64bit)</span></span>
+<span id="cb8-206"><a href="#cb8-206" aria-hidden="true" tabindex="-1"></a><span class="co"># libutil.so.1()(64bit)</span></span>
+<span id="cb8-207"><a href="#cb8-207" aria-hidden="true" tabindex="-1"></a><span class="co"># libutil.so.1(GLIBC_2.2.5)(64bit)</span></span>
+<span id="cb8-208"><a href="#cb8-208" aria-hidden="true" tabindex="-1"></a><span class="co"># libz.so.1()(64bit)</span></span>
+<span id="cb8-209"><a href="#cb8-209" aria-hidden="true" tabindex="-1"></a><span class="co"># libz.so.1(ZLIB_1.2.0)(64bit)</span></span>
+<span id="cb8-210"><a href="#cb8-210" aria-hidden="true" tabindex="-1"></a><span class="co"># qemu-kvm-common = 15:5.2.0-16.module+el8.4.0+13460+2e130eec.13</span></span>
+<span id="cb8-211"><a href="#cb8-211" aria-hidden="true" tabindex="-1"></a><span class="co"># rpmlib(CompressedFileNames) &lt;= 3.0.4-1</span></span>
+<span id="cb8-212"><a href="#cb8-212" aria-hidden="true" tabindex="-1"></a><span class="co"># rpmlib(FileDigests) &lt;= 4.6.0-1</span></span>
+<span id="cb8-213"><a href="#cb8-213" aria-hidden="true" tabindex="-1"></a><span class="co"># rpmlib(PayloadFilesHavePrefix) &lt;= 4.0-1</span></span>
+<span id="cb8-214"><a href="#cb8-214" aria-hidden="true" tabindex="-1"></a><span class="co"># rpmlib(PayloadIsXz) &lt;= 5.2-1</span></span>
+<span id="cb8-215"><a href="#cb8-215" aria-hidden="true" tabindex="-1"></a><span class="co"># rtld(GNU_HASH)</span></span>
+<span id="cb8-216"><a href="#cb8-216" aria-hidden="true" tabindex="-1"></a></span></code></pre></div>
+        <h1 id="end">end</h1>
+      </article>
+    </div>
+      </main>
+
+  <footer>
+    <p>
+      Licensed under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank"
+        rel="noopener">CC-BY-NC-SA 4.0</a>
+      &nbsp;·&nbsp;
+      <a href="https://github.com/wangzheng422/docker_env" target="_blank" rel="noopener">wangzheng422/docker_env</a>
+    </p>
+  </footer>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: false, theme: 'dark' });
+
+    const SITE_BUILD_ID = 'fbe91b569ae8';
+    const SITE_HOME_URL = '../../../index.html';
+
+    const getBuildIdFromHtml = (html) => {
+      const match = String(html).match(/<meta[^>]+name=["']site-build-id["'][^>]+content=["']([^"']+)["']/i)
+        || String(html).match(/<meta[^>]+content=["']([^"']+)["'][^>]+name=["']site-build-id["']/i);
+      return match ? match[1] : '';
+    };
+
+    const checkForSiteUpdate = async () => {
+      if (!SITE_BUILD_ID || window.location.protocol === 'file:') return;
+      try {
+        const probeUrl = new URL(SITE_HOME_URL || './index.html', window.location.href);
+        probeUrl.searchParams.set('site_cache_probe', Date.now().toString());
+        const response = await fetch(probeUrl.toString(), { cache: 'no-store' });
+        if (!response.ok) return;
+        const latestBuildId = getBuildIdFromHtml(await response.text());
+        if (!latestBuildId || latestBuildId === SITE_BUILD_ID) return;
+        if (sessionStorage.getItem('site-build-refresh') === latestBuildId) return;
+        sessionStorage.setItem('site-build-refresh', latestBuildId);
+        const freshUrl = new URL(window.location.href);
+        freshUrl.searchParams.set('v', latestBuildId);
+        window.location.replace(freshUrl.toString());
+      } catch (error) {
+        // Network errors should not block reading the current page.
+      }
+    };
+
+    const versionedLocalUrl = (rawUrl) => {
+      if (!rawUrl || /^(https?:)?\/\//i.test(rawUrl) || /^(data|blob|mailto):/i.test(rawUrl)) return rawUrl;
+      const url = new URL(rawUrl, window.location.href);
+      if (url.searchParams.has('v')) return rawUrl;
+      url.searchParams.set('v', SITE_BUILD_ID);
+      return url.toString();
+    };
+
+    const cacheBustPageAssets = () => {
+      document.querySelectorAll('img[src], video[src], audio[src], source[src]').forEach((node) => {
+        const src = node.getAttribute('src');
+        const versioned = versionedLocalUrl(src);
+        if (versioned !== src) node.setAttribute('src', versioned);
+      });
+    };
+
+    const updateReadingProgress = () => {
+      const progress = document.querySelector('.reading-progress');
+      if (!progress) return;
+      const scrollable = document.documentElement.scrollHeight - window.innerHeight;
+      const ratio = scrollable > 0 ? window.scrollY / scrollable : 0;
+      progress.style.transform = 'scaleX(' + Math.min(1, Math.max(0, ratio)) + ')';
+    };
+
+    const topicFor = (text, href) => {
+      const haystack = (text + ' ' + href).toLowerCase();
+      if (/developers\.redhat\.com|redhatquickcourses|github\.com\/redhatquickcourses/.test(haystack)) return 'Red Hat';
+      if (/ai|llm|gpu|vllm|llama|model|rhaiis/.test(haystack)) return 'AI';
+      if (/network|ovn|bgp|dns|egress|ingress|metallb|nic|route/.test(haystack)) return 'Network';
+      if (/cert|tls|sso|keycloak|rhbk|security|compliance/.test(haystack)) return 'Security';
+      if (/perf|profile|throttling|heap|debug/.test(haystack)) return 'Performance';
+      if (/install|ipi|upi|sno|disconnected|bootstrap/.test(haystack)) return 'Install';
+      if (/rhel|coreos|rhcos|kernel|rpm|ostree/.test(haystack)) return 'RHEL';
+      if (/backup|storage|nfs|odf|ocs|ceph|dr/.test(haystack)) return 'Storage';
+      if (/pipeline|gitops|ansible|aap|rhdh|devops/.test(haystack)) return 'DevOps';
+      return 'OpenShift';
+    };
+
+    const yearFor = (text, href) => {
+      const match = (text + ' ' + href).match(/20\d{2}/);
+      return match ? match[0] : 'Notes';
+    };
+
+    const importantExternal = (href) =>
+      /developers\.redhat\.com|redhatquickcourses\.github\.io/i.test(href);
+
+    const titleForLink = (link) => {
+      const href = link.getAttribute('href') || '';
+      const directText = link.textContent.trim().replace(/\s+/g, ' ');
+      if (!/^https?:\/\//.test(directText)) return directText;
+      const parentItem = link.closest('ul')?.parentElement;
+      if (parentItem) {
+        const clone = parentItem.cloneNode(true);
+        clone.querySelectorAll('ul').forEach((nested) => nested.remove());
+        const parentText = clone.textContent.trim().replace(/\s+/g, ' ');
+        if (parentText) {
+          return parentText;
+        }
+      }
+      return directText;
+    };
+
+    const escapeHtml = (value) => String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+
+    const enhanceHome = () => {
+      if (!document.body.classList.contains('page-index')) return;
+      const source = document.querySelector('.home-source');
+      const grid = document.getElementById('note-grid');
+      const stats = document.getElementById('console-stats');
+      const externalPanel = document.getElementById('external-panel');
+      const topicStrip = document.getElementById('topic-strip');
+      const search = document.getElementById('console-search');
+      if (!source || !grid || !stats || !externalPanel || !topicStrip || !search) return;
+
+      const seen = new Set();
+      const links = Array.from(source.querySelectorAll('a[href]'))
+        .map((link) => {
+          const href = link.getAttribute('href') || '';
+          const text = titleForLink(link);
+          return { text, href, topic: topicFor(text, href), year: yearFor(text, href) };
+        });
+      const notes = links
+        .filter((note) => note.text && !note.href.startsWith('http') && !seen.has(note.href) && seen.add(note.href));
+      const externalLinks = links
+        .filter((note) => note.text && importantExternal(note.href));
+
+      const topics = ['All', ...Array.from(new Set(notes.map((note) => note.topic))).sort()];
+      let activeTopic = 'All';
+
+      const renderStats = () => {
+        const years = notes.map((note) => note.year).filter((year) => year.length === 4 && /^\d{4}/.test(year));
+        const latest = years.length ? Math.max(...years.map(Number)) : 'N/A';
+        const oldest = years.length ? Math.min(...years.map(Number)) : 'N/A';
+        stats.innerHTML = [
+          ['Notes', notes.length],
+          ['Resources', externalLinks.length],
+          ['Topics', topics.length - 1],
+          ['Latest', latest],
+        ].map(([label, value]) => '<div class="stat-tile"><span>' + label + '</span><strong>' + value + '</strong></div>').join('');
+        const signal = document.getElementById('signal-count');
+        if (signal) signal.textContent = notes.length + ' links indexed';
+      };
+
+      const renderExternal = () => {
+        externalPanel.innerHTML =
+          '<div class="section-heading"><span>Published / Learning</span><strong>Red Hat resources</strong></div>' +
+          '<div class="external-grid">' +
+          externalLinks.map((note) =>
+            '<a class="resource-card" href="' + escapeHtml(note.href) + '" target="_blank" rel="noopener">' +
+            '<span class="note-meta"><span>' + escapeHtml(note.year) + '</span><span>' + escapeHtml(note.topic) + '</span></span>' +
+            '<strong>' + escapeHtml(note.text) + '</strong>' +
+            '<small>' + escapeHtml(note.href) + '</small>' +
+            '</a>'
+          ).join('') +
+          '</div>';
+      };
+
+      const renderTopics = () => {
+        topicStrip.innerHTML = topics.map((topic) => '<button class="topic-chip' + (topic === activeTopic ? ' active' : '') + '" type="button" data-topic="' + escapeHtml(topic) + '">' + escapeHtml(topic) + '</button>').join('');
+        topicStrip.querySelectorAll('button').forEach((button) => {
+          button.addEventListener('click', () => {
+            activeTopic = button.dataset.topic || 'All';
+            renderTopics();
+            renderCards();
+          });
+        });
+      };
+
+      const renderCards = () => {
+        const query = search.value.trim().toLowerCase();
+        const filtered = notes.filter((note) => {
+          const topicMatch = activeTopic === 'All' || note.topic === activeTopic;
+          const queryMatch = !query || (note.text + ' ' + note.href + ' ' + note.topic + ' ' + note.year).toLowerCase().includes(query);
+          return topicMatch && queryMatch;
+        });
+        grid.innerHTML = filtered.map((note) =>
+          '<a class="note-card" href="' + escapeHtml(note.href) + '">' +
+          '<span class="note-meta"><span>' + escapeHtml(note.year) + '</span><span>' + escapeHtml(note.topic) + '</span></span>' +
+          '<strong>' + escapeHtml(note.text) + '</strong>' +
+          '<small>' + escapeHtml(note.href) + '</small>' +
+          '</a>'
+        ).join('') || '<p class="empty-state">No matching notes.</p>';
+      };
+
+      const drawMap = () => {
+        const canvas = document.getElementById('knowledge-canvas');
+        if (!(canvas instanceof HTMLCanvasElement)) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        const width = canvas.width;
+        const height = canvas.height;
+        const nodes = notes.slice(0, 44).map((note, index) => {
+          const angle = (index / 44) * Math.PI * 2;
+          const ring = 90 + (index % 5) * 22;
+          return {
+            x: width / 2 + Math.cos(angle) * ring,
+            y: height / 2 + Math.sin(angle) * ring * 0.72,
+            topic: note.topic,
+          };
+        });
+        ctx.clearRect(0, 0, width, height);
+        ctx.strokeStyle = 'rgba(88, 166, 255, 0.14)';
+        ctx.lineWidth = 1;
+        nodes.forEach((node, index) => {
+          const next = nodes[(index + 7) % nodes.length];
+          ctx.beginPath();
+          ctx.moveTo(node.x, node.y);
+          ctx.lineTo(next.x, next.y);
+          ctx.stroke();
+        });
+        const palette = {
+          AI: '#a371f7',
+          Network: '#39d0d8',
+          Security: '#ff7b72',
+          Performance: '#f2cc60',
+          Install: '#7ee787',
+          RHEL: '#ff7b72',
+          Storage: '#d2a8ff',
+          DevOps: '#ffa657',
+          OpenShift: '#58a6ff',
+        };
+        nodes.forEach((node) => {
+          ctx.fillStyle = palette[node.topic] || '#58a6ff';
+          ctx.beginPath();
+          ctx.arc(node.x, node.y, 3.4, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      };
+
+      search.addEventListener('input', renderCards);
+      renderStats();
+      renderExternal();
+      renderTopics();
+      renderCards();
+      drawMap();
+      document.body.classList.add('home-enhanced');
+    };
+
+    const enhanceCodeBlocks = () => {
+      document.querySelectorAll('pre').forEach((pre) => {
+        if (pre.classList.contains('mermaid') || pre.querySelector('.copy-code')) return;
+        const button = document.createElement('button');
+        button.className = 'copy-code';
+        button.type = 'button';
+        button.textContent = 'Copy';
+        button.addEventListener('click', async () => {
+          await navigator.clipboard.writeText(pre.textContent || '');
+          button.textContent = 'Copied';
+          setTimeout(() => { button.textContent = 'Copy'; }, 1200);
+        });
+        pre.appendChild(button);
+      });
+    };
+
+    window.addEventListener('scroll', updateReadingProgress, { passive: true });
+    window.addEventListener('pageshow', (event) => {
+      if (event.persisted) checkForSiteUpdate();
+    });
+    document.addEventListener('DOMContentLoaded', async () => {
+      checkForSiteUpdate();
+      cacheBustPageAssets();
+      updateReadingProgress();
+      enhanceHome();
+      enhanceCodeBlocks();
+      // pandoc 输出 mermaid 为 <pre class="mermaid"><code>...</code></pre>
+      // 需要转成 <div class="mermaid">...</div> 供 mermaid.js 渲染
+      document.querySelectorAll('pre.mermaid').forEach(pre => {
+        const div = document.createElement('div');
+        div.classList.add('mermaid');
+        div.textContent = pre.textContent;
+        pre.replaceWith(div);
+      });
+      // 也处理 <pre><code class="language-mermaid"> 形式（备用）
+      document.querySelectorAll('pre code.language-mermaid').forEach(code => {
+        const div = document.createElement('div');
+        div.classList.add('mermaid');
+        div.textContent = code.textContent;
+        code.closest('pre').replaceWith(div);
+      });
+      await mermaid.run();
+    });
+  </script>
+</body>
+
+</html>

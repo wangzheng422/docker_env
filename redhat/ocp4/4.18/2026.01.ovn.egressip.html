@@ -1,0 +1,1529 @@
+<!DOCTYPE html>
+<html lang="zh" dir="ltr">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="generator" content="pandoc" />
+  <meta name="site-build-id" content="fbe91b569ae8" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <title>OVN EgressIP Limitation Workaround | wandering.star notes</title>
+  <meta name="description"
+    content="Wandering field notes on OpenShift, RHEL, AI infrastructure, and platform operations." />
+  <!-- Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-E3FRMDB7L2"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-E3FRMDB7L2');
+  </script>
+  <style>
+  html {
+    color: #1a1a1a;
+    background-color: #fdfdfd;
+  }
+  body {
+    margin: 0 auto;
+    max-width: 36em;
+    padding-left: 50px;
+    padding-right: 50px;
+    padding-top: 50px;
+    padding-bottom: 50px;
+    hyphens: auto;
+    overflow-wrap: break-word;
+    text-rendering: optimizeLegibility;
+    font-kerning: normal;
+  }
+  @media (max-width: 600px) {
+    body {
+      font-size: 0.9em;
+      padding: 12px;
+    }
+    h1 {
+      font-size: 1.8em;
+    }
+  }
+  @media print {
+    html {
+      background-color: white;
+    }
+    body {
+      background-color: transparent;
+      color: black;
+      font-size: 12pt;
+    }
+    p, h2, h3 {
+      orphans: 3;
+      widows: 3;
+    }
+    h2, h3, h4 {
+      page-break-after: avoid;
+    }
+  }
+  p {
+    margin: 1em 0;
+  }
+  a {
+    color: #1a1a1a;
+  }
+  a:visited {
+    color: #1a1a1a;
+  }
+  img {
+    max-width: 100%;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.4em;
+  }
+  h5, h6 {
+    font-size: 1em;
+    font-style: italic;
+  }
+  h6 {
+    font-weight: normal;
+  }
+  ol, ul {
+    padding-left: 1.7em;
+    margin-top: 1em;
+  }
+  li > ol, li > ul {
+    margin-top: 0;
+  }
+  blockquote {
+    margin: 1em 0 1em 1.7em;
+    padding-left: 1em;
+    border-left: 2px solid #e6e6e6;
+    color: #606060;
+  }
+  code {
+    font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+    font-size: 85%;
+    margin: 0;
+    hyphens: manual;
+  }
+  pre {
+    margin: 1em 0;
+    overflow: auto;
+  }
+  pre code {
+    padding: 0;
+    overflow: visible;
+    overflow-wrap: normal;
+  }
+  .sourceCode {
+   background-color: transparent;
+   overflow: visible;
+  }
+  hr {
+    background-color: #1a1a1a;
+    border: none;
+    height: 1px;
+    margin: 1em 0;
+  }
+  table {
+    margin: 1em 0;
+    border-collapse: collapse;
+    width: 100%;
+    overflow-x: auto;
+    display: block;
+    font-variant-numeric: lining-nums tabular-nums;
+  }
+  table caption {
+    margin-bottom: 0.75em;
+  }
+  tbody {
+    margin-top: 0.5em;
+    border-top: 1px solid #1a1a1a;
+    border-bottom: 1px solid #1a1a1a;
+  }
+  th {
+    border-top: 1px solid #1a1a1a;
+    padding: 0.25em 0.5em 0.25em 0.5em;
+  }
+  td {
+    padding: 0.125em 0.5em 0.25em 0.5em;
+  }
+  header {
+    margin-bottom: 4em;
+    text-align: center;
+  }
+  #TOC li {
+    list-style: none;
+  }
+  #TOC ul {
+    padding-left: 1.3em;
+  }
+  #TOC > ul {
+    padding-left: 0;
+  }
+  #TOC a:not(:hover) {
+    text-decoration: none;
+  }
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  div.columns{display: flex; gap: min(4vw, 1.5em);}
+  div.column{flex: auto; overflow-x: auto;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  /* The extra [class] is a hack that increases specificity enough to
+     override a similar rule in reveal.js */
+  ul.task-list[class]{list-style: none;}
+  ul.task-list li input[type="checkbox"] {
+    font-size: inherit;
+    width: 0.8em;
+    margin: 0 0.8em 0.2em -1.6em;
+    vertical-align: middle;
+  }
+  .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  /* CSS for syntax highlighting */
+  pre > code.sourceCode { white-space: pre; position: relative; }
+  pre > code.sourceCode > span { line-height: 1.25; }
+  pre > code.sourceCode > span:empty { height: 1.2em; }
+  .sourceCode { overflow: visible; }
+  code.sourceCode > span { color: inherit; text-decoration: inherit; }
+  div.sourceCode { margin: 1em 0; }
+  pre.sourceCode { margin: 0; }
+  @media screen {
+  div.sourceCode { overflow: auto; }
+  }
+  @media print {
+  pre > code.sourceCode { white-space: pre-wrap; }
+  pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+  }
+  pre.numberSource code
+    { counter-reset: source-line 0; }
+  pre.numberSource code > span
+    { position: relative; left: -4em; counter-increment: source-line; }
+  pre.numberSource code > span > a:first-child::before
+    { content: counter(source-line);
+      position: relative; left: -1em; text-align: right; vertical-align: baseline;
+      border: none; display: inline-block;
+      -webkit-touch-callout: none; -webkit-user-select: none;
+      -khtml-user-select: none; -moz-user-select: none;
+      -ms-user-select: none; user-select: none;
+      padding: 0 4px; width: 4em;
+    }
+  pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+  div.sourceCode
+    { color: #cccccc; background-color: #303030; }
+  @media screen {
+  pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+  }
+  code span.al { color: #ffcfaf; } /* Alert */
+  code span.an { color: #7f9f7f; font-weight: bold; } /* Annotation */
+  code span.at { } /* Attribute */
+  code span.bn { color: #dca3a3; } /* BaseN */
+  code span.bu { } /* BuiltIn */
+  code span.cf { color: #f0dfaf; } /* ControlFlow */
+  code span.ch { color: #dca3a3; } /* Char */
+  code span.cn { color: #dca3a3; font-weight: bold; } /* Constant */
+  code span.co { color: #7f9f7f; } /* Comment */
+  code span.cv { color: #7f9f7f; font-weight: bold; } /* CommentVar */
+  code span.do { color: #7f9f7f; } /* Documentation */
+  code span.dt { color: #dfdfbf; } /* DataType */
+  code span.dv { color: #dcdccc; } /* DecVal */
+  code span.er { color: #c3bf9f; } /* Error */
+  code span.ex { } /* Extension */
+  code span.fl { color: #c0bed1; } /* Float */
+  code span.fu { color: #efef8f; } /* Function */
+  code span.im { } /* Import */
+  code span.in { color: #7f9f7f; font-weight: bold; } /* Information */
+  code span.kw { color: #f0dfaf; } /* Keyword */
+  code span.op { color: #f0efd0; } /* Operator */
+  code span.ot { color: #efef8f; } /* Other */
+  code span.pp { color: #ffcfaf; font-weight: bold; } /* Preprocessor */
+  code span.sc { color: #dca3a3; } /* SpecialChar */
+  code span.ss { color: #cc9393; } /* SpecialString */
+  code span.st { color: #cc9393; } /* String */
+  code span.va { } /* Variable */
+  code span.vs { color: #cc9393; } /* VerbatimString */
+  code span.wa { color: #7f9f7f; font-weight: bold; } /* Warning */
+  </style>
+  <link rel="stylesheet" href="../../../style.css?v=fbe91b569ae8" />
+  </head>
+
+<body class="page-article">
+  <div class="reading-progress" aria-hidden="true"></div>
+  <div class="console-backdrop" aria-hidden="true"></div>
+  <nav class="site-nav">
+    <div class="nav-inner">
+      <a class="nav-brand" href="../../../index.html">wandering.star<span>notes</span></a>
+      <div class="nav-links">
+        <a href="https://github.com/wangzheng422/docker_env" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://www.youtube.com/@wangzheng422" target="_blank" rel="noopener">YouTube</a>
+      </div>
+    </div>
+  </nav>
+
+  <main>
+            <a class="back-link" href="../../../index.html">← Back to Index</a>
+        <div class="article-layout">
+            <aside class="toc-panel">
+        <div class="toc-title">ON THIS PAGE</div>
+        <ul>
+        <li><a href="#ovn-egressip-limitation-workaround"
+        id="toc-ovn-egressip-limitation-workaround">OVN EgressIP
+        Limitation Workaround</a>
+        <ul>
+        <li><a href="#background"
+        id="toc-background">Background</a></li>
+        <li><a href="#ovn-architecture-design-principles"
+        id="toc-ovn-architecture-design-principles">OVN Architecture
+        &amp; Design Principles</a>
+        <ul>
+        <li><a href="#why-patching-is-required"
+        id="toc-why-patching-is-required">Why Patching is
+        Required</a></li>
+        <li><a href="#what-we-patch" id="toc-what-we-patch">What We
+        Patch</a></li>
+        <li><a href="#benefits" id="toc-benefits">Benefits</a></li>
+        <li><a href="#risks-and-trade-offs"
+        id="toc-risks-and-trade-offs">Risks and Trade-offs</a></li>
+        <li><a href="#implementation-details"
+        id="toc-implementation-details">Implementation Details</a></li>
+        </ul></li>
+        <li><a href="#workaround-implementation"
+        id="toc-workaround-implementation">Workaround Implementation</a>
+        <ul>
+        <li><a href="#infrastructure-setup-namespace-and-rbac"
+        id="toc-infrastructure-setup-namespace-and-rbac">1.
+        Infrastructure Setup: Namespace and RBAC</a></li>
+        <li><a href="#network-preparation"
+        id="toc-network-preparation">2. Network Preparation</a></li>
+        <li><a href="#gateway-pod-deployment"
+        id="toc-gateway-pod-deployment">3. Gateway Pod
+        Deployment</a></li>
+        </ul></li>
+        <li><a href="#automated-controller-deployment"
+        id="toc-automated-controller-deployment">Automated Controller
+        Deployment</a>
+        <ul>
+        <li><a href="#build-and-deploy" id="toc-build-and-deploy">Build
+        and Deploy</a></li>
+        <li><a href="#apply-routing-policy-and-deploy-app"
+        id="toc-apply-routing-policy-and-deploy-app">Apply Routing
+        Policy and Deploy App</a></li>
+        </ul></li>
+        <li><a href="#multi-namespace-deployment-example"
+        id="toc-multi-namespace-deployment-example">Multi-Namespace
+        Deployment Example</a>
+        <ul>
+        <li><a href="#controller-network-configuration"
+        id="toc-controller-network-configuration">Controller &amp;
+        Network Configuration</a></li>
+        <li><a href="#gateway-business-pods"
+        id="toc-gateway-business-pods">Gateway &amp; Business
+        Pods</a></li>
+        <li><a href="#configuration-reference"
+        id="toc-configuration-reference">Configuration
+        Reference</a></li>
+        <li><a href="#environment-variable-checklist"
+        id="toc-environment-variable-checklist">Environment Variable
+        Checklist</a></li>
+        </ul></li>
+        </ul></li>
+        </ul>
+      </aside>
+            <article class="markdown-body article-shell">
+        <h1 id="ovn-egressip-limitation-workaround">OVN EgressIP
+        Limitation Workaround</h1>
+        <blockquote>
+        <p>[!IMPORTANT] This solution is <strong>not recommended for
+        production environments</strong>. This document is intended to
+        demonstrate the implementation complexity of integrating an
+        External Gateway VM as a Gateway Pod into the cluster. In actual
+        production scenarios, it is recommended to use the External
+        Gateway VM solution directly.</p>
+        </blockquote>
+        <h2 id="background">Background</h2>
+        <p>This document outlines a workaround implemented for a
+        customer deploying OpenShift Container Platform (OCP) 4.18 on a
+        third-party OpenStack environment using the baremetal
+        installation method.</p>
+        <p><strong>The Challenge:</strong> The underlying OpenStack
+        platform imposes a strict limitation of 10 Elastic IPs per node.
+        However, the security requirements mandate that each namespace
+        must have a dedicated Egress IP, and there are over 40
+        namespaces planned.</p>
+        <p><strong>The Limitation:</strong> The Elastic IP pools are
+        distributed across different subnets, and worker nodes have
+        varying associations with these subnets. The current OVN
+        implementation for EgressIP does not support
+        <code>nodeSelectors</code> to map specific EgressIP pools to
+        specific nodes. Additionally, it generally supports only a
+        single pool of Egress IPs.</p>
+        <p><strong>The Solution:</strong> To satisfy the requirement of
+        a dedicated Egress IP per namespace, we implemented a “Gateway
+        Pod” pattern:</p>
+        <ol type="1">
+        <li><strong>Gateway Pod:</strong> Deploy a dedicated Gateway Pod
+        for each namespace to hold the Egress IP.</li>
+        <li><strong>Traffic Steering:</strong> Configure OVN to route
+        traffic from the application namespace to its corresponding
+        Gateway Pod.</li>
+        <li><strong>Controller:</strong> Use a custom controller (Tool
+        Pod) to monitor the Gateway Pod’s IP and dynamically update the
+        OVN configuration (specifically the
+        <code>AdminPolicyBasedExternalRoute</code>) if the Gateway Pod
+        restarts or changes IP.</li>
+        </ol>
+        <p><strong>Environment:</strong></p>
+        <ul>
+        <li><strong>OCP Version:</strong> 4.18</li>
+        <li><strong>Nodes:</strong> 3 Masters, 2 Workers
+        (<code>192.168.99.26</code>, <code>192.168.99.27</code>).</li>
+        <li><strong>Infrastructure:</strong> A large RHEL 9 hypervisor
+        hosting the 5 OCP nodes via KVM.</li>
+        <li><strong>Network:</strong> No MAC address restrictions on the
+        KVM network.</li>
+        </ul>
+        <h2 id="ovn-architecture-design-principles">OVN Architecture
+        &amp; Design Principles</h2>
+        <pre class="mermaid"><code>graph TD
+    subgraph OCP Cluster
+        subgraph ns_blue [Namespace ns-blue]
+            BP_B[Business Pods&lt;br/&gt;*Matched by Controller*]
+            APB_B[APB Route&lt;br/&gt;Policy Routing]
+        end
+
+        subgraph ns_red [Namespace ns-red]
+            BP_R[Business Pods&lt;br/&gt;*Matched by Controller*]
+            APB_R[APB Route&lt;br/&gt;Policy Routing]
+        end
+        
+        subgraph ns_egress_infra [Shared Infrastructure Namespace]
+            GP_B[Gateway Pod Blue&lt;br/&gt;&lt;b&gt;Dual Homed&lt;/b&gt;&lt;br/&gt;eth0 - OVN / macvlan0 - Phys]
+            GP_R[Gateway Pod Red&lt;br/&gt;&lt;b&gt;Dual Homed&lt;/b&gt;&lt;br/&gt;eth0 - OVN / macvlan0 - Phys]
+            CTRL[APB Controllers&lt;br/&gt;One per NS]
+        end
+    end
+    
+    EXT[External Network&lt;br/&gt;Internet 8.8.8.8]
+    
+    %% Traffic Flow Blue
+    BP_B -- &quot;1. Traffic&quot; --&gt; APB_B
+    APB_B -- &quot;2. Redirect via eth0&quot; --&gt; GP_B
+    GP_B -- &quot;3. Egress via macvlan0&quot; --&gt; EXT
+
+    %% Traffic Flow Red
+    BP_R -- &quot;1. Traffic&quot; --&gt; APB_R
+    APB_R -- &quot;2. Redirect via eth0&quot; --&gt; GP_R
+    GP_R -- &quot;3. Egress via macvlan0&quot; --&gt; EXT
+    
+    %% Control Plane
+    CTRL -. &quot;Watch IP&quot; .-&gt; GP_B &amp; GP_R
+    CTRL -. &quot;Update NextHop&quot; .-&gt; APB_B &amp; APB_R
+    
+    %% OVN Patches Blue
+    CTRL -. &quot;&lt;b&gt;OVN Patch 1&lt;/b&gt;&lt;br/&gt;Clear Port Security&lt;br/&gt;Stateless ACL&quot; .-&gt; GP_B
+    CTRL -. &quot;&lt;b&gt;OVN Patch 2&lt;/b&gt;&lt;br/&gt;Stateless ACL&quot; .-&gt; BP_B
+
+    %% OVN Patches Red
+    CTRL -. &quot;&lt;b&gt;OVN Patch 1&lt;/b&gt;&lt;br/&gt;Clear Port Security&lt;br/&gt;Stateless ACL&quot; .-&gt; GP_R
+    CTRL -. &quot;&lt;b&gt;OVN Patch 2&lt;/b&gt;&lt;br/&gt;Stateless ACL&quot; .-&gt; BP_R
+    
+    %% Styling
+    style BP_B fill:#e1f5fe,stroke:#01579b
+    style BP_R fill:#ffebee,stroke:#b71c1c
+    style GP_B fill:#e8f5e9,stroke:#2e7d32
+    style GP_R fill:#e8f5e9,stroke:#2e7d32
+    style APB_B fill:#fff3e0,stroke:#ef6c00
+    style APB_R fill:#fff3e0,stroke:#ef6c00
+    style CTRL fill:#f3e5f5,stroke:#7b1fa2
+    style EXT fill:#eceff1,stroke:#455a64</code></pre>
+        <h3 id="why-patching-is-required">Why Patching is Required</h3>
+        <p>The default security mechanisms in OpenShift OVN prevent this
+        “Gateway Pod” scheme from functioning correctly. We must bypass
+        specific checks to enable custom egress routing.</p>
+        <p><strong>Core Issues:</strong></p>
+        <ol type="1">
+        <li><strong>Port Security Limitations</strong>
+        <ul>
+        <li>OVN enables Port Security by default, allowing a pod to send
+        traffic <em>only</em> if the source IP matches its own assigned
+        IP.</li>
+        <li>The Gateway Pod needs to forward traffic originating from
+        <em>other</em> pods (where the source IP is not the Gateway
+        Pod’s own IP).</li>
+        <li>If Port Security is not cleared, OVN will drop the forwarded
+        traffic.</li>
+        </ul></li>
+        <li><strong>Stateful ACL Source IP Checks</strong>
+        <ul>
+        <li>OVN uses stateful ACLs for connection tracking by
+        default.</li>
+        <li>When a Business Pod accesses an external IP (e.g.,
+        <code>8.8.8.8</code>) through the gateway, the return traffic
+        has a source IP of <code>8.8.8.8</code>.</li>
+        <li>Host-based Stateful ACLs may check this return traffic and
+        drop it if it doesn’t match expected flows.</li>
+        <li>This causes failures for DNS queries, HTTPS requests,
+        etc.</li>
+        </ul></li>
+        </ol>
+        <h3 id="what-we-patch">What We Patch</h3>
+        <p>We have modified OVN configurations (logic integrated into <a
+        href="files/ovn.egressip/controller.py">controller.py</a>) as
+        follows:</p>
+        <p><strong>1. Gateway Pod Configuration</strong></p>
+        <pre class="text"><code>- Clear Port Security (allow-stateless)
+  → Allows forwarding traffic where the source IP is not the pod&#39;s own.
+  
+- Add Stateless ACL (Priority 31821)
+  → from-lport: Allow all outbound traffic.
+  → to-lport: Allow all inbound traffic.
+  → Bypasses OVN&#39;s strict source IP checking.</code></pre>
+        <p><strong>2. Business Pod Configuration</strong></p>
+        <pre class="text"><code>- Keep Port Security (keep_port_security)
+  → Maintain basic security; the pod can only send traffic masquerading as itself.
+  
+- Add Stateless ACL (Priority 31821)
+  → from-lport: Allow all outbound traffic.
+  → to-lport: Allow all inbound traffic.
+  → Allows receiving return traffic from arbitrary external IPs.</code></pre>
+        <p><strong>3. Intelligent ACL Cleanup</strong></p>
+        <pre class="text"><code>- Only delete &quot;orphan&quot; ACLs pointing to non-existent pods.
+- Avoid accidentally deleting normal ACLs for other pods.
+- Use custom priority 31821 to avoid conflicts with system ACLs.</code></pre>
+        <h3 id="benefits">Benefits</h3>
+        <p>✅ <strong>Custom Limitless Egress Routing</strong></p>
+        <ul>
+        <li>Bypasses the OVN EgressIP single-subnet limitation.</li>
+        <li>Supports a dedicated egress IP for every namespace.</li>
+        <li>Offers flexible node selector configurations.</li>
+        </ul>
+        <p>✅ <strong>Co-located Deployment Support</strong></p>
+        <ul>
+        <li>Gateway pods and Business pods can reside on the same
+        node.</li>
+        <li>The <code>accept_local</code> parameter resolves local
+        routing issues.</li>
+        </ul>
+        <p>✅ <strong>Automated Management</strong></p>
+        <ul>
+        <li>The Controller automatically applies and cleans up OVN
+        configurations.</li>
+        <li>Automatic reconfiguration upon Pod restart.</li>
+        <li>Zero manual intervention required during operation.</li>
+        </ul>
+        <h3 id="risks-and-trade-offs">Risks and Trade-offs</h3>
+        <p>⚠️ <strong>Bypassing Network Policies</strong></p>
+        <p><strong>Scope of Impact:</strong></p>
+        <ul>
+        <li>Using stateless ACLs bypasses parts of Kubernetes Network
+        Policy enforcement.</li>
+        <li>Our priority <code>21743</code> is higher than standard
+        Network Policy ACLs (usually <code>1000-2000</code>).</li>
+        <li><strong>Impact is limited only to patched pods</strong>
+        (Gateway Pods and Business Pods).</li>
+        </ul>
+        <p><strong>Specific Effects:</strong></p>
+        <pre class="text"><code>Network Policy Function | Gateway Pod | Business Pod | Other Pods
+------------------------|-------------|--------------|-----------
+Egress Rules            | ❌ Bypassed  | ❌ Bypassed   | ✅ Normal
+Ingress Rules           | ❌ Bypassed  | ❌ Bypassed   | ✅ Normal
+Inter-Pod Restrictions  | ❌ Invalid   | ❌ Invalid    | ✅ Normal</code></pre>
+        <p><strong>Mitigation:</strong></p>
+        <ul>
+        <li>Deploy Gateway Pods in a dedicated infrastructure
+        namespace.</li>
+        <li>Limit the number of pods in the Business Namespace.</li>
+        <li>Use RBAC to control who can create pods in these
+        namespaces.</li>
+        <li>Implement additional IP-based access control (iptables)
+        inside the Gateway Pod if necessary.</li>
+        </ul>
+        <p>⚠️ <strong>Port Security Risks</strong></p>
+        <p><strong>Gateway Pod (Port Security Cleared):</strong></p>
+        <ul>
+        <li>Can send traffic with any source IP (IP spoofing).</li>
+        <li>Potential for abuse in network attacks.</li>
+        <li><strong>Mitigation</strong>: Use privileged SCC
+        restrictions; allow only specific ServiceAccounts.</li>
+        </ul>
+        <p><strong>Business Pod (Port Security Kept):</strong></p>
+        <ul>
+        <li>Can still only send traffic with its own IP.</li>
+        <li>Basic security is maintained.</li>
+        </ul>
+        <p>⚠️ <strong>OVN Database Modification</strong></p>
+        <ul>
+        <li>Direct modification of the OVN database bypasses standard
+        OpenShift processes.</li>
+        <li>Compatibility re-verification may be needed when upgrading
+        OpenShift.</li>
+        <li>Controller anomalies could leave orphan ACLs (though
+        intelligent cleanup mitigates this).</li>
+        </ul>
+        <h3 id="implementation-details">Implementation Details</h3>
+        <p>All the OVN patching logic described above is integrated into
+        <a href="files/ovn.egressip/controller.py">controller.py</a> and
+        managed automatically via the Kubernetes controller pattern:</p>
+        <ul>
+        <li><strong>Auto-Apply:</strong> Configure OVN automatically
+        when a Pod is created.</li>
+        <li><strong>Auto-Cleanup:</strong> Clean up ACLs automatically
+        when a Pod is deleted.</li>
+        <li><strong>Smart Management:</strong> Only remove orphan ACLs
+        to avoid collateral damage.</li>
+        <li><strong>High Availability:</strong> Automatic restarts,
+        exponential backoff, and double-layer exception handling.</li>
+        </ul>
+        <h2 id="workaround-implementation">Workaround
+        Implementation</h2>
+        <h3 id="infrastructure-setup-namespace-and-rbac">1.
+        Infrastructure Setup: Namespace and RBAC</h3>
+        <p>First, we create the business namespace and the
+        infrastructure namespace. We then establish the necessary
+        ServiceAccounts and RBAC permissions for the controller.</p>
+        <div class="sourceCode" id="cb6"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Create namespaces</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> create ns ns-blue</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> create ns ns-egress-infra</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Create ServiceAccount in the infra namespace</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> create sa apb-syncer <span class="at">-n</span> ns-egress-infra</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Cleanup: Delete any old local rolebinding if it exists</span></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> delete rolebinding apb-syncer-binding <span class="at">-n</span> ns-egress-infra <span class="at">--ignore-not-found</span></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a><span class="co"># 2. Create ClusterRole</span></span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a><span class="co"># This role grants permissions to watch pods and manage OVN External Routes</span></span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> <span class="op">&lt;&lt;EOF</span> <span class="kw">|</span> <span class="ex">oc</span> apply <span class="at">-f</span> <span class="at">-</span></span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a><span class="st">apiVersion: rbac.authorization.k8s.io/v1</span></span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a><span class="st">kind: ClusterRole</span></span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a><span class="st">metadata:</span></span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a><span class="st">  name: apb-cluster-manager</span></span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a><span class="st">rules:</span></span>
+<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a><span class="st">- apiGroups: [&quot;&quot;]</span></span>
+<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a><span class="st">  resources: [&quot;pods&quot;]</span></span>
+<span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a><span class="st">  verbs: [&quot;get&quot;, &quot;list&quot;, &quot;watch&quot;]</span></span>
+<span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a><span class="st">- apiGroups: [&quot;&quot;]</span></span>
+<span id="cb6-24"><a href="#cb6-24" aria-hidden="true" tabindex="-1"></a><span class="st">  resources: [&quot;pods/exec&quot;]</span></span>
+<span id="cb6-25"><a href="#cb6-25" aria-hidden="true" tabindex="-1"></a><span class="st">  verbs: [&quot;create&quot;]</span></span>
+<span id="cb6-26"><a href="#cb6-26" aria-hidden="true" tabindex="-1"></a><span class="st">- apiGroups: [&quot;k8s.ovn.org&quot;]</span></span>
+<span id="cb6-27"><a href="#cb6-27" aria-hidden="true" tabindex="-1"></a><span class="st">  resources: [&quot;adminpolicybasedexternalroutes&quot;]</span></span>
+<span id="cb6-28"><a href="#cb6-28" aria-hidden="true" tabindex="-1"></a><span class="st">  verbs: [&quot;get&quot;, &quot;list&quot;, &quot;watch&quot;, &quot;patch&quot;, &quot;update&quot;]</span></span>
+<span id="cb6-29"><a href="#cb6-29" aria-hidden="true" tabindex="-1"></a><span class="op">EOF</span></span>
+<span id="cb6-30"><a href="#cb6-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-31"><a href="#cb6-31" aria-hidden="true" tabindex="-1"></a><span class="co"># 3. Create ClusterRoleBinding</span></span>
+<span id="cb6-32"><a href="#cb6-32" aria-hidden="true" tabindex="-1"></a><span class="co"># Bind the SA &#39;apb-syncer&#39; in &#39;ns-egress-infra&#39; to the &#39;apb-cluster-manager&#39; ClusterRole</span></span>
+<span id="cb6-33"><a href="#cb6-33" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> <span class="op">&lt;&lt;EOF</span> <span class="kw">|</span> <span class="ex">oc</span> apply <span class="at">-f</span> <span class="at">-</span></span>
+<span id="cb6-34"><a href="#cb6-34" aria-hidden="true" tabindex="-1"></a><span class="st">apiVersion: rbac.authorization.k8s.io/v1</span></span>
+<span id="cb6-35"><a href="#cb6-35" aria-hidden="true" tabindex="-1"></a><span class="st">kind: ClusterRoleBinding</span></span>
+<span id="cb6-36"><a href="#cb6-36" aria-hidden="true" tabindex="-1"></a><span class="st">metadata:</span></span>
+<span id="cb6-37"><a href="#cb6-37" aria-hidden="true" tabindex="-1"></a><span class="st">  name: apb-syncer-cluster-binding</span></span>
+<span id="cb6-38"><a href="#cb6-38" aria-hidden="true" tabindex="-1"></a><span class="st">subjects:</span></span>
+<span id="cb6-39"><a href="#cb6-39" aria-hidden="true" tabindex="-1"></a><span class="st">- kind: ServiceAccount</span></span>
+<span id="cb6-40"><a href="#cb6-40" aria-hidden="true" tabindex="-1"></a><span class="st">  name: apb-syncer</span></span>
+<span id="cb6-41"><a href="#cb6-41" aria-hidden="true" tabindex="-1"></a><span class="st">  namespace: ns-egress-infra</span></span>
+<span id="cb6-42"><a href="#cb6-42" aria-hidden="true" tabindex="-1"></a><span class="st">roleRef:</span></span>
+<span id="cb6-43"><a href="#cb6-43" aria-hidden="true" tabindex="-1"></a><span class="st">  kind: ClusterRole</span></span>
+<span id="cb6-44"><a href="#cb6-44" aria-hidden="true" tabindex="-1"></a><span class="st">  name: apb-cluster-manager</span></span>
+<span id="cb6-45"><a href="#cb6-45" aria-hidden="true" tabindex="-1"></a><span class="st">  apiGroup: rbac.authorization.k8s.io</span></span>
+<span id="cb6-46"><a href="#cb6-46" aria-hidden="true" tabindex="-1"></a><span class="op">EOF</span></span></code></pre></div>
+        <h3 id="network-preparation">2. Network Preparation</h3>
+        <p>We label the worker node to host the gateway and define the
+        <code>NetworkAttachmentDefinition</code> for the
+        <code>macvlan</code> interface that will provide the external
+        Egress IP.</p>
+        <div class="sourceCode" id="cb7"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Label the node where the gateway will run</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> label node worker-01-demo egress-node=ns-blue-group</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Create NetworkAttachmentDefinition for macvlan</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Note: This MUST be in the same namespace as the Gateway Pod</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> <span class="op">&lt;&lt;EOF</span> <span class="kw">|</span> <span class="ex">oc</span> apply <span class="at">-f</span> <span class="at">-</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a><span class="st">apiVersion: &quot;k8s.cni.cncf.io/v1&quot;</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a><span class="st">kind: NetworkAttachmentDefinition</span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a><span class="st">metadata:</span></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a><span class="st">  name: ns-blue-external-macvlan</span></span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a><span class="st">  namespace: ns-egress-infra </span></span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a><span class="st">spec:</span></span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a><span class="st">  config: &#39;{</span></span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a><span class="st">      &quot;cniVersion&quot;: &quot;0.3.1&quot;,</span></span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a><span class="st">      &quot;type&quot;: &quot;macvlan&quot;,</span></span>
+<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a><span class="st">      &quot;master&quot;: &quot;enp2s0&quot;,</span></span>
+<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a><span class="st">      &quot;mode&quot;: &quot;bridge&quot;,</span></span>
+<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a><span class="st">      &quot;ipam&quot;: {</span></span>
+<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a><span class="st">        &quot;type&quot;: &quot;static&quot;</span></span>
+<span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a><span class="st">      }</span></span>
+<span id="cb7-21"><a href="#cb7-21" aria-hidden="true" tabindex="-1"></a><span class="st">    }&#39;</span></span>
+<span id="cb7-22"><a href="#cb7-22" aria-hidden="true" tabindex="-1"></a><span class="op">EOF</span></span></code></pre></div>
+        <h3 id="gateway-pod-deployment">3. Gateway Pod Deployment</h3>
+        <p>We configure a privileged ServiceAccount for the gateway and
+        deploy the Gateway Pod. This pod utilizes a script to configure
+        <code>sysctl</code>, <code>iptables</code>, and routing tables
+        to function as a NAT gateway.</p>
+        <div class="sourceCode" id="cb8"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Create dedicated SA for Gateway</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> create sa gateway-sa <span class="at">-n</span> ns-egress-infra</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Grant privileged SCC to the SA so it can change network settings</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> adm policy add-scc-to-user privileged <span class="at">-z</span> gateway-sa <span class="at">-n</span> ns-egress-infra</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Deploy the Gateway</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> <span class="op">&lt;&lt;&#39;EOF&#39;</span> <span class="kw">|</span> <span class="ex">oc</span> apply <span class="at">-f</span> <span class="at">-</span></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a><span class="st">apiVersion: apps/v1</span></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a><span class="st">kind: Deployment</span></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a><span class="st">metadata:</span></span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a><span class="st">  name: ns-blue-gateway</span></span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a><span class="st">  namespace: ns-egress-infra</span></span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a><span class="st">spec:</span></span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a><span class="st">  replicas: 1 </span></span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a><span class="st">  selector:</span></span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a><span class="st">    matchLabels:</span></span>
+<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a><span class="st">      app: ns-blue-gateway</span></span>
+<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a><span class="st">  template:</span></span>
+<span id="cb8-20"><a href="#cb8-20" aria-hidden="true" tabindex="-1"></a><span class="st">    metadata:</span></span>
+<span id="cb8-21"><a href="#cb8-21" aria-hidden="true" tabindex="-1"></a><span class="st">      labels:</span></span>
+<span id="cb8-22"><a href="#cb8-22" aria-hidden="true" tabindex="-1"></a><span class="st">        app: ns-blue-gateway</span></span>
+<span id="cb8-23"><a href="#cb8-23" aria-hidden="true" tabindex="-1"></a><span class="st">      annotations:</span></span>
+<span id="cb8-24"><a href="#cb8-24" aria-hidden="true" tabindex="-1"></a><span class="st">        k8s.v1.cni.cncf.io/networks: &#39;[</span></span>
+<span id="cb8-25"><a href="#cb8-25" aria-hidden="true" tabindex="-1"></a><span class="st">          {</span></span>
+<span id="cb8-26"><a href="#cb8-26" aria-hidden="true" tabindex="-1"></a><span class="st">            &quot;name&quot;: &quot;ns-blue-external-macvlan&quot;, </span></span>
+<span id="cb8-27"><a href="#cb8-27" aria-hidden="true" tabindex="-1"></a><span class="st">            &quot;interface&quot;: &quot;macvlan0&quot;,</span></span>
+<span id="cb8-28"><a href="#cb8-28" aria-hidden="true" tabindex="-1"></a><span class="st">            &quot;ips&quot;: [&quot;192.168.99.2/24&quot;]</span></span>
+<span id="cb8-29"><a href="#cb8-29" aria-hidden="true" tabindex="-1"></a><span class="st">          }</span></span>
+<span id="cb8-30"><a href="#cb8-30" aria-hidden="true" tabindex="-1"></a><span class="st">        ]&#39;</span></span>
+<span id="cb8-31"><a href="#cb8-31" aria-hidden="true" tabindex="-1"></a><span class="st">    spec:</span></span>
+<span id="cb8-32"><a href="#cb8-32" aria-hidden="true" tabindex="-1"></a><span class="st">      serviceAccountName: gateway-sa</span></span>
+<span id="cb8-33"><a href="#cb8-33" aria-hidden="true" tabindex="-1"></a><span class="st">      nodeSelector:</span></span>
+<span id="cb8-34"><a href="#cb8-34" aria-hidden="true" tabindex="-1"></a><span class="st">        egress-node: ns-blue-group</span></span>
+<span id="cb8-35"><a href="#cb8-35" aria-hidden="true" tabindex="-1"></a><span class="st">      containers:</span></span>
+<span id="cb8-36"><a href="#cb8-36" aria-hidden="true" tabindex="-1"></a><span class="st">      - name: gateway</span></span>
+<span id="cb8-37"><a href="#cb8-37" aria-hidden="true" tabindex="-1"></a><span class="st">        image: registry.redhat.io/openshift4/ose-egress-router:latest</span></span>
+<span id="cb8-38"><a href="#cb8-38" aria-hidden="true" tabindex="-1"></a><span class="st">        command: [&quot;/bin/sh&quot;, &quot;-c&quot;]</span></span>
+<span id="cb8-39"><a href="#cb8-39" aria-hidden="true" tabindex="-1"></a><span class="st">        args:</span></span>
+<span id="cb8-40"><a href="#cb8-40" aria-hidden="true" tabindex="-1"></a><span class="st">        - |</span></span>
+<span id="cb8-41"><a href="#cb8-41" aria-hidden="true" tabindex="-1"></a><span class="st">          # 0. Enable IP Forwarding &amp; Disable Reverse Path Filtering</span></span>
+<span id="cb8-42"><a href="#cb8-42" aria-hidden="true" tabindex="-1"></a><span class="st">          sysctl -w net.ipv4.ip_forward=1</span></span>
+<span id="cb8-43"><a href="#cb8-43" aria-hidden="true" tabindex="-1"></a><span class="st">          sysctl -w net.ipv4.conf.all.rp_filter=0</span></span>
+<span id="cb8-44"><a href="#cb8-44" aria-hidden="true" tabindex="-1"></a><span class="st">          sysctl -w net.ipv4.conf.default.rp_filter=0</span></span>
+<span id="cb8-45"><a href="#cb8-45" aria-hidden="true" tabindex="-1"></a><span class="st">          sysctl -w net.ipv4.conf.eth0.rp_filter=0</span></span>
+<span id="cb8-46"><a href="#cb8-46" aria-hidden="true" tabindex="-1"></a><span class="st">          sysctl -w net.ipv4.conf.macvlan0.rp_filter=0</span></span>
+<span id="cb8-47"><a href="#cb8-47" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-48"><a href="#cb8-48" aria-hidden="true" tabindex="-1"></a><span class="st">          # Critical: Allow receiving packets where the destination IP is not localhost</span></span>
+<span id="cb8-49"><a href="#cb8-49" aria-hidden="true" tabindex="-1"></a><span class="st">          sysctl -w net.ipv4.conf.eth0.accept_local=1</span></span>
+<span id="cb8-50"><a href="#cb8-50" aria-hidden="true" tabindex="-1"></a><span class="st">          sysctl -w net.ipv4.conf.all.accept_local=1</span></span>
+<span id="cb8-51"><a href="#cb8-51" aria-hidden="true" tabindex="-1"></a><span class="st">          </span></span>
+<span id="cb8-52"><a href="#cb8-52" aria-hidden="true" tabindex="-1"></a><span class="st">          # Ensure Forward chain is ACCEPT</span></span>
+<span id="cb8-53"><a href="#cb8-53" aria-hidden="true" tabindex="-1"></a><span class="st">          iptables -P FORWARD ACCEPT</span></span>
+<span id="cb8-54"><a href="#cb8-54" aria-hidden="true" tabindex="-1"></a><span class="st">          </span></span>
+<span id="cb8-55"><a href="#cb8-55" aria-hidden="true" tabindex="-1"></a><span class="st">          # 1. Save the original OVN Network Gateway</span></span>
+<span id="cb8-56"><a href="#cb8-56" aria-hidden="true" tabindex="-1"></a><span class="st">          OVN_GW=$(ip route show default | awk &#39;/default/ {print $3}&#39;)</span></span>
+<span id="cb8-57"><a href="#cb8-57" aria-hidden="true" tabindex="-1"></a><span class="st">          </span></span>
+<span id="cb8-58"><a href="#cb8-58" aria-hidden="true" tabindex="-1"></a><span class="st">          # 2. Add routes for Pod Network and Service Network</span></span>
+<span id="cb8-59"><a href="#cb8-59" aria-hidden="true" tabindex="-1"></a><span class="st">          ip route add 10.0.0.0/8 via $OVN_GW dev eth0</span></span>
+<span id="cb8-60"><a href="#cb8-60" aria-hidden="true" tabindex="-1"></a><span class="st">          ip route add 172.16.0.0/12 via $OVN_GW dev eth0</span></span>
+<span id="cb8-61"><a href="#cb8-61" aria-hidden="true" tabindex="-1"></a><span class="st">          </span></span>
+<span id="cb8-62"><a href="#cb8-62" aria-hidden="true" tabindex="-1"></a><span class="st">          # 3. Ensure macvlan0 interface is up</span></span>
+<span id="cb8-63"><a href="#cb8-63" aria-hidden="true" tabindex="-1"></a><span class="st">          ip link set macvlan0 up</span></span>
+<span id="cb8-64"><a href="#cb8-64" aria-hidden="true" tabindex="-1"></a><span class="st">          </span></span>
+<span id="cb8-65"><a href="#cb8-65" aria-hidden="true" tabindex="-1"></a><span class="st">          # 4. Switch default route to point to the physical gateway</span></span>
+<span id="cb8-66"><a href="#cb8-66" aria-hidden="true" tabindex="-1"></a><span class="st">          ip route del default</span></span>
+<span id="cb8-67"><a href="#cb8-67" aria-hidden="true" tabindex="-1"></a><span class="st">          ip route add default via 192.168.99.1 dev macvlan0</span></span>
+<span id="cb8-68"><a href="#cb8-68" aria-hidden="true" tabindex="-1"></a><span class="st">          </span></span>
+<span id="cb8-69"><a href="#cb8-69" aria-hidden="true" tabindex="-1"></a><span class="st">          # Get the OVN IP of the gateway pod</span></span>
+<span id="cb8-70"><a href="#cb8-70" aria-hidden="true" tabindex="-1"></a><span class="st">          GW_OVN_IP=$(ip -4 addr show eth0 | grep -oP &#39;(?&lt;=inet\s)\d+(\.\d+){3}&#39;)</span></span>
+<span id="cb8-71"><a href="#cb8-71" aria-hidden="true" tabindex="-1"></a><span class="st">          </span></span>
+<span id="cb8-72"><a href="#cb8-72" aria-hidden="true" tabindex="-1"></a><span class="st">          # 5. Critical modification: Add policy routing to handle traffic from other pods</span></span>
+<span id="cb8-73"><a href="#cb8-73" aria-hidden="true" tabindex="-1"></a><span class="st">          # Use static route modification as policy routing tables were found to be ineffective in testing</span></span>
+<span id="cb8-74"><a href="#cb8-74" aria-hidden="true" tabindex="-1"></a><span class="st">          ip route del default</span></span>
+<span id="cb8-75"><a href="#cb8-75" aria-hidden="true" tabindex="-1"></a><span class="st">          ip route add default via 192.168.99.1 dev macvlan0</span></span>
+<span id="cb8-76"><a href="#cb8-76" aria-hidden="true" tabindex="-1"></a><span class="st">          </span></span>
+<span id="cb8-77"><a href="#cb8-77" aria-hidden="true" tabindex="-1"></a><span class="st">          # 6. SNAT Rules</span></span>
+<span id="cb8-78"><a href="#cb8-78" aria-hidden="true" tabindex="-1"></a><span class="st">          # Perform SNAT for egress traffic on eth0 (Internal traffic)</span></span>
+<span id="cb8-79"><a href="#cb8-79" aria-hidden="true" tabindex="-1"></a><span class="st">          iptables -t nat -A POSTROUTING -o eth0 -j SNAT --to-source $GW_OVN_IP</span></span>
+<span id="cb8-80"><a href="#cb8-80" aria-hidden="true" tabindex="-1"></a><span class="st">          </span></span>
+<span id="cb8-81"><a href="#cb8-81" aria-hidden="true" tabindex="-1"></a><span class="st">          # Perform SNAT for egress traffic on macvlan0 (External traffic)</span></span>
+<span id="cb8-82"><a href="#cb8-82" aria-hidden="true" tabindex="-1"></a><span class="st">          iptables -t nat -A POSTROUTING -o macvlan0 -j SNAT --to-source 192.168.99.2</span></span>
+<span id="cb8-83"><a href="#cb8-83" aria-hidden="true" tabindex="-1"></a><span class="st">          </span></span>
+<span id="cb8-84"><a href="#cb8-84" aria-hidden="true" tabindex="-1"></a><span class="st">          echo &quot;Gateway started! Egress IP: 192.168.99.2, Physical GW: 192.168.99.1, OVN IP: $GW_OVN_IP&quot;;</span></span>
+<span id="cb8-85"><a href="#cb8-85" aria-hidden="true" tabindex="-1"></a><span class="st">          ip route show</span></span>
+<span id="cb8-86"><a href="#cb8-86" aria-hidden="true" tabindex="-1"></a><span class="st">          iptables -t nat -L -n -v</span></span>
+<span id="cb8-87"><a href="#cb8-87" aria-hidden="true" tabindex="-1"></a><span class="st">          </span></span>
+<span id="cb8-88"><a href="#cb8-88" aria-hidden="true" tabindex="-1"></a><span class="st">          # Prevent container exit</span></span>
+<span id="cb8-89"><a href="#cb8-89" aria-hidden="true" tabindex="-1"></a><span class="st">          sleep infinity;</span></span>
+<span id="cb8-90"><a href="#cb8-90" aria-hidden="true" tabindex="-1"></a><span class="st">        securityContext:</span></span>
+<span id="cb8-91"><a href="#cb8-91" aria-hidden="true" tabindex="-1"></a><span class="st">          privileged: true</span></span>
+<span id="cb8-92"><a href="#cb8-92" aria-hidden="true" tabindex="-1"></a><span class="op">EOF</span></span></code></pre></div>
+        <h2 id="automated-controller-deployment">Automated Controller
+        Deployment</h2>
+        <p>The Controller manages OVN configurations and APB route
+        synchronization automatically. The full source code is available
+        here: <a
+        href="files/ovn.egressip/controller.py">controller.py</a>.</p>
+        <p><strong>Core Features:</strong></p>
+        <ol type="1">
+        <li><strong>APB Route Synchronization</strong>
+        <ul>
+        <li>Monitors the Gateway Pod’s IP changes.</li>
+        <li>Automatically updates the <code>nextHops</code> in
+        <code>AdminPolicyBasedExternalRoute</code>.</li>
+        <li>Prevents manual modifications from being overwritten
+        (enforces state).</li>
+        </ul></li>
+        <li><strong>OVN Configuration Management</strong>
+        <ul>
+        <li>Automatically clears Port Security for Gateway Pods.</li>
+        <li>Adds stateless ACLs for Business Pods and Gateway Pods.</li>
+        <li>Intelligently cleans up orphan ACLs (removing only those
+        pointing to non-existent pods).</li>
+        </ul></li>
+        <li><strong>High Availability</strong>
+        <ul>
+        <li><strong>Auto-recovery:</strong> Recovers automatically from
+        API errors.</li>
+        <li><strong>Exponential Backoff:</strong> Prevents resource
+        exhaustion during persistent failures.</li>
+        <li><strong>Robustness:</strong> Protected by double-layer
+        exception handling (Watch Stream and Event Handler).</li>
+        </ul></li>
+        <li><strong>Multi-Tenancy Support</strong>
+        <ul>
+        <li>All configurations are customizable via environment
+        variables.</li>
+        <li>Supports managing multiple namespace combinations.</li>
+        <li>Configurable ACL priorities to prevent conflicts.</li>
+        </ul></li>
+        </ol>
+        <p><strong>Configuration:</strong> Configure the controller’s
+        behavior using environment variables. See the Deployment example
+        below.</p>
+        <h3 id="build-and-deploy">Build and Deploy</h3>
+        <p>This section builds the controller image and deploys it to
+        the infrastructure namespace.</p>
+        <div class="sourceCode" id="cb9"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Build and push controller image</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="fu">tee</span> controller.dockerfile <span class="op">&lt;&lt;EOF</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="st">FROM registry.access.redhat.com/ubi9/python-312</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="st"># Install Python dependencies</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a><span class="st">RUN pip install kubernetes</span></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a><span class="st"># Install OpenShift CLI (oc)</span></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a><span class="st">USER 0</span></span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a><span class="st">RUN curl -L https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable/openshift-client-linux.tar.gz | </span><span class="dt">\</span></span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a><span class="st">    tar -xzf - -C /usr/local/bin/ oc &amp;&amp; </span><span class="dt">\</span></span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a><span class="st">    chmod +x /usr/local/bin/oc</span></span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a><span class="st"># Switch back to default user</span></span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a><span class="st">USER 1001</span></span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a><span class="op">EOF</span></span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a><span class="ex">podman</span> build <span class="at">-f</span> controller.dockerfile <span class="at">-t</span> quay.io/wangzheng422/qimgs:apb-controller-2026.01.25-v01 .</span>
+<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a><span class="ex">podman</span> push quay.io/wangzheng422/qimgs:apb-controller-2026.01.25-v01</span>
+<span id="cb9-20"><a href="#cb9-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-21"><a href="#cb9-21" aria-hidden="true" tabindex="-1"></a><span class="co"># Create ConfigMap from the standalone controller.py file</span></span>
+<span id="cb9-22"><a href="#cb9-22" aria-hidden="true" tabindex="-1"></a><span class="co"># This assumes controller.py exists in the current directory</span></span>
+<span id="cb9-23"><a href="#cb9-23" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> delete configmap apb-script <span class="at">-n</span> ns-egress-infra <span class="at">--ignore-not-found</span></span>
+<span id="cb9-24"><a href="#cb9-24" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> create configmap apb-script <span class="at">--from-file</span><span class="op">=</span>controller.py <span class="at">-n</span> ns-egress-infra</span>
+<span id="cb9-25"><a href="#cb9-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-26"><a href="#cb9-26" aria-hidden="true" tabindex="-1"></a><span class="co"># Deploy Controller</span></span>
+<span id="cb9-27"><a href="#cb9-27" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> <span class="op">&lt;&lt;EOF</span> <span class="kw">|</span> <span class="ex">oc</span> apply <span class="at">-f</span> <span class="at">-</span></span>
+<span id="cb9-28"><a href="#cb9-28" aria-hidden="true" tabindex="-1"></a><span class="st">apiVersion: apps/v1</span></span>
+<span id="cb9-29"><a href="#cb9-29" aria-hidden="true" tabindex="-1"></a><span class="st">kind: Deployment</span></span>
+<span id="cb9-30"><a href="#cb9-30" aria-hidden="true" tabindex="-1"></a><span class="st">metadata:</span></span>
+<span id="cb9-31"><a href="#cb9-31" aria-hidden="true" tabindex="-1"></a><span class="st">  name: apb-controller</span></span>
+<span id="cb9-32"><a href="#cb9-32" aria-hidden="true" tabindex="-1"></a><span class="st">  namespace: ns-egress-infra</span></span>
+<span id="cb9-33"><a href="#cb9-33" aria-hidden="true" tabindex="-1"></a><span class="st">spec:</span></span>
+<span id="cb9-34"><a href="#cb9-34" aria-hidden="true" tabindex="-1"></a><span class="st">  replicas: 1</span></span>
+<span id="cb9-35"><a href="#cb9-35" aria-hidden="true" tabindex="-1"></a><span class="st">  selector:</span></span>
+<span id="cb9-36"><a href="#cb9-36" aria-hidden="true" tabindex="-1"></a><span class="st">    matchLabels:</span></span>
+<span id="cb9-37"><a href="#cb9-37" aria-hidden="true" tabindex="-1"></a><span class="st">      app: apb-controller</span></span>
+<span id="cb9-38"><a href="#cb9-38" aria-hidden="true" tabindex="-1"></a><span class="st">  template:</span></span>
+<span id="cb9-39"><a href="#cb9-39" aria-hidden="true" tabindex="-1"></a><span class="st">    metadata:</span></span>
+<span id="cb9-40"><a href="#cb9-40" aria-hidden="true" tabindex="-1"></a><span class="st">      labels:</span></span>
+<span id="cb9-41"><a href="#cb9-41" aria-hidden="true" tabindex="-1"></a><span class="st">        app: apb-controller</span></span>
+<span id="cb9-42"><a href="#cb9-42" aria-hidden="true" tabindex="-1"></a><span class="st">    spec:</span></span>
+<span id="cb9-43"><a href="#cb9-43" aria-hidden="true" tabindex="-1"></a><span class="st">      serviceAccountName: apb-syncer</span></span>
+<span id="cb9-44"><a href="#cb9-44" aria-hidden="true" tabindex="-1"></a><span class="st">      containers:</span></span>
+<span id="cb9-45"><a href="#cb9-45" aria-hidden="true" tabindex="-1"></a><span class="st">      - name: controller</span></span>
+<span id="cb9-46"><a href="#cb9-46" aria-hidden="true" tabindex="-1"></a><span class="st">        image: quay.io/wangzheng422/qimgs:apb-controller-2026.01.25-v01</span></span>
+<span id="cb9-47"><a href="#cb9-47" aria-hidden="true" tabindex="-1"></a><span class="st">        command: [&quot;/bin/sh&quot;, &quot;-c&quot;, &quot;python /mnt/controller.py&quot;]</span></span>
+<span id="cb9-48"><a href="#cb9-48" aria-hidden="true" tabindex="-1"></a><span class="st">        env:</span></span>
+<span id="cb9-49"><a href="#cb9-49" aria-hidden="true" tabindex="-1"></a><span class="st">        # Gateway Configuration</span></span>
+<span id="cb9-50"><a href="#cb9-50" aria-hidden="true" tabindex="-1"></a><span class="st">        - name: GATEWAY_NAMESPACE</span></span>
+<span id="cb9-51"><a href="#cb9-51" aria-hidden="true" tabindex="-1"></a><span class="st">          value: &quot;ns-egress-infra&quot;</span></span>
+<span id="cb9-52"><a href="#cb9-52" aria-hidden="true" tabindex="-1"></a><span class="st">        - name: GATEWAY_LABEL</span></span>
+<span id="cb9-53"><a href="#cb9-53" aria-hidden="true" tabindex="-1"></a><span class="st">          value: &quot;app=ns-blue-gateway&quot;</span></span>
+<span id="cb9-54"><a href="#cb9-54" aria-hidden="true" tabindex="-1"></a><span class="st">        # Business Pod Configuration</span></span>
+<span id="cb9-55"><a href="#cb9-55" aria-hidden="true" tabindex="-1"></a><span class="st">        - name: BUSINESS_NAMESPACE</span></span>
+<span id="cb9-56"><a href="#cb9-56" aria-hidden="true" tabindex="-1"></a><span class="st">          value: &quot;ns-blue&quot;</span></span>
+<span id="cb9-57"><a href="#cb9-57" aria-hidden="true" tabindex="-1"></a><span class="st">        - name: BUSINESS_LABEL</span></span>
+<span id="cb9-58"><a href="#cb9-58" aria-hidden="true" tabindex="-1"></a><span class="st">          value: &quot;app=business-app&quot;</span></span>
+<span id="cb9-59"><a href="#cb9-59" aria-hidden="true" tabindex="-1"></a><span class="st">        # APB Configuration</span></span>
+<span id="cb9-60"><a href="#cb9-60" aria-hidden="true" tabindex="-1"></a><span class="st">        - name: APB_NAME</span></span>
+<span id="cb9-61"><a href="#cb9-61" aria-hidden="true" tabindex="-1"></a><span class="st">          value: &quot;ns-blue-route&quot;</span></span>
+<span id="cb9-62"><a href="#cb9-62" aria-hidden="true" tabindex="-1"></a><span class="st">        # OVN Configuration (optional, use defaults if not set)</span></span>
+<span id="cb9-63"><a href="#cb9-63" aria-hidden="true" tabindex="-1"></a><span class="st">        - name: OVN_NAMESPACE</span></span>
+<span id="cb9-64"><a href="#cb9-64" aria-hidden="true" tabindex="-1"></a><span class="st">          value: &quot;openshift-ovn-kubernetes&quot;</span></span>
+<span id="cb9-65"><a href="#cb9-65" aria-hidden="true" tabindex="-1"></a><span class="st">        - name: OVN_ACL_PRIORITY</span></span>
+<span id="cb9-66"><a href="#cb9-66" aria-hidden="true" tabindex="-1"></a><span class="st">          value: &quot;21743&quot;</span></span>
+<span id="cb9-67"><a href="#cb9-67" aria-hidden="true" tabindex="-1"></a><span class="st">        volumeMounts:</span></span>
+<span id="cb9-68"><a href="#cb9-68" aria-hidden="true" tabindex="-1"></a><span class="st">        - name: script</span></span>
+<span id="cb9-69"><a href="#cb9-69" aria-hidden="true" tabindex="-1"></a><span class="st">          mountPath: /mnt</span></span>
+<span id="cb9-70"><a href="#cb9-70" aria-hidden="true" tabindex="-1"></a><span class="st">      volumes:</span></span>
+<span id="cb9-71"><a href="#cb9-71" aria-hidden="true" tabindex="-1"></a><span class="st">      - name: script</span></span>
+<span id="cb9-72"><a href="#cb9-72" aria-hidden="true" tabindex="-1"></a><span class="st">        configMap:</span></span>
+<span id="cb9-73"><a href="#cb9-73" aria-hidden="true" tabindex="-1"></a><span class="st">          name: apb-script</span></span>
+<span id="cb9-74"><a href="#cb9-74" aria-hidden="true" tabindex="-1"></a><span class="op">EOF</span></span></code></pre></div>
+        <h3 id="apply-routing-policy-and-deploy-app">Apply Routing
+        Policy and Deploy App</h3>
+        <p>Apply the <code>AdminPolicyBasedExternalRoute</code> (which
+        the controller will manage) and deploy the business
+        application.</p>
+        <div class="sourceCode" id="cb10"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Create the APB Route</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="co"># This policy directs traffic from the namespace match to the nextHop</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> <span class="op">&lt;&lt;EOF</span> <span class="kw">|</span> <span class="ex">oc</span> apply <span class="at">-f</span> <span class="at">-</span></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a><span class="st">apiVersion: k8s.ovn.org/v1</span></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a><span class="st">kind: AdminPolicyBasedExternalRoute</span></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a><span class="st">metadata:</span></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a><span class="st">  name: ns-blue-route</span></span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a><span class="st">  namespace: ns-blue</span></span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a><span class="st">spec:</span></span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a><span class="st">  from:</span></span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a><span class="st">    namespaceSelector:</span></span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a><span class="st">      matchLabels:</span></span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a><span class="st">        kubernetes.io/metadata.name: ns-blue</span></span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a><span class="st">  nextHops:</span></span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a><span class="st">    static:</span></span>
+<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a><span class="st">    # This IP will be updated by apb-controller to match the gateway pod IP</span></span>
+<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a><span class="st">    - ip: &quot;192.168.99.1&quot;</span></span>
+<span id="cb10-18"><a href="#cb10-18" aria-hidden="true" tabindex="-1"></a><span class="op">EOF</span></span>
+<span id="cb10-19"><a href="#cb10-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-20"><a href="#cb10-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-21"><a href="#cb10-21" aria-hidden="true" tabindex="-1"></a><span class="co"># Deploy the actual business application</span></span>
+<span id="cb10-22"><a href="#cb10-22" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> <span class="op">&lt;&lt;EOF</span> <span class="kw">|</span> <span class="ex">oc</span> apply <span class="at">-f</span> <span class="at">-</span></span>
+<span id="cb10-23"><a href="#cb10-23" aria-hidden="true" tabindex="-1"></a><span class="st">apiVersion: apps/v1</span></span>
+<span id="cb10-24"><a href="#cb10-24" aria-hidden="true" tabindex="-1"></a><span class="st">kind: Deployment</span></span>
+<span id="cb10-25"><a href="#cb10-25" aria-hidden="true" tabindex="-1"></a><span class="st">metadata:</span></span>
+<span id="cb10-26"><a href="#cb10-26" aria-hidden="true" tabindex="-1"></a><span class="st">  name: business-app</span></span>
+<span id="cb10-27"><a href="#cb10-27" aria-hidden="true" tabindex="-1"></a><span class="st">  namespace: ns-blue</span></span>
+<span id="cb10-28"><a href="#cb10-28" aria-hidden="true" tabindex="-1"></a><span class="st">spec:</span></span>
+<span id="cb10-29"><a href="#cb10-29" aria-hidden="true" tabindex="-1"></a><span class="st">  replicas: 5</span></span>
+<span id="cb10-30"><a href="#cb10-30" aria-hidden="true" tabindex="-1"></a><span class="st">  selector:</span></span>
+<span id="cb10-31"><a href="#cb10-31" aria-hidden="true" tabindex="-1"></a><span class="st">    matchLabels:</span></span>
+<span id="cb10-32"><a href="#cb10-32" aria-hidden="true" tabindex="-1"></a><span class="st">      app: business-app</span></span>
+<span id="cb10-33"><a href="#cb10-33" aria-hidden="true" tabindex="-1"></a><span class="st">  template:</span></span>
+<span id="cb10-34"><a href="#cb10-34" aria-hidden="true" tabindex="-1"></a><span class="st">    metadata:</span></span>
+<span id="cb10-35"><a href="#cb10-35" aria-hidden="true" tabindex="-1"></a><span class="st">      labels:</span></span>
+<span id="cb10-36"><a href="#cb10-36" aria-hidden="true" tabindex="-1"></a><span class="st">        app: business-app</span></span>
+<span id="cb10-37"><a href="#cb10-37" aria-hidden="true" tabindex="-1"></a><span class="st">    spec:</span></span>
+<span id="cb10-38"><a href="#cb10-38" aria-hidden="true" tabindex="-1"></a><span class="st">      affinity:</span></span>
+<span id="cb10-39"><a href="#cb10-39" aria-hidden="true" tabindex="-1"></a><span class="st">        podAntiAffinity:</span></span>
+<span id="cb10-40"><a href="#cb10-40" aria-hidden="true" tabindex="-1"></a><span class="st">          preferredDuringSchedulingIgnoredDuringExecution:</span></span>
+<span id="cb10-41"><a href="#cb10-41" aria-hidden="true" tabindex="-1"></a><span class="st">          - weight: 100</span></span>
+<span id="cb10-42"><a href="#cb10-42" aria-hidden="true" tabindex="-1"></a><span class="st">            podAffinityTerm:</span></span>
+<span id="cb10-43"><a href="#cb10-43" aria-hidden="true" tabindex="-1"></a><span class="st">              labelSelector:</span></span>
+<span id="cb10-44"><a href="#cb10-44" aria-hidden="true" tabindex="-1"></a><span class="st">                matchExpressions:</span></span>
+<span id="cb10-45"><a href="#cb10-45" aria-hidden="true" tabindex="-1"></a><span class="st">                - key: app</span></span>
+<span id="cb10-46"><a href="#cb10-46" aria-hidden="true" tabindex="-1"></a><span class="st">                  operator: In</span></span>
+<span id="cb10-47"><a href="#cb10-47" aria-hidden="true" tabindex="-1"></a><span class="st">                  values:</span></span>
+<span id="cb10-48"><a href="#cb10-48" aria-hidden="true" tabindex="-1"></a><span class="st">                  - business-app</span></span>
+<span id="cb10-49"><a href="#cb10-49" aria-hidden="true" tabindex="-1"></a><span class="st">              topologyKey: kubernetes.io/hostname</span></span>
+<span id="cb10-50"><a href="#cb10-50" aria-hidden="true" tabindex="-1"></a><span class="st">      containers:</span></span>
+<span id="cb10-51"><a href="#cb10-51" aria-hidden="true" tabindex="-1"></a><span class="st">      - name: app</span></span>
+<span id="cb10-52"><a href="#cb10-52" aria-hidden="true" tabindex="-1"></a><span class="st">        image: quay.io/wangzheng422/qimgs:centos9-test-2025.12.18.v01</span></span>
+<span id="cb10-53"><a href="#cb10-53" aria-hidden="true" tabindex="-1"></a><span class="st">        command: [&quot;/bin/sh&quot;, &quot;-c&quot;, &quot;sleep infinity&quot;]</span></span>
+<span id="cb10-54"><a href="#cb10-54" aria-hidden="true" tabindex="-1"></a><span class="op">EOF</span></span></code></pre></div>
+        <h2 id="multi-namespace-deployment-example">Multi-Namespace
+        Deployment Example</h2>
+        <p>If you need to deploy independent controllers for multiple
+        business namespaces, you can configure distinct instances via
+        environment variables.</p>
+        <h3 id="controller-network-configuration">Controller &amp;
+        Network Configuration</h3>
+        <p>This example deploys a second controller for a red namespace
+        (<code>ns-red</code>), ensuring it doesn’t conflict with the
+        blue deployment.</p>
+        <div class="sourceCode" id="cb11"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Example: Deploy controller for ns-red namespace</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> <span class="op">&lt;&lt;EOF</span> <span class="kw">|</span> <span class="ex">oc</span> apply <span class="at">-f</span> <span class="at">-</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a><span class="st">apiVersion: apps/v1</span></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a><span class="st">kind: Deployment</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a><span class="st">metadata:</span></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a><span class="st">  name: apb-controller-red</span></span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a><span class="st">  namespace: ns-egress-infra</span></span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a><span class="st">spec:</span></span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a><span class="st">  replicas: 1</span></span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a><span class="st">  selector:</span></span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a><span class="st">    matchLabels:</span></span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a><span class="st">      app: apb-controller-red</span></span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a><span class="st">  template:</span></span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a><span class="st">    metadata:</span></span>
+<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a><span class="st">      labels:</span></span>
+<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a><span class="st">        app: apb-controller-red</span></span>
+<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a><span class="st">    spec:</span></span>
+<span id="cb11-18"><a href="#cb11-18" aria-hidden="true" tabindex="-1"></a><span class="st">      serviceAccountName: apb-syncer</span></span>
+<span id="cb11-19"><a href="#cb11-19" aria-hidden="true" tabindex="-1"></a><span class="st">      containers:</span></span>
+<span id="cb11-20"><a href="#cb11-20" aria-hidden="true" tabindex="-1"></a><span class="st">      - name: controller</span></span>
+<span id="cb11-21"><a href="#cb11-21" aria-hidden="true" tabindex="-1"></a><span class="st">        image: quay.io/wangzheng422/qimgs:apb-controller-2026.01.25-v01</span></span>
+<span id="cb11-22"><a href="#cb11-22" aria-hidden="true" tabindex="-1"></a><span class="st">        command: [&quot;/bin/sh&quot;, &quot;-c&quot;, &quot;python /mnt/controller.py&quot;]</span></span>
+<span id="cb11-23"><a href="#cb11-23" aria-hidden="true" tabindex="-1"></a><span class="st">        env:</span></span>
+<span id="cb11-24"><a href="#cb11-24" aria-hidden="true" tabindex="-1"></a><span class="st">        # Gateway Configuration - Use the same infra namespace</span></span>
+<span id="cb11-25"><a href="#cb11-25" aria-hidden="true" tabindex="-1"></a><span class="st">        - name: GATEWAY_NAMESPACE</span></span>
+<span id="cb11-26"><a href="#cb11-26" aria-hidden="true" tabindex="-1"></a><span class="st">          value: &quot;ns-egress-infra&quot;</span></span>
+<span id="cb11-27"><a href="#cb11-27" aria-hidden="true" tabindex="-1"></a><span class="st">        - name: GATEWAY_LABEL</span></span>
+<span id="cb11-28"><a href="#cb11-28" aria-hidden="true" tabindex="-1"></a><span class="st">          value: &quot;app=ns-red-gateway&quot;  # Distinct gateway label</span></span>
+<span id="cb11-29"><a href="#cb11-29" aria-hidden="true" tabindex="-1"></a><span class="st">        # Business Pod Configuration - Distinct business namespace</span></span>
+<span id="cb11-30"><a href="#cb11-30" aria-hidden="true" tabindex="-1"></a><span class="st">        - name: BUSINESS_NAMESPACE</span></span>
+<span id="cb11-31"><a href="#cb11-31" aria-hidden="true" tabindex="-1"></a><span class="st">          value: &quot;ns-red&quot;</span></span>
+<span id="cb11-32"><a href="#cb11-32" aria-hidden="true" tabindex="-1"></a><span class="st">        - name: BUSINESS_LABEL</span></span>
+<span id="cb11-33"><a href="#cb11-33" aria-hidden="true" tabindex="-1"></a><span class="st">          value: &quot;app=business-app&quot;</span></span>
+<span id="cb11-34"><a href="#cb11-34" aria-hidden="true" tabindex="-1"></a><span class="st">        # APB Configuration - Distinct APB name</span></span>
+<span id="cb11-35"><a href="#cb11-35" aria-hidden="true" tabindex="-1"></a><span class="st">        - name: APB_NAME</span></span>
+<span id="cb11-36"><a href="#cb11-36" aria-hidden="true" tabindex="-1"></a><span class="st">          value: &quot;ns-red-route&quot;</span></span>
+<span id="cb11-37"><a href="#cb11-37" aria-hidden="true" tabindex="-1"></a><span class="st">        # OVN Configuration - Use different ACL priority to avoid conflict</span></span>
+<span id="cb11-38"><a href="#cb11-38" aria-hidden="true" tabindex="-1"></a><span class="st">        - name: OVN_ACL_PRIORITY</span></span>
+<span id="cb11-39"><a href="#cb11-39" aria-hidden="true" tabindex="-1"></a><span class="st">          value: &quot;21743&quot;  # Different priority</span></span>
+<span id="cb11-40"><a href="#cb11-40" aria-hidden="true" tabindex="-1"></a><span class="st">        volumeMounts:</span></span>
+<span id="cb11-41"><a href="#cb11-41" aria-hidden="true" tabindex="-1"></a><span class="st">        - name: script</span></span>
+<span id="cb11-42"><a href="#cb11-42" aria-hidden="true" tabindex="-1"></a><span class="st">          mountPath: /mnt</span></span>
+<span id="cb11-43"><a href="#cb11-43" aria-hidden="true" tabindex="-1"></a><span class="st">      volumes:</span></span>
+<span id="cb11-44"><a href="#cb11-44" aria-hidden="true" tabindex="-1"></a><span class="st">      - name: script</span></span>
+<span id="cb11-45"><a href="#cb11-45" aria-hidden="true" tabindex="-1"></a><span class="st">        configMap:</span></span>
+<span id="cb11-46"><a href="#cb11-46" aria-hidden="true" tabindex="-1"></a><span class="st">          name: apb-script</span></span>
+<span id="cb11-47"><a href="#cb11-47" aria-hidden="true" tabindex="-1"></a><span class="op">EOF</span></span>
+<span id="cb11-48"><a href="#cb11-48" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-49"><a href="#cb11-49" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-50"><a href="#cb11-50" aria-hidden="true" tabindex="-1"></a><span class="co"># Corresponding NetworkAttachmentDefinition for ns-red</span></span>
+<span id="cb11-51"><a href="#cb11-51" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> <span class="op">&lt;&lt;EOF</span> <span class="kw">|</span> <span class="ex">oc</span> apply <span class="at">-f</span> <span class="at">-</span></span>
+<span id="cb11-52"><a href="#cb11-52" aria-hidden="true" tabindex="-1"></a><span class="st">apiVersion: &quot;k8s.cni.cncf.io/v1&quot;</span></span>
+<span id="cb11-53"><a href="#cb11-53" aria-hidden="true" tabindex="-1"></a><span class="st">kind: NetworkAttachmentDefinition</span></span>
+<span id="cb11-54"><a href="#cb11-54" aria-hidden="true" tabindex="-1"></a><span class="st">metadata:</span></span>
+<span id="cb11-55"><a href="#cb11-55" aria-hidden="true" tabindex="-1"></a><span class="st">  name: ns-red-external-macvlan</span></span>
+<span id="cb11-56"><a href="#cb11-56" aria-hidden="true" tabindex="-1"></a><span class="st">  namespace: ns-egress-infra  # Must be in the same namespace as the Gateway Pod</span></span>
+<span id="cb11-57"><a href="#cb11-57" aria-hidden="true" tabindex="-1"></a><span class="st">spec:</span></span>
+<span id="cb11-58"><a href="#cb11-58" aria-hidden="true" tabindex="-1"></a><span class="st">  config: &#39;{</span></span>
+<span id="cb11-59"><a href="#cb11-59" aria-hidden="true" tabindex="-1"></a><span class="st">      &quot;cniVersion&quot;: &quot;0.3.1&quot;,</span></span>
+<span id="cb11-60"><a href="#cb11-60" aria-hidden="true" tabindex="-1"></a><span class="st">      &quot;type&quot;: &quot;macvlan&quot;,</span></span>
+<span id="cb11-61"><a href="#cb11-61" aria-hidden="true" tabindex="-1"></a><span class="st">      &quot;master&quot;: &quot;enp2s0&quot;,</span></span>
+<span id="cb11-62"><a href="#cb11-62" aria-hidden="true" tabindex="-1"></a><span class="st">      &quot;mode&quot;: &quot;bridge&quot;,</span></span>
+<span id="cb11-63"><a href="#cb11-63" aria-hidden="true" tabindex="-1"></a><span class="st">      &quot;ipam&quot;: {</span></span>
+<span id="cb11-64"><a href="#cb11-64" aria-hidden="true" tabindex="-1"></a><span class="st">        &quot;type&quot;: &quot;static&quot;</span></span>
+<span id="cb11-65"><a href="#cb11-65" aria-hidden="true" tabindex="-1"></a><span class="st">      }</span></span>
+<span id="cb11-66"><a href="#cb11-66" aria-hidden="true" tabindex="-1"></a><span class="st">    }&#39;</span></span>
+<span id="cb11-67"><a href="#cb11-67" aria-hidden="true" tabindex="-1"></a><span class="op">EOF</span></span></code></pre></div>
+        <h3 id="gateway-business-pods">Gateway &amp; Business Pods</h3>
+        <p>Deploy the Gateway and Business logic for the red
+        namespace.</p>
+        <div class="sourceCode" id="cb12"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Corresponding Gateway Deployment for ns-red</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> <span class="op">&lt;&lt;&#39;EOF&#39;</span> <span class="kw">|</span> <span class="ex">oc</span> apply <span class="at">-f</span> <span class="at">-</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a><span class="st">apiVersion: apps/v1</span></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a><span class="st">kind: Deployment</span></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a><span class="st">metadata:</span></span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a><span class="st">  name: ns-red-gateway</span></span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a><span class="st">  namespace: ns-egress-infra</span></span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a><span class="st">spec:</span></span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a><span class="st">  replicas: 1 </span></span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a><span class="st">  selector:</span></span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a><span class="st">    matchLabels:</span></span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a><span class="st">      app: ns-red-gateway</span></span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a><span class="st">  template:</span></span>
+<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a><span class="st">    metadata:</span></span>
+<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a><span class="st">      labels:</span></span>
+<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a><span class="st">        app: ns-red-gateway</span></span>
+<span id="cb12-17"><a href="#cb12-17" aria-hidden="true" tabindex="-1"></a><span class="st">      annotations:</span></span>
+<span id="cb12-18"><a href="#cb12-18" aria-hidden="true" tabindex="-1"></a><span class="st">        k8s.v1.cni.cncf.io/networks: &#39;[</span></span>
+<span id="cb12-19"><a href="#cb12-19" aria-hidden="true" tabindex="-1"></a><span class="st">          {</span></span>
+<span id="cb12-20"><a href="#cb12-20" aria-hidden="true" tabindex="-1"></a><span class="st">            &quot;name&quot;: &quot;ns-red-external-macvlan&quot;, </span></span>
+<span id="cb12-21"><a href="#cb12-21" aria-hidden="true" tabindex="-1"></a><span class="st">            &quot;interface&quot;: &quot;macvlan0&quot;,</span></span>
+<span id="cb12-22"><a href="#cb12-22" aria-hidden="true" tabindex="-1"></a><span class="st">            &quot;ips&quot;: [&quot;192.168.99.3/24&quot;]</span></span>
+<span id="cb12-23"><a href="#cb12-23" aria-hidden="true" tabindex="-1"></a><span class="st">          }</span></span>
+<span id="cb12-24"><a href="#cb12-24" aria-hidden="true" tabindex="-1"></a><span class="st">        ]&#39;</span></span>
+<span id="cb12-25"><a href="#cb12-25" aria-hidden="true" tabindex="-1"></a><span class="st">    spec:</span></span>
+<span id="cb12-26"><a href="#cb12-26" aria-hidden="true" tabindex="-1"></a><span class="st">      serviceAccountName: gateway-sa</span></span>
+<span id="cb12-27"><a href="#cb12-27" aria-hidden="true" tabindex="-1"></a><span class="st">      nodeSelector:</span></span>
+<span id="cb12-28"><a href="#cb12-28" aria-hidden="true" tabindex="-1"></a><span class="st">        egress-node: ns-blue-group</span></span>
+<span id="cb12-29"><a href="#cb12-29" aria-hidden="true" tabindex="-1"></a><span class="st">      containers:</span></span>
+<span id="cb12-30"><a href="#cb12-30" aria-hidden="true" tabindex="-1"></a><span class="st">      - name: gateway</span></span>
+<span id="cb12-31"><a href="#cb12-31" aria-hidden="true" tabindex="-1"></a><span class="st">        image: registry.redhat.io/openshift4/ose-egress-router:latest</span></span>
+<span id="cb12-32"><a href="#cb12-32" aria-hidden="true" tabindex="-1"></a><span class="st">        command: [&quot;/bin/sh&quot;, &quot;-c&quot;]</span></span>
+<span id="cb12-33"><a href="#cb12-33" aria-hidden="true" tabindex="-1"></a><span class="st">        args:</span></span>
+<span id="cb12-34"><a href="#cb12-34" aria-hidden="true" tabindex="-1"></a><span class="st">        - |</span></span>
+<span id="cb12-35"><a href="#cb12-35" aria-hidden="true" tabindex="-1"></a><span class="st">          # 0. Enable IP Forwarding &amp; Disable Reverse Path Filtering</span></span>
+<span id="cb12-36"><a href="#cb12-36" aria-hidden="true" tabindex="-1"></a><span class="st">          sysctl -w net.ipv4.ip_forward=1</span></span>
+<span id="cb12-37"><a href="#cb12-37" aria-hidden="true" tabindex="-1"></a><span class="st">          sysctl -w net.ipv4.conf.all.rp_filter=0</span></span>
+<span id="cb12-38"><a href="#cb12-38" aria-hidden="true" tabindex="-1"></a><span class="st">          sysctl -w net.ipv4.conf.default.rp_filter=0</span></span>
+<span id="cb12-39"><a href="#cb12-39" aria-hidden="true" tabindex="-1"></a><span class="st">          sysctl -w net.ipv4.conf.eth0.rp_filter=0</span></span>
+<span id="cb12-40"><a href="#cb12-40" aria-hidden="true" tabindex="-1"></a><span class="st">          sysctl -w net.ipv4.conf.macvlan0.rp_filter=0</span></span>
+<span id="cb12-41"><a href="#cb12-41" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-42"><a href="#cb12-42" aria-hidden="true" tabindex="-1"></a><span class="st">          # Critical: Allow receiving packets where the destination IP is not localhost</span></span>
+<span id="cb12-43"><a href="#cb12-43" aria-hidden="true" tabindex="-1"></a><span class="st">          sysctl -w net.ipv4.conf.eth0.accept_local=1</span></span>
+<span id="cb12-44"><a href="#cb12-44" aria-hidden="true" tabindex="-1"></a><span class="st">          sysctl -w net.ipv4.conf.all.accept_local=1</span></span>
+<span id="cb12-45"><a href="#cb12-45" aria-hidden="true" tabindex="-1"></a><span class="st">          </span></span>
+<span id="cb12-46"><a href="#cb12-46" aria-hidden="true" tabindex="-1"></a><span class="st">          # Ensure Forward chain is ACCEPT</span></span>
+<span id="cb12-47"><a href="#cb12-47" aria-hidden="true" tabindex="-1"></a><span class="st">          iptables -P FORWARD ACCEPT</span></span>
+<span id="cb12-48"><a href="#cb12-48" aria-hidden="true" tabindex="-1"></a><span class="st">          </span></span>
+<span id="cb12-49"><a href="#cb12-49" aria-hidden="true" tabindex="-1"></a><span class="st">          # 1. Save the original OVN Network Gateway</span></span>
+<span id="cb12-50"><a href="#cb12-50" aria-hidden="true" tabindex="-1"></a><span class="st">          OVN_GW=$(ip route show default | awk &#39;/default/ {print $3}&#39;)</span></span>
+<span id="cb12-51"><a href="#cb12-51" aria-hidden="true" tabindex="-1"></a><span class="st">          </span></span>
+<span id="cb12-52"><a href="#cb12-52" aria-hidden="true" tabindex="-1"></a><span class="st">          # 2. Add routes for Pod Network and Service Network</span></span>
+<span id="cb12-53"><a href="#cb12-53" aria-hidden="true" tabindex="-1"></a><span class="st">          ip route add 10.0.0.0/8 via $OVN_GW dev eth0</span></span>
+<span id="cb12-54"><a href="#cb12-54" aria-hidden="true" tabindex="-1"></a><span class="st">          ip route add 172.16.0.0/12 via $OVN_GW dev eth0</span></span>
+<span id="cb12-55"><a href="#cb12-55" aria-hidden="true" tabindex="-1"></a><span class="st">          </span></span>
+<span id="cb12-56"><a href="#cb12-56" aria-hidden="true" tabindex="-1"></a><span class="st">          # 3. Ensure macvlan0 interface is up</span></span>
+<span id="cb12-57"><a href="#cb12-57" aria-hidden="true" tabindex="-1"></a><span class="st">          ip link set macvlan0 up</span></span>
+<span id="cb12-58"><a href="#cb12-58" aria-hidden="true" tabindex="-1"></a><span class="st">          </span></span>
+<span id="cb12-59"><a href="#cb12-59" aria-hidden="true" tabindex="-1"></a><span class="st">          # 4. Switch default route to point to the physical gateway</span></span>
+<span id="cb12-60"><a href="#cb12-60" aria-hidden="true" tabindex="-1"></a><span class="st">          ip route del default</span></span>
+<span id="cb12-61"><a href="#cb12-61" aria-hidden="true" tabindex="-1"></a><span class="st">          ip route add default via 192.168.99.1 dev macvlan0</span></span>
+<span id="cb12-62"><a href="#cb12-62" aria-hidden="true" tabindex="-1"></a><span class="st">          </span></span>
+<span id="cb12-63"><a href="#cb12-63" aria-hidden="true" tabindex="-1"></a><span class="st">          # Get the OVN IP of the gateway pod</span></span>
+<span id="cb12-64"><a href="#cb12-64" aria-hidden="true" tabindex="-1"></a><span class="st">          GW_OVN_IP=$(ip -4 addr show eth0 | grep -oP &#39;(?&lt;=inet\s)\d+(\.\d+){3}&#39;)</span></span>
+<span id="cb12-65"><a href="#cb12-65" aria-hidden="true" tabindex="-1"></a><span class="st">          </span></span>
+<span id="cb12-66"><a href="#cb12-66" aria-hidden="true" tabindex="-1"></a><span class="st">          # 5. SNAT Rules</span></span>
+<span id="cb12-67"><a href="#cb12-67" aria-hidden="true" tabindex="-1"></a><span class="st">          # Perform SNAT for egress traffic on eth0 (Internal traffic)</span></span>
+<span id="cb12-68"><a href="#cb12-68" aria-hidden="true" tabindex="-1"></a><span class="st">          iptables -t nat -A POSTROUTING -o eth0 -j SNAT --to-source $GW_OVN_IP</span></span>
+<span id="cb12-69"><a href="#cb12-69" aria-hidden="true" tabindex="-1"></a><span class="st">          </span></span>
+<span id="cb12-70"><a href="#cb12-70" aria-hidden="true" tabindex="-1"></a><span class="st">          # Perform SNAT for egress traffic on macvlan0 (External traffic)</span></span>
+<span id="cb12-71"><a href="#cb12-71" aria-hidden="true" tabindex="-1"></a><span class="st">          iptables -t nat -A POSTROUTING -o macvlan0 -j SNAT --to-source 192.168.99.3</span></span>
+<span id="cb12-72"><a href="#cb12-72" aria-hidden="true" tabindex="-1"></a><span class="st">          </span></span>
+<span id="cb12-73"><a href="#cb12-73" aria-hidden="true" tabindex="-1"></a><span class="st">          echo &quot;Gateway started! Egress IP: 192.168.99.3, Physical GW: 192.168.99.1, OVN IP: $GW_OVN_IP&quot;;</span></span>
+<span id="cb12-74"><a href="#cb12-74" aria-hidden="true" tabindex="-1"></a><span class="st">          ip route show</span></span>
+<span id="cb12-75"><a href="#cb12-75" aria-hidden="true" tabindex="-1"></a><span class="st">          iptables -t nat -L -n -v</span></span>
+<span id="cb12-76"><a href="#cb12-76" aria-hidden="true" tabindex="-1"></a><span class="st">          </span></span>
+<span id="cb12-77"><a href="#cb12-77" aria-hidden="true" tabindex="-1"></a><span class="st">          # Prevent container exit</span></span>
+<span id="cb12-78"><a href="#cb12-78" aria-hidden="true" tabindex="-1"></a><span class="st">          sleep infinity;</span></span>
+<span id="cb12-79"><a href="#cb12-79" aria-hidden="true" tabindex="-1"></a><span class="st">        securityContext:</span></span>
+<span id="cb12-80"><a href="#cb12-80" aria-hidden="true" tabindex="-1"></a><span class="st">          privileged: true</span></span>
+<span id="cb12-81"><a href="#cb12-81" aria-hidden="true" tabindex="-1"></a><span class="op">EOF</span></span>
+<span id="cb12-82"><a href="#cb12-82" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-83"><a href="#cb12-83" aria-hidden="true" tabindex="-1"></a><span class="co"># Corresponding APB Policy for ns-red</span></span>
+<span id="cb12-84"><a href="#cb12-84" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> <span class="op">&lt;&lt;EOF</span> <span class="kw">|</span> <span class="ex">oc</span> apply <span class="at">-f</span> <span class="at">-</span></span>
+<span id="cb12-85"><a href="#cb12-85" aria-hidden="true" tabindex="-1"></a><span class="st">apiVersion: k8s.ovn.org/v1</span></span>
+<span id="cb12-86"><a href="#cb12-86" aria-hidden="true" tabindex="-1"></a><span class="st">kind: AdminPolicyBasedExternalRoute</span></span>
+<span id="cb12-87"><a href="#cb12-87" aria-hidden="true" tabindex="-1"></a><span class="st">metadata:</span></span>
+<span id="cb12-88"><a href="#cb12-88" aria-hidden="true" tabindex="-1"></a><span class="st">  name: ns-red-route</span></span>
+<span id="cb12-89"><a href="#cb12-89" aria-hidden="true" tabindex="-1"></a><span class="st">spec:</span></span>
+<span id="cb12-90"><a href="#cb12-90" aria-hidden="true" tabindex="-1"></a><span class="st">  from:</span></span>
+<span id="cb12-91"><a href="#cb12-91" aria-hidden="true" tabindex="-1"></a><span class="st">    namespaceSelector:</span></span>
+<span id="cb12-92"><a href="#cb12-92" aria-hidden="true" tabindex="-1"></a><span class="st">      matchLabels:</span></span>
+<span id="cb12-93"><a href="#cb12-93" aria-hidden="true" tabindex="-1"></a><span class="st">        kubernetes.io/metadata.name: ns-red</span></span>
+<span id="cb12-94"><a href="#cb12-94" aria-hidden="true" tabindex="-1"></a><span class="st">  nextHops:</span></span>
+<span id="cb12-95"><a href="#cb12-95" aria-hidden="true" tabindex="-1"></a><span class="st">    static:</span></span>
+<span id="cb12-96"><a href="#cb12-96" aria-hidden="true" tabindex="-1"></a><span class="st">    - ip: &quot;192.168.99.1&quot;  # Will be automatically updated by controller</span></span>
+<span id="cb12-97"><a href="#cb12-97" aria-hidden="true" tabindex="-1"></a><span class="op">EOF</span></span>
+<span id="cb12-98"><a href="#cb12-98" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-99"><a href="#cb12-99" aria-hidden="true" tabindex="-1"></a><span class="co"># Corresponding Business Pod for ns-red</span></span>
+<span id="cb12-100"><a href="#cb12-100" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> <span class="op">&lt;&lt;EOF</span> <span class="kw">|</span> <span class="ex">oc</span> apply <span class="at">-f</span> <span class="at">-</span></span>
+<span id="cb12-101"><a href="#cb12-101" aria-hidden="true" tabindex="-1"></a><span class="st">apiVersion: apps/v1</span></span>
+<span id="cb12-102"><a href="#cb12-102" aria-hidden="true" tabindex="-1"></a><span class="st">kind: Deployment</span></span>
+<span id="cb12-103"><a href="#cb12-103" aria-hidden="true" tabindex="-1"></a><span class="st">metadata:</span></span>
+<span id="cb12-104"><a href="#cb12-104" aria-hidden="true" tabindex="-1"></a><span class="st">  name: business-app</span></span>
+<span id="cb12-105"><a href="#cb12-105" aria-hidden="true" tabindex="-1"></a><span class="st">  namespace: ns-red</span></span>
+<span id="cb12-106"><a href="#cb12-106" aria-hidden="true" tabindex="-1"></a><span class="st">spec:</span></span>
+<span id="cb12-107"><a href="#cb12-107" aria-hidden="true" tabindex="-1"></a><span class="st">  replicas: 5</span></span>
+<span id="cb12-108"><a href="#cb12-108" aria-hidden="true" tabindex="-1"></a><span class="st">  selector:</span></span>
+<span id="cb12-109"><a href="#cb12-109" aria-hidden="true" tabindex="-1"></a><span class="st">    matchLabels:</span></span>
+<span id="cb12-110"><a href="#cb12-110" aria-hidden="true" tabindex="-1"></a><span class="st">      app: business-app</span></span>
+<span id="cb12-111"><a href="#cb12-111" aria-hidden="true" tabindex="-1"></a><span class="st">  template:</span></span>
+<span id="cb12-112"><a href="#cb12-112" aria-hidden="true" tabindex="-1"></a><span class="st">    metadata:</span></span>
+<span id="cb12-113"><a href="#cb12-113" aria-hidden="true" tabindex="-1"></a><span class="st">      labels:</span></span>
+<span id="cb12-114"><a href="#cb12-114" aria-hidden="true" tabindex="-1"></a><span class="st">        app: business-app</span></span>
+<span id="cb12-115"><a href="#cb12-115" aria-hidden="true" tabindex="-1"></a><span class="st">    spec:</span></span>
+<span id="cb12-116"><a href="#cb12-116" aria-hidden="true" tabindex="-1"></a><span class="st">      affinity:</span></span>
+<span id="cb12-117"><a href="#cb12-117" aria-hidden="true" tabindex="-1"></a><span class="st">        podAntiAffinity:</span></span>
+<span id="cb12-118"><a href="#cb12-118" aria-hidden="true" tabindex="-1"></a><span class="st">          preferredDuringSchedulingIgnoredDuringExecution:</span></span>
+<span id="cb12-119"><a href="#cb12-119" aria-hidden="true" tabindex="-1"></a><span class="st">          - weight: 100</span></span>
+<span id="cb12-120"><a href="#cb12-120" aria-hidden="true" tabindex="-1"></a><span class="st">            podAffinityTerm:</span></span>
+<span id="cb12-121"><a href="#cb12-121" aria-hidden="true" tabindex="-1"></a><span class="st">              labelSelector:</span></span>
+<span id="cb12-122"><a href="#cb12-122" aria-hidden="true" tabindex="-1"></a><span class="st">                matchExpressions:</span></span>
+<span id="cb12-123"><a href="#cb12-123" aria-hidden="true" tabindex="-1"></a><span class="st">                - key: app</span></span>
+<span id="cb12-124"><a href="#cb12-124" aria-hidden="true" tabindex="-1"></a><span class="st">                  operator: In</span></span>
+<span id="cb12-125"><a href="#cb12-125" aria-hidden="true" tabindex="-1"></a><span class="st">                  values:</span></span>
+<span id="cb12-126"><a href="#cb12-126" aria-hidden="true" tabindex="-1"></a><span class="st">                  - business-app</span></span>
+<span id="cb12-127"><a href="#cb12-127" aria-hidden="true" tabindex="-1"></a><span class="st">              topologyKey: kubernetes.io/hostname</span></span>
+<span id="cb12-128"><a href="#cb12-128" aria-hidden="true" tabindex="-1"></a><span class="st">      containers:</span></span>
+<span id="cb12-129"><a href="#cb12-129" aria-hidden="true" tabindex="-1"></a><span class="st">      - name: app</span></span>
+<span id="cb12-130"><a href="#cb12-130" aria-hidden="true" tabindex="-1"></a><span class="st">        image: quay.io/wangzheng422/qimgs:centos9-test-2025.12.18.v01</span></span>
+<span id="cb12-131"><a href="#cb12-131" aria-hidden="true" tabindex="-1"></a><span class="st">        command: [&quot;/bin/sh&quot;, &quot;-c&quot;, &quot;sleep infinity&quot;]</span></span>
+<span id="cb12-132"><a href="#cb12-132" aria-hidden="true" tabindex="-1"></a><span class="op">EOF</span></span></code></pre></div>
+        <h3 id="configuration-reference">Configuration Reference</h3>
+        <p>By utilizing environment variables, you can:</p>
+        <ol type="1">
+        <li><strong>Manage Multiple Business Namespaces:</strong> Deploy
+        one Controller instance per business namespace.</li>
+        <li><strong>Share Infrastructure Namespace:</strong> Multiple
+        controllers can co-exist in the same Gateway Infra
+        namespace.</li>
+        <li><strong>Prevent ACL Conflicts:</strong> Assign a unique
+        <code>OVN_ACL_PRIORITY</code> for each controller.</li>
+        <li><strong>Flexible Label Selection:</strong> Use
+        <code>GATEWAY_LABEL</code> and <code>BUSINESS_LABEL</code> to
+        target specific pod groups.</li>
+        </ol>
+        <h3 id="environment-variable-checklist">Environment Variable
+        Checklist</h3>
+        <table>
+        <colgroup>
+        <col style="width: 33%" />
+        <col style="width: 33%" />
+        <col style="width: 33%" />
+        </colgroup>
+        <thead>
+        <tr class="header">
+        <th style="text-align: left;">Variable</th>
+        <th style="text-align: left;">Default</th>
+        <th style="text-align: left;">Description</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr class="odd">
+        <td
+        style="text-align: left;"><code>GATEWAY_NAMESPACE</code></td>
+        <td style="text-align: left;"><code>ns-egress-infra</code></td>
+        <td style="text-align: left;">Namespace where the Gateway Pod
+        resides.</td>
+        </tr>
+        <tr class="even">
+        <td style="text-align: left;"><code>GATEWAY_LABEL</code></td>
+        <td
+        style="text-align: left;"><code>app=ns-blue-gateway</code></td>
+        <td style="text-align: left;">Label selector for the Gateway
+        Pod.</td>
+        </tr>
+        <tr class="odd">
+        <td
+        style="text-align: left;"><code>BUSINESS_NAMESPACE</code></td>
+        <td style="text-align: left;"><code>ns-blue</code></td>
+        <td style="text-align: left;">Namespace where the Business Pods
+        reside.</td>
+        </tr>
+        <tr class="even">
+        <td style="text-align: left;"><code>BUSINESS_LABEL</code></td>
+        <td style="text-align: left;"><code>app=business-app</code></td>
+        <td style="text-align: left;">Label selector for the Business
+        Pods.</td>
+        </tr>
+        <tr class="odd">
+        <td style="text-align: left;"><code>APB_NAME</code></td>
+        <td style="text-align: left;"><code>ns-blue-route</code></td>
+        <td style="text-align: left;">Name of the
+        <code>AdminPolicyBasedExternalRoute</code>.</td>
+        </tr>
+        <tr class="even">
+        <td style="text-align: left;"><code>OVN_NAMESPACE</code></td>
+        <td
+        style="text-align: left;"><code>openshift-ovn-kubernetes</code></td>
+        <td style="text-align: left;">Namespace where OVN components
+        reside.</td>
+        </tr>
+        <tr class="odd">
+        <td style="text-align: left;"><code>OVN_POD_LABEL</code></td>
+        <td style="text-align: left;"><code>app=ovnkube-node</code></td>
+        <td style="text-align: left;">Label selector for OVN pods.</td>
+        </tr>
+        <tr class="even">
+        <td style="text-align: left;"><code>OVN_CONTAINER</code></td>
+        <td style="text-align: left;"><code>ovn-controller</code></td>
+        <td style="text-align: left;">Name of the OVN container.</td>
+        </tr>
+        <tr class="odd">
+        <td style="text-align: left;"><code>OVN_ACL_PRIORITY</code></td>
+        <td style="text-align: left;"><code>31821</code></td>
+        <td style="text-align: left;">Priority for OVN ACL rules.</td>
+        </tr>
+        </tbody>
+        </table>
+      </article>
+    </div>
+      </main>
+
+  <footer>
+    <p>
+      Licensed under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank"
+        rel="noopener">CC-BY-NC-SA 4.0</a>
+      &nbsp;·&nbsp;
+      <a href="https://github.com/wangzheng422/docker_env" target="_blank" rel="noopener">wangzheng422/docker_env</a>
+    </p>
+  </footer>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: false, theme: 'dark' });
+
+    const SITE_BUILD_ID = 'fbe91b569ae8';
+    const SITE_HOME_URL = '../../../index.html';
+
+    const getBuildIdFromHtml = (html) => {
+      const match = String(html).match(/<meta[^>]+name=["']site-build-id["'][^>]+content=["']([^"']+)["']/i)
+        || String(html).match(/<meta[^>]+content=["']([^"']+)["'][^>]+name=["']site-build-id["']/i);
+      return match ? match[1] : '';
+    };
+
+    const checkForSiteUpdate = async () => {
+      if (!SITE_BUILD_ID || window.location.protocol === 'file:') return;
+      try {
+        const probeUrl = new URL(SITE_HOME_URL || './index.html', window.location.href);
+        probeUrl.searchParams.set('site_cache_probe', Date.now().toString());
+        const response = await fetch(probeUrl.toString(), { cache: 'no-store' });
+        if (!response.ok) return;
+        const latestBuildId = getBuildIdFromHtml(await response.text());
+        if (!latestBuildId || latestBuildId === SITE_BUILD_ID) return;
+        if (sessionStorage.getItem('site-build-refresh') === latestBuildId) return;
+        sessionStorage.setItem('site-build-refresh', latestBuildId);
+        const freshUrl = new URL(window.location.href);
+        freshUrl.searchParams.set('v', latestBuildId);
+        window.location.replace(freshUrl.toString());
+      } catch (error) {
+        // Network errors should not block reading the current page.
+      }
+    };
+
+    const versionedLocalUrl = (rawUrl) => {
+      if (!rawUrl || /^(https?:)?\/\//i.test(rawUrl) || /^(data|blob|mailto):/i.test(rawUrl)) return rawUrl;
+      const url = new URL(rawUrl, window.location.href);
+      if (url.searchParams.has('v')) return rawUrl;
+      url.searchParams.set('v', SITE_BUILD_ID);
+      return url.toString();
+    };
+
+    const cacheBustPageAssets = () => {
+      document.querySelectorAll('img[src], video[src], audio[src], source[src]').forEach((node) => {
+        const src = node.getAttribute('src');
+        const versioned = versionedLocalUrl(src);
+        if (versioned !== src) node.setAttribute('src', versioned);
+      });
+    };
+
+    const updateReadingProgress = () => {
+      const progress = document.querySelector('.reading-progress');
+      if (!progress) return;
+      const scrollable = document.documentElement.scrollHeight - window.innerHeight;
+      const ratio = scrollable > 0 ? window.scrollY / scrollable : 0;
+      progress.style.transform = 'scaleX(' + Math.min(1, Math.max(0, ratio)) + ')';
+    };
+
+    const topicFor = (text, href) => {
+      const haystack = (text + ' ' + href).toLowerCase();
+      if (/developers\.redhat\.com|redhatquickcourses|github\.com\/redhatquickcourses/.test(haystack)) return 'Red Hat';
+      if (/ai|llm|gpu|vllm|llama|model|rhaiis/.test(haystack)) return 'AI';
+      if (/network|ovn|bgp|dns|egress|ingress|metallb|nic|route/.test(haystack)) return 'Network';
+      if (/cert|tls|sso|keycloak|rhbk|security|compliance/.test(haystack)) return 'Security';
+      if (/perf|profile|throttling|heap|debug/.test(haystack)) return 'Performance';
+      if (/install|ipi|upi|sno|disconnected|bootstrap/.test(haystack)) return 'Install';
+      if (/rhel|coreos|rhcos|kernel|rpm|ostree/.test(haystack)) return 'RHEL';
+      if (/backup|storage|nfs|odf|ocs|ceph|dr/.test(haystack)) return 'Storage';
+      if (/pipeline|gitops|ansible|aap|rhdh|devops/.test(haystack)) return 'DevOps';
+      return 'OpenShift';
+    };
+
+    const yearFor = (text, href) => {
+      const match = (text + ' ' + href).match(/20\d{2}/);
+      return match ? match[0] : 'Notes';
+    };
+
+    const importantExternal = (href) =>
+      /developers\.redhat\.com|redhatquickcourses\.github\.io/i.test(href);
+
+    const titleForLink = (link) => {
+      const href = link.getAttribute('href') || '';
+      const directText = link.textContent.trim().replace(/\s+/g, ' ');
+      if (!/^https?:\/\//.test(directText)) return directText;
+      const parentItem = link.closest('ul')?.parentElement;
+      if (parentItem) {
+        const clone = parentItem.cloneNode(true);
+        clone.querySelectorAll('ul').forEach((nested) => nested.remove());
+        const parentText = clone.textContent.trim().replace(/\s+/g, ' ');
+        if (parentText) {
+          return parentText;
+        }
+      }
+      return directText;
+    };
+
+    const escapeHtml = (value) => String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+
+    const enhanceHome = () => {
+      if (!document.body.classList.contains('page-index')) return;
+      const source = document.querySelector('.home-source');
+      const grid = document.getElementById('note-grid');
+      const stats = document.getElementById('console-stats');
+      const externalPanel = document.getElementById('external-panel');
+      const topicStrip = document.getElementById('topic-strip');
+      const search = document.getElementById('console-search');
+      if (!source || !grid || !stats || !externalPanel || !topicStrip || !search) return;
+
+      const seen = new Set();
+      const links = Array.from(source.querySelectorAll('a[href]'))
+        .map((link) => {
+          const href = link.getAttribute('href') || '';
+          const text = titleForLink(link);
+          return { text, href, topic: topicFor(text, href), year: yearFor(text, href) };
+        });
+      const notes = links
+        .filter((note) => note.text && !note.href.startsWith('http') && !seen.has(note.href) && seen.add(note.href));
+      const externalLinks = links
+        .filter((note) => note.text && importantExternal(note.href));
+
+      const topics = ['All', ...Array.from(new Set(notes.map((note) => note.topic))).sort()];
+      let activeTopic = 'All';
+
+      const renderStats = () => {
+        const years = notes.map((note) => note.year).filter((year) => year.length === 4 && /^\d{4}/.test(year));
+        const latest = years.length ? Math.max(...years.map(Number)) : 'N/A';
+        const oldest = years.length ? Math.min(...years.map(Number)) : 'N/A';
+        stats.innerHTML = [
+          ['Notes', notes.length],
+          ['Resources', externalLinks.length],
+          ['Topics', topics.length - 1],
+          ['Latest', latest],
+        ].map(([label, value]) => '<div class="stat-tile"><span>' + label + '</span><strong>' + value + '</strong></div>').join('');
+        const signal = document.getElementById('signal-count');
+        if (signal) signal.textContent = notes.length + ' links indexed';
+      };
+
+      const renderExternal = () => {
+        externalPanel.innerHTML =
+          '<div class="section-heading"><span>Published / Learning</span><strong>Red Hat resources</strong></div>' +
+          '<div class="external-grid">' +
+          externalLinks.map((note) =>
+            '<a class="resource-card" href="' + escapeHtml(note.href) + '" target="_blank" rel="noopener">' +
+            '<span class="note-meta"><span>' + escapeHtml(note.year) + '</span><span>' + escapeHtml(note.topic) + '</span></span>' +
+            '<strong>' + escapeHtml(note.text) + '</strong>' +
+            '<small>' + escapeHtml(note.href) + '</small>' +
+            '</a>'
+          ).join('') +
+          '</div>';
+      };
+
+      const renderTopics = () => {
+        topicStrip.innerHTML = topics.map((topic) => '<button class="topic-chip' + (topic === activeTopic ? ' active' : '') + '" type="button" data-topic="' + escapeHtml(topic) + '">' + escapeHtml(topic) + '</button>').join('');
+        topicStrip.querySelectorAll('button').forEach((button) => {
+          button.addEventListener('click', () => {
+            activeTopic = button.dataset.topic || 'All';
+            renderTopics();
+            renderCards();
+          });
+        });
+      };
+
+      const renderCards = () => {
+        const query = search.value.trim().toLowerCase();
+        const filtered = notes.filter((note) => {
+          const topicMatch = activeTopic === 'All' || note.topic === activeTopic;
+          const queryMatch = !query || (note.text + ' ' + note.href + ' ' + note.topic + ' ' + note.year).toLowerCase().includes(query);
+          return topicMatch && queryMatch;
+        });
+        grid.innerHTML = filtered.map((note) =>
+          '<a class="note-card" href="' + escapeHtml(note.href) + '">' +
+          '<span class="note-meta"><span>' + escapeHtml(note.year) + '</span><span>' + escapeHtml(note.topic) + '</span></span>' +
+          '<strong>' + escapeHtml(note.text) + '</strong>' +
+          '<small>' + escapeHtml(note.href) + '</small>' +
+          '</a>'
+        ).join('') || '<p class="empty-state">No matching notes.</p>';
+      };
+
+      const drawMap = () => {
+        const canvas = document.getElementById('knowledge-canvas');
+        if (!(canvas instanceof HTMLCanvasElement)) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        const width = canvas.width;
+        const height = canvas.height;
+        const nodes = notes.slice(0, 44).map((note, index) => {
+          const angle = (index / 44) * Math.PI * 2;
+          const ring = 90 + (index % 5) * 22;
+          return {
+            x: width / 2 + Math.cos(angle) * ring,
+            y: height / 2 + Math.sin(angle) * ring * 0.72,
+            topic: note.topic,
+          };
+        });
+        ctx.clearRect(0, 0, width, height);
+        ctx.strokeStyle = 'rgba(88, 166, 255, 0.14)';
+        ctx.lineWidth = 1;
+        nodes.forEach((node, index) => {
+          const next = nodes[(index + 7) % nodes.length];
+          ctx.beginPath();
+          ctx.moveTo(node.x, node.y);
+          ctx.lineTo(next.x, next.y);
+          ctx.stroke();
+        });
+        const palette = {
+          AI: '#a371f7',
+          Network: '#39d0d8',
+          Security: '#ff7b72',
+          Performance: '#f2cc60',
+          Install: '#7ee787',
+          RHEL: '#ff7b72',
+          Storage: '#d2a8ff',
+          DevOps: '#ffa657',
+          OpenShift: '#58a6ff',
+        };
+        nodes.forEach((node) => {
+          ctx.fillStyle = palette[node.topic] || '#58a6ff';
+          ctx.beginPath();
+          ctx.arc(node.x, node.y, 3.4, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      };
+
+      search.addEventListener('input', renderCards);
+      renderStats();
+      renderExternal();
+      renderTopics();
+      renderCards();
+      drawMap();
+      document.body.classList.add('home-enhanced');
+    };
+
+    const enhanceCodeBlocks = () => {
+      document.querySelectorAll('pre').forEach((pre) => {
+        if (pre.classList.contains('mermaid') || pre.querySelector('.copy-code')) return;
+        const button = document.createElement('button');
+        button.className = 'copy-code';
+        button.type = 'button';
+        button.textContent = 'Copy';
+        button.addEventListener('click', async () => {
+          await navigator.clipboard.writeText(pre.textContent || '');
+          button.textContent = 'Copied';
+          setTimeout(() => { button.textContent = 'Copy'; }, 1200);
+        });
+        pre.appendChild(button);
+      });
+    };
+
+    window.addEventListener('scroll', updateReadingProgress, { passive: true });
+    window.addEventListener('pageshow', (event) => {
+      if (event.persisted) checkForSiteUpdate();
+    });
+    document.addEventListener('DOMContentLoaded', async () => {
+      checkForSiteUpdate();
+      cacheBustPageAssets();
+      updateReadingProgress();
+      enhanceHome();
+      enhanceCodeBlocks();
+      // pandoc 输出 mermaid 为 <pre class="mermaid"><code>...</code></pre>
+      // 需要转成 <div class="mermaid">...</div> 供 mermaid.js 渲染
+      document.querySelectorAll('pre.mermaid').forEach(pre => {
+        const div = document.createElement('div');
+        div.classList.add('mermaid');
+        div.textContent = pre.textContent;
+        pre.replaceWith(div);
+      });
+      // 也处理 <pre><code class="language-mermaid"> 形式（备用）
+      document.querySelectorAll('pre code.language-mermaid').forEach(code => {
+        const div = document.createElement('div');
+        div.classList.add('mermaid');
+        div.textContent = code.textContent;
+        code.closest('pre').replaceWith(div);
+      });
+      await mermaid.run();
+    });
+  </script>
+</body>
+
+</html>

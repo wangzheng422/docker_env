@@ -1,0 +1,1996 @@
+<!DOCTYPE html>
+<html lang="zh" dir="ltr">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="generator" content="pandoc" />
+  <meta name="site-build-id" content="fbe91b569ae8" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <title>Kubernetes Certificate Rotation Process and Monitoring Solution | wandering.star notes</title>
+  <meta name="description"
+    content="Wandering field notes on OpenShift, RHEL, AI infrastructure, and platform operations." />
+  <!-- Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-E3FRMDB7L2"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-E3FRMDB7L2');
+  </script>
+  <style>
+  html {
+    color: #1a1a1a;
+    background-color: #fdfdfd;
+  }
+  body {
+    margin: 0 auto;
+    max-width: 36em;
+    padding-left: 50px;
+    padding-right: 50px;
+    padding-top: 50px;
+    padding-bottom: 50px;
+    hyphens: auto;
+    overflow-wrap: break-word;
+    text-rendering: optimizeLegibility;
+    font-kerning: normal;
+  }
+  @media (max-width: 600px) {
+    body {
+      font-size: 0.9em;
+      padding: 12px;
+    }
+    h1 {
+      font-size: 1.8em;
+    }
+  }
+  @media print {
+    html {
+      background-color: white;
+    }
+    body {
+      background-color: transparent;
+      color: black;
+      font-size: 12pt;
+    }
+    p, h2, h3 {
+      orphans: 3;
+      widows: 3;
+    }
+    h2, h3, h4 {
+      page-break-after: avoid;
+    }
+  }
+  p {
+    margin: 1em 0;
+  }
+  a {
+    color: #1a1a1a;
+  }
+  a:visited {
+    color: #1a1a1a;
+  }
+  img {
+    max-width: 100%;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.4em;
+  }
+  h5, h6 {
+    font-size: 1em;
+    font-style: italic;
+  }
+  h6 {
+    font-weight: normal;
+  }
+  ol, ul {
+    padding-left: 1.7em;
+    margin-top: 1em;
+  }
+  li > ol, li > ul {
+    margin-top: 0;
+  }
+  blockquote {
+    margin: 1em 0 1em 1.7em;
+    padding-left: 1em;
+    border-left: 2px solid #e6e6e6;
+    color: #606060;
+  }
+  code {
+    font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+    font-size: 85%;
+    margin: 0;
+    hyphens: manual;
+  }
+  pre {
+    margin: 1em 0;
+    overflow: auto;
+  }
+  pre code {
+    padding: 0;
+    overflow: visible;
+    overflow-wrap: normal;
+  }
+  .sourceCode {
+   background-color: transparent;
+   overflow: visible;
+  }
+  hr {
+    background-color: #1a1a1a;
+    border: none;
+    height: 1px;
+    margin: 1em 0;
+  }
+  table {
+    margin: 1em 0;
+    border-collapse: collapse;
+    width: 100%;
+    overflow-x: auto;
+    display: block;
+    font-variant-numeric: lining-nums tabular-nums;
+  }
+  table caption {
+    margin-bottom: 0.75em;
+  }
+  tbody {
+    margin-top: 0.5em;
+    border-top: 1px solid #1a1a1a;
+    border-bottom: 1px solid #1a1a1a;
+  }
+  th {
+    border-top: 1px solid #1a1a1a;
+    padding: 0.25em 0.5em 0.25em 0.5em;
+  }
+  td {
+    padding: 0.125em 0.5em 0.25em 0.5em;
+  }
+  header {
+    margin-bottom: 4em;
+    text-align: center;
+  }
+  #TOC li {
+    list-style: none;
+  }
+  #TOC ul {
+    padding-left: 1.3em;
+  }
+  #TOC > ul {
+    padding-left: 0;
+  }
+  #TOC a:not(:hover) {
+    text-decoration: none;
+  }
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  div.columns{display: flex; gap: min(4vw, 1.5em);}
+  div.column{flex: auto; overflow-x: auto;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  /* The extra [class] is a hack that increases specificity enough to
+     override a similar rule in reveal.js */
+  ul.task-list[class]{list-style: none;}
+  ul.task-list li input[type="checkbox"] {
+    font-size: inherit;
+    width: 0.8em;
+    margin: 0 0.8em 0.2em -1.6em;
+    vertical-align: middle;
+  }
+  .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  /* CSS for syntax highlighting */
+  pre > code.sourceCode { white-space: pre; position: relative; }
+  pre > code.sourceCode > span { line-height: 1.25; }
+  pre > code.sourceCode > span:empty { height: 1.2em; }
+  .sourceCode { overflow: visible; }
+  code.sourceCode > span { color: inherit; text-decoration: inherit; }
+  div.sourceCode { margin: 1em 0; }
+  pre.sourceCode { margin: 0; }
+  @media screen {
+  div.sourceCode { overflow: auto; }
+  }
+  @media print {
+  pre > code.sourceCode { white-space: pre-wrap; }
+  pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+  }
+  pre.numberSource code
+    { counter-reset: source-line 0; }
+  pre.numberSource code > span
+    { position: relative; left: -4em; counter-increment: source-line; }
+  pre.numberSource code > span > a:first-child::before
+    { content: counter(source-line);
+      position: relative; left: -1em; text-align: right; vertical-align: baseline;
+      border: none; display: inline-block;
+      -webkit-touch-callout: none; -webkit-user-select: none;
+      -khtml-user-select: none; -moz-user-select: none;
+      -ms-user-select: none; user-select: none;
+      padding: 0 4px; width: 4em;
+    }
+  pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+  div.sourceCode
+    { color: #cccccc; background-color: #303030; }
+  @media screen {
+  pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+  }
+  code span.al { color: #ffcfaf; } /* Alert */
+  code span.an { color: #7f9f7f; font-weight: bold; } /* Annotation */
+  code span.at { } /* Attribute */
+  code span.bn { color: #dca3a3; } /* BaseN */
+  code span.bu { } /* BuiltIn */
+  code span.cf { color: #f0dfaf; } /* ControlFlow */
+  code span.ch { color: #dca3a3; } /* Char */
+  code span.cn { color: #dca3a3; font-weight: bold; } /* Constant */
+  code span.co { color: #7f9f7f; } /* Comment */
+  code span.cv { color: #7f9f7f; font-weight: bold; } /* CommentVar */
+  code span.do { color: #7f9f7f; } /* Documentation */
+  code span.dt { color: #dfdfbf; } /* DataType */
+  code span.dv { color: #dcdccc; } /* DecVal */
+  code span.er { color: #c3bf9f; } /* Error */
+  code span.ex { } /* Extension */
+  code span.fl { color: #c0bed1; } /* Float */
+  code span.fu { color: #efef8f; } /* Function */
+  code span.im { } /* Import */
+  code span.in { color: #7f9f7f; font-weight: bold; } /* Information */
+  code span.kw { color: #f0dfaf; } /* Keyword */
+  code span.op { color: #f0efd0; } /* Operator */
+  code span.ot { color: #efef8f; } /* Other */
+  code span.pp { color: #ffcfaf; font-weight: bold; } /* Preprocessor */
+  code span.sc { color: #dca3a3; } /* SpecialChar */
+  code span.ss { color: #cc9393; } /* SpecialString */
+  code span.st { color: #cc9393; } /* String */
+  code span.va { } /* Variable */
+  code span.vs { color: #cc9393; } /* VerbatimString */
+  code span.wa { color: #7f9f7f; font-weight: bold; } /* Warning */
+  </style>
+  <link rel="stylesheet" href="../../../style.css?v=fbe91b569ae8" />
+  </head>
+
+<body class="page-article">
+  <div class="reading-progress" aria-hidden="true"></div>
+  <div class="console-backdrop" aria-hidden="true"></div>
+  <nav class="site-nav">
+    <div class="nav-inner">
+      <a class="nav-brand" href="../../../index.html">wandering.star<span>notes</span></a>
+      <div class="nav-links">
+        <a href="https://github.com/wangzheng422/docker_env" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://www.youtube.com/@wangzheng422" target="_blank" rel="noopener">YouTube</a>
+      </div>
+    </div>
+  </nav>
+
+  <main>
+            <a class="back-link" href="../../../index.html">← Back to Index</a>
+        <div class="article-layout">
+            <aside class="toc-panel">
+        <div class="toc-title">ON THIS PAGE</div>
+        <ul>
+        <li><a
+        href="#kubernetes-certificate-rotation-process-and-monitoring-solution"
+        id="toc-kubernetes-certificate-rotation-process-and-monitoring-solution">Kubernetes
+        Certificate Rotation Process and Monitoring Solution</a>
+        <ul>
+        <li><a href="#background" id="toc-background">1.
+        Background</a></li>
+        <li><a href="#certificate-rotation-overview"
+        id="toc-certificate-rotation-overview">2. Certificate Rotation
+        Overview</a>
+        <ul>
+        <li><a href="#certificate-rotation-controller-structure"
+        id="toc-certificate-rotation-controller-structure">2.1
+        Certificate Rotation Controller Structure</a></li>
+        <li><a href="#certificate-rotator-configuration"
+        id="toc-certificate-rotator-configuration">2.2 Certificate
+        Rotator Configuration</a></li>
+        </ul></li>
+        <li><a href="#certificate-rotation-internal-mechanism"
+        id="toc-certificate-rotation-internal-mechanism">3. Certificate
+        Rotation Internal Mechanism</a>
+        <ul>
+        <li><a href="#controller-execution-flow"
+        id="toc-controller-execution-flow">3.1 Controller Execution
+        Flow</a></li>
+        <li><a href="#certificate-rotation-process-steps"
+        id="toc-certificate-rotation-process-steps">3.2 Certificate
+        Rotation Process Steps</a></li>
+        <li><a href="#certificate-rotation-decision-logic"
+        id="toc-certificate-rotation-decision-logic">3.3 Certificate
+        Rotation Decision Logic</a></li>
+        </ul></li>
+        <li><a href="#certificate-rotation-events-and-logs"
+        id="toc-certificate-rotation-events-and-logs">4. Certificate
+        Rotation Events and Logs</a>
+        <ul>
+        <li><a href="#event-triggering-mechanism"
+        id="toc-event-triggering-mechanism">4.1 Event Triggering
+        Mechanism</a></li>
+        <li><a
+        href="#relationship-between-events-and-certificate-updates"
+        id="toc-relationship-between-events-and-certificate-updates">4.2
+        Relationship Between Events and Certificate Updates</a></li>
+        <li><a href="#logging-mechanism" id="toc-logging-mechanism">4.3
+        Logging Mechanism</a></li>
+        </ul></li>
+        <li><a
+        href="#kube-apiserver-to-kubelet-certificate-rotation-flow"
+        id="toc-kube-apiserver-to-kubelet-certificate-rotation-flow">5.
+        kube-apiserver to kubelet Certificate Rotation Flow</a>
+        <ul>
+        <li><a href="#certificate-rotation-flow-chart"
+        id="toc-certificate-rotation-flow-chart">5.1 Certificate
+        Rotation Flow Chart</a></li>
+        <li><a
+        href="#detailed-process-of-kubelet-client-certificate-update-triggering-kube-apiserver-restart"
+        id="toc-detailed-process-of-kubelet-client-certificate-update-triggering-kube-apiserver-restart">5.2
+        Detailed Process of kubelet-client Certificate Update Triggering
+        kube-apiserver Restart</a></li>
+        <li><a href="#how-kubelet-verifies-kube-apiservers-certificate"
+        id="toc-how-kubelet-verifies-kube-apiservers-certificate">5.3
+        How kubelet Verifies kube-apiserver’s Certificate</a></li>
+        </ul></li>
+        <li><a href="#certificate-monitoring-solution-to-be-verified"
+        id="toc-certificate-monitoring-solution-to-be-verified">6.
+        Certificate Monitoring Solution (To Be Verified)</a>
+        <ul>
+        <li><a href="#event-based-monitoring"
+        id="toc-event-based-monitoring">6.1 Event-Based
+        Monitoring</a></li>
+        <li><a href="#log-based-monitoring"
+        id="toc-log-based-monitoring">6.2 Log-Based Monitoring</a></li>
+        <li><a href="#certificate-expiry-monitoring"
+        id="toc-certificate-expiry-monitoring">6.3 Certificate Expiry
+        Monitoring</a></li>
+        <li><a
+        href="#differentiated-alerting-rules-based-on-certificate-typeslifetimes"
+        id="toc-differentiated-alerting-rules-based-on-certificate-typeslifetimes">6.4
+        Differentiated Alerting Rules Based on Certificate
+        Types/Lifetimes</a></li>
+        <li><a href="#specific-alerts-for-certificate-rotation-events"
+        id="toc-specific-alerts-for-certificate-rotation-events">6.5
+        Specific Alerts for Certificate Rotation Events</a></li>
+        </ul></li>
+        <li><a href="#summary-1" id="toc-summary-1">7. Summary</a></li>
+        </ul></li>
+        </ul>
+      </aside>
+            <article class="markdown-body article-shell">
+        <blockquote>
+        <p>[!WARNING] Working in progress, use with caution.</p>
+        </blockquote>
+        <h1
+        id="kubernetes-certificate-rotation-process-and-monitoring-solution">Kubernetes
+        Certificate Rotation Process and Monitoring Solution</h1>
+        <h2 id="background">1. Background</h2>
+        <p>When using OpenShift, users often notice that OpenShift
+        creates/updates certificates. The certificate creation process
+        consumes CPU resources, which may cause performance issues in
+        CPU-sensitive scenarios. The timing of certificate creation or
+        updates can be confusing for customers, as they cannot predict
+        an exact time. Therefore, this article will analyze how these
+        certificates are created, who maintains them, and when they will
+        be updated, so that we can make appropriate plans for future
+        operations and maintenance.</p>
+        <p>OpenShift has made many enhancements on top of Kubernetes,
+        one of the most significant differences being the extensive use
+        of Operators. We can view the TLS and CA certificates managed by
+        these Operators using the following commands:</p>
+        <div class="sourceCode" id="cb1"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># get current time</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">date</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Tue Apr  1 12:02:49 AM CST 2025</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="co"># get all the secrets that are tls certificates</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="at">-e</span> <span class="st">&quot;NAMESPACE\tNAME\tEXPIRY&quot;</span> <span class="kw">&amp;&amp;</span> <span class="ex">oc</span> get secrets <span class="at">-A</span> <span class="at">-o</span> go-template=<span class="st">&#39;{{range .items}}{{if eq .type &quot;kubernetes.io/tls&quot;}}{{.metadata.namespace}}{{&quot; &quot;}}{{.metadata.name}}{{&quot; &quot;}}{{index .data &quot;tls.crt&quot;}}{{&quot;\n&quot;}}{{end}}{{end}}&#39;</span> <span class="kw">|</span> <span class="cf">while</span> <span class="bu">read</span> <span class="va">namespace</span> <span class="va">name</span> <span class="va">cert</span><span class="kw">;</span> <span class="cf">do</span> <span class="bu">echo</span> <span class="at">-en</span> <span class="st">&quot;</span><span class="va">$namespace</span><span class="st">\t</span><span class="va">$name</span><span class="st">\t&quot;</span><span class="kw">;</span> <span class="bu">echo</span> <span class="va">$cert</span> <span class="kw">|</span> <span class="fu">base64</span> <span class="at">-d</span> <span class="kw">|</span> <span class="ex">openssl</span> x509 <span class="at">-noout</span> <span class="at">-enddate</span><span class="kw">;</span> <span class="cf">done</span> <span class="kw">|</span> <span class="ex">column</span> <span class="at">-t</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co"># NAMESPACE       NAME    EXPIRY</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="co"># ......</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift-apiserver-operator                      openshift-apiserver-operator-serving-cert           notAfter=Oct  20  02:54:55  2026  GMT</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift-apiserver                               etcd-client                                         notAfter=Oct  20  02:46:45  2027  GMT</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift-apiserver                               serving-cert                                        notAfter=Oct  20  02:55:08  2026  GMT</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift-kube-apiserver-operator                 aggregator-client-signer                            notAfter=Apr  20  04:37:04  2025  GMT</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift-kube-apiserver-operator                 kube-apiserver-operator-serving-cert                notAfter=Oct  20  02:54:59  2026  GMT</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift-kube-apiserver-operator                 kube-apiserver-to-kubelet-signer                    notAfter=Oct  20  02:44:49  2025  GMT</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift-kube-apiserver-operator                 kube-control-plane-signer                           notAfter=May  3   10:10:59  2025  GMT</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift-kube-apiserver-operator                 loadbalancer-serving-signer                         notAfter=Oct  18  02:35:45  2034  GMT</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift-kube-apiserver-operator                 localhost-recovery-serving-signer                   notAfter=Oct  18  02:54:45  2034  GMT</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift-kube-apiserver-operator                 localhost-serving-signer                            notAfter=Oct  18  02:35:46  2034  GMT</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift-kube-apiserver-operator                 node-system-admin-client                            notAfter=Oct  20  02:54:45  2025  GMT</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift-kube-apiserver-operator                 node-system-admin-signer                            notAfter=Oct  20  02:54:45  2025  GMT</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift-kube-apiserver-operator                 service-network-serving-signer                      notAfter=Oct  18  02:35:46  2034  GMT</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift-kube-apiserver                          aggregator-client                                   notAfter=Apr  20  04:37:04  2025  GMT</span></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift-kube-apiserver                          check-endpoints-client-cert-key                     notAfter=Apr  20  04:37:04  2025  GMT</span></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift-kube-apiserver                          control-plane-node-admin-client-cert-key            notAfter=Apr  20  04:37:04  2025  GMT</span></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift-kube-apiserver                          etcd-client                                         notAfter=Oct  20  02:46:45  2027  GMT</span></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift-kube-apiserver                          external-loadbalancer-serving-certkey               notAfter=Apr  20  04:37:04  2025  GMT</span></span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift-kube-apiserver                          internal-loadbalancer-serving-certkey               notAfter=Apr  20  04:37:12  2025  GMT</span></span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift-kube-apiserver                          kubelet-client                                      notAfter=Apr  20  04:37:04  2025  GMT</span></span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift-kube-apiserver                          localhost-recovery-serving-certkey                  notAfter=Oct  18  02:54:45  2034  GMT</span></span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift-kube-apiserver                          localhost-serving-cert-certkey                      notAfter=Apr  20  04:37:04  2025  GMT</span></span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift-kube-apiserver                          service-network-serving-certkey                     notAfter=Apr  20  04:37:13  2025  GMT</span></span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a><span class="co"># ......</span></span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a><span class="co"># get CA Bundle Certificates</span></span>
+<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> get configmap <span class="at">-A</span> <span class="at">-o</span> json <span class="kw">|</span> <span class="ex">jq</span> <span class="at">-r</span> <span class="st">&#39;.items[] | select(.data[&quot;service-ca.crt&quot;] or .data[&quot;ca-bundle.crt&quot;]) | [.metadata.namespace, .metadata.name] | join(&quot;\t&quot;)&#39;</span>  <span class="kw">|</span> <span class="ex">column</span> <span class="at">-t</span></span>
+<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a><span class="co"># ......</span></span>
+<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift-apiserver-operator                      openshift-service-ca.crt</span></span>
+<span id="cb1-38"><a href="#cb1-38" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift-apiserver-operator                      trusted-ca-bundle</span></span>
+<span id="cb1-39"><a href="#cb1-39" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift-apiserver                               etcd-serving-ca</span></span>
+<span id="cb1-40"><a href="#cb1-40" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift-apiserver                               openshift-service-ca.crt</span></span>
+<span id="cb1-41"><a href="#cb1-41" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift-apiserver                               trusted-ca-bundle</span></span>
+<span id="cb1-42"><a href="#cb1-42" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift-kube-apiserver-operator                 kube-apiserver-to-kubelet-client-ca</span></span>
+<span id="cb1-43"><a href="#cb1-43" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift-kube-apiserver-operator                 kube-control-plane-signer-ca</span></span>
+<span id="cb1-44"><a href="#cb1-44" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift-kube-apiserver-operator                 loadbalancer-serving-ca</span></span>
+<span id="cb1-45"><a href="#cb1-45" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift-kube-apiserver-operator                 localhost-recovery-serving-ca</span></span>
+<span id="cb1-46"><a href="#cb1-46" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift-kube-apiserver-operator                 localhost-serving-ca</span></span>
+<span id="cb1-47"><a href="#cb1-47" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift-kube-apiserver-operator                 node-system-admin-ca</span></span>
+<span id="cb1-48"><a href="#cb1-48" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift-kube-apiserver-operator                 openshift-service-ca.crt</span></span>
+<span id="cb1-49"><a href="#cb1-49" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift-kube-apiserver-operator                 service-network-serving-ca</span></span>
+<span id="cb1-50"><a href="#cb1-50" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift-kube-apiserver                          aggregator-client-ca</span></span>
+<span id="cb1-51"><a href="#cb1-51" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift-kube-apiserver                          client-ca</span></span>
+<span id="cb1-52"><a href="#cb1-52" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift-kube-apiserver                          etcd-serving-ca</span></span>
+<span id="cb1-53"><a href="#cb1-53" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift-kube-apiserver                          kube-apiserver-server-ca</span></span>
+<span id="cb1-54"><a href="#cb1-54" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift-kube-apiserver                          kubelet-serving-ca</span></span>
+<span id="cb1-55"><a href="#cb1-55" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift-kube-apiserver                          openshift-service-ca.crt</span></span>
+<span id="cb1-56"><a href="#cb1-56" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift-kube-apiserver                          trusted-ca-bundle</span></span>
+<span id="cb1-57"><a href="#cb1-57" aria-hidden="true" tabindex="-1"></a><span class="co"># ......</span></span></code></pre></div>
+        <p>We can see that there are a large number of certificates, and
+        most of them expire within 1-2 years. Among them, the most
+        noticeable to customers, and also the starting point of <a
+        href="https://docs.google.com/document/d/16U2TLCRglmwPWYfjZu-nBtZSHp7JeujNDFXldVRdtHk/edit?tab=t.0#heading=h.tqctc166nwq9">Red
+        Hat Case 03857456</a> failure, is the expiration of the
+        <code>openshift-kube-apiserver-operator/kube-apiserver-to-kubelet-signer</code>
+        certificate. Its expiration will cause the API Server to
+        restart, which has a certain impact on the cluster.</p>
+        <p>This document details the certificate rotation process in a
+        Kubernetes cluster, especially the certificate rotation
+        mechanism from kube-apiserver to kubelet, and how to effectively
+        monitor certificates before and during updates. The source code
+        for <code>openshift-kube-apiserver-operator</code> is <a
+        href="https://github.com/openshift/cluster-kube-apiserver-operator">here</a>,
+        and this analysis is based on research of the source code, with
+        the assistance of AI technology during the analysis process.</p>
+        <h2 id="certificate-rotation-overview">2. Certificate Rotation
+        Overview</h2>
+        <p>In a Kubernetes cluster, certificate rotation is an automated
+        process that ensures certificates are updated before they
+        expire, thereby maintaining the security and availability of the
+        cluster. The Certificate Rotation Controller
+        (CertRotationController) is responsible for managing multiple
+        certificate rotators, each responsible for updating a specific
+        type of certificate.</p>
+        <h3 id="certificate-rotation-controller-structure">2.1
+        Certificate Rotation Controller Structure</h3>
+        <p>The certificate rotation controller is implemented in
+        <code>pkg/operator/certrotationcontroller/certrotationcontroller.go</code>
+        and mainly includes the following components:</p>
+        <div class="sourceCode" id="cb2"><pre
+        class="sourceCode go"><code class="sourceCode go"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">type</span> CertRotationController <span class="kw">struct</span> <span class="op">{</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    certRotators <span class="op">[]</span>factory<span class="op">.</span>Controller</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... other fields</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+        <p>Each certificate rotator is responsible for a specific type
+        of certificate, such as
+        <code>KubeAPIServerToKubeletClientCert</code>,
+        <code>AggregatorProxyClientCert</code>, etc.</p>
+        <h3 id="certificate-rotator-configuration">2.2 Certificate
+        Rotator Configuration</h3>
+        <p>Taking <code>KubeAPIServerToKubeletClientCert</code> as an
+        example, its configuration involves three parts: the signing CA
+        secret, the CA bundle config map, and the target certificate
+        secret.</p>
+        <h4 id="signing-ca-secret-configuration">2.2.1 Signing CA Secret
+        Configuration</h4>
+        <div class="sourceCode" id="cb3"><pre
+        class="sourceCode go"><code class="sourceCode go"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>certrotation<span class="op">.</span>RotatedSigningCASecret<span class="op">{</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    Namespace<span class="op">:</span> operatorclient<span class="op">.</span>OperatorNamespace<span class="op">,</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    Name<span class="op">:</span>      <span class="st">&quot;kube-apiserver-to-kubelet-signer&quot;</span><span class="op">,</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    AdditionalAnnotations<span class="op">:</span> certrotation<span class="op">.</span>AdditionalAnnotations<span class="op">{</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>        JiraComponent<span class="op">:</span> <span class="st">&quot;kube-apiserver&quot;</span><span class="op">,</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">},</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    Validity<span class="op">:</span> <span class="dv">1</span> <span class="op">*</span> <span class="dv">365</span> <span class="op">*</span> defaultRotationDay<span class="op">,</span> <span class="co">// Validity period is 1 year</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Refresh time is set to 80% of the validity period</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    Refresh<span class="op">:</span>                <span class="dv">292</span> <span class="op">*</span> defaultRotationDay<span class="op">,</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    RefreshOnlyWhenExpired<span class="op">:</span> refreshOnlyWhenExpired<span class="op">,</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>    EventRecorder<span class="op">:</span> eventRecorder<span class="op">,</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... other configurations</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+        <p>Key parameter explanations:</p>
+        <ul>
+        <li><strong>Validity</strong>: The validity period of the
+        signing CA certificate, set to 1 year here.</li>
+        <li><strong>Refresh</strong>: The refresh period of the signing
+        CA certificate, set to 292 days here (approximately 80% of the
+        validity period).</li>
+        <li><strong>RefreshOnlyWhenExpired</strong>: Whether to refresh
+        only when the certificate expires; if set to true, it will only
+        refresh when the certificate expires.</li>
+        </ul>
+        <p>When a signing CA certificate rotates, the following process
+        occurs:</p>
+        <ol type="1">
+        <li>Create a new CA certificate and key pair.</li>
+        <li>Add the new CA certificate to the CA certificate bundle (see
+        next section).</li>
+        <li>The old CA certificate is retained in the certificate bundle
+        until it expires.</li>
+        <li>New target certificates will be signed using the new CA
+        certificate.</li>
+        </ol>
+        <p>This mechanism ensures a smooth transition period during CA
+        certificate rotation, during which both old and new CA
+        certificates are trusted, thereby avoiding service
+        interruptions.</p>
+        <h4 id="ca-bundle-configmap-configuration">2.2.2 CA Bundle
+        ConfigMap Configuration</h4>
+        <div class="sourceCode" id="cb4"><pre
+        class="sourceCode go"><code class="sourceCode go"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>certrotation<span class="op">.</span>CABundleConfigMap<span class="op">{</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    Namespace<span class="op">:</span> operatorclient<span class="op">.</span>OperatorNamespace<span class="op">,</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    Name<span class="op">:</span>      <span class="st">&quot;kube-apiserver-to-kubelet-client-ca&quot;</span><span class="op">,</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    AdditionalAnnotations<span class="op">:</span> certrotation<span class="op">.</span>AdditionalAnnotations<span class="op">{</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>        JiraComponent<span class="op">:</span> <span class="st">&quot;kube-apiserver&quot;</span><span class="op">,</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">},</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    EventRecorder<span class="op">:</span> eventRecorder<span class="op">,</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... other configurations</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+        <p>Key parameter explanations:</p>
+        <ul>
+        <li><strong>Namespace</strong>: The namespace where the
+        ConfigMap is located, which is the operator’s namespace
+        here.</li>
+        <li><strong>Name</strong>: The name of the ConfigMap, used to
+        store the CA certificate bundle. This bundle contains the
+        current and potentially previous signing CA certificates to
+        ensure trust during rotation.</li>
+        <li><strong>EventRecorder</strong>: Used to record
+        certificate-related events, facilitating subsequent monitoring
+        and troubleshooting.</li>
+        </ul>
+        <h4 id="target-certificate-secret-configuration">2.2.3 Target
+        Certificate Secret Configuration</h4>
+        <div class="sourceCode" id="cb5"><pre
+        class="sourceCode go"><code class="sourceCode go"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>certrotation<span class="op">.</span>RotatedSelfSignedCertKeySecret<span class="op">{</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    Namespace<span class="op">:</span> operatorclient<span class="op">.</span>TargetNamespace<span class="op">,</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    Name<span class="op">:</span>      <span class="st">&quot;kubelet-client&quot;</span><span class="op">,</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    AdditionalAnnotations<span class="op">:</span> certrotation<span class="op">.</span>AdditionalAnnotations<span class="op">{</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>        JiraComponent<span class="op">:</span> <span class="st">&quot;kube-apiserver&quot;</span><span class="op">,</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">},</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>    Validity<span class="op">:</span>               <span class="dv">30</span> <span class="op">*</span> rotationDay<span class="op">,</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>    Refresh<span class="op">:</span>                <span class="dv">15</span> <span class="op">*</span> rotationDay<span class="op">,</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>    CertCreator<span class="op">:</span> <span class="op">&amp;</span>certrotation<span class="op">.</span>ClientRotation<span class="op">{</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>        UserInfo<span class="op">:</span> <span class="op">&amp;</span>user<span class="op">.</span>DefaultInfo<span class="op">{</span>Name<span class="op">:</span> <span class="st">&quot;system:kube-apiserver&quot;</span><span class="op">,</span> Groups<span class="op">:</span> <span class="op">[]</span><span class="dt">string</span><span class="op">{</span><span class="st">&quot;kube-master&quot;</span><span class="op">}},</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>    <span class="op">},</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>    EventRecorder<span class="op">:</span> eventRecorder<span class="op">,</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... other configurations</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+        <p>Key parameter explanations:</p>
+        <ul>
+        <li><strong>Namespace</strong>: The namespace where the Secret
+        is located, which is the target namespace
+        (<code>openshift-kube-apiserver</code>) here.</li>
+        <li><strong>Name</strong>: The name of the Secret, used to store
+        the client certificate and key
+        (<code>kubelet-client</code>).</li>
+        <li><strong>Validity</strong>: The validity period of the target
+        certificate, set to 30 days here.</li>
+        <li><strong>Refresh</strong>: The refresh period of the target
+        certificate, set to 15 days here (approximately 50% of the
+        validity period).</li>
+        <li><strong>CertCreator</strong>: The certificate creator,
+        specifying the user information of the certificate
+        (<code>system:kube-apiserver</code>), which determines the
+        permission scope of the certificate.</li>
+        </ul>
+        <p>From the above data structure, we can infer that the CA
+        bundle update also follows the signing CA certificate update.
+        When the signing CA certificate needs to be updated, the
+        corresponding CA bundle also needs to be updated to include the
+        new CA, ensuring the integrity of the verification chain for
+        target certificates.</p>
+        <h2 id="certificate-rotation-internal-mechanism">3. Certificate
+        Rotation Internal Mechanism</h2>
+        <p>With the core data structure understood, let’s look at the
+        overall process of certificate updates. This process is not only
+        used internally by
+        <code>openshift-kube-apiserver-operator</code>, but also calls
+        common class libraries (<code>library-go</code>), so this
+        pattern can be reused in multiple Operators, ensuring the
+        consistency and reliability of the certificate rotation
+        mechanism.</p>
+        <h3 id="controller-execution-flow">3.1 Controller Execution
+        Flow</h3>
+        <pre class="mermaid"><code>flowchart TD
+    A[CertRotationController.Run] --&gt; B[Start goroutine for each certRotator]
+    B --&gt; C[certRotator.Run]
+    C --&gt; D[baseController.Run]
+    D --&gt; E[Start worker threads]
+    E --&gt; F[runWorker]
+    F --&gt; G[wait.UntilWithContext]
+    G --&gt; H[Infinite loop]
+    H --&gt; I{select}
+    I --&gt;|queueCtx.Done| J[Return]
+    I --&gt;|default| K[processNextWorkItem]
+    K --&gt; L[Get key from queue]
+    L --&gt; M[reconcile]
+    M --&gt; N[sync]
+    N --&gt; O[SyncWorker]
+    O --&gt; P[EnsureSigningCertKeyPair]
+    O --&gt; Q[EnsureConfigMapCABundle]
+    O --&gt; R[EnsureTargetCertKeyPair]
+    R --&gt;|Success| S[Forget key]
+    R --&gt;|Error| T[Add rate-limited key]
+    
+    Z[Resync Mechanism] --&gt;|Every minute| AA[Add DefaultQueueKey]
+    AA --&gt; H</code></pre>
+        <h4 id="controller-structure">3.1.1 Controller Structure</h4>
+        <p>The certificate rotation process is managed by the
+        <code>CertRotationController</code> in
+        <code>pkg/operator/certrotationcontroller/certrotationcontroller.go</code>.
+        This controller creates and manages multiple certificate
+        rotators, each responsible for rotating specific certificates
+        (signing CA, CA bundle, target certificate).</p>
+        <h4 id="initialization-flow">3.1.2 Initialization Flow</h4>
+        <ol type="1">
+        <li><p>The <code>CertRotationController</code> is created with
+        multiple certificate rotators, for example, for
+        <code>KubeAPIServerToKubeletClientCert</code>:</p>
+        <div class="sourceCode" id="cb7"><pre
+        class="sourceCode go"><code class="sourceCode go"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>certRotator <span class="op">=</span> certrotation<span class="op">.</span>NewCertRotationController<span class="op">(</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;KubeAPIServerToKubeletClientCert&quot;</span><span class="op">,</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    certrotation<span class="op">.</span>RotatedSigningCASecret<span class="op">{...},</span> <span class="co">// Config for the signer secret</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>    certrotation<span class="op">.</span>CABundleConfigMap<span class="op">{...},</span>    <span class="co">// Config for the CA bundle configmap</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>    certrotation<span class="op">.</span>RotatedSelfSignedCertKeySecret<span class="op">{...},</span> <span class="co">// Config for the target secret</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>    eventRecorder<span class="op">,</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">&amp;</span>certrotation<span class="op">.</span>StaticPodConditionStatusReporter<span class="op">{</span>OperatorClient<span class="op">:</span> operatorClient<span class="op">},</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a><span class="op">)</span></span></code></pre></div></li>
+        <li><p>Each rotator is added to the controller’s list:</p>
+        <div class="sourceCode" id="cb8"><pre
+        class="sourceCode go"><code class="sourceCode go"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>ret<span class="op">.</span>certRotators <span class="op">=</span> <span class="bu">append</span><span class="op">(</span>ret<span class="op">.</span>certRotators<span class="op">,</span> certRotator<span class="op">)</span></span></code></pre></div></li>
+        </ol>
+        <h4 id="execution-flow">3.1.3 Execution Flow</h4>
+        <p>When the controller is run, it starts each certificate
+        rotator in a separate goroutine:</p>
+        <div class="sourceCode" id="cb9"><pre
+        class="sourceCode go"><code class="sourceCode go"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="kw">func</span> <span class="op">(</span>c <span class="op">*</span>CertRotationController<span class="op">)</span> Run<span class="op">(</span>ctx context<span class="op">.</span>Context<span class="op">,</span> workers <span class="dt">int</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ...</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> _<span class="op">,</span> certRotator <span class="op">:=</span> <span class="kw">range</span> c<span class="op">.</span>certRotators <span class="op">{</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>        <span class="cf">go</span> certRotator<span class="op">.</span>Run<span class="op">(</span>ctx<span class="op">,</span> workers<span class="op">)</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ...</span></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+        <h4 id="internal-loop-mechanism">3.1.4 Internal Loop
+        Mechanism</h4>
+        <p>The internal loop that handles certificate rotation is
+        implemented in the factory controller pattern in the OpenShift
+        <code>library-go</code> package. Here’s how it works:</p>
+        <ol type="1">
+        <li><p>Each <code>certRotator.Run(ctx, workers)</code> call
+        executes the <code>baseController.Run</code> method from
+        <code>vendor/github.com/openshift/library-go/pkg/controller/factory/base_controller.go</code>:</p>
+        <div class="sourceCode" id="cb10"><pre
+        class="sourceCode go"><code class="sourceCode go"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="kw">func</span> <span class="op">(</span>c <span class="op">*</span>baseController<span class="op">)</span> Run<span class="op">(</span>ctx context<span class="op">.</span>Context<span class="op">,</span> workers <span class="dt">int</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ...</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> i <span class="op">:=</span> <span class="dv">1</span><span class="op">;</span> i <span class="op">&lt;=</span> workers<span class="op">;</span> i<span class="op">++</span> <span class="op">{</span></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>        workerWg<span class="op">.</span>Add<span class="op">(</span><span class="dv">1</span><span class="op">)</span></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>        <span class="cf">go</span> <span class="kw">func</span><span class="op">()</span> <span class="op">{</span></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>            <span class="cf">defer</span> workerWg<span class="op">.</span>Done<span class="op">()</span></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>            <span class="co">// Pass the queue context to runWorker</span></span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>            c<span class="op">.</span>runWorker<span class="op">(</span>queueContext<span class="op">)</span> </span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>        <span class="op">}()</span></span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ...</span></span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div></li>
+        <li><p>The <code>runWorker</code> method in
+        <code>vendor/github.com/openshift/library-go/pkg/controller/factory/base_controller.go</code>
+        contains the actual internal loop:</p>
+        <div class="sourceCode" id="cb11"><pre
+        class="sourceCode go"><code class="sourceCode go"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="kw">func</span> <span class="op">(</span>c <span class="op">*</span>baseController<span class="op">)</span> runWorker<span class="op">(</span>queueCtx context<span class="op">.</span>Context<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>    wait<span class="op">.</span>UntilWithContext<span class="op">(</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>        queueCtx<span class="op">,</span></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>        <span class="kw">func</span><span class="op">(</span>queueCtx context<span class="op">.</span>Context<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>            <span class="cf">defer</span> utilruntime<span class="op">.</span>HandleCrash<span class="op">(</span>c<span class="op">.</span>degradedPanicHandler<span class="op">)</span></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>            <span class="cf">for</span> <span class="op">{</span></span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>                <span class="cf">select</span> <span class="op">{</span></span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>                <span class="cf">case</span> <span class="op">&lt;-</span>queueCtx<span class="op">.</span>Done<span class="op">():</span></span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>                    <span class="cf">return</span></span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>                <span class="cf">default</span><span class="op">:</span></span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>                    <span class="co">// Process items until context is cancelled</span></span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a>                    <span class="cf">if</span> <span class="op">!</span>c<span class="op">.</span>processNextWorkItem<span class="op">(</span>queueCtx<span class="op">)</span> <span class="op">{</span> </span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a>                        <span class="co">// If processNextWorkItem returns false, it means the queue is shutting down</span></span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a>                        <span class="cf">return</span> </span>
+<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a>                    <span class="op">}</span></span>
+<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a>                <span class="op">}</span></span>
+<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb11-18"><a href="#cb11-18" aria-hidden="true" tabindex="-1"></a>        <span class="op">},</span></span>
+<span id="cb11-19"><a href="#cb11-19" aria-hidden="true" tabindex="-1"></a>        <span class="dv">1</span><span class="op">*</span>time<span class="op">.</span>Second<span class="op">)</span> <span class="co">// Wait time between checks if queue is empty</span></span>
+<span id="cb11-20"><a href="#cb11-20" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div></li>
+        <li><p>The <code>processNextWorkItem</code> method in
+        <code>vendor/github.com/openshift/library-go/pkg/controller/factory/base_controller.go</code>
+        gets an item from the queue and processes it:</p>
+        <div class="sourceCode" id="cb12"><pre
+        class="sourceCode go"><code class="sourceCode go"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="kw">func</span> <span class="op">(</span>c <span class="op">*</span>baseController<span class="op">)</span> processNextWorkItem<span class="op">(</span>queueCtx context<span class="op">.</span>Context<span class="op">)</span> <span class="dt">bool</span> <span class="op">{</span> <span class="co">// Returns bool indicating if processing should continue</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>    key<span class="op">,</span> quit <span class="op">:=</span> c<span class="op">.</span>syncContext<span class="op">.</span>Queue<span class="op">().</span>Get<span class="op">()</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> quit <span class="op">{</span></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="ot">false</span> <span class="co">// Queue is shutting down</span></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">defer</span> c<span class="op">.</span>syncContext<span class="op">.</span>Queue<span class="op">().</span>Done<span class="op">(</span>key<span class="op">)</span></span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... (Context creation for reconcile) ...</span></span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> err <span class="op">:=</span> c<span class="op">.</span>reconcile<span class="op">(</span>reconcileCtx<span class="op">,</span> syncCtx<span class="op">);</span> err <span class="op">!=</span> <span class="ot">nil</span> <span class="op">{</span></span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Handle error and requeue if needed</span></span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>        utilruntime<span class="op">.</span>HandleError<span class="op">(</span>fmt<span class="op">.</span>Errorf<span class="op">(</span><span class="st">&quot;%s: failed processing item %q with error: %w&quot;</span><span class="op">,</span> c<span class="op">.</span>name<span class="op">,</span> key<span class="op">,</span> err<span class="op">))</span></span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a>        c<span class="op">.</span>syncContext<span class="op">.</span>Queue<span class="op">().</span>AddRateLimited<span class="op">(</span>key<span class="op">)</span></span>
+<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="ot">true</span> <span class="co">// Continue processing</span></span>
+<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-17"><a href="#cb12-17" aria-hidden="true" tabindex="-1"></a>    c<span class="op">.</span>syncContext<span class="op">.</span>Queue<span class="op">().</span>Forget<span class="op">(</span>key<span class="op">)</span></span>
+<span id="cb12-18"><a href="#cb12-18" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="ot">true</span> <span class="co">// Continue processing</span></span>
+<span id="cb12-19"><a href="#cb12-19" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div></li>
+        <li><p>The <code>reconcile</code> method calls the
+        <code>sync</code> method provided during factory creation. For
+        the certificate rotator, this calls <code>SyncWorker</code> from
+        <code>vendor/github.com/openshift/library-go/pkg/operator/certrotation/client_cert_rotation_controller.go</code>:</p>
+        <div class="sourceCode" id="cb13"><pre
+        class="sourceCode go"><code class="sourceCode go"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="kw">func</span> <span class="op">(</span>c CertRotationController<span class="op">)</span> Sync<span class="op">(</span>ctx context<span class="op">.</span>Context<span class="op">,</span> syncCtx factory<span class="op">.</span>SyncContext<span class="op">)</span> <span class="dt">error</span> <span class="op">{</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">// The actual sync logic is in SyncWorker</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>    syncErr <span class="op">:=</span> c<span class="op">.</span>SyncWorker<span class="op">(</span>ctx<span class="op">)</span> </span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... (Handle status reporting based on syncErr) ...</span></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> syncErr <span class="co">// Return the error from SyncWorker</span></span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div></li>
+        <li><p>The <code>SyncWorker</code> method in
+        <code>vendor/github.com/openshift/library-go/pkg/operator/certrotation/client_cert_rotation_controller.go</code>
+        performs the actual certificate rotation steps:</p>
+        <div class="sourceCode" id="cb14"><pre
+        class="sourceCode go"><code class="sourceCode go"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="kw">func</span> <span class="op">(</span>c CertRotationController<span class="op">)</span> SyncWorker<span class="op">(</span>ctx context<span class="op">.</span>Context<span class="op">)</span> <span class="dt">error</span> <span class="op">{</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">// 1. Ensure the signing CA certificate exists and is valid</span></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>    signingCertKeyPair<span class="op">,</span> err <span class="op">:=</span> c<span class="op">.</span>RotatedSigningCASecret<span class="op">.</span>EnsureSigningCertKeyPair<span class="op">(</span>ctx<span class="op">)</span></span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> err <span class="op">!=</span> <span class="ot">nil</span> <span class="op">{</span></span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> fmt<span class="op">.</span>Errorf<span class="op">(</span><span class="st">&quot;error ensuring signing cert/key pair: %w&quot;</span><span class="op">,</span> err<span class="op">)</span></span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>    <span class="co">// 2. Ensure the CA bundle ConfigMap contains the valid signing CA(s)</span></span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>    cabundleCerts<span class="op">,</span> err <span class="op">:=</span> c<span class="op">.</span>CABundleConfigMap<span class="op">.</span>EnsureConfigMapCABundle<span class="op">(</span>ctx<span class="op">,</span> signingCertKeyPair<span class="op">)</span></span>
+<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> err <span class="op">!=</span> <span class="ot">nil</span> <span class="op">{</span></span>
+<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> fmt<span class="op">.</span>Errorf<span class="op">(</span><span class="st">&quot;error ensuring CA bundle configmap: %w&quot;</span><span class="op">,</span> err<span class="op">)</span></span>
+<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb14-13"><a href="#cb14-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-14"><a href="#cb14-14" aria-hidden="true" tabindex="-1"></a>    <span class="co">// 3. Ensure the target certificate exists, is valid, and signed by the current CA</span></span>
+<span id="cb14-15"><a href="#cb14-15" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> _<span class="op">,</span> err <span class="op">:=</span> c<span class="op">.</span>RotatedSelfSignedCertKeySecret<span class="op">.</span>EnsureTargetCertKeyPair<span class="op">(</span>ctx<span class="op">,</span> signingCertKeyPair<span class="op">,</span> cabundleCerts<span class="op">);</span> err <span class="op">!=</span> <span class="ot">nil</span> <span class="op">{</span></span>
+<span id="cb14-16"><a href="#cb14-16" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> fmt<span class="op">.</span>Errorf<span class="op">(</span><span class="st">&quot;error ensuring target cert/key pair: %w&quot;</span><span class="op">,</span> err<span class="op">)</span></span>
+<span id="cb14-17"><a href="#cb14-17" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb14-18"><a href="#cb14-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-19"><a href="#cb14-19" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="ot">nil</span> <span class="co">// Success</span></span>
+<span id="cb14-20"><a href="#cb14-20" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div></li>
+        </ol>
+        <h4 id="resync-mechanism">3.1.5 Resync Mechanism</h4>
+        <p>The controller also has a resync mechanism that adds items to
+        the queue periodically, defined in
+        <code>vendor/github.com/openshift/library-go/pkg/controller/factory/base_controller.go</code>:</p>
+        <div class="sourceCode" id="cb15"><pre
+        class="sourceCode go"><code class="sourceCode go"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> c<span class="op">.</span>resyncEvery <span class="op">&gt;</span> <span class="dv">0</span> <span class="op">{</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>    workerWg<span class="op">.</span>Add<span class="op">(</span><span class="dv">1</span><span class="op">)</span></span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> c<span class="op">.</span>resyncEvery <span class="op">&lt;</span> <span class="dv">60</span><span class="op">*</span>time<span class="op">.</span>Second <span class="op">{</span></span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Warn about too fast resyncs as they might drain the operators QPS.</span></span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>        <span class="co">// This event is cheap as it is only emitted on operator startup.</span></span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>        c<span class="op">.</span>syncContext<span class="op">.</span>Recorder<span class="op">().</span>Warningf<span class="op">(</span><span class="st">&quot;FastControllerResync&quot;</span><span class="op">,</span> <span class="st">&quot;Controller %q resync interval is set to %s which might lead to client request throttling&quot;</span><span class="op">,</span> c<span class="op">.</span>name<span class="op">,</span> c<span class="op">.</span>resyncEvery<span class="op">)</span></span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">go</span> <span class="kw">func</span><span class="op">()</span> <span class="op">{</span></span>
+<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a>        <span class="cf">defer</span> workerWg<span class="op">.</span>Done<span class="op">()</span></span>
+<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Periodically add the default key to trigger a reconcile</span></span>
+<span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a>        wait<span class="op">.</span>UntilWithContext<span class="op">(</span>ctx<span class="op">,</span> <span class="kw">func</span><span class="op">(</span>ctx context<span class="op">.</span>Context<span class="op">)</span> <span class="op">{</span> c<span class="op">.</span>syncContext<span class="op">.</span>Queue<span class="op">().</span>Add<span class="op">(</span>DefaultQueueKey<span class="op">)</span> <span class="op">},</span> c<span class="op">.</span>resyncEvery<span class="op">)</span> </span>
+<span id="cb15-12"><a href="#cb15-12" aria-hidden="true" tabindex="-1"></a>    <span class="op">}()</span></span>
+<span id="cb15-13"><a href="#cb15-13" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+        <p>By default, this resync happens every minute
+        (<code>DefaultResyncInterval = 1 * time.Minute</code>), ensuring
+        certificates are checked regularly and rotated when needed based
+        on their validity periods and refresh settings defined in the
+        rotator configuration.</p>
+        <p>After the controller starts, it creates a goroutine for each
+        certificate rotator, and each rotator runs an infinite loop
+        (<code>runWorker</code>) that periodically checks the
+        certificate status (triggered by the resync mechanism adding
+        <code>DefaultQueueKey</code> to the queue) and rotates it when
+        needed via the <code>SyncWorker</code> logic. This parallel
+        processing approach ensures that the rotation processes of
+        various types of certificates do not interfere with each other,
+        improving the reliability of the system.</p>
+        <h3 id="certificate-rotation-process-steps">3.2 Certificate
+        Rotation Process Steps</h3>
+        <p>The certificate rotation process within
+        <code>SyncWorker</code> includes three main steps:</p>
+        <ol type="1">
+        <li><strong>EnsureSigningCertKeyPair</strong>: Ensure the
+        signing CA certificate and key pair are valid, creating or
+        rotating them if needed.</li>
+        <li><strong>EnsureConfigMapCABundle</strong>: Update the CA
+        certificate bundle ConfigMap with the current (and possibly
+        previous) signing CA certificate(s).</li>
+        <li><strong>EnsureTargetCertKeyPair</strong>: Ensure the target
+        certificate and key pair are valid, creating or rotating them if
+        needed, signed by the current signing CA.</li>
+        </ol>
+        <h3 id="certificate-rotation-decision-logic">3.3 Certificate
+        Rotation Decision Logic</h3>
+        <p>The controller uses the following logic (primarily within
+        <code>NeedNewTargetCertKeyPair</code> called by
+        <code>EnsureTargetCertKeyPair</code>) to decide when to rotate
+        target certificates, which is the core decision mechanism:</p>
+        <div class="sourceCode" id="cb16"><pre
+        class="sourceCode go"><code class="sourceCode go"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Simplified logic from NeedNewTargetCertKeyPair in vendor/github.com/openshift/library-go/pkg/operator/certrotation/target_rotation.go</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a><span class="kw">func</span> needNewTargetCertKeyPairForTime<span class="op">(</span>secret <span class="op">*</span>corev1<span class="op">.</span>Secret<span class="op">,</span> signer <span class="op">*</span>crypto<span class="op">.</span>CA<span class="op">,</span> refresh time<span class="op">.</span>Duration<span class="op">,</span> refreshOnlyWhenExpired <span class="dt">bool</span><span class="op">)</span> <span class="dt">string</span> <span class="op">{</span></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>    <span class="co">// 1. Check if secret data exists</span></span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ...</span></span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>    <span class="co">// 2. Check if certificate is parseable</span></span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ...</span></span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>    cert<span class="op">,</span> err <span class="op">:=</span> crypto<span class="op">.</span>CertsFromPEM<span class="op">(</span>secret<span class="op">.</span>Data<span class="op">[</span><span class="st">&quot;tls.crt&quot;</span><span class="op">])</span></span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ...</span></span>
+<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a>    <span class="co">// 3. Check if signed by the correct CA</span></span>
+<span id="cb16-12"><a href="#cb16-12" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ...</span></span>
+<span id="cb16-13"><a href="#cb16-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-14"><a href="#cb16-14" aria-hidden="true" tabindex="-1"></a>    <span class="co">// 4. Check validity period based on time</span></span>
+<span id="cb16-15"><a href="#cb16-15" aria-hidden="true" tabindex="-1"></a>    notBefore <span class="op">:=</span> cert<span class="op">[</span><span class="dv">0</span><span class="op">].</span>NotBefore</span>
+<span id="cb16-16"><a href="#cb16-16" aria-hidden="true" tabindex="-1"></a>    notAfter <span class="op">:=</span> cert<span class="op">[</span><span class="dv">0</span><span class="op">].</span>NotAfter</span>
+<span id="cb16-17"><a href="#cb16-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-18"><a href="#cb16-18" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Check if the certificate has already expired</span></span>
+<span id="cb16-19"><a href="#cb16-19" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> time<span class="op">.</span>Now<span class="op">().</span>After<span class="op">(</span>notAfter<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb16-20"><a href="#cb16-20" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="st">&quot;already expired&quot;</span></span>
+<span id="cb16-21"><a href="#cb16-21" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb16-22"><a href="#cb16-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-23"><a href="#cb16-23" aria-hidden="true" tabindex="-1"></a>    <span class="co">// If set to refresh only when expired, do not perform early refresh</span></span>
+<span id="cb16-24"><a href="#cb16-24" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> refreshOnlyWhenExpired <span class="op">{</span></span>
+<span id="cb16-25"><a href="#cb16-25" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Only rotate if expired (handled above) or past 80% validity</span></span>
+<span id="cb16-26"><a href="#cb16-26" aria-hidden="true" tabindex="-1"></a>        validity <span class="op">:=</span> notAfter<span class="op">.</span>Sub<span class="op">(</span>notBefore<span class="op">)</span></span>
+<span id="cb16-27"><a href="#cb16-27" aria-hidden="true" tabindex="-1"></a>        at80Percent <span class="op">:=</span> notAfter<span class="op">.</span>Add<span class="op">(-</span>validity <span class="op">/</span> <span class="dv">5</span><span class="op">)</span></span>
+<span id="cb16-28"><a href="#cb16-28" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> time<span class="op">.</span>Now<span class="op">().</span>After<span class="op">(</span>at80Percent<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb16-29"><a href="#cb16-29" aria-hidden="true" tabindex="-1"></a>             <span class="cf">return</span> fmt<span class="op">.</span>Sprintf<span class="op">(</span><span class="st">&quot;past its latest possible time %v&quot;</span><span class="op">,</span> at80Percent<span class="op">)</span></span>
+<span id="cb16-30"><a href="#cb16-30" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb16-31"><a href="#cb16-31" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="st">&quot;&quot;</span> <span class="co">// Don&#39;t refresh based on &#39;refresh&#39; duration</span></span>
+<span id="cb16-32"><a href="#cb16-32" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb16-33"><a href="#cb16-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-34"><a href="#cb16-34" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Check if it has reached 80% of the validity period</span></span>
+<span id="cb16-35"><a href="#cb16-35" aria-hidden="true" tabindex="-1"></a>    validity <span class="op">:=</span> notAfter<span class="op">.</span>Sub<span class="op">(</span>notBefore<span class="op">)</span></span>
+<span id="cb16-36"><a href="#cb16-36" aria-hidden="true" tabindex="-1"></a>    at80Percent <span class="op">:=</span> notAfter<span class="op">.</span>Add<span class="op">(-</span>validity <span class="op">/</span> <span class="dv">5</span><span class="op">)</span></span>
+<span id="cb16-37"><a href="#cb16-37" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> time<span class="op">.</span>Now<span class="op">().</span>After<span class="op">(</span>at80Percent<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb16-38"><a href="#cb16-38" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> fmt<span class="op">.</span>Sprintf<span class="op">(</span><span class="st">&quot;past its latest possible time %v&quot;</span><span class="op">,</span> at80Percent<span class="op">)</span></span>
+<span id="cb16-39"><a href="#cb16-39" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb16-40"><a href="#cb16-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-41"><a href="#cb16-41" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Check if it has reached the preset refresh time</span></span>
+<span id="cb16-42"><a href="#cb16-42" aria-hidden="true" tabindex="-1"></a>    refreshTime <span class="op">:=</span> notBefore<span class="op">.</span>Add<span class="op">(</span>refresh<span class="op">)</span></span>
+<span id="cb16-43"><a href="#cb16-43" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> time<span class="op">.</span>Now<span class="op">().</span>After<span class="op">(</span>refreshTime<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb16-44"><a href="#cb16-44" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Ensure the signing CA has been valid for more than 10% of the target refresh time</span></span>
+<span id="cb16-45"><a href="#cb16-45" aria-hidden="true" tabindex="-1"></a>        <span class="co">// This prevents rotating a target cert immediately after the signer rotates</span></span>
+<span id="cb16-46"><a href="#cb16-46" aria-hidden="true" tabindex="-1"></a>        timeToWaitForTrustRotation <span class="op">:=</span> refresh <span class="op">/</span> <span class="dv">10</span></span>
+<span id="cb16-47"><a href="#cb16-47" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Check against the *current* signer&#39;s NotBefore</span></span>
+<span id="cb16-48"><a href="#cb16-48" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="bu">len</span><span class="op">(</span>signer<span class="op">.</span>Config<span class="op">.</span>Certs<span class="op">)</span> <span class="op">&gt;</span> <span class="dv">0</span> <span class="op">&amp;&amp;</span> time<span class="op">.</span>Now<span class="op">().</span>After<span class="op">(</span>signer<span class="op">.</span>Config<span class="op">.</span>Certs<span class="op">[</span><span class="dv">0</span><span class="op">].</span>NotBefore<span class="op">.</span>Add<span class="op">(</span>time<span class="op">.</span>Duration<span class="op">(</span>timeToWaitForTrustRotation<span class="op">)))</span> <span class="op">{</span></span>
+<span id="cb16-49"><a href="#cb16-49" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span> fmt<span class="op">.</span>Sprintf<span class="op">(</span><span class="st">&quot;past its refresh time %v&quot;</span><span class="op">,</span> refreshTime<span class="op">)</span></span>
+<span id="cb16-50"><a href="#cb16-50" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb16-51"><a href="#cb16-51" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb16-52"><a href="#cb16-52" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-53"><a href="#cb16-53" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="st">&quot;&quot;</span> <span class="co">// No rotation needed based on time</span></span>
+<span id="cb16-54"><a href="#cb16-54" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+        <p>The conditions for triggering target certificate rotation
+        include:</p>
+        <ul>
+        <li>The certificate has already expired (highest priority
+        condition).</li>
+        <li>The certificate validity period has reached 80% (if
+        <code>RefreshOnlyWhenExpired</code> is false, or always if
+        true).</li>
+        <li>The preset refresh time (<code>Refresh</code> parameter) has
+        been reached (only if <code>RefreshOnlyWhenExpired</code> is
+        false), AND the current signing CA has been valid for at least
+        10% of the refresh duration.</li>
+        </ul>
+        <p>Similar logic exists for rotating the signing CA itself
+        (<code>NeedNewSigningCertKeyPair</code> in
+        <code>signer.go</code>), primarily checking expiration and the
+        <code>Refresh</code> duration. The CA bundle
+        (<code>NeedNewCABundle</code> in <code>cabundle.go</code>) is
+        updated if the current signer is not present or if expired
+        certificates can be removed.</p>
+        <p>These conditions ensure that there is enough time for
+        certificate rotation before expiration, while avoiding
+        unnecessary frequent rotations.</p>
+        <h2 id="certificate-rotation-events-and-logs">4. Certificate
+        Rotation Events and Logs</h2>
+        <h3 id="event-triggering-mechanism">4.1 Event Triggering
+        Mechanism</h3>
+        <p>During the certificate rotation process, the system triggers
+        Kubernetes events at key points, which can be viewed using the
+        <code>kubectl get events</code> command. These events provide
+        important sources of information for monitoring and
+        troubleshooting.</p>
+        <h4 id="signing-ca-certificate-rotation-events">4.1.1 Signing CA
+        Certificate Rotation Events</h4>
+        <p>When a signing CA certificate needs to be rotated
+        (<code>EnsureSigningCertKeyPair</code> detects a need), the
+        system triggers an event:</p>
+        <div class="sourceCode" id="cb17"><pre
+        class="sourceCode go"><code class="sourceCode go"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="co">// From vendor/github.com/openshift/library-go/pkg/operator/certrotation/signer.go</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>c<span class="op">.</span>EventRecorder<span class="op">.</span>Eventf<span class="op">(</span><span class="st">&quot;SignerUpdateRequired&quot;</span><span class="op">,</span> <span class="st">&quot;%q in %q requires a new signing cert/key pair: %v&quot;</span><span class="op">,</span> c<span class="op">.</span>Name<span class="op">,</span> c<span class="op">.</span>Namespace<span class="op">,</span> reason<span class="op">)</span></span></code></pre></div>
+        <h4 id="ca-certificate-bundle-update-events">4.1.2 CA
+        Certificate Bundle Update Events</h4>
+        <p>When a CA certificate bundle needs to be updated
+        (<code>EnsureConfigMapCABundle</code> detects a need), the
+        system triggers an event:</p>
+        <div class="sourceCode" id="cb18"><pre
+        class="sourceCode go"><code class="sourceCode go"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="co">// From vendor/github.com/openshift/library-go/pkg/operator/certrotation/cabundle.go</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>c<span class="op">.</span>EventRecorder<span class="op">.</span>Eventf<span class="op">(</span><span class="st">&quot;CABundleUpdateRequired&quot;</span><span class="op">,</span> <span class="st">&quot;%q in %q requires a new cert&quot;</span><span class="op">,</span> c<span class="op">.</span>Name<span class="op">,</span> c<span class="op">.</span>Namespace<span class="op">)</span> </span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a><span class="co">// Note: The reason for update isn&#39;t included in this specific event message format.</span></span></code></pre></div>
+        <h4 id="target-certificate-rotation-events">4.1.3 Target
+        Certificate Rotation Events</h4>
+        <p>When a target certificate needs to be rotated
+        (<code>EnsureTargetCertKeyPair</code> detects a need), the
+        system triggers an event:</p>
+        <div class="sourceCode" id="cb19"><pre
+        class="sourceCode go"><code class="sourceCode go"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="co">// From vendor/github.com/openshift/library-go/pkg/operator/certrotation/target.go</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>c<span class="op">.</span>EventRecorder<span class="op">.</span>Eventf<span class="op">(</span><span class="st">&quot;TargetUpdateRequired&quot;</span><span class="op">,</span> <span class="st">&quot;%q in %q requires a new target cert/key pair: %v&quot;</span><span class="op">,</span> c<span class="op">.</span>Name<span class="op">,</span> c<span class="op">.</span>Namespace<span class="op">,</span> reason<span class="op">)</span></span></code></pre></div>
+        <h3 id="relationship-between-events-and-certificate-updates">4.2
+        Relationship Between Events and Certificate Updates</h3>
+        <p><strong>Important finding</strong>: Certificate rotation
+        events and actual certificate updates occur immediately within
+        the same controller reconcile cycle:</p>
+        <ol type="1">
+        <li>The controller runs checks (e.g., every minute triggered by
+        the resync mechanism).</li>
+        <li>The <code>SyncWorker</code> function is called.</li>
+        <li>Inside <code>SyncWorker</code>, functions like
+        <code>EnsureSigningCertKeyPair</code>,
+        <code>EnsureConfigMapCABundle</code>, and
+        <code>EnsureTargetCertKeyPair</code> are called
+        sequentially.</li>
+        <li>If one of these functions determines an update is needed
+        (e.g., <code>NeedNewTargetCertKeyPair</code> returns a reason),
+        it <strong>first</strong> issues the corresponding event (e.g.,
+        <code>TargetUpdateRequired</code>).</li>
+        <li><strong>Then</strong>, in the same function call, it
+        generates the new certificate/key/bundle and applies the change
+        to the Kubernetes API (e.g., updates the Secret or
+        ConfigMap).</li>
+        <li>The <code>SyncWorker</code> function only returns after
+        these steps (or if an error occurred).</li>
+        </ol>
+        <p>This means that when we observe a certificate rotation event,
+        the corresponding certificate update operation has already been
+        completed or is in the process of being applied within that same
+        reconcile loop. There is no significant delay between the event
+        being issued and the certificate resource being updated in the
+        API server.</p>
+        <h3 id="logging-mechanism">4.3 Logging Mechanism</h3>
+        <p>In addition to Kubernetes events, key operations in the
+        certificate rotation process are also recorded in the operator
+        logs using <code>klog</code>, providing more detailed
+        information:</p>
+        <div class="sourceCode" id="cb20"><pre
+        class="sourceCode go"><code class="sourceCode go"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Example log messages from library-go/operator/certrotation</span></span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>klog<span class="op">.</span>V<span class="op">(</span><span class="dv">2</span><span class="op">).</span>Infof<span class="op">(</span><span class="st">&quot;Starting CertRotation controller %q&quot;</span><span class="op">,</span> c<span class="op">.</span>Name<span class="op">)</span> <span class="co">// Controller start</span></span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>klog<span class="op">.</span>V<span class="op">(</span><span class="dv">4</span><span class="op">).</span>Infof<span class="op">(</span><span class="st">&quot;Syncing CertRotation controller %q&quot;</span><span class="op">,</span> c<span class="op">.</span>Name<span class="op">)</span> <span class="co">// Sync loop start</span></span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>klog<span class="op">.</span>V<span class="op">(</span><span class="dv">2</span><span class="op">).</span>Infof<span class="op">(</span><span class="st">&quot;Updating signing cert/key pair for %s/%s: %s&quot;</span><span class="op">,</span> c<span class="op">.</span>Namespace<span class="op">,</span> c<span class="op">.</span>Name<span class="op">,</span> reason<span class="op">)</span> <span class="co">// Signer update</span></span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>klog<span class="op">.</span>V<span class="op">(</span><span class="dv">2</span><span class="op">).</span>Infof<span class="op">(</span><span class="st">&quot;Updating CA bundle for %s/%s&quot;</span><span class="op">,</span> c<span class="op">.</span>Namespace<span class="op">,</span> c<span class="op">.</span>Name<span class="op">)</span> <span class="co">// CA bundle update</span></span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>klog<span class="op">.</span>V<span class="op">(</span><span class="dv">2</span><span class="op">).</span>Infof<span class="op">(</span><span class="st">&quot;Updating target cert/key pair for %s/%s: %s&quot;</span><span class="op">,</span> c<span class="op">.</span>Namespace<span class="op">,</span> c<span class="op">.</span>Name<span class="op">,</span> reason<span class="op">)</span> <span class="co">// Target update</span></span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a>klog<span class="op">.</span>V<span class="op">(</span><span class="dv">4</span><span class="op">).</span>Infof<span class="op">(</span><span class="st">&quot;Finished syncing CertRotation controller %q&quot;</span><span class="op">,</span> c<span class="op">.</span>Name<span class="op">)</span> <span class="co">// Sync loop end</span></span></code></pre></div>
+        <p>Higher verbosity levels (<code>klog.V(4)</code>) provide more
+        detailed step-by-step logging.</p>
+        <h2 id="kube-apiserver-to-kubelet-certificate-rotation-flow">5.
+        kube-apiserver to kubelet Certificate Rotation Flow</h2>
+        <p>Below is the detailed flow of certificate rotation from
+        kube-apiserver to kubelet, which is one of the most critical
+        parts of the entire certificate rotation mechanism.</p>
+        <h3 id="certificate-rotation-flow-chart">5.1 Certificate
+        Rotation Flow Chart</h3>
+        <pre class="mermaid"><code>flowchart TD
+    A[CertRotationController starts in kube-apiserver-operator] --&gt; B[Periodically check kubelet-client cert status]
+    B --&gt; C{Certificate needs rotation? （e.g., past 15 days）}
+    C --&gt;|No| B
+    C --&gt;|Yes| D[Generate new kubelet-client cert/key]
+    D --&gt; E[Update Secret &#39;kubelet-client&#39; in &#39;openshift-kube-apiserver&#39; namespace via K8s API]
+    E --&gt; F[InstallerController in kube-apiserver-operator detects Secret change]
+    F --&gt; G[InstallerController creates new revision]
+    G --&gt; H[InstallerController updates kube-apiserver static pod manifest on master nodes]
+    H --&gt; I[Kubelet on master node detects manifest change]
+    I --&gt; J[Kubelet terminates old kube-apiserver pod]
+    J --&gt; K[Kubelet starts new kube-apiserver pod using new manifest]
+    K --&gt; L[New kube-apiserver pod mounts updated &#39;kubelet-client&#39; Secret]
+    L --&gt; M[kube-apiserver uses new certificate to connect to kubelet]
+    M --&gt; N[kubelet verifies kube-apiserver identity using its CA bundle]
+    N --&gt; B</code></pre>
+        <h3
+        id="detailed-process-of-kubelet-client-certificate-update-triggering-kube-apiserver-restart">5.2
+        Detailed Process of kubelet-client Certificate Update Triggering
+        kube-apiserver Restart</h3>
+        <p>In an OpenShift cluster, the
+        <code>cluster-kube-apiserver-operator</code> manages the
+        lifecycle of the <code>kube-apiserver</code>, including its
+        configuration and associated certificates. The
+        <code>kubelet-client</code> certificate is used for
+        authentication when the <code>kube-apiserver</code> makes
+        requests to the <code>kubelet</code>. This certificate is
+        automatically rotated by the
+        <code>CertRotationController</code>. A common observation is
+        that when the <code>kubelet-client</code> certificate is
+        updated, the <code>kube-apiserver</code> Pod restarts. This
+        section explains the logic flow and key code paths behind this
+        process.</p>
+        <h4 id="core-components">5.2.1 Core Components</h4>
+        <p>The key components involved in this process are:</p>
+        <ul>
+        <li><strong>CertRotationController</strong>: A generic
+        controller provided by the <code>library-go</code> library, used
+        for automatic certificate rotation. In
+        <code>cluster-kube-apiserver-operator</code>, it’s configured to
+        manage certificates like <code>kubelet-client</code>.</li>
+        <li><strong>kubelet-client Secret</strong>: Stores the client
+        certificate and private key used by <code>kube-apiserver</code>
+        to connect to <code>kubelet</code>. Located in the
+        <code>openshift-kube-apiserver</code> namespace.</li>
+        <li><strong>InstallerController</strong>: A static Pod
+        controller provided by the <code>library-go</code> library.
+        <code>cluster-kube-apiserver-operator</code> uses it to manage
+        the deployment and updates of the <code>kube-apiserver</code>
+        static Pod. It monitors input resources (like Secrets,
+        ConfigMaps), and triggers Pod updates (rollouts) when these
+        resources change.</li>
+        <li><strong>Kubelet</strong>: Runs on each master node and is
+        responsible for starting and managing the
+        <code>kube-apiserver</code> Pod based on the static Pod manifest
+        file in the <code>/etc/kubernetes/manifests/</code>
+        directory.</li>
+        </ul>
+        <h4 id="logical-flow">5.2.2 Logical Flow</h4>
+        <p>Here are the detailed logical steps for how a
+        <code>kubelet-client</code> certificate update leads to a
+        <code>kube-apiserver</code> restart:</p>
+        <ol type="1">
+        <li><strong>Certificate Rotation Check</strong>: The
+        <code>CertRotationController</code> (running within the
+        <code>cluster-kube-apiserver-operator</code> Pod) periodically
+        checks the certificates it manages (default is every minute via
+        the <code>resync</code> mechanism). For the
+        <code>kubelet-client</code> certificate, it checks if rotation
+        conditions are met (e.g., has the preset <code>Refresh</code>
+        time of 15 days been reached?).</li>
+        <li><strong>Trigger Certificate Update</strong>: When rotation
+        conditions are met, the <code>CertRotationController</code>’s
+        <code>SyncWorker</code> function is called.</li>
+        <li><strong>Generate New Certificate</strong>:
+        <code>SyncWorker</code> calls the
+        <code>RotatedSelfSignedCertKeySecret.EnsureTargetCertKeyPair</code>
+        function. This function generates a new
+        <code>kubelet-client</code> certificate and private key
+        pair.</li>
+        <li><strong>Update Secret</strong>: The
+        <code>EnsureTargetCertKeyPair</code> function then calls the
+        Kubernetes API to update the <code>kubelet-client</code> Secret
+        object in the <code>openshift-kube-apiserver</code> namespace,
+        writing the new certificate and private key.</li>
+        <li><strong>InstallerController Detects Change</strong>: The
+        <code>InstallerController</code> (also running within the
+        <code>cluster-kube-apiserver-operator</code> Pod) monitors the
+        input resources required by the <code>kube-apiserver</code>
+        static Pod, including the <code>kubelet-client</code> Secret.
+        When it detects that the content of the
+        <code>kubelet-client</code> Secret has changed, it determines
+        that the <code>kube-apiserver</code> configuration needs an
+        update.</li>
+        <li><strong>Create New Revision</strong>: The
+        <code>InstallerController</code> creates a new deployment
+        “revision”. This typically involves creating a new ConfigMap or
+        Secret to represent this revision (e.g.,
+        <code>kube-apiserver-pod-5</code>) and recording the current
+        revision number in the operator’s status.</li>
+        <li><strong>Update Static Pod Manifest</strong>: The
+        <code>InstallerController</code> updates the
+        <code>kube-apiserver</code> static Pod manifest file (usually
+        <code>/etc/kubernetes/manifests/kube-apiserver-pod.yaml</code>)
+        on each master node. This updated manifest will reference
+        resources related to the new revision (if applicable), and its
+        own metadata (like labels or annotations) might also change to
+        reflect the new revision. This update is often performed by an
+        “installer” pod launched by the InstallerController onto the
+        target node.</li>
+        <li><strong>Kubelet Detects Manifest Change</strong>: The
+        Kubelet running on the master node monitors the
+        <code>/etc/kubernetes/manifests/</code> directory. When it
+        detects a change in the <code>kube-apiserver-pod.yaml</code>
+        file, it reads the new manifest.</li>
+        <li><strong>Trigger Pod Restart</strong>: Kubelet compares the
+        new and old manifests. Since the manifest content (at least the
+        part identifying the revision) has changed, Kubelet gracefully
+        terminates the old <code>kube-apiserver</code> Pod container and
+        starts a new <code>kube-apiserver</code> Pod container based on
+        the new manifest file. This new Pod will mount the updated
+        <code>kubelet-client</code> Secret.</li>
+        </ol>
+        <h4 id="key-code-flow-points">5.2.3 Key Code Flow Points</h4>
+        <ul>
+        <li><strong>Certificate Check and Update</strong>:
+        <ul>
+        <li><p><code>vendor/github.com/openshift/library-go/pkg/operator/certrotation/client_cert_rotation_controller.go</code>:
+        <code>CertRotationController.SyncWorker</code> is the entry
+        point.</p>
+        <div class="sourceCode" id="cb22"><pre
+        class="sourceCode go"><code class="sourceCode go"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="kw">func</span> <span class="op">(</span>c CertRotationController<span class="op">)</span> SyncWorker<span class="op">(</span>ctx context<span class="op">.</span>Context<span class="op">)</span> <span class="dt">error</span> <span class="op">{</span></span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... (EnsureSigningCertKeyPair and EnsureConfigMapCABundle calls) ...</span></span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a>    <span class="co">// This calls EnsureTargetCertKeyPair below</span></span>
+<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> _<span class="op">,</span> err <span class="op">:=</span> c<span class="op">.</span>RotatedSelfSignedCertKeySecret<span class="op">.</span>EnsureTargetCertKeyPair<span class="op">(</span>ctx<span class="op">,</span> signingCertKeyPair<span class="op">,</span> cabundleCerts<span class="op">);</span> err <span class="op">!=</span> <span class="ot">nil</span> <span class="op">{</span></span>
+<span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> fmt<span class="op">.</span>Errorf<span class="op">(</span><span class="st">&quot;error ensuring target cert/key pair: %w&quot;</span><span class="op">,</span> err<span class="op">)</span></span>
+<span id="cb22-7"><a href="#cb22-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb22-8"><a href="#cb22-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-9"><a href="#cb22-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="ot">nil</span></span>
+<span id="cb22-10"><a href="#cb22-10" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div></li>
+        <li><p><code>vendor/github.com/openshift/library-go/pkg/operator/certrotation/target.go</code>:
+        <code>RotatedSelfSignedCertKeySecret.EnsureTargetCertKeyPair</code>
+        is responsible for checking rotation conditions
+        (<code>NeedNewTargetCertKeyPair</code>), generating the new
+        certificate (<code>setTargetCertKeyPairSecret</code>), and
+        updating the Secret
+        (<code>resourceapply.ApplySecret</code>).</p>
+        <div class="sourceCode" id="cb23"><pre
+        class="sourceCode go"><code class="sourceCode go"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="kw">func</span> <span class="op">(</span>c RotatedSelfSignedCertKeySecret<span class="op">)</span> EnsureTargetCertKeyPair<span class="op">(</span>ctx context<span class="op">.</span>Context<span class="op">,</span> signingCertKeyPair <span class="op">*</span>crypto<span class="op">.</span>CA<span class="op">,</span> caBundleCerts <span class="op">[]*</span>x509<span class="op">.</span>Certificate<span class="op">)</span> <span class="op">(*</span>corev1<span class="op">.</span>Secret<span class="op">,</span> <span class="dt">error</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... (error handling and secret retrieval/creation) ...</span></span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>    applyFn <span class="op">:=</span> resourceapply<span class="op">.</span>ApplySecret <span class="co">// Or resourceapply.ApplySecretDoNotUse if UseSecretUpdateOnly is true</span></span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... (metadata update) ...</span></span>
+<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Check if a new cert is needed</span></span>
+<span id="cb23-8"><a href="#cb23-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> reason <span class="op">:=</span> c<span class="op">.</span>CertCreator<span class="op">.</span>NeedNewTargetCertKeyPair<span class="op">(</span>targetCertKeyPairSecret<span class="op">,</span> signingCertKeyPair<span class="op">,</span> caBundleCerts<span class="op">,</span> c<span class="op">.</span>Refresh<span class="op">,</span> c<span class="op">.</span>RefreshOnlyWhenExpired<span class="op">);</span> <span class="bu">len</span><span class="op">(</span>reason<span class="op">)</span> <span class="op">&gt;</span> <span class="dv">0</span> <span class="op">{</span></span>
+<span id="cb23-9"><a href="#cb23-9" aria-hidden="true" tabindex="-1"></a>        c<span class="op">.</span>EventRecorder<span class="op">.</span>Eventf<span class="op">(</span><span class="st">&quot;TargetUpdateRequired&quot;</span><span class="op">,</span> <span class="st">&quot;%q in %q requires a new target cert/key pair: %v&quot;</span><span class="op">,</span> c<span class="op">.</span>Name<span class="op">,</span> c<span class="op">.</span>Namespace<span class="op">,</span> reason<span class="op">)</span></span>
+<span id="cb23-10"><a href="#cb23-10" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Generate and set the new cert/key in the secret data</span></span>
+<span id="cb23-11"><a href="#cb23-11" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> err <span class="op">:=</span> setTargetCertKeyPairSecret<span class="op">(</span>targetCertKeyPairSecret<span class="op">,</span> c<span class="op">.</span>Validity<span class="op">,</span> signingCertKeyPair<span class="op">,</span> c<span class="op">.</span>CertCreator<span class="op">,</span> c<span class="op">.</span>AdditionalAnnotations<span class="op">);</span> err <span class="op">!=</span> <span class="ot">nil</span> <span class="op">{</span></span>
+<span id="cb23-12"><a href="#cb23-12" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span> <span class="ot">nil</span><span class="op">,</span> err</span>
+<span id="cb23-13"><a href="#cb23-13" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb23-14"><a href="#cb23-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-15"><a href="#cb23-15" aria-hidden="true" tabindex="-1"></a>        LabelAsManagedSecret<span class="op">(</span>targetCertKeyPairSecret<span class="op">,</span> CertificateTypeTarget<span class="op">)</span></span>
+<span id="cb23-16"><a href="#cb23-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-17"><a href="#cb23-17" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Apply the updated secret to the API server</span></span>
+<span id="cb23-18"><a href="#cb23-18" aria-hidden="true" tabindex="-1"></a>        actualTargetCertKeyPairSecret<span class="op">,</span> _<span class="op">,</span> err <span class="op">:=</span> applyFn<span class="op">(</span>ctx<span class="op">,</span> c<span class="op">.</span>Client<span class="op">,</span> c<span class="op">.</span>EventRecorder<span class="op">,</span> targetCertKeyPairSecret<span class="op">)</span></span>
+<span id="cb23-19"><a href="#cb23-19" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> err <span class="op">!=</span> <span class="ot">nil</span> <span class="op">{</span></span>
+<span id="cb23-20"><a href="#cb23-20" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span> <span class="ot">nil</span><span class="op">,</span> err</span>
+<span id="cb23-21"><a href="#cb23-21" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb23-22"><a href="#cb23-22" aria-hidden="true" tabindex="-1"></a>        targetCertKeyPairSecret <span class="op">=</span> actualTargetCertKeyPairSecret</span>
+<span id="cb23-23"><a href="#cb23-23" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb23-24"><a href="#cb23-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-25"><a href="#cb23-25" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> targetCertKeyPairSecret<span class="op">,</span> <span class="ot">nil</span></span>
+<span id="cb23-26"><a href="#cb23-26" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div></li>
+        </ul></li>
+        <li><strong>Static Pod Update Trigger</strong>:
+        <ul>
+        <li><p><code>vendor/github.com/openshift/library-go/pkg/operator/staticpod/controller/installer/installer_controller.go</code>:
+        <code>InstallerController.Sync</code> is the core logic entry
+        point. It checks if required resources exist and then calls
+        <code>manageInstallationPods</code> to handle the
+        installation/update process.</p>
+        <div class="sourceCode" id="cb24"><pre
+        class="sourceCode go"><code class="sourceCode go"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="kw">func</span> <span class="op">(</span>c <span class="op">*</span>InstallerController<span class="op">)</span> Sync<span class="op">(</span>ctx context<span class="op">.</span>Context<span class="op">,</span> syncCtx factory<span class="op">.</span>SyncContext<span class="op">)</span> <span class="dt">error</span> <span class="op">{</span></span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... (Get operator spec and status) ...</span></span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Ensure ConfigMaps/Secrets for the target revision exist</span></span>
+<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a>    <span class="co">// This involves checking secrets like kubelet-client</span></span>
+<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a>    err <span class="op">:=</span> c<span class="op">.</span>ensureRequiredResourcesExist<span class="op">(</span>ctx<span class="op">,</span> targetRevision<span class="op">)</span> </span>
+<span id="cb24-7"><a href="#cb24-7" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ...</span></span>
+<span id="cb24-8"><a href="#cb24-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-9"><a href="#cb24-9" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Only manage installation pods when all required resources are present.</span></span>
+<span id="cb24-10"><a href="#cb24-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> err <span class="op">==</span> <span class="ot">nil</span> <span class="op">{</span></span>
+<span id="cb24-11"><a href="#cb24-11" aria-hidden="true" tabindex="-1"></a>        <span class="co">// This function handles the node-by-node rollout logic</span></span>
+<span id="cb24-12"><a href="#cb24-12" aria-hidden="true" tabindex="-1"></a>        requeue<span class="op">,</span> after<span class="op">,</span> syncErr <span class="op">:=</span> c<span class="op">.</span>manageInstallationPods<span class="op">(</span>ctx<span class="op">,</span> operatorSpec<span class="op">,</span> operatorStatus<span class="op">)</span></span>
+<span id="cb24-13"><a href="#cb24-13" aria-hidden="true" tabindex="-1"></a>        <span class="co">// ... (Handle requeue and error) ...</span></span>
+<span id="cb24-14"><a href="#cb24-14" aria-hidden="true" tabindex="-1"></a>        err <span class="op">=</span> syncErr</span>
+<span id="cb24-15"><a href="#cb24-15" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb24-16"><a href="#cb24-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-17"><a href="#cb24-17" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... (Update operator status conditions) ...</span></span>
+<span id="cb24-18"><a href="#cb24-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-19"><a href="#cb24-19" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> err</span>
+<span id="cb24-20"><a href="#cb24-20" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div></li>
+        <li><p>The <code>manageInstallationPods</code> method (in
+        <code>installer_controller.go</code>) determines which node
+        needs updating (<code>nodeToStartRevisionWith</code>), checks if
+        waiting is necessary
+        (<code>timeToWaitBeforeInstallingNextPod</code>), and then
+        potentially creates or manages an <code>installer</code> Pod for
+        the target node (<code>ensureInstallerPod</code>). It also
+        updates the <code>NodeStatus</code> to reflect installation
+        progress or failure
+        (<code>newNodeStateForInstallInProgress</code>). When the
+        <code>TargetRevision</code> in <code>NodeStatus</code> is set or
+        updated, it signifies that a new static Pod version is
+        required.</p></li>
+        <li><p>The <code>ensureInstallerPod</code> function is
+        responsible for creating the actual <code>installer</code> Pod.
+        This Pod runs on the target node and writes the new static Pod
+        manifest and related resources to the node’s
+        <code>/etc/kubernetes/manifests/</code> and
+        <code>/etc/kubernetes/static-pod-resources/</code>
+        directories.</p></li>
+        <li><p><strong>Discovery</strong>: The <code>installer</code>
+        pod directly writes to the local disk files, rather than going
+        through the Machine Config Operator for these specific static
+        pod manifests.</p></li>
+        </ul></li>
+        <li><strong>Kubelet Behavior</strong>: Kubelet’s monitoring of
+        the <code>/etc/kubernetes/manifests/</code> directory and
+        restarting Pods based on file changes is standard Kubernetes
+        behavior, not directly controlled by the operator’s code but an
+        inherent function of Kubelet.</li>
+        </ul>
+        <h4 id="mermaid-flow-diagram">5.2.4 Mermaid Flow Diagram</h4>
+        <pre class="mermaid"><code>flowchart TD
+    subgraph CertRotationController [CertRotationController in Operator Pod]
+        A[Periodically check KubeletClientCert] --&gt; B{Needs Rotation?};
+        B -- Yes --&gt; C[EnsureTargetCertKeyPair];
+        C --&gt; D[Generate New Cert/Key];
+        D --&gt; E[Update kubelet-client Secret（k8s API）];
+    end
+
+    subgraph InstallerController [InstallerController in Operator Pod]
+        F[Monitor kubelet-client Secret] --&gt; G{Secret Content Changed?};
+        G -- Yes --&gt; H[Create New Revision];
+        H --&gt; I[Update /etc/kubernetes/manifests/kube-apiserver-pod.yaml on each Master Node （via Installer Pod）];
+    end
+
+    subgraph Kubelet [Kubelet on Master Node]
+        J[Monitor /etc/kubernetes/manifests/ directory] --&gt; K{kube-apiserver-pod.yaml Changed?};
+        K -- Yes --&gt; L[Read New Manifest];
+        L --&gt; M[Terminate Old kube-apiserver Pod];
+        M --&gt; N[Start New kube-apiserver Pod （mounts new Secret）];
+    end
+
+    E --&gt; F;
+    I --&gt; J;
+    N --&gt; A; 
+
+    style CertRotationController fill:#fff9c4,stroke:#333,stroke-width:2px;
+    style InstallerController fill:#ccf,stroke:#333,stroke-width:2px;
+    style Kubelet fill:#cfc,stroke:#333,stroke-width:2px;</code></pre>
+        <h4 id="summary">5.2.5 Summary</h4>
+        <p>The restart of <code>kube-apiserver</code> upon
+        <code>kubelet-client</code> certificate update is an
+        orchestrated process managed by the
+        <code>cluster-kube-apiserver-operator</code>. The
+        <code>CertRotationController</code> updates the Secret object as
+        scheduled, while the <code>InstallerController</code> monitors
+        these Secrets used as input for the static Pod. Once a Secret
+        changes, the <code>InstallerController</code> drives the
+        deployment of a new revision by updating the static Pod manifest
+        file on the nodes. Finally, Kubelet executes the Pod restart,
+        ensuring the <code>kube-apiserver</code> uses the latest
+        configuration and credentials. This mechanism guarantees that
+        certificates are updated before expiration and that
+        configuration changes are safely and automatically applied to
+        critical static Pods.</p>
+        <h3 id="how-kubelet-verifies-kube-apiservers-certificate">5.3
+        How kubelet Verifies kube-apiserver’s Certificate</h3>
+        <p>The kubelet does not need to be redeployed or restarted to
+        accept the new <code>kubelet-client</code> certificate presented
+        by the kube-apiserver. This is because:</p>
+        <ol type="1">
+        <li>The <code>kubelet-client</code> certificate is a
+        <strong>client certificate</strong> used by kube-apiserver to
+        authenticate itself <em>to</em> the kubelet when making requests
+        (e.g., for logs, exec).</li>
+        <li>The kubelet verifies incoming client certificates based on a
+        <strong>Certificate Authority (CA)</strong> bundle it
+        trusts.</li>
+        <li>The kubelet is configured (via its configuration file,
+        typically <code>/etc/kubernetes/kubelet.conf</code>) with a path
+        to the CA file used to verify client certificates. This is
+        specified by the <code>clientCAFile</code> field within the
+        <code>authentication.x509</code> section.</li>
+        </ol>
+        <p>Example kubelet configuration:</p>
+        <div class="sourceCode" id="cb26"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="ex">/usr/bin/kubelet</span> <span class="at">--config</span><span class="op">=</span>/etc/kubernetes/kubelet.conf <span class="at">--bootstrap-kubeconfig</span><span class="op">=</span>/etc/kubernetes/kubeconfig <span class="at">--kubeconfig</span><span class="op">=</span>/var/lib/kubelet/kubeconfig <span class="at">--container-runtime-endpoint</span><span class="op">=</span>/var/run/crio/crio.sock ...</span></code></pre></div>
+        <p>Relevant configuration in kubelet.conf:</p>
+        <div class="sourceCode" id="cb27"><pre
+        class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a><span class="fu">&quot;authentication&quot;</span><span class="kw">:</span><span class="at"> </span><span class="kw">{</span></span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">&quot;x509&quot;</span><span class="kw">:</span><span class="at"> </span><span class="kw">{</span></span>
+<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">&quot;clientCAFile&quot;</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;/etc/kubernetes/kubelet-ca.crt&quot;</span></span>
+<span id="cb27-4"><a href="#cb27-4" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="kw">},</span></span>
+<span id="cb27-5"><a href="#cb27-5" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">&quot;webhook&quot;</span><span class="kw">:</span><span class="at"> </span><span class="kw">{</span></span>
+<span id="cb27-6"><a href="#cb27-6" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">&quot;cacheTTL&quot;</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;0s&quot;</span></span>
+<span id="cb27-7"><a href="#cb27-7" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="kw">},</span></span>
+<span id="cb27-8"><a href="#cb27-8" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">&quot;anonymous&quot;</span><span class="kw">:</span><span class="at"> </span><span class="kw">{</span></span>
+<span id="cb27-9"><a href="#cb27-9" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">&quot;enabled&quot;</span><span class="kw">:</span><span class="at"> </span><span class="ch">false</span></span>
+<span id="cb27-10"><a href="#cb27-10" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="kw">}</span></span>
+<span id="cb27-11"><a href="#cb27-11" aria-hidden="true" tabindex="-1"></a><span class="kw">}</span><span class="at">,</span></span></code></pre></div>
+        <p>The CA bundle specified in <code>clientCAFile</code> (e.g.,
+        <code>/etc/kubernetes/kubelet-ca.crt</code>) contains the public
+        certificate of the CA that <em>signed</em> the
+        <code>kubelet-client</code> certificate (which is the
+        <code>kube-apiserver-to-kubelet-signer</code> CA). As long as
+        the new <code>kubelet-client</code> certificate presented by the
+        restarted kube-apiserver is signed by a CA present in the
+        kubelet’s <code>clientCAFile</code>, the kubelet will trust
+        it.</p>
+        <p>The <code>kube-apiserver-to-kubelet-signer</code> CA
+        certificate itself has a longer validity (1 year) and its
+        rotation (managed by <code>CertRotationController</code>
+        updating the <code>kube-apiserver-to-kubelet-signer</code>
+        Secret and the <code>kube-apiserver-to-kubelet-client-ca</code>
+        ConfigMap) is a separate process. The
+        <code>kubelet-ca.crt</code> file on the node, managed by the
+        Machine Config Operator (MCO), needs to contain the necessary
+        CA(s) to verify the client certificate. Typically, the MCO
+        ensures this file is updated if the underlying CA
+        (<code>kube-apiserver-to-kubelet-signer</code>) rotates.</p>
+        <p>Therefore, the rotation of the short-lived
+        <code>kubelet-client</code> certificate only requires the
+        kube-apiserver to restart to pick up the new certificate; the
+        kubelet continues to operate normally as long as its trusted CA
+        bundle is up-to-date.</p>
+        <h2 id="certificate-monitoring-solution-to-be-verified">6.
+        Certificate Monitoring Solution (To Be Verified)</h2>
+        <blockquote>
+        <p>[!WARNING] This is just an introduction to the methodology,
+        not the specific implementation steps. The specific parameters
+        need to be confirmed on-site. Pending verification, testing, and
+        implementation details. Do not use in production without
+        validation.</p>
+        </blockquote>
+        <p>We already know that certificate updates generate
+        Kubernetes-level events and logs, so we can monitor these events
+        and logs to implement monitoring of certificate rotation. This
+        monitoring is crucial for preventing service interruptions
+        caused by certificate expiration. The specific monitoring
+        solution can refer to the following steps:</p>
+        <h3 id="event-based-monitoring">6.1 Event-Based Monitoring</h3>
+        <p>The certificate rotation controller generates specific
+        Kubernetes events when performing certificate rotation
+        operations. We can monitor these events to get real-time
+        information about certificate rotation and timely understand
+        certificate status changes:</p>
+        <ol type="1">
+        <li><p><strong>Monitor key event types</strong>:</p>
+        <ul>
+        <li><code>SignerUpdateRequired</code>: Signing CA certificate
+        needs to be updated.</li>
+        <li><code>CABundleUpdateRequired</code>: CA certificate bundle
+        needs to be updated.</li>
+        <li><code>TargetUpdateRequired</code>: Target certificate needs
+        to be updated.</li>
+        </ul></li>
+        <li><p><strong>Event monitoring implementation</strong>:</p>
+        <div class="sourceCode" id="cb28"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Use kubectl to monitor certificate rotation events in a specific namespace (e.g., operator namespace)</span></span>
+<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a><span class="ex">kubectl</span> get events <span class="at">-n</span> openshift-kube-apiserver-operator <span class="at">--field-selector</span> reason=SignerUpdateRequired,reason=CABundleUpdateRequired,reason=TargetUpdateRequired</span>
+<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb28-4"><a href="#cb28-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Use the watch command for real-time monitoring</span></span>
+<span id="cb28-5"><a href="#cb28-5" aria-hidden="true" tabindex="-1"></a><span class="ex">watch</span> <span class="st">&quot;kubectl get events -n openshift-kube-apiserver-operator --sort-by=&#39;.metadata.creationTimestamp&#39; | grep -E &#39;SignerUpdateRequired|CABundleUpdateRequired|TargetUpdateRequired&#39;&quot;</span></span></code></pre></div></li>
+        <li><p><strong>Integration with monitoring systems</strong>:</p>
+        <ul>
+        <li>Collect events into Prometheus, using <a
+        href="https://github.com/resmoio/kubernetes-event-exporter/tree/master">Kubernetes
+        Event Exporter</a>, and stream the event to 3rd-party monitoring
+        systems, and export to Prometheus.</li>
+        <li>Create dedicated certificate rotation event dashboards in
+        Grafana</li>
+        <li>Configure event-based alerting rules</li>
+        </ul></li>
+        </ol>
+        <h3 id="log-based-monitoring">6.2 Log-Based Monitoring</h3>
+        <p>Key operations in the certificate rotation process are
+        recorded in the operator logs. We can track the certificate
+        rotation process by monitoring these logs and obtain more
+        detailed operation information:</p>
+        <ol type="1">
+        <li><p><strong>Key log patterns</strong> (adjust based on actual
+        log messages and verbosity):
+        <code>"Updating signing cert/key pair"     "Updating CA bundle"     "Updating target cert/key pair"     "requires a new signing cert/key pair"     "requires a new cert" // For CA bundle     "requires a new target cert/key pair"</code></p></li>
+        <li><p><strong>Log monitoring implementation</strong>:</p>
+        <div class="sourceCode" id="cb29"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a><span class="co"># View kube-apiserver-operator logs</span></span>
+<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a><span class="ex">kubectl</span> logs <span class="at">-n</span> openshift-kube-apiserver-operator deployment/kube-apiserver-operator <span class="at">-c</span> operator <span class="kw">|</span> <span class="fu">grep</span> <span class="at">-Ei</span> <span class="st">&quot;certrotation|cert/key|ca-bundle|update.*required&quot;</span></span>
+<span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb29-4"><a href="#cb29-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Use OpenShift Logging (Loki/Elasticsearch) or a similar stack to collect and analyze logs</span></span></code></pre></div></li>
+        <li><p><strong>Log alert configuration</strong>:</p>
+        <ul>
+        <li>Configure log analysis tools (such as Loki, Elasticsearch)
+        to detect certificate rotation-related log patterns.</li>
+        <li>Set up alerting rules based on log patterns, potentially
+        correlating with specific certificate names if available in
+        logs.</li>
+        </ul></li>
+        </ol>
+        <h3 id="certificate-expiry-monitoring">6.3 Certificate Expiry
+        Monitoring</h3>
+        <p>To get alerts before certificates are about to be updated or
+        expire, we need to monitor the expiration time of certificates,
+        which is the most direct preventive measure:</p>
+        <ol type="1">
+        <li><p><strong>Certificate expiration time check
+        script</strong>:</p>
+        <div class="sourceCode" id="cb30"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a><span class="co">#!/bin/bash</span></span>
+<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Get current time in seconds since epoch for comparison</span></span>
+<span id="cb30-4"><a href="#cb30-4" aria-hidden="true" tabindex="-1"></a><span class="va">now_epoch</span><span class="op">=</span><span class="va">$(</span><span class="fu">date</span> +%s<span class="va">)</span></span>
+<span id="cb30-5"><a href="#cb30-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb30-6"><a href="#cb30-6" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="at">-e</span> <span class="st">&quot;NAMESPACE\tSECRET_NAME\tEXPIRY_DATE\tDAYS_LEFT&quot;</span></span>
+<span id="cb30-7"><a href="#cb30-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Iterate through all secrets of type kubernetes.io/tls across all namespaces</span></span>
+<span id="cb30-8"><a href="#cb30-8" aria-hidden="true" tabindex="-1"></a><span class="ex">kubectl</span> get secret <span class="at">--all-namespaces</span> <span class="at">-o</span> go-template=<span class="st">&#39;{{range .items}}{{if eq .type &quot;kubernetes.io/tls&quot;}}{{.metadata.namespace}}{{&quot;\t&quot;}}{{.metadata.name}}{{&quot;\t&quot;}}{{index .data &quot;tls.crt&quot;}}{{&quot;\n&quot;}}{{end}}{{end}}&#39;</span> <span class="kw">|</span> <span class="dt">\</span></span>
+<span id="cb30-9"><a href="#cb30-9" aria-hidden="true" tabindex="-1"></a><span class="cf">while</span> <span class="va">IFS</span><span class="op">=</span><span class="st">$&#39;</span><span class="dt">\t</span><span class="st">&#39;</span> <span class="bu">read</span> <span class="at">-r</span> <span class="va">namespace</span> <span class="va">name</span> <span class="va">cert_b64</span><span class="kw">;</span> <span class="cf">do</span></span>
+<span id="cb30-10"><a href="#cb30-10" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Ensure cert_b64 is not empty</span></span>
+<span id="cb30-11"><a href="#cb30-11" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> <span class="kw">[[</span> <span class="ot">-n</span> <span class="st">&quot;</span><span class="va">$cert_b64</span><span class="st">&quot;</span> <span class="kw">]];</span> <span class="cf">then</span></span>
+<span id="cb30-12"><a href="#cb30-12" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Decode base64, extract expiry date using openssl, handle potential errors</span></span>
+<span id="cb30-13"><a href="#cb30-13" aria-hidden="true" tabindex="-1"></a>    <span class="va">expiry_str</span><span class="op">=</span><span class="va">$(</span><span class="bu">echo</span> <span class="st">&quot;</span><span class="va">$cert_b64</span><span class="st">&quot;</span> <span class="kw">|</span> <span class="fu">base64</span> <span class="at">-d</span> <span class="dv">2</span><span class="op">&gt;</span>/dev/null <span class="kw">|</span> <span class="ex">openssl</span> x509 <span class="at">-noout</span> <span class="at">-enddate</span> <span class="dv">2</span><span class="op">&gt;</span>/dev/null<span class="va">)</span></span>
+<span id="cb30-14"><a href="#cb30-14" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="kw">[[</span> <span class="va">$?</span> <span class="ot">-eq</span> 0 <span class="kw">&amp;&amp;</span> <span class="st">&quot;</span><span class="va">$expiry_str</span><span class="st">&quot;</span> <span class="ot">==</span> <span class="pp">*</span><span class="st">&quot;notAfter=&quot;</span><span class="pp">*</span> <span class="kw">]];</span> <span class="cf">then</span></span>
+<span id="cb30-15"><a href="#cb30-15" aria-hidden="true" tabindex="-1"></a>      <span class="va">expiry_date</span><span class="op">=</span><span class="va">$(</span><span class="bu">echo</span> <span class="st">&quot;</span><span class="va">$expiry_str</span><span class="st">&quot;</span> <span class="kw">|</span> <span class="fu">cut</span> <span class="at">-d</span><span class="op">=</span> <span class="at">-f2</span><span class="va">)</span></span>
+<span id="cb30-16"><a href="#cb30-16" aria-hidden="true" tabindex="-1"></a>      <span class="co"># Convert expiry date to seconds since epoch (works with common date formats)</span></span>
+<span id="cb30-17"><a href="#cb30-17" aria-hidden="true" tabindex="-1"></a>      <span class="va">expiry_epoch</span><span class="op">=</span><span class="va">$(</span><span class="fu">date</span> <span class="at">-d</span> <span class="st">&quot;</span><span class="va">$expiry_date</span><span class="st">&quot;</span> +%s <span class="dv">2</span><span class="op">&gt;</span>/dev/null<span class="va">)</span></span>
+<span id="cb30-18"><a href="#cb30-18" aria-hidden="true" tabindex="-1"></a>      <span class="cf">if</span> <span class="kw">[[</span> <span class="va">$?</span> <span class="ot">-eq</span> 0 <span class="kw">]];</span> <span class="cf">then</span></span>
+<span id="cb30-19"><a href="#cb30-19" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Calculate days left</span></span>
+<span id="cb30-20"><a href="#cb30-20" aria-hidden="true" tabindex="-1"></a>        <span class="va">days_left</span><span class="op">=</span><span class="va">$((</span> (<span class="va">$expiry_epoch</span> <span class="op">-</span> <span class="va">$now_epoch</span>) <span class="op">/</span> <span class="dv">86400</span> <span class="va">))</span></span>
+<span id="cb30-21"><a href="#cb30-21" aria-hidden="true" tabindex="-1"></a>        <span class="bu">echo</span> <span class="at">-e</span> <span class="st">&quot;</span><span class="va">$namespace</span><span class="st">\t</span><span class="va">$name</span><span class="st">\t</span><span class="va">$expiry_date</span><span class="st">\t</span><span class="va">$days_left</span><span class="st">&quot;</span></span>
+<span id="cb30-22"><a href="#cb30-22" aria-hidden="true" tabindex="-1"></a>      <span class="cf">else</span></span>
+<span id="cb30-23"><a href="#cb30-23" aria-hidden="true" tabindex="-1"></a>        <span class="bu">echo</span> <span class="at">-e</span> <span class="st">&quot;</span><span class="va">$namespace</span><span class="st">\t</span><span class="va">$name</span><span class="st">\t</span><span class="va">$expiry_date</span><span class="st">\tERROR_CONVERTING_EXPIRY_DATE&quot;</span> <span class="op">&gt;&amp;</span><span class="dv">2</span></span>
+<span id="cb30-24"><a href="#cb30-24" aria-hidden="true" tabindex="-1"></a>      <span class="cf">fi</span></span>
+<span id="cb30-25"><a href="#cb30-25" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span></span>
+<span id="cb30-26"><a href="#cb30-26" aria-hidden="true" tabindex="-1"></a>       <span class="bu">echo</span> <span class="at">-e</span> <span class="st">&quot;</span><span class="va">$namespace</span><span class="st">\t</span><span class="va">$name</span><span class="st">\t-\tERROR_READING_CERT&quot;</span> <span class="op">&gt;&amp;</span><span class="dv">2</span></span>
+<span id="cb30-27"><a href="#cb30-27" aria-hidden="true" tabindex="-1"></a>    <span class="cf">fi</span></span>
+<span id="cb30-28"><a href="#cb30-28" aria-hidden="true" tabindex="-1"></a>  <span class="cf">fi</span></span>
+<span id="cb30-29"><a href="#cb30-29" aria-hidden="true" tabindex="-1"></a><span class="cf">done</span> <span class="kw">|</span> <span class="fu">sort</span> <span class="at">-t</span> <span class="st">$&#39;</span><span class="dt">\t</span><span class="st">&#39;</span> <span class="at">-k4,4n</span> <span class="kw">|</span> <span class="ex">column</span> <span class="at">-t</span> <span class="co"># Sort by days_left numerically</span></span></code></pre></div>
+        <p>The output of this script is similar to this:
+        <code>log    NAMESPACE                          SECRET_NAME                                 EXPIRY_DATE              DAYS_LEFT    openshift-kube-apiserver           kubelet-client                              Apr  20 04:37:04 2025 GMT  11    openshift-config-managed           kube-controller-manager-client-cert-key     Apr  20 04:37:04 2025 GMT  11    openshift-config-managed           kube-scheduler-client-cert-key              Apr  20 04:37:04 2025 GMT  11    openshift-kube-apiserver           aggregator-client                           Apr  20 04:37:04 2025 GMT  11    openshift-kube-apiserver           check-endpoints-client-cert-key             Apr  20 04:37:04 2025 GMT  11    openshift-kube-apiserver           control-plane-node-admin-client-cert-key    Apr  20 04:37:04 2025 GMT  11    openshift-kube-apiserver           external-loadbalancer-serving-certkey       Apr  20 04:37:04 2025 GMT  11    openshift-kube-apiserver           internal-loadbalancer-serving-certkey       Apr  20 04:37:12 2025 GMT  11    openshift-kube-apiserver           localhost-serving-cert-certkey              Apr  20 04:37:04 2025 GMT  11    openshift-kube-apiserver           service-network-serving-certkey             Apr  20 04:37:13 2025 GMT  11    openshift-kube-controller-manager  csr-signer                                  Apr  20 04:39:51 2025 GMT  11    openshift-kube-apiserver-operator  aggregator-client-signer                    Apr  20 04:37:04 2025 GMT  11    openshift-kube-apiserver-operator  kube-control-plane-signer                   May   3 10:10:59 2025 GMT  24    openshift-kube-apiserver-operator  kube-apiserver-to-kubelet-signer            Oct  20 02:44:49 2025 GMT  194    openshift-kube-apiserver-operator  node-system-admin-signer                    Oct  20 02:54:45 2025 GMT  195    openshift-kube-apiserver-operator  node-system-admin-client                    Oct  20 02:54:45 2025 GMT  195    openshift-apiserver-operator       openshift-apiserver-operator-serving-cert   Oct  20 02:54:55 2026 GMT  559    openshift-kube-apiserver-operator  kube-apiserver-operator-serving-cert        Oct  20 02:54:59 2026 GMT  559    openshift-apiserver                serving-cert                                Oct  20 02:55:08 2026 GMT  559    openshift-apiserver                etcd-client                                 Oct  20 02:46:45 2027 GMT  925    openshift-kube-apiserver           etcd-client                                 Oct  20 02:46:45 2027 GMT  925    openshift-kube-apiserver-operator  loadbalancer-serving-signer                 Oct  18 02:35:45 2034 GMT  3479    openshift-kube-apiserver           localhost-recovery-serving-certkey          Oct  18 02:54:45 2034 GMT  3479    openshift-kube-apiserver-operator  localhost-recovery-serving-signer           Oct  18 02:54:45 2034 GMT  3479    openshift-kube-apiserver-operator  localhost-serving-signer                    Oct  18 02:35:46 2034 GMT  3479    openshift-kube-apiserver-operator  service-network-serving-signer              Oct  18 02:35:46 2034 GMT  3479</code>
+        <em>(Note: Example output assumes current date is around Apr 9,
+        2025)</em></p></li>
+        <li><p><strong>Prometheus Monitoring Integration</strong>:</p>
+        <ul>
+        <li>Use a Prometheus exporter like <a
+        href="https://github.com/kubernetes/kube-state-metrics"><code>kube-state-metrics</code></a>
+        (which exposes secret creation/update timestamps but not expiry
+        directly) or a dedicated certificate exporter like <a
+        href="https://github.com/ribbybibby/ssl_exporter"><code>ssl-exporter</code></a>
+        or <a
+        href="https://github.com/joe-elliott/cert-exporter"><code>prometheus-cert-exporter</code></a>.
+        These exporters can read secrets, parse certificates, and expose
+        the <code>notAfter</code> timestamp as a gauge metric.</li>
+        <li>Example metric name: <code>cert_exporter_not_after</code> or
+        <code>ssl_cert_not_after</code>.</li>
+        <li>Configure OpenShift Monitoring or a custom Prometheus
+        instance to scrape these metrics.</li>
+        </ul></li>
+        </ol>
+        <h3
+        id="differentiated-alerting-rules-based-on-certificate-typeslifetimes">6.4
+        Differentiated Alerting Rules Based on Certificate
+        Types/Lifetimes</h3>
+        <p>Different certificates have different validity periods and
+        refresh cycles. Alerting thresholds should reflect this to
+        provide timely warnings without excessive noise.</p>
+        <h4 id="certificate-types-and-their-characteristics">6.4.1
+        Certificate Types and Their Characteristics</h4>
+        <p>Below are examples of expiration times and refresh times for
+        some key certificates, which are important for setting
+        reasonable alerting thresholds:</p>
+        <table>
+        <colgroup>
+        <col style="width: 19%" />
+        <col style="width: 14%" />
+        <col style="width: 19%" />
+        <col style="width: 21%" />
+        <col style="width: 25%" />
+        </colgroup>
+        <thead>
+        <tr class="header">
+        <th>Certificate Type</th>
+        <th>Validity Period</th>
+        <th>Refresh Time</th>
+        <th>Refresh Percentage</th>
+        <th>Recommended Alert Threshold</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr class="odd">
+        <td>kube-apiserver-to-kubelet-signer</td>
+        <td>365 days</td>
+        <td>292 days</td>
+        <td>80%</td>
+        <td>60 days</td>
+        </tr>
+        <tr class="even">
+        <td>kubelet-client</td>
+        <td>30 days</td>
+        <td>15 days</td>
+        <td>50%</td>
+        <td>7 days</td>
+        </tr>
+        <tr class="odd">
+        <td>aggregator-client-signer</td>
+        <td>365 days</td>
+        <td>292 days</td>
+        <td>80%</td>
+        <td>60 days</td>
+        </tr>
+        <tr class="even">
+        <td>kube-control-plane-signer</td>
+        <td>365 days</td>
+        <td>292 days</td>
+        <td>80%</td>
+        <td>60 days</td>
+        </tr>
+        <tr class="odd">
+        <td>node-system-admin-signer</td>
+        <td>365 days</td>
+        <td>292 days</td>
+        <td>80%</td>
+        <td>60 days</td>
+        </tr>
+        <tr class="even">
+        <td>loadbalancer-serving-signer</td>
+        <td>3650 days</td>
+        <td>2920 days</td>
+        <td>80%</td>
+        <td>180 days</td>
+        </tr>
+        <tr class="odd">
+        <td>localhost-serving-signer</td>
+        <td>3650 days</td>
+        <td>2920 days</td>
+        <td>80%</td>
+        <td>180 days</td>
+        </tr>
+        <tr class="even">
+        <td>service-network-serving-signer</td>
+        <td>3650 days</td>
+        <td>2920 days</td>
+        <td>80%</td>
+        <td>180 days</td>
+        </tr>
+        </tbody>
+        </table>
+        <h4
+        id="differentiated-prometheus-alerting-rules-using-hypothetical-cert_exporter_not_after-metric">6.4.2
+        Differentiated Prometheus Alerting Rules (using hypothetical
+        <code>cert_exporter_not_after</code> metric)</h4>
+        <div class="sourceCode" id="cb31"><pre
+        class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a><span class="fu">groups</span><span class="kw">:</span></span>
+<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a><span class="kw">-</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> CertificateExpiryAlerts</span></span>
+<span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">rules</span><span class="kw">:</span></span>
+<span id="cb31-4"><a href="#cb31-4" aria-hidden="true" tabindex="-1"></a><span class="co">  # Alert for short-lived certs (e.g., kubelet-client, some serving certs) - 7 days warning</span></span>
+<span id="cb31-5"><a href="#cb31-5" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="kw">-</span><span class="at"> </span><span class="fu">alert</span><span class="kw">:</span><span class="at"> ShortLivedCertificateApproachingExpiry</span></span>
+<span id="cb31-6"><a href="#cb31-6" aria-hidden="true" tabindex="-1"></a><span class="fu">    expr</span><span class="kw">: </span><span class="ch">|</span></span>
+<span id="cb31-7"><a href="#cb31-7" aria-hidden="true" tabindex="-1"></a>      (cert_exporter_not_after{secret_name=~&quot;kubelet-client|.*serving-certkey&quot;} - time()) / 86400 &lt; 7</span>
+<span id="cb31-8"><a href="#cb31-8" aria-hidden="true" tabindex="-1"></a>      and</span>
+<span id="cb31-9"><a href="#cb31-9" aria-hidden="true" tabindex="-1"></a>      (cert_exporter_not_after{secret_name=~&quot;kubelet-client|.*serving-certkey&quot;} - time()) / 86400 &gt; 0</span>
+<span id="cb31-10"><a href="#cb31-10" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">for</span><span class="kw">:</span><span class="at"> 1h</span></span>
+<span id="cb31-11"><a href="#cb31-11" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">labels</span><span class="kw">:</span></span>
+<span id="cb31-12"><a href="#cb31-12" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">severity</span><span class="kw">:</span><span class="at"> warning</span></span>
+<span id="cb31-13"><a href="#cb31-13" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">certificate_lifetime</span><span class="kw">:</span><span class="at"> short</span></span>
+<span id="cb31-14"><a href="#cb31-14" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">annotations</span><span class="kw">:</span></span>
+<span id="cb31-15"><a href="#cb31-15" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">summary</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;Short-lived certificate {{ $labels.secret_name }} in {{ $labels.namespace }} expiring soon&quot;</span></span>
+<span id="cb31-16"><a href="#cb31-16" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">description</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;Certificate {{ $labels.secret_name }} in namespace {{ $labels.namespace }} will expire in {{ $value | printf </span><span class="sc">\&quot;</span><span class="st">%.1f</span><span class="sc">\&quot;</span><span class="st"> }} days. Rotation expected.&quot;</span></span>
+<span id="cb31-17"><a href="#cb31-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb31-18"><a href="#cb31-18" aria-hidden="true" tabindex="-1"></a><span class="co">  # Alert for medium-lived certs (e.g., 1-year signers) - 60 days warning</span></span>
+<span id="cb31-19"><a href="#cb31-19" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="kw">-</span><span class="at"> </span><span class="fu">alert</span><span class="kw">:</span><span class="at"> MediumLivedCertificateApproachingExpiry</span></span>
+<span id="cb31-20"><a href="#cb31-20" aria-hidden="true" tabindex="-1"></a><span class="fu">    expr</span><span class="kw">: </span><span class="ch">|</span></span>
+<span id="cb31-21"><a href="#cb31-21" aria-hidden="true" tabindex="-1"></a>      (cert_exporter_not_after{secret_name=~&quot;.*-signer&quot;} - time()) / 86400 &lt; 60</span>
+<span id="cb31-22"><a href="#cb31-22" aria-hidden="true" tabindex="-1"></a>      and</span>
+<span id="cb31-23"><a href="#cb31-23" aria-hidden="true" tabindex="-1"></a>      (cert_exporter_not_after{secret_name=~&quot;.*-signer&quot;} - time()) / 86400 &gt; 0</span>
+<span id="cb31-24"><a href="#cb31-24" aria-hidden="true" tabindex="-1"></a>      and on(secret_name) # Exclude long-lived signers matched by the pattern</span>
+<span id="cb31-25"><a href="#cb31-25" aria-hidden="true" tabindex="-1"></a>      (cert_exporter_not_after{secret_name!~&quot;loadbalancer-serving-signer|localhost-serving-signer|service-network-serving-signer&quot;} - time()) / 86400 &lt; 60</span>
+<span id="cb31-26"><a href="#cb31-26" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">for</span><span class="kw">:</span><span class="at"> 6h</span></span>
+<span id="cb31-27"><a href="#cb31-27" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">labels</span><span class="kw">:</span></span>
+<span id="cb31-28"><a href="#cb31-28" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">severity</span><span class="kw">:</span><span class="at"> warning</span></span>
+<span id="cb31-29"><a href="#cb31-29" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">certificate_lifetime</span><span class="kw">:</span><span class="at"> medium</span></span>
+<span id="cb31-30"><a href="#cb31-30" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">annotations</span><span class="kw">:</span></span>
+<span id="cb31-31"><a href="#cb31-31" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">summary</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;Medium-lived certificate {{ $labels.secret_name }} in {{ $labels.namespace }} expiring soon&quot;</span></span>
+<span id="cb31-32"><a href="#cb31-32" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">description</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;Certificate {{ $labels.secret_name }} in namespace {{ $labels.namespace }} will expire in {{ $value | printf </span><span class="sc">\&quot;</span><span class="st">%.1f</span><span class="sc">\&quot;</span><span class="st"> }} days. Rotation expected.&quot;</span></span>
+<span id="cb31-33"><a href="#cb31-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb31-34"><a href="#cb31-34" aria-hidden="true" tabindex="-1"></a><span class="co">  # Alert for operator/etcd certs (e.g., 2-year) - 90 days warning</span></span>
+<span id="cb31-35"><a href="#cb31-35" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="kw">-</span><span class="at"> </span><span class="fu">alert</span><span class="kw">:</span><span class="at"> OperatorEtcdCertificateApproachingExpiry</span></span>
+<span id="cb31-36"><a href="#cb31-36" aria-hidden="true" tabindex="-1"></a><span class="fu">    expr</span><span class="kw">: </span><span class="ch">|</span></span>
+<span id="cb31-37"><a href="#cb31-37" aria-hidden="true" tabindex="-1"></a>      (cert_exporter_not_after{secret_name=~&quot;.*operator-serving-cert|etcd-client&quot;} - time()) / 86400 &lt; 90</span>
+<span id="cb31-38"><a href="#cb31-38" aria-hidden="true" tabindex="-1"></a>      and</span>
+<span id="cb31-39"><a href="#cb31-39" aria-hidden="true" tabindex="-1"></a>      (cert_exporter_not_after{secret_name=~&quot;.*operator-serving-cert|etcd-client&quot;} - time()) / 86400 &gt; 0</span>
+<span id="cb31-40"><a href="#cb31-40" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">for</span><span class="kw">:</span><span class="at"> 12h</span></span>
+<span id="cb31-41"><a href="#cb31-41" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">labels</span><span class="kw">:</span></span>
+<span id="cb31-42"><a href="#cb31-42" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">severity</span><span class="kw">:</span><span class="at"> warning</span></span>
+<span id="cb31-43"><a href="#cb31-43" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">certificate_lifetime</span><span class="kw">:</span><span class="at"> medium_long</span></span>
+<span id="cb31-44"><a href="#cb31-44" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">annotations</span><span class="kw">:</span></span>
+<span id="cb31-45"><a href="#cb31-45" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">summary</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;Operator/Etcd certificate {{ $labels.secret_name }} in {{ $labels.namespace }} expiring soon&quot;</span></span>
+<span id="cb31-46"><a href="#cb31-46" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">description</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;Certificate {{ $labels.secret_name }} in namespace {{ $labels.namespace }} will expire in {{ $value | printf </span><span class="sc">\&quot;</span><span class="st">%.1f</span><span class="sc">\&quot;</span><span class="st"> }} days. Rotation expected.&quot;</span></span>
+<span id="cb31-47"><a href="#cb31-47" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb31-48"><a href="#cb31-48" aria-hidden="true" tabindex="-1"></a><span class="co">  # Alert for long-lived certs (e.g., 10-year signers) - 180 days warning</span></span>
+<span id="cb31-49"><a href="#cb31-49" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="kw">-</span><span class="at"> </span><span class="fu">alert</span><span class="kw">:</span><span class="at"> LongLivedCertificateApproachingExpiry</span></span>
+<span id="cb31-50"><a href="#cb31-50" aria-hidden="true" tabindex="-1"></a><span class="fu">    expr</span><span class="kw">: </span><span class="ch">|</span></span>
+<span id="cb31-51"><a href="#cb31-51" aria-hidden="true" tabindex="-1"></a>      (cert_exporter_not_after{secret_name=~&quot;loadbalancer-serving-signer|localhost-serving-signer|service-network-serving-signer&quot;} - time()) / 86400 &lt; 180</span>
+<span id="cb31-52"><a href="#cb31-52" aria-hidden="true" tabindex="-1"></a>      and</span>
+<span id="cb31-53"><a href="#cb31-53" aria-hidden="true" tabindex="-1"></a>      (cert_exporter_not_after{secret_name=~&quot;loadbalancer-serving-signer|localhost-serving-signer|service-network-serving-signer&quot;} - time()) / 86400 &gt; 0</span>
+<span id="cb31-54"><a href="#cb31-54" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">for</span><span class="kw">:</span><span class="at"> 24h</span></span>
+<span id="cb31-55"><a href="#cb31-55" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">labels</span><span class="kw">:</span></span>
+<span id="cb31-56"><a href="#cb31-56" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">severity</span><span class="kw">:</span><span class="at"> warning</span></span>
+<span id="cb31-57"><a href="#cb31-57" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">certificate_lifetime</span><span class="kw">:</span><span class="at"> long</span></span>
+<span id="cb31-58"><a href="#cb31-58" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">annotations</span><span class="kw">:</span></span>
+<span id="cb31-59"><a href="#cb31-59" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">summary</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;Long-lived certificate {{ $labels.secret_name }} in {{ $labels.namespace }} expiring soon&quot;</span></span>
+<span id="cb31-60"><a href="#cb31-60" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">description</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;Certificate {{ $labels.secret_name }} in namespace {{ $labels.namespace }} will expire in {{ $value | printf </span><span class="sc">\&quot;</span><span class="st">%.1f</span><span class="sc">\&quot;</span><span class="st"> }} days. Rotation is rare but expected eventually.&quot;</span></span>
+<span id="cb31-61"><a href="#cb31-61" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb31-62"><a href="#cb31-62" aria-hidden="true" tabindex="-1"></a><span class="co">  # General certificate near expiry critical alert - 3 days warning</span></span>
+<span id="cb31-63"><a href="#cb31-63" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="kw">-</span><span class="at"> </span><span class="fu">alert</span><span class="kw">:</span><span class="at"> CertificateNearExpiryCritical</span></span>
+<span id="cb31-64"><a href="#cb31-64" aria-hidden="true" tabindex="-1"></a><span class="fu">    expr</span><span class="kw">: </span><span class="ch">|</span></span>
+<span id="cb31-65"><a href="#cb31-65" aria-hidden="true" tabindex="-1"></a>      (cert_exporter_not_after - time()) / 86400 &lt; 3</span>
+<span id="cb31-66"><a href="#cb31-66" aria-hidden="true" tabindex="-1"></a>      and</span>
+<span id="cb31-67"><a href="#cb31-67" aria-hidden="true" tabindex="-1"></a>      (cert_exporter_not_after - time()) / 86400 &gt; 0</span>
+<span id="cb31-68"><a href="#cb31-68" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">for</span><span class="kw">:</span><span class="at"> 1h</span></span>
+<span id="cb31-69"><a href="#cb31-69" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">labels</span><span class="kw">:</span></span>
+<span id="cb31-70"><a href="#cb31-70" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">severity</span><span class="kw">:</span><span class="at"> critical</span></span>
+<span id="cb31-71"><a href="#cb31-71" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">annotations</span><span class="kw">:</span></span>
+<span id="cb31-72"><a href="#cb31-72" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">summary</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;Certificate {{ $labels.secret_name }} in {{ $labels.namespace }} nearing expiry!&quot;</span></span>
+<span id="cb31-73"><a href="#cb31-73" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">description</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;Certificate {{ $labels.secret_name }} in namespace {{ $labels.namespace }} will expire in {{ $value | printf </span><span class="sc">\&quot;</span><span class="st">%.1f</span><span class="sc">\&quot;</span><span class="st"> }} days. Immediate attention required if rotation hasn&#39;t occurred!&quot;</span></span></code></pre></div>
+        <p><em>(Note: These rules assume a metric
+        <code>cert_exporter_not_after</code> with labels
+        <code>namespace</code> and <code>secret_name</code>. Adjust
+        metric name and labels based on your chosen exporter.)</em></p>
+        <h3 id="specific-alerts-for-certificate-rotation-events">6.5
+        Specific Alerts for Certificate Rotation Events</h3>
+        <p>In addition to expiry alerts, monitoring the rotation
+        <em>events</em> themselves can provide operational awareness and
+        detect potential issues (like excessive rotation).</p>
+        <div class="sourceCode" id="cb32"><pre
+        class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a><span class="fu">groups</span><span class="kw">:</span></span>
+<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a><span class="kw">-</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> CertificateRotationEventsAlerts</span></span>
+<span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">rules</span><span class="kw">:</span></span>
+<span id="cb32-4"><a href="#cb32-4" aria-hidden="true" tabindex="-1"></a><span class="co">  # Info alert when any certificate rotation event occurs</span></span>
+<span id="cb32-5"><a href="#cb32-5" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="kw">-</span><span class="at"> </span><span class="fu">alert</span><span class="kw">:</span><span class="at"> CertificateRotationEventOccurred</span></span>
+<span id="cb32-6"><a href="#cb32-6" aria-hidden="true" tabindex="-1"></a><span class="fu">    expr</span><span class="kw">: </span><span class="ch">|</span></span>
+<span id="cb32-7"><a href="#cb32-7" aria-hidden="true" tabindex="-1"></a>      increase(kube_event_count{reason=~&quot;SignerUpdateRequired|CABundleUpdateRequired|TargetUpdateRequired&quot;}[15m]) &gt; 0</span>
+<span id="cb32-8"><a href="#cb32-8" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">for</span><span class="kw">:</span><span class="at"> 1m</span><span class="co"> # Fire immediately when detected</span></span>
+<span id="cb32-9"><a href="#cb32-9" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">labels</span><span class="kw">:</span></span>
+<span id="cb32-10"><a href="#cb32-10" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">severity</span><span class="kw">:</span><span class="at"> info</span></span>
+<span id="cb32-11"><a href="#cb32-11" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">annotations</span><span class="kw">:</span></span>
+<span id="cb32-12"><a href="#cb32-12" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">summary</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;Certificate rotation event detected&quot;</span></span>
+<span id="cb32-13"><a href="#cb32-13" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">description</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;A certificate rotation event ({{ $labels.reason }}) occurred for {{ $labels.involved_object_name }} in namespace {{ $labels.involved_object_namespace }}.&quot;</span></span>
+<span id="cb32-14"><a href="#cb32-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-15"><a href="#cb32-15" aria-hidden="true" tabindex="-1"></a><span class="co">  # Warning alert for frequent rotation of the same certificate</span></span>
+<span id="cb32-16"><a href="#cb32-16" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="kw">-</span><span class="at"> </span><span class="fu">alert</span><span class="kw">:</span><span class="at"> FrequentCertificateRotationDetected</span></span>
+<span id="cb32-17"><a href="#cb32-17" aria-hidden="true" tabindex="-1"></a><span class="fu">    expr</span><span class="kw">: </span><span class="ch">|</span></span>
+<span id="cb32-18"><a href="#cb32-18" aria-hidden="true" tabindex="-1"></a>      sum by (involved_object_namespace, involved_object_name) (</span>
+<span id="cb32-19"><a href="#cb32-19" aria-hidden="true" tabindex="-1"></a>        increase(kube_event_count{reason=&quot;TargetUpdateRequired&quot;}[1h])</span>
+<span id="cb32-20"><a href="#cb32-20" aria-hidden="true" tabindex="-1"></a>      ) &gt; 2 # More than 2 target updates for the same cert in 1 hour</span>
+<span id="cb32-21"><a href="#cb32-21" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">for</span><span class="kw">:</span><span class="at"> 30m</span></span>
+<span id="cb32-22"><a href="#cb32-22" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">labels</span><span class="kw">:</span></span>
+<span id="cb32-23"><a href="#cb32-23" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">severity</span><span class="kw">:</span><span class="at"> warning</span></span>
+<span id="cb32-24"><a href="#cb32-24" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">annotations</span><span class="kw">:</span></span>
+<span id="cb32-25"><a href="#cb32-25" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">summary</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;Frequent certificate rotation detected&quot;</span></span>
+<span id="cb32-26"><a href="#cb32-26" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">description</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;Certificate {{ $labels.involved_object_name }} in namespace {{ $labels.involved_object_namespace }} has rotated more than twice in the past hour. Check operator logs for potential issues.&quot;</span></span>
+<span id="cb32-27"><a href="#cb32-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-28"><a href="#cb32-28" aria-hidden="true" tabindex="-1"></a><span class="co">  # Warning alert if a signer rotates unexpectedly frequently</span></span>
+<span id="cb32-29"><a href="#cb32-29" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="kw">-</span><span class="at"> </span><span class="fu">alert</span><span class="kw">:</span><span class="at"> FrequentSignerRotationDetected</span></span>
+<span id="cb32-30"><a href="#cb32-30" aria-hidden="true" tabindex="-1"></a><span class="fu">    expr</span><span class="kw">: </span><span class="ch">|</span></span>
+<span id="cb32-31"><a href="#cb32-31" aria-hidden="true" tabindex="-1"></a>      sum by (involved_object_namespace, involved_object_name) (</span>
+<span id="cb32-32"><a href="#cb32-32" aria-hidden="true" tabindex="-1"></a>        increase(kube_event_count{reason=&quot;SignerUpdateRequired&quot;}[24h])</span>
+<span id="cb32-33"><a href="#cb32-33" aria-hidden="true" tabindex="-1"></a>      ) &gt; 1 # More than 1 signer update for the same CA in 24 hours (signers usually last much longer)</span>
+<span id="cb32-34"><a href="#cb32-34" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">for</span><span class="kw">:</span><span class="at"> 1h</span></span>
+<span id="cb32-35"><a href="#cb32-35" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">labels</span><span class="kw">:</span></span>
+<span id="cb32-36"><a href="#cb32-36" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">severity</span><span class="kw">:</span><span class="at"> warning</span></span>
+<span id="cb32-37"><a href="#cb32-37" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">annotations</span><span class="kw">:</span></span>
+<span id="cb32-38"><a href="#cb32-38" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">summary</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;Frequent signer certificate rotation detected&quot;</span></span>
+<span id="cb32-39"><a href="#cb32-39" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">description</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;Signing CA {{ $labels.involved_object_name }} in namespace {{ $labels.involved_object_namespace }} has rotated more than once in the past 24 hours. This is unusual, investigate operator logs.&quot;</span></span></code></pre></div>
+        <p><em>(Note: These rules assume metrics from an event exporter
+        like <code>kubernetes-event-exporter</code> mapped to
+        Prometheus, providing <code>kube_event_count</code> with
+        appropriate labels like <code>reason</code>,
+        <code>involved_object_name</code>,
+        <code>involved_object_namespace</code>.)</em></p>
+        <h2 id="summary-1">7. Summary</h2>
+        <p>Certificate rotation is a crucial security mechanism in
+        Kubernetes clusters. Understanding the internal workings of the
+        <code>CertRotationController</code> and related components like
+        the <code>InstallerController</code> is key to managing
+        OpenShift clusters effectively. By implementing appropriate
+        monitoring solutions based on events, logs, and direct
+        certificate expiry checks, administrators can ensure the smooth
+        operation of the certificate update process and prevent service
+        disruptions caused by expired certificates.</p>
+        <p>Effective monitoring before and during certificate updates
+        helps administrators identify potential problems promptly,
+        ensuring cluster security and stability. Deploying
+        differentiated alerting rules based on certificate lifetimes
+        allows for more precise monitoring and enables proactive
+        operational planning to mitigate risks associated with
+        certificate rotation, especially for critical components like
+        the kube-apiserver.</p>
+        <p>To create a truly comprehensive monitoring solution, it’s
+        recommended to:</p>
+        <ol type="1">
+        <li>Identify all operators managing certificates in the target
+        cluster.</li>
+        <li>Analyze their source code or documentation to confirm the
+        exact certificate names, validity periods, and refresh
+        logic.</li>
+        <li>Implement and validate monitoring metrics (e.g., using a
+        certificate exporter) and alerting rules based on this verified
+        information.</li>
+        </ol>
+      </article>
+    </div>
+      </main>
+
+  <footer>
+    <p>
+      Licensed under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank"
+        rel="noopener">CC-BY-NC-SA 4.0</a>
+      &nbsp;·&nbsp;
+      <a href="https://github.com/wangzheng422/docker_env" target="_blank" rel="noopener">wangzheng422/docker_env</a>
+    </p>
+  </footer>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: false, theme: 'dark' });
+
+    const SITE_BUILD_ID = 'fbe91b569ae8';
+    const SITE_HOME_URL = '../../../index.html';
+
+    const getBuildIdFromHtml = (html) => {
+      const match = String(html).match(/<meta[^>]+name=["']site-build-id["'][^>]+content=["']([^"']+)["']/i)
+        || String(html).match(/<meta[^>]+content=["']([^"']+)["'][^>]+name=["']site-build-id["']/i);
+      return match ? match[1] : '';
+    };
+
+    const checkForSiteUpdate = async () => {
+      if (!SITE_BUILD_ID || window.location.protocol === 'file:') return;
+      try {
+        const probeUrl = new URL(SITE_HOME_URL || './index.html', window.location.href);
+        probeUrl.searchParams.set('site_cache_probe', Date.now().toString());
+        const response = await fetch(probeUrl.toString(), { cache: 'no-store' });
+        if (!response.ok) return;
+        const latestBuildId = getBuildIdFromHtml(await response.text());
+        if (!latestBuildId || latestBuildId === SITE_BUILD_ID) return;
+        if (sessionStorage.getItem('site-build-refresh') === latestBuildId) return;
+        sessionStorage.setItem('site-build-refresh', latestBuildId);
+        const freshUrl = new URL(window.location.href);
+        freshUrl.searchParams.set('v', latestBuildId);
+        window.location.replace(freshUrl.toString());
+      } catch (error) {
+        // Network errors should not block reading the current page.
+      }
+    };
+
+    const versionedLocalUrl = (rawUrl) => {
+      if (!rawUrl || /^(https?:)?\/\//i.test(rawUrl) || /^(data|blob|mailto):/i.test(rawUrl)) return rawUrl;
+      const url = new URL(rawUrl, window.location.href);
+      if (url.searchParams.has('v')) return rawUrl;
+      url.searchParams.set('v', SITE_BUILD_ID);
+      return url.toString();
+    };
+
+    const cacheBustPageAssets = () => {
+      document.querySelectorAll('img[src], video[src], audio[src], source[src]').forEach((node) => {
+        const src = node.getAttribute('src');
+        const versioned = versionedLocalUrl(src);
+        if (versioned !== src) node.setAttribute('src', versioned);
+      });
+    };
+
+    const updateReadingProgress = () => {
+      const progress = document.querySelector('.reading-progress');
+      if (!progress) return;
+      const scrollable = document.documentElement.scrollHeight - window.innerHeight;
+      const ratio = scrollable > 0 ? window.scrollY / scrollable : 0;
+      progress.style.transform = 'scaleX(' + Math.min(1, Math.max(0, ratio)) + ')';
+    };
+
+    const topicFor = (text, href) => {
+      const haystack = (text + ' ' + href).toLowerCase();
+      if (/developers\.redhat\.com|redhatquickcourses|github\.com\/redhatquickcourses/.test(haystack)) return 'Red Hat';
+      if (/ai|llm|gpu|vllm|llama|model|rhaiis/.test(haystack)) return 'AI';
+      if (/network|ovn|bgp|dns|egress|ingress|metallb|nic|route/.test(haystack)) return 'Network';
+      if (/cert|tls|sso|keycloak|rhbk|security|compliance/.test(haystack)) return 'Security';
+      if (/perf|profile|throttling|heap|debug/.test(haystack)) return 'Performance';
+      if (/install|ipi|upi|sno|disconnected|bootstrap/.test(haystack)) return 'Install';
+      if (/rhel|coreos|rhcos|kernel|rpm|ostree/.test(haystack)) return 'RHEL';
+      if (/backup|storage|nfs|odf|ocs|ceph|dr/.test(haystack)) return 'Storage';
+      if (/pipeline|gitops|ansible|aap|rhdh|devops/.test(haystack)) return 'DevOps';
+      return 'OpenShift';
+    };
+
+    const yearFor = (text, href) => {
+      const match = (text + ' ' + href).match(/20\d{2}/);
+      return match ? match[0] : 'Notes';
+    };
+
+    const importantExternal = (href) =>
+      /developers\.redhat\.com|redhatquickcourses\.github\.io/i.test(href);
+
+    const titleForLink = (link) => {
+      const href = link.getAttribute('href') || '';
+      const directText = link.textContent.trim().replace(/\s+/g, ' ');
+      if (!/^https?:\/\//.test(directText)) return directText;
+      const parentItem = link.closest('ul')?.parentElement;
+      if (parentItem) {
+        const clone = parentItem.cloneNode(true);
+        clone.querySelectorAll('ul').forEach((nested) => nested.remove());
+        const parentText = clone.textContent.trim().replace(/\s+/g, ' ');
+        if (parentText) {
+          return parentText;
+        }
+      }
+      return directText;
+    };
+
+    const escapeHtml = (value) => String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+
+    const enhanceHome = () => {
+      if (!document.body.classList.contains('page-index')) return;
+      const source = document.querySelector('.home-source');
+      const grid = document.getElementById('note-grid');
+      const stats = document.getElementById('console-stats');
+      const externalPanel = document.getElementById('external-panel');
+      const topicStrip = document.getElementById('topic-strip');
+      const search = document.getElementById('console-search');
+      if (!source || !grid || !stats || !externalPanel || !topicStrip || !search) return;
+
+      const seen = new Set();
+      const links = Array.from(source.querySelectorAll('a[href]'))
+        .map((link) => {
+          const href = link.getAttribute('href') || '';
+          const text = titleForLink(link);
+          return { text, href, topic: topicFor(text, href), year: yearFor(text, href) };
+        });
+      const notes = links
+        .filter((note) => note.text && !note.href.startsWith('http') && !seen.has(note.href) && seen.add(note.href));
+      const externalLinks = links
+        .filter((note) => note.text && importantExternal(note.href));
+
+      const topics = ['All', ...Array.from(new Set(notes.map((note) => note.topic))).sort()];
+      let activeTopic = 'All';
+
+      const renderStats = () => {
+        const years = notes.map((note) => note.year).filter((year) => year.length === 4 && /^\d{4}/.test(year));
+        const latest = years.length ? Math.max(...years.map(Number)) : 'N/A';
+        const oldest = years.length ? Math.min(...years.map(Number)) : 'N/A';
+        stats.innerHTML = [
+          ['Notes', notes.length],
+          ['Resources', externalLinks.length],
+          ['Topics', topics.length - 1],
+          ['Latest', latest],
+        ].map(([label, value]) => '<div class="stat-tile"><span>' + label + '</span><strong>' + value + '</strong></div>').join('');
+        const signal = document.getElementById('signal-count');
+        if (signal) signal.textContent = notes.length + ' links indexed';
+      };
+
+      const renderExternal = () => {
+        externalPanel.innerHTML =
+          '<div class="section-heading"><span>Published / Learning</span><strong>Red Hat resources</strong></div>' +
+          '<div class="external-grid">' +
+          externalLinks.map((note) =>
+            '<a class="resource-card" href="' + escapeHtml(note.href) + '" target="_blank" rel="noopener">' +
+            '<span class="note-meta"><span>' + escapeHtml(note.year) + '</span><span>' + escapeHtml(note.topic) + '</span></span>' +
+            '<strong>' + escapeHtml(note.text) + '</strong>' +
+            '<small>' + escapeHtml(note.href) + '</small>' +
+            '</a>'
+          ).join('') +
+          '</div>';
+      };
+
+      const renderTopics = () => {
+        topicStrip.innerHTML = topics.map((topic) => '<button class="topic-chip' + (topic === activeTopic ? ' active' : '') + '" type="button" data-topic="' + escapeHtml(topic) + '">' + escapeHtml(topic) + '</button>').join('');
+        topicStrip.querySelectorAll('button').forEach((button) => {
+          button.addEventListener('click', () => {
+            activeTopic = button.dataset.topic || 'All';
+            renderTopics();
+            renderCards();
+          });
+        });
+      };
+
+      const renderCards = () => {
+        const query = search.value.trim().toLowerCase();
+        const filtered = notes.filter((note) => {
+          const topicMatch = activeTopic === 'All' || note.topic === activeTopic;
+          const queryMatch = !query || (note.text + ' ' + note.href + ' ' + note.topic + ' ' + note.year).toLowerCase().includes(query);
+          return topicMatch && queryMatch;
+        });
+        grid.innerHTML = filtered.map((note) =>
+          '<a class="note-card" href="' + escapeHtml(note.href) + '">' +
+          '<span class="note-meta"><span>' + escapeHtml(note.year) + '</span><span>' + escapeHtml(note.topic) + '</span></span>' +
+          '<strong>' + escapeHtml(note.text) + '</strong>' +
+          '<small>' + escapeHtml(note.href) + '</small>' +
+          '</a>'
+        ).join('') || '<p class="empty-state">No matching notes.</p>';
+      };
+
+      const drawMap = () => {
+        const canvas = document.getElementById('knowledge-canvas');
+        if (!(canvas instanceof HTMLCanvasElement)) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        const width = canvas.width;
+        const height = canvas.height;
+        const nodes = notes.slice(0, 44).map((note, index) => {
+          const angle = (index / 44) * Math.PI * 2;
+          const ring = 90 + (index % 5) * 22;
+          return {
+            x: width / 2 + Math.cos(angle) * ring,
+            y: height / 2 + Math.sin(angle) * ring * 0.72,
+            topic: note.topic,
+          };
+        });
+        ctx.clearRect(0, 0, width, height);
+        ctx.strokeStyle = 'rgba(88, 166, 255, 0.14)';
+        ctx.lineWidth = 1;
+        nodes.forEach((node, index) => {
+          const next = nodes[(index + 7) % nodes.length];
+          ctx.beginPath();
+          ctx.moveTo(node.x, node.y);
+          ctx.lineTo(next.x, next.y);
+          ctx.stroke();
+        });
+        const palette = {
+          AI: '#a371f7',
+          Network: '#39d0d8',
+          Security: '#ff7b72',
+          Performance: '#f2cc60',
+          Install: '#7ee787',
+          RHEL: '#ff7b72',
+          Storage: '#d2a8ff',
+          DevOps: '#ffa657',
+          OpenShift: '#58a6ff',
+        };
+        nodes.forEach((node) => {
+          ctx.fillStyle = palette[node.topic] || '#58a6ff';
+          ctx.beginPath();
+          ctx.arc(node.x, node.y, 3.4, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      };
+
+      search.addEventListener('input', renderCards);
+      renderStats();
+      renderExternal();
+      renderTopics();
+      renderCards();
+      drawMap();
+      document.body.classList.add('home-enhanced');
+    };
+
+    const enhanceCodeBlocks = () => {
+      document.querySelectorAll('pre').forEach((pre) => {
+        if (pre.classList.contains('mermaid') || pre.querySelector('.copy-code')) return;
+        const button = document.createElement('button');
+        button.className = 'copy-code';
+        button.type = 'button';
+        button.textContent = 'Copy';
+        button.addEventListener('click', async () => {
+          await navigator.clipboard.writeText(pre.textContent || '');
+          button.textContent = 'Copied';
+          setTimeout(() => { button.textContent = 'Copy'; }, 1200);
+        });
+        pre.appendChild(button);
+      });
+    };
+
+    window.addEventListener('scroll', updateReadingProgress, { passive: true });
+    window.addEventListener('pageshow', (event) => {
+      if (event.persisted) checkForSiteUpdate();
+    });
+    document.addEventListener('DOMContentLoaded', async () => {
+      checkForSiteUpdate();
+      cacheBustPageAssets();
+      updateReadingProgress();
+      enhanceHome();
+      enhanceCodeBlocks();
+      // pandoc 输出 mermaid 为 <pre class="mermaid"><code>...</code></pre>
+      // 需要转成 <div class="mermaid">...</div> 供 mermaid.js 渲染
+      document.querySelectorAll('pre.mermaid').forEach(pre => {
+        const div = document.createElement('div');
+        div.classList.add('mermaid');
+        div.textContent = pre.textContent;
+        pre.replaceWith(div);
+      });
+      // 也处理 <pre><code class="language-mermaid"> 形式（备用）
+      document.querySelectorAll('pre code.language-mermaid').forEach(code => {
+        const div = document.createElement('div');
+        div.classList.add('mermaid');
+        div.textContent = code.textContent;
+        code.closest('pre').replaceWith(div);
+      });
+      await mermaid.run();
+    });
+  </script>
+</body>
+
+</html>

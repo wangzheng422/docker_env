@@ -1,0 +1,1685 @@
+<!DOCTYPE html>
+<html lang="zh" dir="ltr">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="generator" content="pandoc" />
+  <meta name="site-build-id" content="fbe91b569ae8" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <title>OpenShift Virtualization Disaster Recovery with Storage Replication and OADP Plugins | wandering.star notes</title>
+  <meta name="description"
+    content="Wandering field notes on OpenShift, RHEL, AI infrastructure, and platform operations." />
+  <!-- Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-E3FRMDB7L2"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-E3FRMDB7L2');
+  </script>
+  <style>
+  html {
+    color: #1a1a1a;
+    background-color: #fdfdfd;
+  }
+  body {
+    margin: 0 auto;
+    max-width: 36em;
+    padding-left: 50px;
+    padding-right: 50px;
+    padding-top: 50px;
+    padding-bottom: 50px;
+    hyphens: auto;
+    overflow-wrap: break-word;
+    text-rendering: optimizeLegibility;
+    font-kerning: normal;
+  }
+  @media (max-width: 600px) {
+    body {
+      font-size: 0.9em;
+      padding: 12px;
+    }
+    h1 {
+      font-size: 1.8em;
+    }
+  }
+  @media print {
+    html {
+      background-color: white;
+    }
+    body {
+      background-color: transparent;
+      color: black;
+      font-size: 12pt;
+    }
+    p, h2, h3 {
+      orphans: 3;
+      widows: 3;
+    }
+    h2, h3, h4 {
+      page-break-after: avoid;
+    }
+  }
+  p {
+    margin: 1em 0;
+  }
+  a {
+    color: #1a1a1a;
+  }
+  a:visited {
+    color: #1a1a1a;
+  }
+  img {
+    max-width: 100%;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.4em;
+  }
+  h5, h6 {
+    font-size: 1em;
+    font-style: italic;
+  }
+  h6 {
+    font-weight: normal;
+  }
+  ol, ul {
+    padding-left: 1.7em;
+    margin-top: 1em;
+  }
+  li > ol, li > ul {
+    margin-top: 0;
+  }
+  blockquote {
+    margin: 1em 0 1em 1.7em;
+    padding-left: 1em;
+    border-left: 2px solid #e6e6e6;
+    color: #606060;
+  }
+  code {
+    font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+    font-size: 85%;
+    margin: 0;
+    hyphens: manual;
+  }
+  pre {
+    margin: 1em 0;
+    overflow: auto;
+  }
+  pre code {
+    padding: 0;
+    overflow: visible;
+    overflow-wrap: normal;
+  }
+  .sourceCode {
+   background-color: transparent;
+   overflow: visible;
+  }
+  hr {
+    background-color: #1a1a1a;
+    border: none;
+    height: 1px;
+    margin: 1em 0;
+  }
+  table {
+    margin: 1em 0;
+    border-collapse: collapse;
+    width: 100%;
+    overflow-x: auto;
+    display: block;
+    font-variant-numeric: lining-nums tabular-nums;
+  }
+  table caption {
+    margin-bottom: 0.75em;
+  }
+  tbody {
+    margin-top: 0.5em;
+    border-top: 1px solid #1a1a1a;
+    border-bottom: 1px solid #1a1a1a;
+  }
+  th {
+    border-top: 1px solid #1a1a1a;
+    padding: 0.25em 0.5em 0.25em 0.5em;
+  }
+  td {
+    padding: 0.125em 0.5em 0.25em 0.5em;
+  }
+  header {
+    margin-bottom: 4em;
+    text-align: center;
+  }
+  #TOC li {
+    list-style: none;
+  }
+  #TOC ul {
+    padding-left: 1.3em;
+  }
+  #TOC > ul {
+    padding-left: 0;
+  }
+  #TOC a:not(:hover) {
+    text-decoration: none;
+  }
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  div.columns{display: flex; gap: min(4vw, 1.5em);}
+  div.column{flex: auto; overflow-x: auto;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  /* The extra [class] is a hack that increases specificity enough to
+     override a similar rule in reveal.js */
+  ul.task-list[class]{list-style: none;}
+  ul.task-list li input[type="checkbox"] {
+    font-size: inherit;
+    width: 0.8em;
+    margin: 0 0.8em 0.2em -1.6em;
+    vertical-align: middle;
+  }
+  .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  /* CSS for syntax highlighting */
+  pre > code.sourceCode { white-space: pre; position: relative; }
+  pre > code.sourceCode > span { line-height: 1.25; }
+  pre > code.sourceCode > span:empty { height: 1.2em; }
+  .sourceCode { overflow: visible; }
+  code.sourceCode > span { color: inherit; text-decoration: inherit; }
+  div.sourceCode { margin: 1em 0; }
+  pre.sourceCode { margin: 0; }
+  @media screen {
+  div.sourceCode { overflow: auto; }
+  }
+  @media print {
+  pre > code.sourceCode { white-space: pre-wrap; }
+  pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+  }
+  pre.numberSource code
+    { counter-reset: source-line 0; }
+  pre.numberSource code > span
+    { position: relative; left: -4em; counter-increment: source-line; }
+  pre.numberSource code > span > a:first-child::before
+    { content: counter(source-line);
+      position: relative; left: -1em; text-align: right; vertical-align: baseline;
+      border: none; display: inline-block;
+      -webkit-touch-callout: none; -webkit-user-select: none;
+      -khtml-user-select: none; -moz-user-select: none;
+      -ms-user-select: none; user-select: none;
+      padding: 0 4px; width: 4em;
+    }
+  pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+  div.sourceCode
+    { color: #cccccc; background-color: #303030; }
+  @media screen {
+  pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+  }
+  code span.al { color: #ffcfaf; } /* Alert */
+  code span.an { color: #7f9f7f; font-weight: bold; } /* Annotation */
+  code span.at { } /* Attribute */
+  code span.bn { color: #dca3a3; } /* BaseN */
+  code span.bu { } /* BuiltIn */
+  code span.cf { color: #f0dfaf; } /* ControlFlow */
+  code span.ch { color: #dca3a3; } /* Char */
+  code span.cn { color: #dca3a3; font-weight: bold; } /* Constant */
+  code span.co { color: #7f9f7f; } /* Comment */
+  code span.cv { color: #7f9f7f; font-weight: bold; } /* CommentVar */
+  code span.do { color: #7f9f7f; } /* Documentation */
+  code span.dt { color: #dfdfbf; } /* DataType */
+  code span.dv { color: #dcdccc; } /* DecVal */
+  code span.er { color: #c3bf9f; } /* Error */
+  code span.ex { } /* Extension */
+  code span.fl { color: #c0bed1; } /* Float */
+  code span.fu { color: #efef8f; } /* Function */
+  code span.im { } /* Import */
+  code span.in { color: #7f9f7f; font-weight: bold; } /* Information */
+  code span.kw { color: #f0dfaf; } /* Keyword */
+  code span.op { color: #f0efd0; } /* Operator */
+  code span.ot { color: #efef8f; } /* Other */
+  code span.pp { color: #ffcfaf; font-weight: bold; } /* Preprocessor */
+  code span.sc { color: #dca3a3; } /* SpecialChar */
+  code span.ss { color: #cc9393; } /* SpecialString */
+  code span.st { color: #cc9393; } /* String */
+  code span.va { } /* Variable */
+  code span.vs { color: #cc9393; } /* VerbatimString */
+  code span.wa { color: #7f9f7f; font-weight: bold; } /* Warning */
+  </style>
+  <link rel="stylesheet" href="../../../style.css?v=fbe91b569ae8" />
+  </head>
+
+<body class="page-article">
+  <div class="reading-progress" aria-hidden="true"></div>
+  <div class="console-backdrop" aria-hidden="true"></div>
+  <nav class="site-nav">
+    <div class="nav-inner">
+      <a class="nav-brand" href="../../../index.html">wandering.star<span>notes</span></a>
+      <div class="nav-links">
+        <a href="https://github.com/wangzheng422/docker_env" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://www.youtube.com/@wangzheng422" target="_blank" rel="noopener">YouTube</a>
+      </div>
+    </div>
+  </nav>
+
+  <main>
+            <a class="back-link" href="../../../index.html">← Back to Index</a>
+        <div class="article-layout">
+            <aside class="toc-panel">
+        <div class="toc-title">ON THIS PAGE</div>
+        <ul>
+        <li><a
+        href="#openshift-virtualization-disaster-recovery-with-storage-replication-and-oadp-plugins"
+        id="toc-openshift-virtualization-disaster-recovery-with-storage-replication-and-oadp-plugins">OpenShift
+        Virtualization Disaster Recovery with Storage Replication and
+        OADP Plugins</a>
+        <ul>
+        <li><a href="#introduction-and-strategy"
+        id="toc-introduction-and-strategy">1. Introduction and
+        Strategy</a>
+        <ul>
+        <li><a
+        href="#the-challenge-native-dr-gaps-in-openshift-virtualization"
+        id="toc-the-challenge-native-dr-gaps-in-openshift-virtualization">The
+        Challenge: Native DR Gaps in OpenShift Virtualization</a></li>
+        <li><a
+        href="#our-solution-a-hybrid-approach-with-oadp-and-storage-replication"
+        id="toc-our-solution-a-hybrid-approach-with-oadp-and-storage-replication">Our
+        Solution: A Hybrid Approach with OADP and Storage
+        Replication</a></li>
+        <li><a href="#the-daily-backup-process"
+        id="toc-the-daily-backup-process">The Daily Backup
+        Process</a></li>
+        <li><a href="#the-failover-process"
+        id="toc-the-failover-process">The Failover Process</a></li>
+        </ul></li>
+        <li><a href="#prerequisites-operator-installation"
+        id="toc-prerequisites-operator-installation">2. Prerequisites:
+        Operator Installation</a>
+        <ul>
+        <li><a href="#provisioning-the-nfs-csi-driver"
+        id="toc-provisioning-the-nfs-csi-driver">Provisioning the NFS
+        CSI Driver</a></li>
+        <li><a href="#install-openshift-virtualization"
+        id="toc-install-openshift-virtualization">Install OpenShift
+        Virtualization</a></li>
+        <li><a href="#install-oadp-operator"
+        id="toc-install-oadp-operator">Install OADP Operator</a></li>
+        <li><a href="#verifying-plugin-registration"
+        id="toc-verifying-plugin-registration">3. Verifying Plugin
+        Registration</a></li>
+        </ul></li>
+        <li><a href="#primary-site-performing-the-backup"
+        id="toc-primary-site-performing-the-backup">3. Primary Site:
+        Performing the Backup</a>
+        <ul>
+        <li><a href="#inspecting-the-pvc-and-pv-metadata"
+        id="toc-inspecting-the-pvc-and-pv-metadata">Inspecting the PVC
+        and PV Metadata</a></li>
+        <li><a href="#verifying-the-new-pvc-restored-from-snapshot"
+        id="toc-verifying-the-new-pvc-restored-from-snapshot">Verifying
+        the New PVC Restored from Snapshot</a></li>
+        <li><a href="#checking-the-oadp-plugin-logs"
+        id="toc-checking-the-oadp-plugin-logs">Checking the OADP Plugin
+        Logs</a></li>
+        </ul></li>
+        <li><a href="#dr-site-recovery-process"
+        id="toc-dr-site-recovery-process">4. DR Site: Recovery
+        Process</a>
+        <ul>
+        <li><a href="#step-1-synchronize-storage-data"
+        id="toc-step-1-synchronize-storage-data">Step 1: Synchronize
+        Storage Data</a></li>
+        <li><a href="#step-2-restore-metadata-with-oadp"
+        id="toc-step-2-restore-metadata-with-oadp">Step 2: Restore
+        Metadata with OADP</a></li>
+        <li><a href="#verifying-the-restored-pvc-and-pv-metadata"
+        id="toc-verifying-the-restored-pvc-and-pv-metadata">Verifying
+        the Restored PVC and PV Metadata</a></li>
+        <li><a href="#checking-the-oadp-plugin-logs-1"
+        id="toc-checking-the-oadp-plugin-logs-1">Checking the OADP
+        Plugin Logs</a></li>
+        </ul></li>
+        <li><a href="#automating-backups-with-schedules"
+        id="toc-automating-backups-with-schedules">5. Automating Backups
+        with Schedules</a></li>
+        <li><a href="#path-to-automation" id="toc-path-to-automation">6.
+        Path to Automation</a></li>
+        <li><a href="#summary" id="toc-summary">7. Summary</a></li>
+        </ul></li>
+        </ul>
+      </aside>
+            <article class="markdown-body article-shell">
+        <blockquote>
+        <p>[!NOTE] This document outlines a proof-of-concept for a
+        disaster recovery solution for OpenShift Virtualization. The
+        procedures and scripts are intended for demonstration and
+        require adaptation for production environments.</p>
+        </blockquote>
+        <h1
+        id="openshift-virtualization-disaster-recovery-with-storage-replication-and-oadp-plugins">OpenShift
+        Virtualization Disaster Recovery with Storage Replication and
+        OADP Plugins</h1>
+        <h2 id="introduction-and-strategy">1. Introduction and
+        Strategy</h2>
+        <h3
+        id="the-challenge-native-dr-gaps-in-openshift-virtualization">The
+        Challenge: Native DR Gaps in OpenShift Virtualization</h3>
+        <p>Red Hat OpenShift Virtualization (OCP-V) is a powerful
+        platform for running virtual machines alongside containers, but
+        it does not include a native, built-in disaster recovery (DR)
+        solution. The official recommendation from Red Hat is to
+        leverage the DR capabilities of OpenShift Data Foundation (ODF),
+        which provides robust, integrated disaster recovery mechanisms.
+        ODF is typically backed by Ceph or IBM Flash Storage, offering a
+        tightly integrated ecosystem.</p>
+        <p>However, many enterprise environments have standardized on
+        third-party storage solutions from vendors like Dell, EMC, or
+        Hitachi. In these heterogeneous storage scenarios, a different
+        approach is required to implement a reliable and efficient DR
+        strategy for virtual machines running on OpenShift
+        Virtualization.</p>
+        <h3
+        id="our-solution-a-hybrid-approach-with-oadp-and-storage-replication">Our
+        Solution: A Hybrid Approach with OADP and Storage
+        Replication</h3>
+        <p>This document details a DR strategy that combines the
+        strengths of OpenShift’s native backup tools with the power of
+        underlying storage replication. This hybrid model optimizes for
+        both speed and consistency. The core components of this solution
+        are:</p>
+        <ol type="1">
+        <li><p><strong>OpenShift API for Data Protection
+        (OADP)</strong>: We use OADP (based on the upstream Velero
+        project) to perform <strong>metadata-only backups</strong>. This
+        captures the essential Kubernetes and OpenShift Virtualization
+        object configurations, such as Virtual Machine (VM)
+        specifications, Persistent Volume Claims (PVCs), and other
+        related resources. We deliberately exclude the actual volume
+        data from the OADP backup to avoid the time-consuming process of
+        data compression, transfer to S3, and decompression during
+        restore.</p></li>
+        <li><p><strong>Storage-Level Replication</strong>: The actual VM
+        disk data, contained within Persistent Volumes (PVs), is
+        replicated from the primary site to the DR site using the
+        storage array’s native remote replication capabilities. This
+        method is highly efficient and significantly faster for large
+        volumes compared to OADP’s file-based data movers.</p></li>
+        <li><p><strong>Custom OADP Plugins</strong>: To bridge the gap
+        between the metadata backup and the physically replicated
+        storage, we employ two custom plugins:</p>
+        <ul>
+        <li><strong>Snapshot-to-PVC Plugin (Backup Time)</strong>: Since
+        some storage systems (like the Hitachi model in our use case) do
+        not support replicating snapshots directly, this plugin
+        activates during the backup process. It creates a new PVC from a
+        volume snapshot, effectively materializing the snapshot as a
+        replicable volume. This new PVC is then included in the OADP
+        metadata backup.</li>
+        <li><strong>PV Patching Plugin (Restore Time)</strong>: During a
+        restore at the DR site, this plugin intercepts the
+        PersistentVolume objects. It dynamically modifies their
+        definitions—for example, by changing storage server IPs or
+        volume paths—to match the configuration of the DR site’s storage
+        infrastructure. This ensures that the restored PVs can correctly
+        map to the replicated storage LUNs.</li>
+        </ul></li>
+        </ol>
+        <h3 id="the-daily-backup-process">The Daily Backup Process</h3>
+        <p>In a typical operational cycle, the primary site performs
+        automated backups at a regular interval (e.g., once per
+        hour).</p>
+        <ol type="1">
+        <li><strong>Metadata Backup Initiation</strong>: OADP triggers a
+        scheduled backup of all specified Kubernetes object metadata and
+        stores it in an S3-compatible object store.</li>
+        <li><strong>Snapshot-to-PVC Promotion</strong>: The custom
+        plugin identifies volume snapshots associated with the VMs being
+        backed up. For each snapshot, it creates a new, corresponding
+        PVC. This new PVC is instantly provisioned from the snapshot’s
+        data.</li>
+        <li><strong>Inclusion of New PVCs/PVs</strong>: The OADP backup
+        process continues, adding the newly created PVCs and their
+        associated PVs to the metadata backup set. This ensures the
+        backup contains a complete, consistent, and replicable state of
+        the application.</li>
+        </ol>
+        <h3 id="the-failover-process">The Failover Process</h3>
+        <p>In the event of a disaster at the primary site, a manual or
+        automated failover process is initiated:</p>
+        <ol type="1">
+        <li><strong>Quiesce Primary Site</strong>: VMs at the primary
+        site are shut down, and the underlying storage volumes are set
+        to a read-only state to ensure data consistency.</li>
+        <li><strong>Finalize Storage Synchronization</strong>: The
+        storage replication is finalized to ensure the DR site has the
+        latest consistent copy of the data.</li>
+        <li><strong>Present Storage at DR Site</strong>: The replicated
+        volumes (LUNs or NFS shares) are made available and presented to
+        the DR OpenShift cluster.</li>
+        <li><strong>Restore Metadata with PV Patching</strong>: The OADP
+        metadata backup is restored to the DR cluster. During this
+        process, the custom PV patching plugin automatically modifies
+        the PV definitions to point to the correct storage resources at
+        the DR site.</li>
+        <li><strong>Start VMs</strong>: With the metadata restored and
+        the storage correctly mapped, the virtual machines can be
+        started on the DR cluster, resuming operations.</li>
+        </ol>
+        <p>The process for failing back from the DR site to the primary
+        site follows the same logic in reverse.</p>
+        <p>This document uses a simple NFS storage backend to simulate
+        the process, first demonstrating the manual steps and then
+        outlining a path toward full automation using Ansible.</p>
+        <p><img src="files/ocp-v.dr.oadp.plugin.01.drawio.png" /></p>
+        <h2 id="prerequisites-operator-installation">2. Prerequisites:
+        Operator Installation</h2>
+        <h3 id="provisioning-the-nfs-csi-driver">Provisioning the NFS
+        CSI Driver</h3>
+        <p>For demonstration purposes, we will use the NFS CSI driver as
+        the storage backend.</p>
+        <p>First, deploy the NFS CSI driver to your cluster.</p>
+        <div class="sourceCode" id="cb1"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">curl</span> <span class="at">-skSL</span> https://raw.githubusercontent.com/kubernetes-csi/csi-driver-nfs/v4.12.1/deploy/install-driver.sh <span class="kw">|</span> <span class="fu">bash</span> <span class="at">-s</span> v4.12.1 <span class="at">--</span></span></code></pre></div>
+        <p>Next, create the <code>StorageClass</code> and
+        <code>VolumeSnapshotClass</code>.</p>
+        <blockquote>
+        <p>[!NOTE] The <code>reclaimPolicy</code> must be set to
+        <code>Retain</code>. Otherwise, the OADP plugin for PV
+        modification will not be triggered during the restore
+        process.</p>
+        </blockquote>
+        <div class="sourceCode" id="cb2"><pre
+        class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">apiVersion</span><span class="kw">:</span><span class="at"> storage.ks.io/v1</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="fu">kind</span><span class="kw">:</span><span class="at"> StorageClass</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="fu">metadata</span><span class="kw">:</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">name</span><span class="kw">:</span><span class="at"> nfs-csi</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">annotations</span><span class="kw">:</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">storageclass.kubernetes.io/is-default-class</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;true&quot;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="fu">provisioner</span><span class="kw">:</span><span class="at"> nfs.csi.k8s.io</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="fu">parameters</span><span class="kw">:</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">server</span><span class="kw">:</span><span class="at"> </span><span class="fl">192.168.99.1</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">share</span><span class="kw">:</span><span class="at"> /openshift-01</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="fu">reclaimPolicy</span><span class="kw">:</span><span class="at"> Retain</span><span class="co"> # Must be Retain for this DR strategy</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="fu">volumeBindingMode</span><span class="kw">:</span><span class="at"> Immediate</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="fu">allowVolumeExpansion</span><span class="kw">:</span><span class="at"> </span><span class="ch">true</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="fu">mountOptions</span><span class="kw">:</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="kw">-</span><span class="at"> hard</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="kw">-</span><span class="at"> nfsvers=4.2</span><span class="co"> # Recommended to use NFSv4</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="kw">-</span><span class="at"> rsize=1048576</span><span class="co"> # Increasing read/write block size can improve performance</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="kw">-</span><span class="at"> wsize=1048576</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="kw">-</span><span class="at"> noatime</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="kw">-</span><span class="at"> nodiratime</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="kw">-</span><span class="at"> actimeo=60</span><span class="co"> # Cache attributes for 60 seconds</span></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a><span class="co">  # --- Lock and timeout optimizations to handle &quot;lost lock&quot; issues ---</span></span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="kw">-</span><span class="at"> timeo=600</span><span class="co">     # Timeout in tenths of a second (600 = 60s). Increases tolerance for network latency.</span></span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="kw">-</span><span class="at"> retrans=3</span><span class="co">     # Number of retransmissions.</span></span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a><span class="pp">---</span></span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a><span class="fu">apiVersion</span><span class="kw">:</span><span class="at"> snapshot.storage.k8s.io/v1</span></span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a><span class="fu">kind</span><span class="kw">:</span><span class="at"> VolumeSnapshotClass</span></span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a><span class="fu">metadata</span><span class="kw">:</span></span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">name</span><span class="kw">:</span><span class="at"> nfs-csi-snapclass</span></span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a><span class="fu">driver</span><span class="kw">:</span><span class="at"> nfs.csi.k8s.io</span></span>
+<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a><span class="fu">deletionPolicy</span><span class="kw">:</span><span class="at"> Delete</span></span></code></pre></div>
+        <h3 id="install-openshift-virtualization">Install OpenShift
+        Virtualization</h3>
+        <p>This guide focuses on the disaster recovery of virtual
+        machines, so the <code>OpenShift Virtualization</code> operator
+        is a primary requirement. Install it from the OperatorHub in
+        your OpenShift cluster.</p>
+        <p><img src="imgs/2025.07.ocp-v.dr.nfs.md/2025-07-24-11-34-02.png" width="1024">
+        <img src="imgs/2025.07.ocp-v.dr.nfs.md/2025-07-24-11-34-18.png" width="1024">
+        <img src="imgs/2025.07.ocp-v.dr.nfs.md/2025-07-24-11-36-30.png" width="1024"></p>
+        <h3 id="install-oadp-operator">Install OADP Operator</h3>
+        <p>We use the
+        <code>OpenShift API for Data Protection (OADP)</code> operator
+        for metadata backup and restore. Install the OADP operator on
+        <strong>both</strong> the primary (cluster-01) and DR
+        (cluster-02) clusters.</p>
+        <p><img src="imgs/2025.07.ocp-v.dr.nfs.md/2025-07-24-15-56-54.png" width="1024"></p>
+        <p>Next, configure a Kubernetes <code>Secret</code> containing
+        the credentials for your S3-compatible object storage bucket,
+        which will store the metadata backups.</p>
+        <div class="sourceCode" id="cb3"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Create a credentials file for MinIO or any S3-compatible storage</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> <span class="op">&lt;&lt; EOF</span> <span class="op">&gt;</span> <span class="va">$BASE_DIR</span>/data/install/credentials-minio</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="st">[default]</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="st">aws_access_key_id = rustfsadmin</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="st">aws_secret_access_key = rustfsadmin</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="op">EOF</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Create the secret in the openshift-adp namespace</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> create secret generic minio-credentials <span class="dt">\</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>--from-file=cloud=<span class="va">$BASE_DIR</span>/data/install/credentials-minio <span class="dt">\</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>-n openshift-adp</span></code></pre></div>
+        <p>Finally, create a <code>DataProtectionApplication</code>
+        (DPA) custom resource. This configures the OADP instance,
+        specifying the S3 backup location and enabling the necessary
+        plugins for OpenShift, KubeVirt, CSI, and our custom DR
+        logic.</p>
+        <div class="sourceCode" id="cb4"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Define the OADP instance (DataProtectionApplication)</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> <span class="op">&lt;&lt; EOF</span> <span class="op">&gt;</span> <span class="va">$BASE_DIR</span>/data/install/oadp.yaml</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="st">apiVersion: oadp.openshift.io/v1alpha1</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="st">kind: DataProtectionApplication</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="st">metadata:</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="st">  name: velero-instance</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="st">  namespace: openshift-adp</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="st">spec:</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a><span class="st">  # 1. Define the S3 backup storage location</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="st">  backupLocations:</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a><span class="st">    - name: default</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a><span class="st">      velero:</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a><span class="st">        provider: aws</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a><span class="st">        default: true</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a><span class="st">        objectStorage:</span></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a><span class="st">          bucket: ocp</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a><span class="st">          prefix: velero # Backups will be stored under the &#39;velero/&#39; prefix</span></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a><span class="st">        config:</span></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a><span class="st">          # For non-AWS S3, provide the endpoint URL</span></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a><span class="st">          s3Url: http://192.168.99.1:9001</span></span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a><span class="st">          region: us-east-1</span></span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a><span class="st">        # Reference the secret containing S3 credentials</span></span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a><span class="st">        credential:</span></span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a><span class="st">          name: minio-credentials</span></span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a><span class="st">          key: cloud</span></span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a><span class="st">  </span></span>
+<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a><span class="st">  # 2. Configure Velero plugins and features</span></span>
+<span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a><span class="st">  configuration:</span></span>
+<span id="cb4-29"><a href="#cb4-29" aria-hidden="true" tabindex="-1"></a><span class="st">    nodeAgent:</span></span>
+<span id="cb4-30"><a href="#cb4-30" aria-hidden="true" tabindex="-1"></a><span class="st">      enable: true</span></span>
+<span id="cb4-31"><a href="#cb4-31" aria-hidden="true" tabindex="-1"></a><span class="st">      uploaderType: kopia </span></span>
+<span id="cb4-32"><a href="#cb4-32" aria-hidden="true" tabindex="-1"></a><span class="st">    velero:</span></span>
+<span id="cb4-33"><a href="#cb4-33" aria-hidden="true" tabindex="-1"></a><span class="st">      # Enable default plugins for OpenShift, KubeVirt, CSI, and AWS</span></span>
+<span id="cb4-34"><a href="#cb4-34" aria-hidden="true" tabindex="-1"></a><span class="st">      defaultPlugins:</span></span>
+<span id="cb4-35"><a href="#cb4-35" aria-hidden="true" tabindex="-1"></a><span class="st">        - openshift</span></span>
+<span id="cb4-36"><a href="#cb4-36" aria-hidden="true" tabindex="-1"></a><span class="st">        - kubevirt</span></span>
+<span id="cb4-37"><a href="#cb4-37" aria-hidden="true" tabindex="-1"></a><span class="st">        - csi</span></span>
+<span id="cb4-38"><a href="#cb4-38" aria-hidden="true" tabindex="-1"></a><span class="st">        - aws</span></span>
+<span id="cb4-39"><a href="#cb4-39" aria-hidden="true" tabindex="-1"></a><span class="st">      featureFlags:</span></span>
+<span id="cb4-40"><a href="#cb4-40" aria-hidden="true" tabindex="-1"></a><span class="st">        - EnableCSI</span></span>
+<span id="cb4-41"><a href="#cb4-41" aria-hidden="true" tabindex="-1"></a><span class="st">      customPlugins: # Add custom plugins</span></span>
+<span id="cb4-42"><a href="#cb4-42" aria-hidden="true" tabindex="-1"></a><span class="st">      # This plugin will patch the PV during OADP restore</span></span>
+<span id="cb4-43"><a href="#cb4-43" aria-hidden="true" tabindex="-1"></a><span class="st">      - name: csi-volume-dr # A unique name for the plugin</span></span>
+<span id="cb4-44"><a href="#cb4-44" aria-hidden="true" tabindex="-1"></a><span class="st">        image: quay.io/wangzheng422/qimgs:velero-plugin-oadp-dr-2025.11.05-v01</span></span>
+<span id="cb4-45"><a href="#cb4-45" aria-hidden="true" tabindex="-1"></a><span class="st">      # This plugin will restore a PVC from a snapshot during OADP backup</span></span>
+<span id="cb4-46"><a href="#cb4-46" aria-hidden="true" tabindex="-1"></a><span class="st">      - name: snapshot-dr # A unique name for the plugin</span></span>
+<span id="cb4-47"><a href="#cb4-47" aria-hidden="true" tabindex="-1"></a><span class="st">        image: quay.io/wangzheng422/qimgs:velero-plugin-snapshot-2025.11.12-v01</span></span>
+<span id="cb4-48"><a href="#cb4-48" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-49"><a href="#cb4-49" aria-hidden="true" tabindex="-1"></a><span class="st">    # 3. Volume snapshot and data mover configuration is not needed for this metadata-only strategy</span></span>
+<span id="cb4-50"><a href="#cb4-50" aria-hidden="true" tabindex="-1"></a><span class="st">    # csi:</span></span>
+<span id="cb4-51"><a href="#cb4-51" aria-hidden="true" tabindex="-1"></a><span class="st">    #   enable: false</span></span>
+<span id="cb4-52"><a href="#cb4-52" aria-hidden="true" tabindex="-1"></a><span class="st">    # datamover:</span></span>
+<span id="cb4-53"><a href="#cb4-53" aria-hidden="true" tabindex="-1"></a><span class="st">    #   enable: false</span></span>
+<span id="cb4-54"><a href="#cb4-54" aria-hidden="true" tabindex="-1"></a><span class="op">EOF</span></span>
+<span id="cb4-55"><a href="#cb4-55" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-56"><a href="#cb4-56" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> apply <span class="at">-f</span> <span class="va">$BASE_DIR</span>/data/install/oadp.yaml</span></code></pre></div>
+        <p>As you can see, we use two custom OADP plugins:</p>
+        <h4 id="pv-patching-plugin-velero-plugin-oadp-dr"><strong>1. PV
+        Patching Plugin
+        (<code>velero-plugin-oadp-dr</code>)</strong></h4>
+        <p>The source code is available here: <a
+        href="https://github.com/wangzheng422/openshift-velero-plugin/blob/wzh-oadp-1.5/velero-plugins-wzhlab-top-pv-patch/modify-pv-handle.go">https://github.com/wangzheng422/openshift-velero-plugin/blob/wzh-oadp-1.5/velero-plugins-wzhlab-top-pv-patch/modify-pv-handle.go</a></p>
+        <p>This plugin activates during a restore operation. It reads a
+        <code>ConfigMap</code> named
+        <code>velero-plugin-regex-map</code> which contains rules for
+        finding and replacing strings within PV definitions. This allows
+        it to dynamically adapt PVs to the DR site’s storage
+        environment.</p>
+        <p>Here is an example of the
+        <code>velero-plugin-regex-map</code> ConfigMap
+        configuration:</p>
+        <div class="sourceCode" id="cb5"><pre
+        class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">apiVersion</span><span class="kw">:</span><span class="at"> v1</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="fu">kind</span><span class="kw">:</span><span class="at"> ConfigMap</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="fu">metadata</span><span class="kw">:</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="co">  # The ConfigMap must be created in the Velero installation namespace</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">namespace</span><span class="kw">:</span><span class="at"> openshift-adp</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">name</span><span class="kw">:</span><span class="at"> velero-plugin-regex-map</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="fu">data</span><span class="kw">:</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="co">  # --- Rule 1: Modify volumeHandle ---</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a><span class="co">  # path: Specifies the complete path to the field to be modified</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">rule1.path</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;spec.csi.volumeHandle&quot;</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a><span class="co">  # find: Regular expression used for searching</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">rule1.find</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;openshift-01&quot;</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a><span class="co">  # replace: Target string to replace with. You can use $1, $2, etc. to reference regex capture groups</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">rule1.replace</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;openshift-02&quot;</span></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a><span class="co">  # --- Rule 2: Modify volumeAttributes.share ---</span></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">rule2.path</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;spec.csi.volumeAttributes.share&quot;</span></span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">rule2.find</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;openshift-01&quot;</span></span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">rule2.replace</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;openshift-02&quot;</span></span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a><span class="co">  # --- You can continue adding more rules as needed ---</span></span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a><span class="co">  # rule3.path: &quot;...&quot;</span></span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a><span class="co">  # rule3.find: &quot;...&quot;</span></span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a><span class="co">  # rule3.replace: &quot;...&quot;</span></span></code></pre></div>
+        <p><strong>Configuration Parameters Explained:</strong></p>
+        <ul>
+        <li><p><strong><code>path</code></strong>: The JSON path to the
+        field within the PersistentVolume specification that needs to be
+        modified. Common paths include:</p>
+        <ul>
+        <li><code>spec.csi.volumeHandle</code> - The CSI volume
+        identifier</li>
+        <li><code>spec.csi.volumeAttributes.share</code> - NFS share
+        path</li>
+        <li><code>spec.csi.volumeAttributes.server</code> - Storage
+        server address</li>
+        </ul></li>
+        <li><p><strong><code>find</code></strong>: A regular expression
+        pattern to match the value that needs to be replaced. This
+        supports standard regex syntax, allowing for complex pattern
+        matching.</p></li>
+        <li><p><strong><code>replace</code></strong>: The replacement
+        string. You can use capture groups from the <code>find</code>
+        regex (e.g., <code>$1</code>, <code>$2</code>) to preserve parts
+        of the original value.</p></li>
+        </ul>
+        <p><strong>Example Use Cases:</strong></p>
+        <ol type="1">
+        <li><strong>Changing NFS server paths</strong>: Replace
+        <code>/openshift-01</code> with <code>/openshift-02</code> in
+        the share path</li>
+        <li><strong>Updating server IPs</strong>: Replace
+        <code>192.168.1.100</code> with <code>192.168.2.100</code> in
+        volumeHandle</li>
+        <li><strong>Modifying storage array identifiers</strong>: Update
+        LUN IDs or volume identifiers for different storage systems</li>
+        </ol>
+        <p>The plugin processes these rules sequentially during the
+        restore operation, applying each transformation to the
+        PersistentVolume objects before they are created in the DR
+        cluster.</p>
+        <p>The logic is as follows:</p>
+        <pre class="mermaid"><code>flowchart TD
+    subgraph Initialization and Rule Loading
+        A[Start PV Restore Process] --&gt; B{Fetch velero-plugin-regex-map&lt;br/&gt;ConfigMap};
+        B -- &quot;Success&quot; --&gt; C{Parse ConfigMap&lt;br/&gt;Extract Replacement Rules};
+        B -- &quot;Failure&quot; --&gt; D[Log Error and Skip Modification];
+        C -- &quot;No Valid Rules&quot; --&gt; E[Log Warning and Skip Modification];
+        C -- &quot;Rules Parsed&quot; --&gt; F[Get Current PV Spec Content];
+    end
+
+    subgraph Rule Application Loop
+        F --&gt; G{Iterate Through All Rules};
+        G -- &quot;Loop Start&quot; --&gt; H{Find Value in PV Spec&lt;br/&gt;Based on Rule Path};
+        H -- &quot;Not Found or Path Error&quot; --&gt; I[Skip Current Rule];
+        H -- &quot;Value Found&quot; --&gt; J{Compile &#39;find&#39; Regex from Rule};
+        J -- &quot;Compilation Failed&quot; --&gt; I;
+        J -- &quot;Compilation Succeeded&quot; --&gt; K{Check if Field Value Matches Regex};
+        K -- &quot;No Match&quot; --&gt; I;
+        K -- &quot;Match&quot; --&gt; L[Perform Replacement&lt;br/&gt;Generate New Value];
+        L --&gt; M{Update Field in PV Spec};
+        M -- &quot;Update Failed&quot; --&gt; I;
+        M -- &quot;Update Succeeded&quot; --&gt; N[Mark PV as Modified];
+        I --&gt; O{Are there more rules?};
+        N --&gt; O;
+        O -- &quot;Yes&quot; --&gt; G;
+    end
+
+    subgraph Finalization
+        G -- &quot;Loop End&quot; --&gt; O;
+        O -- &quot;No&quot; --&gt; P[Log Final Modification Status of PV];
+        P --&gt; Q[Complete&lt;br/&gt;Return PV Object];
+        D --&gt; Q;
+        E --&gt; Q;
+    end
+
+    style D fill:#FADBD8,stroke:#C0392B
+    style E fill:#FEF9E7,stroke:#F1C40F
+    style Q fill:#D5F5E3,stroke:#27AE60</code></pre>
+        <h4
+        id="snapshot-to-pvc-plugin-velero-plugin-snapshot"><strong>2.
+        Snapshot-to-PVC Plugin
+        (<code>velero-plugin-snapshot</code>)</strong></h4>
+        <p>The source code is available here: <a
+        href="https://github.com/wangzheng422/openshift-velero-plugin/blob/wzh-odap-1.5-snapshot/velero-plugins-wzhlab-top-restore-pvc-from-snapshot/create-pvc-from-snapshot.go">https://github.com/wangzheng422/openshift-velero-plugin/blob/wzh-odap-1.5-snapshot/velero-plugins-wzhlab-top-restore-pvc-from-snapshot/create-pvc-from-snapshot.go</a></p>
+        <p>This plugin activates during a backup operation. It scans for
+        <code>VolumeSnapshot</code> objects. If a snapshot is found, the
+        plugin creates a new PVC that restores data from that snapshot.
+        It then waits for the new PVC to become bound to a PV. This is
+        essential for storage systems like Hitachi that do not support
+        replicating snapshots directly.</p>
+        <p>The logic of this plugin is as follows:</p>
+        <pre class="mermaid"><code>flowchart TD
+    subgraph &quot;Initialization&quot;
+        A[Velero Backs Up a VolumeSnapshot]
+    end
+
+    subgraph &quot;Snapshot Pre-processing&quot;
+        B{Does Snapshot Have a Source PVC?}
+        A --&gt; B
+        B -- &quot;No&quot; --&gt; C[Skip This Snapshot]
+        B -- &quot;Yes&quot; --&gt; D[Get Source PVC Name]
+    end
+
+    subgraph &quot;Source PVC Validation&quot;
+        E{Does Source PVC Exist?}
+        D --&gt; E
+        E -- &quot;No&quot; --&gt; F[Log Warning and Skip]
+        E -- &quot;Yes&quot; --&gt; G[Read Source PVC Configuration&lt;br/&gt;AccessModes, Resources, etc.]
+    end
+
+    subgraph &quot;Create New PVC&quot;
+        H[Define New PVC Object&lt;br/&gt;Based on Source PVC and Snapshot]
+        G --&gt; H
+        I{Create New PVC API Call}
+        H --&gt; I
+        I -- &quot;Failure&quot; --&gt; J[Log Error and Skip]
+        I -- &quot;Success&quot; --&gt; K[New PVC Created Successfully]
+    end
+
+    subgraph &quot;Wait for PVC to Bind&quot;
+        L[Poll New PVC Status]
+        K --&gt; L
+        M{Is PVC Status &#39;Bound&#39;?}
+        L --&gt; M
+        M -- &quot;No, Status is &#39;Pending&#39;&quot; --&gt; L
+        M -- &quot;Timeout or Error&quot; --&gt; N[Log Error and Skip]
+        M -- &quot;Yes&quot; --&gt; O[PVC Successfully Bound]
+    end
+
+    subgraph &quot;Completion&quot;
+        P[Add the Newly Created PVC&lt;br/&gt;to the Backup Resource List]
+        O --&gt; P
+        Q[Back Up Original VolumeSnapshot&lt;br/&gt;and the New PVC]
+        P --&gt; Q
+        R[End]
+        Q --&gt; R
+        C --&gt; R
+        F --&gt; R
+        J --&gt; R
+        N --&gt; R
+    end
+
+    style A fill:#D6EAF8,stroke:#3498DB
+    style Q fill:#D5F5E3,stroke:#2ECC71
+    style R fill:#D5F5E3,stroke:#2ECC71
+    style C fill:#FADBD8,stroke:#E74C3C
+    style F fill:#FADBD8,stroke:#E74C3C
+    style J fill:#FADBD8,stroke:#E74C3C
+    style N fill:#FADBD8,stroke:#E74C3C</code></pre>
+        <h3 id="verifying-plugin-registration">3. Verifying Plugin
+        Registration</h3>
+        <p>After deploying the <code>DataProtectionApplication</code>
+        resource with the custom plugin images, it is essential to
+        verify that Velero has successfully loaded and registered them.
+        This confirmation step ensures that both the default OADP
+        plugins and our two custom plugins (<code>csi-volume-dr</code>
+        and <code>snapshot-dr</code>) are active and ready to
+        participate in the backup and restore workflows.</p>
+        <p>To list all currently active plugins, you can execute the
+        following command inside the Velero pod. For convenience, we
+        first create a shell alias.</p>
+        <div class="sourceCode" id="cb8"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Create a temporary alias for easier access to the Velero CLI</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="bu">alias</span> velero=<span class="st">&#39;oc -n openshift-adp exec deployment/velero -c velero -it -- ./velero&#39;</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a><span class="co"># List all registered plugins</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="ex">velero</span> get plugins</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a><span class="co"># NAME                                                          KIND</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a><span class="co"># kubevirt-velero-plugin/backup-datavolume-action               BackupItemAction</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a><span class="co"># kubevirt-velero-plugin/backup-datavolume-action               BackupItemAction</span></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a><span class="co"># kubevirt-velero-plugin/backup-virtualmachine-action           BackupItemAction</span></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a><span class="co"># kubevirt-velero-plugin/backup-virtualmachine-action           BackupItemAction</span></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a><span class="co"># kubevirt-velero-plugin/backup-virtualmachineinstance-action   BackupItemAction</span></span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a><span class="co"># kubevirt-velero-plugin/backup-virtualmachineinstance-action   BackupItemAction</span></span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift.io/01-common-backup-plugin                          BackupItemAction</span></span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift.io/01-common-backup-plugin                          BackupItemAction</span></span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift.io/02-serviceaccount-backup-plugin                  BackupItemAction</span></span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift.io/02-serviceaccount-backup-plugin                  BackupItemAction</span></span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift.io/03-pv-backup-plugin                              BackupItemAction</span></span>
+<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift.io/03-pv-backup-plugin                              BackupItemAction</span></span>
+<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift.io/04-imagestreamtag-backup-plugin                  BackupItemAction</span></span>
+<span id="cb8-20"><a href="#cb8-20" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift.io/04-imagestreamtag-backup-plugin                  BackupItemAction</span></span>
+<span id="cb8-21"><a href="#cb8-21" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift.io/07-pod-backup-plugin                             BackupItemAction</span></span>
+<span id="cb8-22"><a href="#cb8-22" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift.io/07-pod-backup-plugin                             BackupItemAction</span></span>
+<span id="cb8-23"><a href="#cb8-23" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift.io/08-deploymentconfig-backup-plugin                BackupItemAction</span></span>
+<span id="cb8-24"><a href="#cb8-24" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift.io/08-deploymentconfig-backup-plugin                BackupItemAction</span></span>
+<span id="cb8-25"><a href="#cb8-25" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift.io/09-replicationcontroller-backup-plugin           BackupItemAction</span></span>
+<span id="cb8-26"><a href="#cb8-26" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift.io/09-replicationcontroller-backup-plugin           BackupItemAction</span></span>
+<span id="cb8-27"><a href="#cb8-27" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift.io/19-is-backup-plugin                              BackupItemAction</span></span>
+<span id="cb8-28"><a href="#cb8-28" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift.io/19-is-backup-plugin                              BackupItemAction</span></span>
+<span id="cb8-29"><a href="#cb8-29" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift.io/25-configmap-backup-plugin                       BackupItemAction</span></span>
+<span id="cb8-30"><a href="#cb8-30" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift.io/25-configmap-backup-plugin                       BackupItemAction</span></span>
+<span id="cb8-31"><a href="#cb8-31" aria-hidden="true" tabindex="-1"></a><span class="co"># velero.io/crd-remap-version                                   BackupItemAction</span></span>
+<span id="cb8-32"><a href="#cb8-32" aria-hidden="true" tabindex="-1"></a><span class="co"># velero.io/crd-remap-version                                   BackupItemAction</span></span>
+<span id="cb8-33"><a href="#cb8-33" aria-hidden="true" tabindex="-1"></a><span class="co"># velero.io/pod                                                 BackupItemAction</span></span>
+<span id="cb8-34"><a href="#cb8-34" aria-hidden="true" tabindex="-1"></a><span class="co"># velero.io/pod                                                 BackupItemAction</span></span>
+<span id="cb8-35"><a href="#cb8-35" aria-hidden="true" tabindex="-1"></a><span class="co"># velero.io/pv                                                  BackupItemAction</span></span>
+<span id="cb8-36"><a href="#cb8-36" aria-hidden="true" tabindex="-1"></a><span class="co"># velero.io/pv                                                  BackupItemAction</span></span>
+<span id="cb8-37"><a href="#cb8-37" aria-hidden="true" tabindex="-1"></a><span class="co"># velero.io/service-account                                     BackupItemAction</span></span>
+<span id="cb8-38"><a href="#cb8-38" aria-hidden="true" tabindex="-1"></a><span class="co"># velero.io/service-account                                     BackupItemAction</span></span>
+<span id="cb8-39"><a href="#cb8-39" aria-hidden="true" tabindex="-1"></a><span class="co"># wzhlab.top/create-pvc-from-snapshot-action                    BackupItemAction</span></span>
+<span id="cb8-40"><a href="#cb8-40" aria-hidden="true" tabindex="-1"></a><span class="co"># wzhlab.top/create-pvc-from-snapshot-action                    BackupItemAction</span></span>
+<span id="cb8-41"><a href="#cb8-41" aria-hidden="true" tabindex="-1"></a><span class="co"># velero.io/csi-pvc-backupper                                   BackupItemActionV2</span></span>
+<span id="cb8-42"><a href="#cb8-42" aria-hidden="true" tabindex="-1"></a><span class="co"># velero.io/csi-volumesnapshot-backupper                        BackupItemActionV2</span></span>
+<span id="cb8-43"><a href="#cb8-43" aria-hidden="true" tabindex="-1"></a><span class="co"># velero.io/csi-volumesnapshotclass-backupper                   BackupItemActionV2</span></span>
+<span id="cb8-44"><a href="#cb8-44" aria-hidden="true" tabindex="-1"></a><span class="co"># velero.io/csi-volumesnapshotcontent-backupper                 BackupItemActionV2</span></span>
+<span id="cb8-45"><a href="#cb8-45" aria-hidden="true" tabindex="-1"></a><span class="co"># velero.io/csi-volumesnapshot-delete                           DeleteItemAction</span></span>
+<span id="cb8-46"><a href="#cb8-46" aria-hidden="true" tabindex="-1"></a><span class="co"># velero.io/csi-volumesnapshotcontent-delete                    DeleteItemAction</span></span>
+<span id="cb8-47"><a href="#cb8-47" aria-hidden="true" tabindex="-1"></a><span class="co"># velero.io/dataupload-delete                                   DeleteItemAction</span></span>
+<span id="cb8-48"><a href="#cb8-48" aria-hidden="true" tabindex="-1"></a><span class="co"># velero.io/aws                                                 ObjectStore</span></span>
+<span id="cb8-49"><a href="#cb8-49" aria-hidden="true" tabindex="-1"></a><span class="co"># kubevirt-velero-plugin/restore-pod-action                     RestoreItemAction</span></span>
+<span id="cb8-50"><a href="#cb8-50" aria-hidden="true" tabindex="-1"></a><span class="co"># kubevirt-velero-plugin/restore-pod-action                     RestoreItemAction</span></span>
+<span id="cb8-51"><a href="#cb8-51" aria-hidden="true" tabindex="-1"></a><span class="co"># kubevirt-velero-plugin/restore-pvc-action                     RestoreItemAction</span></span>
+<span id="cb8-52"><a href="#cb8-52" aria-hidden="true" tabindex="-1"></a><span class="co"># kubevirt-velero-plugin/restore-pvc-action                     RestoreItemAction</span></span>
+<span id="cb8-53"><a href="#cb8-53" aria-hidden="true" tabindex="-1"></a><span class="co"># kubevirt-velero-plugin/restore-vm-action                      RestoreItemAction</span></span>
+<span id="cb8-54"><a href="#cb8-54" aria-hidden="true" tabindex="-1"></a><span class="co"># kubevirt-velero-plugin/restore-vm-action                      RestoreItemAction</span></span>
+<span id="cb8-55"><a href="#cb8-55" aria-hidden="true" tabindex="-1"></a><span class="co"># kubevirt-velero-plugin/restore-vmi-action                     RestoreItemAction</span></span>
+<span id="cb8-56"><a href="#cb8-56" aria-hidden="true" tabindex="-1"></a><span class="co"># kubevirt-velero-plugin/restore-vmi-action                     RestoreItemAction</span></span>
+<span id="cb8-57"><a href="#cb8-57" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift.io/01-common-restore-plugin                         RestoreItemAction</span></span>
+<span id="cb8-58"><a href="#cb8-58" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift.io/01-common-restore-plugin                         RestoreItemAction</span></span>
+<span id="cb8-59"><a href="#cb8-59" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift.io/02-serviceaccount-restore-plugin                 RestoreItemAction</span></span>
+<span id="cb8-60"><a href="#cb8-60" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift.io/02-serviceaccount-restore-plugin                 RestoreItemAction</span></span>
+<span id="cb8-61"><a href="#cb8-61" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift.io/03-pv-restore-plugin                             RestoreItemAction</span></span>
+<span id="cb8-62"><a href="#cb8-62" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift.io/03-pv-restore-plugin                             RestoreItemAction</span></span>
+<span id="cb8-63"><a href="#cb8-63" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift.io/04-pvc-restore-plugin                            RestoreItemAction</span></span>
+<span id="cb8-64"><a href="#cb8-64" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift.io/04-pvc-restore-plugin                            RestoreItemAction</span></span>
+<span id="cb8-65"><a href="#cb8-65" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift.io/05-route-restore-plugin                          RestoreItemAction</span></span>
+<span id="cb8-66"><a href="#cb8-66" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift.io/05-route-restore-plugin                          RestoreItemAction</span></span>
+<span id="cb8-67"><a href="#cb8-67" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift.io/06-build-restore-plugin                          RestoreItemAction</span></span>
+<span id="cb8-68"><a href="#cb8-68" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift.io/06-build-restore-plugin                          RestoreItemAction</span></span>
+<span id="cb8-69"><a href="#cb8-69" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift.io/07-pod-restore-plugin                            RestoreItemAction</span></span>
+<span id="cb8-70"><a href="#cb8-70" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift.io/07-pod-restore-plugin                            RestoreItemAction</span></span>
+<span id="cb8-71"><a href="#cb8-71" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift.io/08-deploymentconfig-restore-plugin               RestoreItemAction</span></span>
+<span id="cb8-72"><a href="#cb8-72" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift.io/08-deploymentconfig-restore-plugin               RestoreItemAction</span></span>
+<span id="cb8-73"><a href="#cb8-73" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift.io/09-replicationcontroller-restore-plugin          RestoreItemAction</span></span>
+<span id="cb8-74"><a href="#cb8-74" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift.io/09-replicationcontroller-restore-plugin          RestoreItemAction</span></span>
+<span id="cb8-75"><a href="#cb8-75" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift.io/10-job-restore-plugin                            RestoreItemAction</span></span>
+<span id="cb8-76"><a href="#cb8-76" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift.io/10-job-restore-plugin                            RestoreItemAction</span></span>
+<span id="cb8-77"><a href="#cb8-77" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift.io/11-daemonset-restore-plugin                      RestoreItemAction</span></span>
+<span id="cb8-78"><a href="#cb8-78" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift.io/11-daemonset-restore-plugin                      RestoreItemAction</span></span>
+<span id="cb8-79"><a href="#cb8-79" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift.io/12-replicaset-restore-plugin                     RestoreItemAction</span></span>
+<span id="cb8-80"><a href="#cb8-80" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift.io/12-replicaset-restore-plugin                     RestoreItemAction</span></span>
+<span id="cb8-81"><a href="#cb8-81" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift.io/13-deployment-restore-plugin                     RestoreItemAction</span></span>
+<span id="cb8-82"><a href="#cb8-82" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift.io/13-deployment-restore-plugin                     RestoreItemAction</span></span>
+<span id="cb8-83"><a href="#cb8-83" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift.io/14-statefulset-restore-plugin                    RestoreItemAction</span></span>
+<span id="cb8-84"><a href="#cb8-84" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift.io/14-statefulset-restore-plugin                    RestoreItemAction</span></span>
+<span id="cb8-85"><a href="#cb8-85" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift.io/15-service-restore-plugin                        RestoreItemAction</span></span>
+<span id="cb8-86"><a href="#cb8-86" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift.io/15-service-restore-plugin                        RestoreItemAction</span></span>
+<span id="cb8-87"><a href="#cb8-87" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift.io/16-cronjob-restore-plugin                        RestoreItemAction</span></span>
+<span id="cb8-88"><a href="#cb8-88" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift.io/16-cronjob-restore-plugin                        RestoreItemAction</span></span>
+<span id="cb8-89"><a href="#cb8-89" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift.io/17-buildconfig-restore-plugin                    RestoreItemAction</span></span>
+<span id="cb8-90"><a href="#cb8-90" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift.io/17-buildconfig-restore-plugin                    RestoreItemAction</span></span>
+<span id="cb8-91"><a href="#cb8-91" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift.io/18-secret-restore-plugin                         RestoreItemAction</span></span>
+<span id="cb8-92"><a href="#cb8-92" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift.io/18-secret-restore-plugin                         RestoreItemAction</span></span>
+<span id="cb8-93"><a href="#cb8-93" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift.io/19-is-restore-plugin                             RestoreItemAction</span></span>
+<span id="cb8-94"><a href="#cb8-94" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift.io/19-is-restore-plugin                             RestoreItemAction</span></span>
+<span id="cb8-95"><a href="#cb8-95" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift.io/20-SCC-restore-plugin                            RestoreItemAction</span></span>
+<span id="cb8-96"><a href="#cb8-96" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift.io/20-SCC-restore-plugin                            RestoreItemAction</span></span>
+<span id="cb8-97"><a href="#cb8-97" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift.io/21-role-bindings-restore-plugin                  RestoreItemAction</span></span>
+<span id="cb8-98"><a href="#cb8-98" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift.io/21-role-bindings-restore-plugin                  RestoreItemAction</span></span>
+<span id="cb8-99"><a href="#cb8-99" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift.io/22-cluster-role-bindings-restore-plugin          RestoreItemAction</span></span>
+<span id="cb8-100"><a href="#cb8-100" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift.io/22-cluster-role-bindings-restore-plugin          RestoreItemAction</span></span>
+<span id="cb8-101"><a href="#cb8-101" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift.io/23-imagetag-restore-plugin                       RestoreItemAction</span></span>
+<span id="cb8-102"><a href="#cb8-102" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift.io/23-imagetag-restore-plugin                       RestoreItemAction</span></span>
+<span id="cb8-103"><a href="#cb8-103" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift.io/24-horizontalpodautoscaler-restore-plugin        RestoreItemAction</span></span>
+<span id="cb8-104"><a href="#cb8-104" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift.io/24-horizontalpodautoscaler-restore-plugin        RestoreItemAction</span></span>
+<span id="cb8-105"><a href="#cb8-105" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift.io/25-configmap-restore-plugin                      RestoreItemAction</span></span>
+<span id="cb8-106"><a href="#cb8-106" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift.io/25-configmap-restore-plugin                      RestoreItemAction</span></span>
+<span id="cb8-107"><a href="#cb8-107" aria-hidden="true" tabindex="-1"></a><span class="co"># velero.io/add-pv-from-pvc                                     RestoreItemAction</span></span>
+<span id="cb8-108"><a href="#cb8-108" aria-hidden="true" tabindex="-1"></a><span class="co"># velero.io/add-pv-from-pvc                                     RestoreItemAction</span></span>
+<span id="cb8-109"><a href="#cb8-109" aria-hidden="true" tabindex="-1"></a><span class="co"># velero.io/add-pvc-from-pod                                    RestoreItemAction</span></span>
+<span id="cb8-110"><a href="#cb8-110" aria-hidden="true" tabindex="-1"></a><span class="co"># velero.io/add-pvc-from-pod                                    RestoreItemAction</span></span>
+<span id="cb8-111"><a href="#cb8-111" aria-hidden="true" tabindex="-1"></a><span class="co"># velero.io/admission-webhook-configuration                     RestoreItemAction</span></span>
+<span id="cb8-112"><a href="#cb8-112" aria-hidden="true" tabindex="-1"></a><span class="co"># velero.io/admission-webhook-configuration                     RestoreItemAction</span></span>
+<span id="cb8-113"><a href="#cb8-113" aria-hidden="true" tabindex="-1"></a><span class="co"># velero.io/apiservice                                          RestoreItemAction</span></span>
+<span id="cb8-114"><a href="#cb8-114" aria-hidden="true" tabindex="-1"></a><span class="co"># velero.io/apiservice                                          RestoreItemAction</span></span>
+<span id="cb8-115"><a href="#cb8-115" aria-hidden="true" tabindex="-1"></a><span class="co"># velero.io/change-image-name                                   RestoreItemAction</span></span>
+<span id="cb8-116"><a href="#cb8-116" aria-hidden="true" tabindex="-1"></a><span class="co"># velero.io/change-image-name                                   RestoreItemAction</span></span>
+<span id="cb8-117"><a href="#cb8-117" aria-hidden="true" tabindex="-1"></a><span class="co"># velero.io/change-pvc-node-selector                            RestoreItemAction</span></span>
+<span id="cb8-118"><a href="#cb8-118" aria-hidden="true" tabindex="-1"></a><span class="co"># velero.io/change-pvc-node-selector                            RestoreItemAction</span></span>
+<span id="cb8-119"><a href="#cb8-119" aria-hidden="true" tabindex="-1"></a><span class="co"># velero.io/change-storage-class                                RestoreItemAction</span></span>
+<span id="cb8-120"><a href="#cb8-120" aria-hidden="true" tabindex="-1"></a><span class="co"># velero.io/change-storage-class                                RestoreItemAction</span></span>
+<span id="cb8-121"><a href="#cb8-121" aria-hidden="true" tabindex="-1"></a><span class="co"># velero.io/cluster-role-bindings                               RestoreItemAction</span></span>
+<span id="cb8-122"><a href="#cb8-122" aria-hidden="true" tabindex="-1"></a><span class="co"># velero.io/cluster-role-bindings                               RestoreItemAction</span></span>
+<span id="cb8-123"><a href="#cb8-123" aria-hidden="true" tabindex="-1"></a><span class="co"># velero.io/crd-preserve-fields                                 RestoreItemAction</span></span>
+<span id="cb8-124"><a href="#cb8-124" aria-hidden="true" tabindex="-1"></a><span class="co"># velero.io/crd-preserve-fields                                 RestoreItemAction</span></span>
+<span id="cb8-125"><a href="#cb8-125" aria-hidden="true" tabindex="-1"></a><span class="co"># velero.io/dataupload                                          RestoreItemAction</span></span>
+<span id="cb8-126"><a href="#cb8-126" aria-hidden="true" tabindex="-1"></a><span class="co"># velero.io/dataupload                                          RestoreItemAction</span></span>
+<span id="cb8-127"><a href="#cb8-127" aria-hidden="true" tabindex="-1"></a><span class="co"># velero.io/init-restore-hook                                   RestoreItemAction</span></span>
+<span id="cb8-128"><a href="#cb8-128" aria-hidden="true" tabindex="-1"></a><span class="co"># velero.io/init-restore-hook                                   RestoreItemAction</span></span>
+<span id="cb8-129"><a href="#cb8-129" aria-hidden="true" tabindex="-1"></a><span class="co"># velero.io/job                                                 RestoreItemAction</span></span>
+<span id="cb8-130"><a href="#cb8-130" aria-hidden="true" tabindex="-1"></a><span class="co"># velero.io/job                                                 RestoreItemAction</span></span>
+<span id="cb8-131"><a href="#cb8-131" aria-hidden="true" tabindex="-1"></a><span class="co"># velero.io/pod                                                 RestoreItemAction</span></span>
+<span id="cb8-132"><a href="#cb8-132" aria-hidden="true" tabindex="-1"></a><span class="co"># velero.io/pod                                                 RestoreItemAction</span></span>
+<span id="cb8-133"><a href="#cb8-133" aria-hidden="true" tabindex="-1"></a><span class="co"># velero.io/pod-volume-restore                                  RestoreItemAction</span></span>
+<span id="cb8-134"><a href="#cb8-134" aria-hidden="true" tabindex="-1"></a><span class="co"># velero.io/pod-volume-restore                                  RestoreItemAction</span></span>
+<span id="cb8-135"><a href="#cb8-135" aria-hidden="true" tabindex="-1"></a><span class="co"># velero.io/role-bindings                                       RestoreItemAction</span></span>
+<span id="cb8-136"><a href="#cb8-136" aria-hidden="true" tabindex="-1"></a><span class="co"># velero.io/role-bindings                                       RestoreItemAction</span></span>
+<span id="cb8-137"><a href="#cb8-137" aria-hidden="true" tabindex="-1"></a><span class="co"># velero.io/secret                                              RestoreItemAction</span></span>
+<span id="cb8-138"><a href="#cb8-138" aria-hidden="true" tabindex="-1"></a><span class="co"># velero.io/secret                                              RestoreItemAction</span></span>
+<span id="cb8-139"><a href="#cb8-139" aria-hidden="true" tabindex="-1"></a><span class="co"># velero.io/service                                             RestoreItemAction</span></span>
+<span id="cb8-140"><a href="#cb8-140" aria-hidden="true" tabindex="-1"></a><span class="co"># velero.io/service                                             RestoreItemAction</span></span>
+<span id="cb8-141"><a href="#cb8-141" aria-hidden="true" tabindex="-1"></a><span class="co"># velero.io/service-account                                     RestoreItemAction</span></span>
+<span id="cb8-142"><a href="#cb8-142" aria-hidden="true" tabindex="-1"></a><span class="co"># velero.io/service-account                                     RestoreItemAction</span></span>
+<span id="cb8-143"><a href="#cb8-143" aria-hidden="true" tabindex="-1"></a><span class="co"># wzhlab.top/modify-csi-volume-handle-action                    RestoreItemAction</span></span>
+<span id="cb8-144"><a href="#cb8-144" aria-hidden="true" tabindex="-1"></a><span class="co"># wzhlab.top/modify-csi-volume-handle-action                    RestoreItemAction</span></span>
+<span id="cb8-145"><a href="#cb8-145" aria-hidden="true" tabindex="-1"></a><span class="co"># openshift.io/04-imagestreamtag-restore-plugin                 RestoreItemActionV2</span></span>
+<span id="cb8-146"><a href="#cb8-146" aria-hidden="true" tabindex="-1"></a><span class="co"># velero.io/csi-pvc-restorer                                    RestoreItemActionV2</span></span>
+<span id="cb8-147"><a href="#cb8-147" aria-hidden="true" tabindex="-1"></a><span class="co"># velero.io/csi-volumesnapshot-restorer                         RestoreItemActionV2</span></span>
+<span id="cb8-148"><a href="#cb8-148" aria-hidden="true" tabindex="-1"></a><span class="co"># velero.io/csi-volumesnapshotclass-restorer                    RestoreItemActionV2</span></span>
+<span id="cb8-149"><a href="#cb8-149" aria-hidden="true" tabindex="-1"></a><span class="co"># velero.io/csi-volumesnapshotcontent-restorer                  RestoreItemActionV2</span></span>
+<span id="cb8-150"><a href="#cb8-150" aria-hidden="true" tabindex="-1"></a><span class="co"># velero.io/aws                                                 VolumeSnapshotter</span></span></code></pre></div>
+        <h2 id="primary-site-performing-the-backup">3. Primary Site:
+        Performing the Backup</h2>
+        <p>Assume we have a project named <code>demo</code> on the
+        primary site (cluster-01) containing a running virtual
+        machine.</p>
+        <p><img src="imgs/2025.11.ocp-v.dr.oadp.plugin.md/2025-11-05-17-09-48.png" width="1024"></p>
+        <p>First, let’s identify the VM and its associated PVC, PV, and
+        VolumeSnapshot.</p>
+        <div class="sourceCode" id="cb9"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Get the VM name</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> get vm <span class="at">-n</span> demo</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="co"># NAME                       AGE     STATUS    READY</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a><span class="co"># cirros-crimson-wombat-26   3d20h   Running   True</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Get the PVC name associated with the VM</span></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> get vm cirros-crimson-wombat-26 <span class="at">-n</span> demo <span class="at">-o</span> jsonpath=<span class="st">&#39;{.spec.template.spec.volumes[*].dataVolume.name}&#39;</span> <span class="kw">&amp;&amp;</span> <span class="bu">echo</span></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a><span class="co"># cirros-crimson-wombat-26-volume</span></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Get the PV name bound to the PVC</span></span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> get pvc cirros-crimson-wombat-26-volume <span class="at">-n</span> demo <span class="at">-o</span> jsonpath=<span class="st">&#39;{.spec.volumeName}&#39;</span> <span class="kw">&amp;&amp;</span> <span class="bu">echo</span></span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a><span class="co"># pvc-7147333f-2db5-4b3f-9320-aac8da5170e2</span></span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a><span class="co"># Get the snapshot from the vm/pvc</span></span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> get volumesnapshot <span class="at">-n</span> demo <span class="at">-o</span> jsonpath=<span class="st">&#39;{.items[?(@.spec.source.persistentVolumeClaimName==&quot;cirros-crimson-wombat-26-volume&quot;)].metadata.name}&#39;</span> <span class="kw">&amp;&amp;</span> <span class="bu">echo</span></span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a><span class="co"># vmsnapshot-f1cafd2b-beb7-47a1-8f9c-c9c0d52569c5-volume-rootdisk</span></span></code></pre></div>
+        <p>Now, we create a Velero <code>Backup</code> object. The key
+        configuration here is <code>snapshotVolumes: false</code>, which
+        instructs OADP to back up only the resource definitions (YAML)
+        and not the data within the volumes.</p>
+        <div class="sourceCode" id="cb10"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> <span class="op">&lt;&lt; EOF</span> <span class="op">&gt;</span> <span class="va">$BASE_DIR</span>/data/install/oadp-backup.yaml</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="st">apiVersion: velero.io/v1</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="st">kind: Backup</span></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a><span class="st">metadata:</span></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a><span class="st">  name: vm-full-metadata-backup-03</span></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a><span class="st">  namespace: openshift-adp</span></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a><span class="st">spec:</span></span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a><span class="st">  # 1. Specify the namespace to back up</span></span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a><span class="st">  includedNamespaces:</span></span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a><span class="st">    - demo</span></span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a><span class="st">  # 2. Ensure cluster-scoped resources like PVs are included in the metadata backup.</span></span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a><span class="st">  # While Velero typically includes PVs linked to PVCs automatically, setting this</span></span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a><span class="st">  # to &#39;true&#39; makes the behavior explicit.</span></span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a><span class="st">  includeClusterResources: true</span></span>
+<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a><span class="st">  # 3. CRITICAL: Disable Velero&#39;s native volume snapshots.</span></span>
+<span id="cb10-18"><a href="#cb10-18" aria-hidden="true" tabindex="-1"></a><span class="st">  # This tells Velero to NOT create data snapshots of the PVs.</span></span>
+<span id="cb10-19"><a href="#cb10-19" aria-hidden="true" tabindex="-1"></a><span class="st">  # It will only save the PV and PVC object definitions.</span></span>
+<span id="cb10-20"><a href="#cb10-20" aria-hidden="true" tabindex="-1"></a><span class="st">  snapshotVolumes: false</span></span>
+<span id="cb10-21"><a href="#cb10-21" aria-hidden="true" tabindex="-1"></a><span class="st">  snapshotMoveData: false</span></span>
+<span id="cb10-22"><a href="#cb10-22" aria-hidden="true" tabindex="-1"></a><span class="st">  defaultVolumesToFsBackup: false</span></span>
+<span id="cb10-23"><a href="#cb10-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-24"><a href="#cb10-24" aria-hidden="true" tabindex="-1"></a><span class="st">  # 4. Specify the S3 storage location defined in the DPA</span></span>
+<span id="cb10-25"><a href="#cb10-25" aria-hidden="true" tabindex="-1"></a><span class="st">  storageLocation: default</span></span>
+<span id="cb10-26"><a href="#cb10-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-27"><a href="#cb10-27" aria-hidden="true" tabindex="-1"></a><span class="st">  # 5. Set a Time-To-Live (TTL) for the backup object</span></span>
+<span id="cb10-28"><a href="#cb10-28" aria-hidden="true" tabindex="-1"></a><span class="st">  ttl: 720h0m0s # 30 days</span></span>
+<span id="cb10-29"><a href="#cb10-29" aria-hidden="true" tabindex="-1"></a><span class="op">EOF</span></span>
+<span id="cb10-30"><a href="#cb10-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-31"><a href="#cb10-31" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> apply <span class="at">-f</span> <span class="va">$BASE_DIR</span>/data/install/oadp-backup.yaml</span></code></pre></div>
+        <h3 id="inspecting-the-pvc-and-pv-metadata">Inspecting the PVC
+        and PV Metadata</h3>
+        <p>Here is the metadata for the original PVC.</p>
+        <div class="sourceCode" id="cb11"><pre
+        class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="fu">kind</span><span class="kw">:</span><span class="at"> PersistentVolumeClaim</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="fu">apiVersion</span><span class="kw">:</span><span class="at"> v1</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a><span class="fu">metadata</span><span class="kw">:</span></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">name</span><span class="kw">:</span><span class="at"> cirros-crimson-wombat-26-volume</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">namespace</span><span class="kw">:</span><span class="at"> demo</span></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a><span class="co">  # ......</span></span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a><span class="fu">spec</span><span class="kw">:</span></span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">accessModes</span><span class="kw">:</span></span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> ReadWriteMany</span></span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">resources</span><span class="kw">:</span></span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">requests</span><span class="kw">:</span></span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">storage</span><span class="kw">:</span><span class="at"> </span><span class="st">&#39;235635999&#39;</span></span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">volumeName</span><span class="kw">:</span><span class="at"> pvc-b6d75156-0c58-422f-8bf8-6e40ed054c5d</span></span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">storageClassName</span><span class="kw">:</span><span class="at"> nfs-csi</span></span>
+<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">volumeMode</span><span class="kw">:</span><span class="at"> Filesystem</span></span>
+<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">dataSource</span><span class="kw">:</span></span>
+<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">apiGroup</span><span class="kw">:</span><span class="at"> cdi.kubevirt.io</span></span>
+<span id="cb11-18"><a href="#cb11-18" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">kind</span><span class="kw">:</span><span class="at"> VolumeCloneSource</span></span>
+<span id="cb11-19"><a href="#cb11-19" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">name</span><span class="kw">:</span><span class="at"> volume-clone-source-916cf253-27ae-4f9a-8456-1e61d775206d</span></span>
+<span id="cb11-20"><a href="#cb11-20" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">dataSourceRef</span><span class="kw">:</span></span>
+<span id="cb11-21"><a href="#cb11-21" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">apiGroup</span><span class="kw">:</span><span class="at"> cdi.kubevirt.io</span></span>
+<span id="cb11-22"><a href="#cb11-22" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">kind</span><span class="kw">:</span><span class="at"> VolumeCloneSource</span></span>
+<span id="cb11-23"><a href="#cb11-23" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">name</span><span class="kw">:</span><span class="at"> volume-clone-source-916cf253-27ae-4f9a-8456-1e61d775206d</span></span>
+<span id="cb11-24"><a href="#cb11-24" aria-hidden="true" tabindex="-1"></a><span class="co"># .....</span></span></code></pre></div>
+        <p>And here is the corresponding PV metadata. Note that it
+        points to the NFS share on <code>/openshift-01</code>.</p>
+        <div class="sourceCode" id="cb12"><pre
+        class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="fu">kind</span><span class="kw">:</span><span class="at"> PersistentVolume</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="fu">apiVersion</span><span class="kw">:</span><span class="at"> v1</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a><span class="fu">metadata</span><span class="kw">:</span></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">name</span><span class="kw">:</span><span class="at"> pvc-b6d75156-0c58-422f-8bf8-6e40ed054c5d</span></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a><span class="co">  # ......</span></span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a><span class="fu">spec</span><span class="kw">:</span></span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">capacity</span><span class="kw">:</span></span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">storage</span><span class="kw">:</span><span class="at"> </span><span class="st">&#39;235635999&#39;</span></span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">csi</span><span class="kw">:</span></span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">driver</span><span class="kw">:</span><span class="at"> nfs.csi.k8s.io</span></span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">volumeHandle</span><span class="kw">:</span><span class="at"> 192.168.99.1</span><span class="co">#openshift-01#pvc-b6d75156-0c58-422f-8bf8-6e40ed054c5d##</span></span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">volumeAttributes</span><span class="kw">:</span></span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">csi.storage.k8s.io/pv/name</span><span class="kw">:</span><span class="at"> pvc-b6d75156-0c58-422f-8bf8-6e40ed054c5d</span></span>
+<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">csi.storage.k8s.io/pvc/name</span><span class="kw">:</span><span class="at"> tmp-pvc-43d11600-7b1c-4a3f-997c-8e99526bdd32</span></span>
+<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">csi.storage.k8s.io/pvc/namespace</span><span class="kw">:</span><span class="at"> openshift-virtualization-os-images</span></span>
+<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">server</span><span class="kw">:</span><span class="at"> </span><span class="fl">192.168.99.1</span></span>
+<span id="cb12-17"><a href="#cb12-17" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">share</span><span class="kw">:</span><span class="at"> /openshift-01</span></span>
+<span id="cb12-18"><a href="#cb12-18" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">storage.kubernetes.io/csiProvisionerIdentity</span><span class="kw">:</span><span class="at"> 1761996473487-3594-nfs.csi.k8s.io</span></span>
+<span id="cb12-19"><a href="#cb12-19" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">subdir</span><span class="kw">:</span><span class="at"> pvc-b6d75156-0c58-422f-8bf8-6e40ed054c5d</span></span>
+<span id="cb12-20"><a href="#cb12-20" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">accessModes</span><span class="kw">:</span></span>
+<span id="cb12-21"><a href="#cb12-21" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> ReadWriteMany</span></span>
+<span id="cb12-22"><a href="#cb12-22" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">claimRef</span><span class="kw">:</span></span>
+<span id="cb12-23"><a href="#cb12-23" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">namespace</span><span class="kw">:</span><span class="at"> demo</span></span>
+<span id="cb12-24"><a href="#cb12-24" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">name</span><span class="kw">:</span><span class="at"> cirros-crimson-wombat-26-volume</span></span>
+<span id="cb12-25"><a href="#cb12-25" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">uid</span><span class="kw">:</span><span class="at"> 43d11600-7b1c-4a3f-997c-8e99526bdd32</span></span>
+<span id="cb12-26"><a href="#cb12-26" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">resourceVersion</span><span class="kw">:</span><span class="at"> </span><span class="st">&#39;126830&#39;</span></span>
+<span id="cb12-27"><a href="#cb12-27" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">persistentVolumeReclaimPolicy</span><span class="kw">:</span><span class="at"> Retain</span></span>
+<span id="cb12-28"><a href="#cb12-28" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">storageClassName</span><span class="kw">:</span><span class="at"> nfs-csi</span></span>
+<span id="cb12-29"><a href="#cb12-29" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">mountOptions</span><span class="kw">:</span></span>
+<span id="cb12-30"><a href="#cb12-30" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> hard</span></span>
+<span id="cb12-31"><a href="#cb12-31" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> nfsvers=4.2</span></span>
+<span id="cb12-32"><a href="#cb12-32" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> rsize=1048576</span></span>
+<span id="cb12-33"><a href="#cb12-33" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> wsize=1048576</span></span>
+<span id="cb12-34"><a href="#cb12-34" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> noatime</span></span>
+<span id="cb12-35"><a href="#cb12-35" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> nodiratime</span></span>
+<span id="cb12-36"><a href="#cb12-36" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> actimeo=60</span></span>
+<span id="cb12-37"><a href="#cb12-37" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> timeo=600</span></span>
+<span id="cb12-38"><a href="#cb12-38" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> retrans=3</span></span>
+<span id="cb12-39"><a href="#cb12-39" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">volumeMode</span><span class="kw">:</span><span class="at"> Filesystem</span></span>
+<span id="cb12-40"><a href="#cb12-40" aria-hidden="true" tabindex="-1"></a><span class="co"># ......</span></span></code></pre></div>
+        <h3 id="verifying-the-new-pvc-restored-from-snapshot">Verifying
+        the New PVC Restored from Snapshot</h3>
+        <p>The snapshot-to-PVC plugin creates a new PVC. Note the name,
+        which is a concatenation of the original PVC name and the
+        snapshot name, as defined by the plugin’s logic.</p>
+        <div class="sourceCode" id="cb13"><pre
+        class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="fu">kind</span><span class="kw">:</span><span class="at"> PersistentVolumeClaim</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="fu">apiVersion</span><span class="kw">:</span><span class="at"> v1</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a><span class="fu">metadata</span><span class="kw">:</span></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">name</span><span class="kw">:</span><span class="at"> cirros-crimson-wombat-26-volume-vmsnapshot-f1cafd2b-beb7-47a1-8f9c-c9c0d52569c5-volume-rootdisk</span></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">namespace</span><span class="kw">:</span><span class="at"> demo</span></span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a><span class="co">  # ......</span></span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a><span class="fu">spec</span><span class="kw">:</span></span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">accessModes</span><span class="kw">:</span></span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> ReadWriteMany</span></span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">resources</span><span class="kw">:</span></span>
+<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">requests</span><span class="kw">:</span></span>
+<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">storage</span><span class="kw">:</span><span class="at"> </span><span class="st">&#39;235635999&#39;</span></span>
+<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">volumeName</span><span class="kw">:</span><span class="at"> pvc-5183c8de-817f-4d45-947c-a02ccc18d422</span></span>
+<span id="cb13-14"><a href="#cb13-14" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">storageClassName</span><span class="kw">:</span><span class="at"> nfs-csi</span></span>
+<span id="cb13-15"><a href="#cb13-15" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">volumeMode</span><span class="kw">:</span><span class="at"> Filesystem</span></span>
+<span id="cb13-16"><a href="#cb13-16" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">dataSource</span><span class="kw">:</span></span>
+<span id="cb13-17"><a href="#cb13-17" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">apiGroup</span><span class="kw">:</span><span class="at"> snapshot.storage.k8s.io</span></span>
+<span id="cb13-18"><a href="#cb13-18" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">kind</span><span class="kw">:</span><span class="at"> VolumeSnapshot</span></span>
+<span id="cb13-19"><a href="#cb13-19" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">name</span><span class="kw">:</span><span class="at"> vmsnapshot-f1cafd2b-beb7-47a1-8f9c-c9c0d52569c5-volume-rootdisk</span></span>
+<span id="cb13-20"><a href="#cb13-20" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">dataSourceRef</span><span class="kw">:</span></span>
+<span id="cb13-21"><a href="#cb13-21" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">apiGroup</span><span class="kw">:</span><span class="at"> snapshot.storage.k8s.io</span></span>
+<span id="cb13-22"><a href="#cb13-22" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">kind</span><span class="kw">:</span><span class="at"> VolumeSnapshot</span></span>
+<span id="cb13-23"><a href="#cb13-23" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">name</span><span class="kw">:</span><span class="at"> vmsnapshot-f1cafd2b-beb7-47a1-8f9c-c9c0d52569c5-volume-rootdisk</span></span>
+<span id="cb13-24"><a href="#cb13-24" aria-hidden="true" tabindex="-1"></a><span class="co"># .....</span></span></code></pre></div>
+        <h3 id="checking-the-oadp-plugin-logs">Checking the OADP Plugin
+        Logs</h3>
+        <p>You can verify the plugin’s execution by checking the Velero
+        pod logs. The logs show the plugin processing the snapshot and
+        creating the new PVC.</p>
+        <div class="sourceCode" id="cb14"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> logs <span class="at">-n</span> openshift-adp <span class="at">-l</span> app.kubernetes.io/name=velero <span class="at">--tail</span><span class="op">=</span>-1 <span class="kw">|</span> <span class="fu">grep</span> create-pvc-from-snapshot.go</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="co"># time=&quot;2025-11-05T11:59:58Z&quot; level=info msg=&quot;Starting CreatePvcFromSnapshotAction for VolumeSnapshot...&quot; backup=openshift-adp/vm-full-metadata-backup-03 cmd=/plugins/velero-plugins-wzhlab-top-restore-pvc-from-snapshot logSource=&quot;/src/github.com/konveyor/openshift-velero-plugin/velero-plugins-wzhlab-top-restore-pvc-from-snapshot/create-pvc-from-snapshot.go:55&quot; pluginName=velero-plugins-wzhlab-top-restore-pvc-from-snapshot</span></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a><span class="co"># time=&quot;2025-11-05T11:59:58Z&quot; level=info msg=&quot;Processing VolumeSnapshot demo/vmsnapshot-f1cafd2b-beb7-47a1-8f9c-c9c0d52569c5-volume-rootdisk&quot; backup=openshift-adp/vm-full-metadata-backup-03 cmd=/plugins/velero-plugins-wzhlab-top-restore-pvc-from-snapshot logSource=&quot;/src/github.com/konveyor/openshift-velero-plugin/velero-plugins-wzhlab-top-restore-pvc-from-snapshot/create-pvc-from-snapshot.go:62&quot; pluginName=velero-plugins-wzhlab-top-restore-pvc-from-snapshot</span></span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a><span class="co"># time=&quot;2025-11-05T11:59:58Z&quot; level=info msg=&quot;Source PVC for snapshot is demo/cirros-crimson-wombat-26-volume&quot; backup=openshift-adp/vm-full-metadata-backup-03 cmd=/plugins/velero-plugins-wzhlab-top-restore-pvc-from-snapshot logSource=&quot;/src/github.com/konveyor/openshift-velero-plugin/velero-plugins-wzhlab-top-restore-pvc-from-snapshot/create-pvc-from-snapshot.go:70&quot; pluginName=velero-plugins-wzhlab-top-restore-pvc-from-snapshot</span></span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a><span class="co"># time=&quot;2025-11-05T11:59:58Z&quot; level=info msg=&quot;Attempting to create new PVC demo/cirros-crimson-wombat-26-volume-vmsnapshot-f1cafd2b-beb7-47a1-8f9c-c9c0d52569c5-volume-rootdisk from snapshot vmsnapshot-f1cafd2b-beb7-47a1-8f9c-c9c0d52569c5-volume-rootdisk&quot; backup=openshift-adp/vm-full-metadata-backup-03 cmd=/plugins/velero-plugins-wzhlab-top-restore-pvc-from-snapshot logSource=&quot;/src/github.com/konveyor/openshift-velero-plugin/velero-plugins-wzhlab-top-restore-pvc-from-snapshot/create-pvc-from-snapshot.go:107&quot; pluginName=velero-plugins-wzhlab-top-restore-pvc-from-snapshot</span></span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a><span class="co"># time=&quot;2025-11-05T11:59:58Z&quot; level=info msg=&quot;Successfully created new PVC demo/cirros-crimson-wombat-26-volume-vmsnapshot-f1cafd2b-beb7-47a1-8f9c-c9c0d52569c5-volume-rootdisk.&quot; backup=openshift-adp/vm-full-metadata-backup-03 cmd=/plugins/velero-plugins-wzhlab-top-restore-pvc-from-snapshot logSource=&quot;/src/github.com/konveyor/openshift-velero-plugin/velero-plugins-wzhlab-top-restore-pvc-from-snapshot/create-pvc-from-snapshot.go:117&quot; pluginName=velero-plugins-wzhlab-top-restore-pvc-from-snapshot</span></span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a><span class="co"># time=&quot;2025-11-05T11:59:58Z&quot; level=info msg=&quot;Waiting for PVC demo/cirros-crimson-wombat-26-volume-vmsnapshot-f1cafd2b-beb7-47a1-8f9c-c9c0d52569c5-volume-rootdisk to become bound...&quot; backup=openshift-adp/vm-full-metadata-backup-03 cmd=/plugins/velero-plugins-wzhlab-top-restore-pvc-from-snapshot logSource=&quot;/src/github.com/konveyor/openshift-velero-plugin/velero-plugins-wzhlab-top-restore-pvc-from-snapshot/create-pvc-from-snapshot.go:120&quot; pluginName=velero-plugins-wzhlab-top-restore-pvc-from-snapshot</span></span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a><span class="co"># time=&quot;2025-11-05T11:59:58Z&quot; level=info msg=&quot;PVC demo/cirros-crimson-wombat-26-volume-vmsnapshot-f1cafd2b-beb7-47a1-8f9c-c9c0d52569c5-volume-rootdisk is still in phase Pending, waiting...&quot; backup=openshift-adp/vm-full-metadata-backup-03 cmd=/plugins/velero-plugins-wzhlab-top-restore-pvc-from-snapshot logSource=&quot;/src/github.com/konveyor/openshift-velero-plugin/velero-plugins-wzhlab-top-restore-pvc-from-snapshot/create-pvc-from-snapshot.go:146&quot; pluginName=velero-plugins-wzhlab-top-restore-pvc-from-snapshot</span></span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a><span class="co"># time=&quot;2025-11-05T12:00:03Z&quot; level=info msg=&quot;PVC demo/cirros-crimson-wombat-26-volume-vmsnapshot-f1cafd2b-beb7-47a1-8f9c-c9c0d52569c5-volume-rootdisk is now bound.&quot; backup=openshift-adp/vm-full-metadata-backup-03 cmd=/plugins/velero-plugins-wzhlab-top-restore-pvc-from-snapshot logSource=&quot;/src/github.com/konveyor/openshift-velero-plugin/velero-plugins-wzhlab-top-restore-pvc-from-snapshot/create-pvc-from-snapshot.go:142&quot; pluginName=velero-plugins-wzhlab-top-restore-pvc-from-snapshot</span></span>
+<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a><span class="co"># time=&quot;2025-11-05T12:00:03Z&quot; level=info msg=&quot;Returning original VolumeSnapshot and adding new PVC cirros-crimson-wombat-26-volume-vmsnapshot-f1cafd2b-beb7-47a1-8f9c-c9c0d52569c5-volume-rootdisk to the backup.&quot; backup=openshift-adp/vm-full-metadata-backup-03 cmd=/plugins/velero-plugins-wzhlab-top-restore-pvc-from-snapshot logSource=&quot;/src/github.com/konveyor/openshift-velero-plugin/velero-plugins-wzhlab-top-restore-pvc-from-snapshot/create-pvc-from-snapshot.go:162&quot; pluginName=velero-plugins-wzhlab-top-restore-pvc-from-snapshot</span></span></code></pre></div>
+        <h2 id="dr-site-recovery-process">4. DR Site: Recovery
+        Process</h2>
+        <h3 id="step-1-synchronize-storage-data">Step 1: Synchronize
+        Storage Data</h3>
+        <p>At the DR site, the first action is to ensure the data is
+        synchronized. This is handled by the storage system. For our NFS
+        simulation, we use <code>rsync</code> to copy the volume data
+        from the primary NFS server to the DR NFS server.</p>
+        <div class="sourceCode" id="cb15"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Simulate storage replication by copying the PV directory</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> rsync <span class="at">-avh</span> <span class="at">--progress</span> /srv/nfs/openshift-01/pvc-b6d75156-0c58-422f-8bf8-6e40ed054c5d /srv/nfs/openshift-02/</span></code></pre></div>
+        <h3 id="step-2-restore-metadata-with-oadp">Step 2: Restore
+        Metadata with OADP</h3>
+        <p>Now, create a Velero <code>Restore</code> object on the DR
+        cluster. This restore will recreate the VM and other resources
+        from the backup. The PV Patching plugin will automatically
+        handle the re-mapping of storage.</p>
+        <div class="sourceCode" id="cb16"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> <span class="op">&lt;&lt; EOF</span> <span class="op">&gt;</span> <span class="va">$BASE_DIR</span>/data/install/oadp-restore.yaml</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a><span class="st">apiVersion: velero.io/v1</span></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a><span class="st">kind: Restore</span></span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a><span class="st">metadata:</span></span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a><span class="st">  name: restore-metadata-excluding-pvs-03</span></span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a><span class="st">  namespace: openshift-adp</span></span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a><span class="st">spec:</span></span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a><span class="st">  # 1. Specify the backup to restore from</span></span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a><span class="st">  backupName: vm-full-metadata-backup-03</span></span>
+<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a><span class="st">  # 2. Whitelist the resources to restore. This provides granular control.</span></span>
+<span id="cb16-12"><a href="#cb16-12" aria-hidden="true" tabindex="-1"></a><span class="st">  includedResources:</span></span>
+<span id="cb16-13"><a href="#cb16-13" aria-hidden="true" tabindex="-1"></a><span class="st">    # KubeVirt / OCP-V VM resources</span></span>
+<span id="cb16-14"><a href="#cb16-14" aria-hidden="true" tabindex="-1"></a><span class="st">    - virtualmachines.kubevirt.io</span></span>
+<span id="cb16-15"><a href="#cb16-15" aria-hidden="true" tabindex="-1"></a><span class="st">    - virtualmachineinstances.kubevirt.io</span></span>
+<span id="cb16-16"><a href="#cb16-16" aria-hidden="true" tabindex="-1"></a><span class="st">    - datavolumes.cdi.kubevirt.io</span></span>
+<span id="cb16-17"><a href="#cb16-17" aria-hidden="true" tabindex="-1"></a><span class="st">    - virtualmachineclusterinstancetypes.instancetype.kubevirt.io</span></span>
+<span id="cb16-18"><a href="#cb16-18" aria-hidden="true" tabindex="-1"></a><span class="st">    - virtualmachineclusterpreferences.instancetype.kubevirt.io</span></span>
+<span id="cb16-19"><a href="#cb16-19" aria-hidden="true" tabindex="-1"></a><span class="st">    - controllerrevisions.apps</span></span>
+<span id="cb16-20"><a href="#cb16-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-21"><a href="#cb16-21" aria-hidden="true" tabindex="-1"></a><span class="st">    # Standard Kubernetes workload resources</span></span>
+<span id="cb16-22"><a href="#cb16-22" aria-hidden="true" tabindex="-1"></a><span class="st">    - pods</span></span>
+<span id="cb16-23"><a href="#cb16-23" aria-hidden="true" tabindex="-1"></a><span class="st">    - deployments</span></span>
+<span id="cb16-24"><a href="#cb16-24" aria-hidden="true" tabindex="-1"></a><span class="st">    - statefulsets</span></span>
+<span id="cb16-25"><a href="#cb16-25" aria-hidden="true" tabindex="-1"></a><span class="st">    - daemonsets</span></span>
+<span id="cb16-26"><a href="#cb16-26" aria-hidden="true" tabindex="-1"></a><span class="st">    - jobs</span></span>
+<span id="cb16-27"><a href="#cb16-27" aria-hidden="true" tabindex="-1"></a><span class="st">    - cronjobs</span></span>
+<span id="cb16-28"><a href="#cb16-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-29"><a href="#cb16-29" aria-hidden="true" tabindex="-1"></a><span class="st">    # OpenShift-specific workload resources</span></span>
+<span id="cb16-30"><a href="#cb16-30" aria-hidden="true" tabindex="-1"></a><span class="st">    - deploymentconfigs</span></span>
+<span id="cb16-31"><a href="#cb16-31" aria-hidden="true" tabindex="-1"></a><span class="st">    - buildconfigs</span></span>
+<span id="cb16-32"><a href="#cb16-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-33"><a href="#cb16-33" aria-hidden="true" tabindex="-1"></a><span class="st">    # Application networking configuration</span></span>
+<span id="cb16-34"><a href="#cb16-34" aria-hidden="true" tabindex="-1"></a><span class="st">    - services</span></span>
+<span id="cb16-35"><a href="#cb16-35" aria-hidden="true" tabindex="-1"></a><span class="st">    - routes.route.openshift.io</span></span>
+<span id="cb16-36"><a href="#cb16-36" aria-hidden="true" tabindex="-1"></a><span class="st">    - ingresses</span></span>
+<span id="cb16-37"><a href="#cb16-37" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-38"><a href="#cb16-38" aria-hidden="true" tabindex="-1"></a><span class="st">    # Application configuration and storage claims (including PVs)</span></span>
+<span id="cb16-39"><a href="#cb16-39" aria-hidden="true" tabindex="-1"></a><span class="st">    - configmaps</span></span>
+<span id="cb16-40"><a href="#cb16-40" aria-hidden="true" tabindex="-1"></a><span class="st">    - secrets</span></span>
+<span id="cb16-41"><a href="#cb16-41" aria-hidden="true" tabindex="-1"></a><span class="st">    - persistentvolumeclaims</span></span>
+<span id="cb16-42"><a href="#cb16-42" aria-hidden="true" tabindex="-1"></a><span class="st">    - persistentvolumes</span></span>
+<span id="cb16-43"><a href="#cb16-43" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-44"><a href="#cb16-44" aria-hidden="true" tabindex="-1"></a><span class="st">  # 3. CRITICAL: Exclude snapshot-related resources</span></span>
+<span id="cb16-45"><a href="#cb16-45" aria-hidden="true" tabindex="-1"></a><span class="st">  # We are restoring from a materialized PVC, not the snapshot itself.</span></span>
+<span id="cb16-46"><a href="#cb16-46" aria-hidden="true" tabindex="-1"></a><span class="st">  excludedResources:</span></span>
+<span id="cb16-47"><a href="#cb16-47" aria-hidden="true" tabindex="-1"></a><span class="st">    - snapshot</span></span>
+<span id="cb16-48"><a href="#cb16-48" aria-hidden="true" tabindex="-1"></a><span class="st">    - snapshotcontent</span></span>
+<span id="cb16-49"><a href="#cb16-49" aria-hidden="true" tabindex="-1"></a><span class="st">    - virtualMachineSnapshot</span></span>
+<span id="cb16-50"><a href="#cb16-50" aria-hidden="true" tabindex="-1"></a><span class="st">    - virtualMachineSnapshotContent</span></span>
+<span id="cb16-51"><a href="#cb16-51" aria-hidden="true" tabindex="-1"></a><span class="st">    - VolumeSnapshot</span></span>
+<span id="cb16-52"><a href="#cb16-52" aria-hidden="true" tabindex="-1"></a><span class="st">    - VolumeSnapshotContent</span></span>
+<span id="cb16-53"><a href="#cb16-53" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-54"><a href="#cb16-54" aria-hidden="true" tabindex="-1"></a><span class="st">  # 4. Set the resource conflict policy</span></span>
+<span id="cb16-55"><a href="#cb16-55" aria-hidden="true" tabindex="-1"></a><span class="st">  # &#39;update&#39; will overwrite existing resources if a restore is re-run.</span></span>
+<span id="cb16-56"><a href="#cb16-56" aria-hidden="true" tabindex="-1"></a><span class="st">  existingResourcePolicy: &#39;update&#39;</span></span>
+<span id="cb16-57"><a href="#cb16-57" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-58"><a href="#cb16-58" aria-hidden="true" tabindex="-1"></a><span class="st">  # 5. Ensure PVs are restored so the plugin can patch them.</span></span>
+<span id="cb16-59"><a href="#cb16-59" aria-hidden="true" tabindex="-1"></a><span class="st">  restorePVs: true</span></span>
+<span id="cb16-60"><a href="#cb16-60" aria-hidden="true" tabindex="-1"></a><span class="st">  </span></span>
+<span id="cb16-61"><a href="#cb16-61" aria-hidden="true" tabindex="-1"></a><span class="op">EOF</span></span>
+<span id="cb16-62"><a href="#cb16-62" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-63"><a href="#cb16-63" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> apply <span class="at">-f</span> <span class="va">$BASE_DIR</span>/data/install/oadp-restore.yaml</span></code></pre></div>
+        <p>After the restore completes, the VM will be created on the DR
+        cluster and connected to the replicated data.</p>
+        <p><img src="imgs/2025.11.ocp-v.dr.oadp.plugin.md/2025-11-05-17-36-34.png" width="1024"></p>
+        <h3 id="verifying-the-restored-pvc-and-pv-metadata">Verifying
+        the Restored PVC and PV Metadata</h3>
+        <p>The restored PVC metadata shows that it is bound to the same
+        PV name as on the primary site.</p>
+        <div class="sourceCode" id="cb17"><pre
+        class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="fu">kind</span><span class="kw">:</span><span class="at"> PersistentVolumeClaim</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a><span class="fu">apiVersion</span><span class="kw">:</span><span class="at"> v1</span></span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a><span class="fu">metadata</span><span class="kw">:</span></span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">name</span><span class="kw">:</span><span class="at"> cirros-crimson-wombat-26-volume</span></span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">namespace</span><span class="kw">:</span><span class="at"> demo</span></span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a><span class="co">  # ......</span></span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a><span class="fu">spec</span><span class="kw">:</span></span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">accessModes</span><span class="kw">:</span></span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> ReadWriteMany</span></span>
+<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">resources</span><span class="kw">:</span></span>
+<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">requests</span><span class="kw">:</span></span>
+<span id="cb17-12"><a href="#cb17-12" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">storage</span><span class="kw">:</span><span class="at"> </span><span class="st">&#39;235635999&#39;</span></span>
+<span id="cb17-13"><a href="#cb17-13" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">volumeName</span><span class="kw">:</span><span class="at"> pvc-b6d75156-0c58-422f-8bf8-6e40ed054c5d</span></span>
+<span id="cb17-14"><a href="#cb17-14" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">storageClassName</span><span class="kw">:</span><span class="at"> nfs-csi</span></span>
+<span id="cb17-15"><a href="#cb17-15" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">volumeMode</span><span class="kw">:</span><span class="at"> Filesystem</span></span>
+<span id="cb17-16"><a href="#cb17-16" aria-hidden="true" tabindex="-1"></a><span class="co"># ......</span></span></code></pre></div>
+        <p>The restored PV metadata shows the effect of the patching
+        plugin. The <code>share</code> and <code>volumeHandle</code> now
+        point to the DR site’s NFS server directory
+        (<code>/openshift-02</code>), thanks to the plugin’s logic.</p>
+        <div class="sourceCode" id="cb18"><pre
+        class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="fu">kind</span><span class="kw">:</span><span class="at"> PersistentVolume</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a><span class="fu">apiVersion</span><span class="kw">:</span><span class="at"> v1</span></span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a><span class="fu">metadata</span><span class="kw">:</span></span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">name</span><span class="kw">:</span><span class="at"> pvc-b6d75156-0c58-422f-8bf8-6e40ed054c5d</span></span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a><span class="co">  # ......</span></span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a><span class="fu">spec</span><span class="kw">:</span></span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">capacity</span><span class="kw">:</span></span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">storage</span><span class="kw">:</span><span class="at"> </span><span class="st">&#39;235635999&#39;</span></span>
+<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">csi</span><span class="kw">:</span></span>
+<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">driver</span><span class="kw">:</span><span class="at"> nfs.csi.k8s.io</span></span>
+<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">volumeHandle</span><span class="kw">:</span><span class="at"> 192.168.99.1</span><span class="co">#openshift-02#pvc-b6d75156-0c58-422f-8bf8-6e40ed054c5d##</span></span>
+<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">volumeAttributes</span><span class="kw">:</span></span>
+<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">csi.storage.k8s.io/pv/name</span><span class="kw">:</span><span class="at"> pvc-b6d75156-0c58-422f-8bf8-6e40ed054c5d</span></span>
+<span id="cb18-14"><a href="#cb18-14" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">csi.storage.k8s.io/pvc/name</span><span class="kw">:</span><span class="at"> tmp-pvc-43d11600-7b1c-4a3f-997c-8e99526bdd32</span></span>
+<span id="cb18-15"><a href="#cb18-15" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">csi.storage.k8s.io/pvc/namespace</span><span class="kw">:</span><span class="at"> openshift-virtualization-os-images</span></span>
+<span id="cb18-16"><a href="#cb18-16" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">server</span><span class="kw">:</span><span class="at"> </span><span class="fl">192.168.99.1</span></span>
+<span id="cb18-17"><a href="#cb18-17" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">share</span><span class="kw">:</span><span class="at"> /openshift-02</span></span>
+<span id="cb18-18"><a href="#cb18-18" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">storage.kubernetes.io/csiProvisionerIdentity</span><span class="kw">:</span><span class="at"> 1761996473487-3594-nfs.csi.k8s.io</span></span>
+<span id="cb18-19"><a href="#cb18-19" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">subdir</span><span class="kw">:</span><span class="at"> pvc-b6d75156-0c58-422f-8bf8-6e40ed054c5d</span></span>
+<span id="cb18-20"><a href="#cb18-20" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">accessModes</span><span class="kw">:</span></span>
+<span id="cb18-21"><a href="#cb18-21" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> ReadWriteMany</span></span>
+<span id="cb18-22"><a href="#cb18-22" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">claimRef</span><span class="kw">:</span></span>
+<span id="cb18-23"><a href="#cb18-23" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">kind</span><span class="kw">:</span><span class="at"> PersistentVolumeClaim</span></span>
+<span id="cb18-24"><a href="#cb18-24" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">namespace</span><span class="kw">:</span><span class="at"> demo</span></span>
+<span id="cb18-25"><a href="#cb18-25" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">name</span><span class="kw">:</span><span class="at"> cirros-crimson-wombat-26-volume</span></span>
+<span id="cb18-26"><a href="#cb18-26" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">uid</span><span class="kw">:</span><span class="at"> 4150f267-fc79-4234-a188-9dbd0b993fc2</span></span>
+<span id="cb18-27"><a href="#cb18-27" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">apiVersion</span><span class="kw">:</span><span class="at"> v1</span></span>
+<span id="cb18-28"><a href="#cb18-28" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">resourceVersion</span><span class="kw">:</span><span class="at"> </span><span class="st">&#39;138499&#39;</span></span>
+<span id="cb18-29"><a href="#cb18-29" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">persistentVolumeReclaimPolicy</span><span class="kw">:</span><span class="at"> Retain</span></span>
+<span id="cb18-30"><a href="#cb18-30" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">storageClassName</span><span class="kw">:</span><span class="at"> nfs-csi</span></span>
+<span id="cb18-31"><a href="#cb18-31" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">mountOptions</span><span class="kw">:</span></span>
+<span id="cb18-32"><a href="#cb18-32" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> hard</span></span>
+<span id="cb18-33"><a href="#cb18-33" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> nfsvers=4.2</span></span>
+<span id="cb18-34"><a href="#cb18-34" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> rsize=1048576</span></span>
+<span id="cb18-35"><a href="#cb18-35" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> wsize=1048576</span></span>
+<span id="cb18-36"><a href="#cb18-36" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> noatime</span></span>
+<span id="cb18-37"><a href="#cb18-37" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> nodiratime</span></span>
+<span id="cb18-38"><a href="#cb18-38" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> actimeo=60</span></span>
+<span id="cb18-39"><a href="#cb18-39" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> timeo=600</span></span>
+<span id="cb18-40"><a href="#cb18-40" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> retrans=3</span></span>
+<span id="cb18-41"><a href="#cb18-41" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">volumeMode</span><span class="kw">:</span><span class="at"> Filesystem</span></span></code></pre></div>
+        <h3 id="checking-the-oadp-plugin-logs-1">Checking the OADP
+        Plugin Logs</h3>
+        <p>The Velero pod logs on the DR cluster confirm that the PV
+        patching plugin executed successfully.</p>
+        <div class="sourceCode" id="cb19"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> logs <span class="at">-n</span> openshift-adp <span class="at">-l</span> app.kubernetes.io/name=velero <span class="at">--tail</span><span class="op">=</span>-1 <span class="kw">|</span> <span class="fu">grep</span> modify-pv-handle.go</span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a><span class="co"># time=&quot;2025-11-05T11:41:57Z&quot; level=info msg=&quot;Starting ModifyPVFieldsAction for PV...&quot; cmd=/plugins/velero-plugins-wzhlab-top-pv-patch logSource=&quot;/src/github.com/konveyor/openshift-velero-plugin/velero-plugins-wzhlab-top-pv-patch/modify-pv-handle.go:66&quot; pluginName=velero-plugins-wzhlab-top-pv-patch restore=openshift-adp/restore-metadata-excluding-pvs-03</span></span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a><span class="co"># time=&quot;2025-11-05T11:41:57Z&quot; level=info msg=&quot;Applying rule for path: spec.csi.volumeAttributes.share&quot; cmd=/plugins/velero-plugins-wzhlab-top-pv-patch logSource=&quot;/src/github.com/konveyor/openshift-velero-plugin/velero-plugins-wzhlab-top-pv-patch/modify-pv-handle.go:98&quot; pluginName=velero-plugins-wzhlab-top-pv-patch restore=openshift-adp/restore-metadata-excluding-pvs-03</span></span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a><span class="co"># time=&quot;2025-11-05T11:41:57Z&quot; level=info msg=&quot;PV pvc-5183c8de-817f-4d45-947c-a02ccc18d422: Match found for path spec.csi.volumeAttributes.share. Changing from &#39;/openshift-01&#39; to &#39;/openshift-02&#39;&quot; cmd=/plugins/velero-plugins-wzhlab-top-pv-patch logSource=&quot;/src/github.com/konveyor/openshift-velero-plugin/velero-plugins-wzhlab-top-pv-patch/modify-pv-handle.go:126&quot; pluginName=velero-plugins-wzhlab-top-pv-patch restore=openshift-adp/restore-metadata-excluding-pvs-03</span></span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a><span class="co"># time=&quot;2025-11-05T11:41:57Z&quot; level=info msg=&quot;Applying rule for path: spec.csi.volumeHandle&quot; cmd=/plugins/velero-plugins-wzhlab-top-pv-patch logSource=&quot;/src/github.com/konveyor/openshift-velero-plugin/velero-plugins-wzhlab-top-pv-patch/modify-pv-handle.go:98&quot; pluginName=velero-plugins-wzhlab-top-pv-patch restore=openshift-adp/restore-metadata-excluding-pvs-03</span></span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a><span class="co"># time=&quot;2025-11-05T11:41:57Z&quot; level=info msg=&quot;PV pvc-5183c8de-817f-4d45-947c-a02ccc18d422: Match found for path spec.csi.volumeHandle. Changing from &#39;192.168.99.1#openshift-01#pvc-5183c8de-817f-4d45-947c-a02ccc18d422##&#39; to &#39;192.168.99.1#openshift-02#pvc-5183c8de-817f-4d45-947c-a02ccc18d422##&#39;&quot; cmd=/plugins/velero-plugins-wzhlab-top-pv-patch logSource=&quot;/src/github.com/konveyor/openshift-velero-plugin/velero-plugins-wzhlab-top-pv-patch/modify-pv-handle.go:126&quot; pluginName=velero-plugins-wzhlab-top-pv-patch restore=openshift-adp/restore-metadata-excluding-pvs-03</span></span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a><span class="co"># time=&quot;2025-11-05T11:41:57Z&quot; level=info msg=&quot;PV pvc-5183c8de-817f-4d45-947c-a02ccc18d422 was modified.&quot; cmd=/plugins/velero-plugins-wzhlab-top-pv-patch logSource=&quot;/src/github.com/konveyor/openshift-velero-plugin/velero-plugins-wzhlab-top-pv-patch/modify-pv-handle.go:139&quot; pluginName=velero-plugins-wzhlab-top-pv-patch restore=openshift-adp/restore-metadata-excluding-pvs-03</span></span>
+<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a><span class="co"># time=&quot;2025-11-05T11:41:57Z&quot; level=info msg=&quot;Starting ModifyPVFieldsAction for PV...&quot; cmd=/plugins/velero-plugins-wzhlab-top-pv-patch logSource=&quot;/src/github.com/konveyor/openshift-velero-plugin/velero-plugins-wzhlab-top-pv-patch/modify-pv-handle.go:66&quot; pluginName=velero-plugins-wzhlab-top-pv-patch restore=openshift-adp/restore-metadata-excluding-pvs-03</span></span>
+<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a><span class="co"># time=&quot;2025-11-05T11:41:57Z&quot; level=info msg=&quot;Applying rule for path: spec.csi.volumeAttributes.share&quot; cmd=/plugins/velero-plugins-wzhlab-top-pv-patch logSource=&quot;/src/github.com/konveyor/openshift-velero-plugin/velero-plugins-wzhlab-top-pv-patch/modify-pv-handle.go:98&quot; pluginName=velero-plugins-wzhlab-top-pv-patch restore=openshift-adp/restore-metadata-excluding-pvs-03</span></span>
+<span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a><span class="co"># time=&quot;2025-11-05T11:41:57Z&quot; level=info msg=&quot;PV pvc-b6d75156-0c58-422f-8bf8-6e40ed054c5d: Match found for path spec.csi.volumeAttributes.share. Changing from &#39;/openshift-01&#39; to &#39;/openshift-02&#39;&quot; cmd=/plugins/velero-plugins-wzhlab-top-pv-patch logSource=&quot;/src/github.com/konveyor/openshift-velero-plugin/velero-plugins-wzhlab-top-pv-patch/modify-pv-handle.go:126&quot; pluginName=velero-plugins-wzhlab-top-pv-patch restore=openshift-adp/restore-metadata-excluding-pvs-03</span></span>
+<span id="cb19-11"><a href="#cb19-11" aria-hidden="true" tabindex="-1"></a><span class="co"># time=&quot;2025-11-05T11:41:57Z&quot; level=info msg=&quot;Applying rule for path: spec.csi.volumeHandle&quot; cmd=/plugins/velero-plugins-wzhlab-top-pv-patch logSource=&quot;/src/github.com/konveyor/openshift-velero-plugin/velero-plugins-wzhlab-top-pv-patch/modify-pv-handle.go:98&quot; pluginName=velero-plugins-wzhlab-top-pv-patch restore=openshift-adp/restore-metadata-excluding-pvs-03</span></span>
+<span id="cb19-12"><a href="#cb19-12" aria-hidden="true" tabindex="-1"></a><span class="co"># time=&quot;2025-11-05T11:41:57Z&quot; level=info msg=&quot;PV pvc-b6d75156-0c58-422f-8bf8-6e40ed054c5d: Match found for path spec.csi.volumeHandle. Changing from &#39;192.168.99.1#openshift-01#pvc-b6d75156-0c58-422f-8bf8-6e40ed054c5d##&#39; to &#39;192.168.99.1#openshift-02#pvc-b6d75156-0c58-422f-8bf8-6e40ed054c5d##&#39;&quot; cmd=/plugins/velero-plugins-wzhlab-top-pv-patch logSource=&quot;/src/github.com/konveyor/openshift-velero-plugin/velero-plugins-wzhlab-top-pv-patch/modify-pv-handle.go:126&quot; pluginName=velero-plugins-wzhlab-top-pv-patch restore=openshift-adp/restore-metadata-excluding-pvs-03</span></span>
+<span id="cb19-13"><a href="#cb19-13" aria-hidden="true" tabindex="-1"></a><span class="co"># time=&quot;2025-11-05T11:41:57Z&quot; level=info msg=&quot;PV pvc-b6d75156-0c58-422f-8bf8-6e40ed054c5d was modified.&quot; cmd=/plugins/velero-plugins-wzhlab-top-pv-patch logSource=&quot;/src/github.com/konveyor/openshift-velero-plugin/velero-plugins-wzhlab-top-pv-patch/modify-pv-handle.go:139&quot; pluginName=velero-plugins-wzhlab-top-pv-patch restore=openshift-adp/restore-metadata-excluding-pvs-03</span></span></code></pre></div>
+        <h2 id="automating-backups-with-schedules">5. Automating Backups
+        with Schedules</h2>
+        <p>In a production environment, backups should be performed
+        automatically on a regular schedule. OADP supports this via the
+        <code>Schedule</code> custom resource. The following example
+        creates a schedule to perform a metadata-only backup every hour
+        at 22 minutes past the hour.</p>
+        <div class="sourceCode" id="cb20"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> <span class="op">&lt;&lt; EOF</span> <span class="op">&gt;</span> <span class="va">$BASE_DIR</span>/data/install/oadp-schedule.yaml</span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a><span class="st">apiVersion: velero.io/v1</span></span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a><span class="st">kind: Schedule</span></span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a><span class="st">metadata:</span></span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a><span class="st">  name: daily-metadata-backup-schedule</span></span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a><span class="st">  namespace: openshift-adp</span></span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a><span class="st">spec:</span></span>
+<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a><span class="st">  # 1. Define the backup schedule using a Cron expression</span></span>
+<span id="cb20-9"><a href="#cb20-9" aria-hidden="true" tabindex="-1"></a><span class="st">  # This example runs at 22 minutes past every hour</span></span>
+<span id="cb20-10"><a href="#cb20-10" aria-hidden="true" tabindex="-1"></a><span class="st">  schedule: 22 * * * *</span></span>
+<span id="cb20-11"><a href="#cb20-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-12"><a href="#cb20-12" aria-hidden="true" tabindex="-1"></a><span class="st">  # 2. Define the backup specification template</span></span>
+<span id="cb20-13"><a href="#cb20-13" aria-hidden="true" tabindex="-1"></a><span class="st">  # This template is identical to the manual &#39;Backup&#39; object</span></span>
+<span id="cb20-14"><a href="#cb20-14" aria-hidden="true" tabindex="-1"></a><span class="st">  template:</span></span>
+<span id="cb20-15"><a href="#cb20-15" aria-hidden="true" tabindex="-1"></a><span class="st">    spec:</span></span>
+<span id="cb20-16"><a href="#cb20-16" aria-hidden="true" tabindex="-1"></a><span class="st">      includedNamespaces:</span></span>
+<span id="cb20-17"><a href="#cb20-17" aria-hidden="true" tabindex="-1"></a><span class="st">        - demo</span></span>
+<span id="cb20-18"><a href="#cb20-18" aria-hidden="true" tabindex="-1"></a><span class="st">      includeClusterResources: true</span></span>
+<span id="cb20-19"><a href="#cb20-19" aria-hidden="true" tabindex="-1"></a><span class="st">      # CRITICAL: Only back up metadata</span></span>
+<span id="cb20-20"><a href="#cb20-20" aria-hidden="true" tabindex="-1"></a><span class="st">      snapshotVolumes: false</span></span>
+<span id="cb20-21"><a href="#cb20-21" aria-hidden="true" tabindex="-1"></a><span class="st">      storageLocation: default</span></span>
+<span id="cb20-22"><a href="#cb20-22" aria-hidden="true" tabindex="-1"></a><span class="st">      # Set the retention policy for backups created by this schedule</span></span>
+<span id="cb20-23"><a href="#cb20-23" aria-hidden="true" tabindex="-1"></a><span class="st">      ttl: 720h0m0s # (30 days * 24 hours = 720 hours)</span></span>
+<span id="cb20-24"><a href="#cb20-24" aria-hidden="true" tabindex="-1"></a><span class="op">EOF</span></span>
+<span id="cb20-25"><a href="#cb20-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-26"><a href="#cb20-26" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> apply <span class="at">-f</span> <span class="va">$BASE_DIR</span>/data/install/oadp-schedule.yaml</span></code></pre></div>
+        <p>OADP will automatically create <code>Backup</code> objects
+        based on this schedule (e.g.,
+        <code>daily-metadata-backup-schedule-20250730012200</code>) and
+        delete them when their TTL expires.</p>
+        <h2 id="path-to-automation">6. Path to Automation</h2>
+        <p>The manual steps outlined in this document form the basis for
+        a fully automated disaster recovery workflow. An automation tool
+        like Ansible can orchestrate the entire process. The high-level
+        logic for an automation playbook would include:</p>
+        <ol type="1">
+        <li><p><strong>Primary Site Cleanup</strong>: On the primary
+        site, a periodic task should run to clean up stale resources. If
+        a snapshot is deleted and the PVC created from it is no longer
+        referenced by any VM, that PVC should be automatically deleted
+        to reclaim storage.</p></li>
+        <li><p><strong>Backup Validation</strong>: The automation should
+        check the status of each OADP backup. Due to the plugin’s logic,
+        a backup might be marked as <code>PartiallyFailed</code> if it
+        finds that a PVC from a snapshot has already been created by a
+        previous run. The script should verify that this is the only
+        cause of failure and that no other critical resources failed to
+        back up.</p></li>
+        <li><p><strong>Failover Execution</strong>: In a disaster
+        scenario, the playbook would trigger the final OADP
+        <code>Restore</code> on the DR cluster. This restore brings the
+        VMs online, connecting them to the already replicated and
+        pre-staged persistent volumes.</p></li>
+        <li><p><strong>Post-Failover Cleanup</strong>: After a
+        successful restore, the automation should perform a
+        reconciliation. If a PVC was deleted on the primary site before
+        the disaster, it should also be removed from the DR site to
+        maintain consistency.</p></li>
+        <li><p><strong>PV Garbage Collection</strong>: Since the
+        <code>StorageClass</code> uses a <code>Retain</code> policy, PVs
+        are not automatically deleted. The automation should include
+        steps to safely identify and remove orphaned PVs on both the
+        primary and DR sites after failback and cleanup operations are
+        complete.</p></li>
+        </ol>
+        <h2 id="summary">7. Summary</h2>
+        <p>In this document, we introduce a disaster recovery strategy
+        that separates the backup and restore of Kubernetes/OpenShift
+        metadata from the data volumes (PV/PVC). We utilize OADP for
+        metadata operations, while leveraging the storage system’s
+        native snapshot and replication capabilities for the data
+        volumes. A key component is the OADP plugin, which modifies PV
+        metadata during the restore process to ensure that the data
+        volumes point to the correct storage location at the DR
+        site.</p>
+      </article>
+    </div>
+      </main>
+
+  <footer>
+    <p>
+      Licensed under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank"
+        rel="noopener">CC-BY-NC-SA 4.0</a>
+      &nbsp;·&nbsp;
+      <a href="https://github.com/wangzheng422/docker_env" target="_blank" rel="noopener">wangzheng422/docker_env</a>
+    </p>
+  </footer>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: false, theme: 'dark' });
+
+    const SITE_BUILD_ID = 'fbe91b569ae8';
+    const SITE_HOME_URL = '../../../index.html';
+
+    const getBuildIdFromHtml = (html) => {
+      const match = String(html).match(/<meta[^>]+name=["']site-build-id["'][^>]+content=["']([^"']+)["']/i)
+        || String(html).match(/<meta[^>]+content=["']([^"']+)["'][^>]+name=["']site-build-id["']/i);
+      return match ? match[1] : '';
+    };
+
+    const checkForSiteUpdate = async () => {
+      if (!SITE_BUILD_ID || window.location.protocol === 'file:') return;
+      try {
+        const probeUrl = new URL(SITE_HOME_URL || './index.html', window.location.href);
+        probeUrl.searchParams.set('site_cache_probe', Date.now().toString());
+        const response = await fetch(probeUrl.toString(), { cache: 'no-store' });
+        if (!response.ok) return;
+        const latestBuildId = getBuildIdFromHtml(await response.text());
+        if (!latestBuildId || latestBuildId === SITE_BUILD_ID) return;
+        if (sessionStorage.getItem('site-build-refresh') === latestBuildId) return;
+        sessionStorage.setItem('site-build-refresh', latestBuildId);
+        const freshUrl = new URL(window.location.href);
+        freshUrl.searchParams.set('v', latestBuildId);
+        window.location.replace(freshUrl.toString());
+      } catch (error) {
+        // Network errors should not block reading the current page.
+      }
+    };
+
+    const versionedLocalUrl = (rawUrl) => {
+      if (!rawUrl || /^(https?:)?\/\//i.test(rawUrl) || /^(data|blob|mailto):/i.test(rawUrl)) return rawUrl;
+      const url = new URL(rawUrl, window.location.href);
+      if (url.searchParams.has('v')) return rawUrl;
+      url.searchParams.set('v', SITE_BUILD_ID);
+      return url.toString();
+    };
+
+    const cacheBustPageAssets = () => {
+      document.querySelectorAll('img[src], video[src], audio[src], source[src]').forEach((node) => {
+        const src = node.getAttribute('src');
+        const versioned = versionedLocalUrl(src);
+        if (versioned !== src) node.setAttribute('src', versioned);
+      });
+    };
+
+    const updateReadingProgress = () => {
+      const progress = document.querySelector('.reading-progress');
+      if (!progress) return;
+      const scrollable = document.documentElement.scrollHeight - window.innerHeight;
+      const ratio = scrollable > 0 ? window.scrollY / scrollable : 0;
+      progress.style.transform = 'scaleX(' + Math.min(1, Math.max(0, ratio)) + ')';
+    };
+
+    const topicFor = (text, href) => {
+      const haystack = (text + ' ' + href).toLowerCase();
+      if (/developers\.redhat\.com|redhatquickcourses|github\.com\/redhatquickcourses/.test(haystack)) return 'Red Hat';
+      if (/ai|llm|gpu|vllm|llama|model|rhaiis/.test(haystack)) return 'AI';
+      if (/network|ovn|bgp|dns|egress|ingress|metallb|nic|route/.test(haystack)) return 'Network';
+      if (/cert|tls|sso|keycloak|rhbk|security|compliance/.test(haystack)) return 'Security';
+      if (/perf|profile|throttling|heap|debug/.test(haystack)) return 'Performance';
+      if (/install|ipi|upi|sno|disconnected|bootstrap/.test(haystack)) return 'Install';
+      if (/rhel|coreos|rhcos|kernel|rpm|ostree/.test(haystack)) return 'RHEL';
+      if (/backup|storage|nfs|odf|ocs|ceph|dr/.test(haystack)) return 'Storage';
+      if (/pipeline|gitops|ansible|aap|rhdh|devops/.test(haystack)) return 'DevOps';
+      return 'OpenShift';
+    };
+
+    const yearFor = (text, href) => {
+      const match = (text + ' ' + href).match(/20\d{2}/);
+      return match ? match[0] : 'Notes';
+    };
+
+    const importantExternal = (href) =>
+      /developers\.redhat\.com|redhatquickcourses\.github\.io/i.test(href);
+
+    const titleForLink = (link) => {
+      const href = link.getAttribute('href') || '';
+      const directText = link.textContent.trim().replace(/\s+/g, ' ');
+      if (!/^https?:\/\//.test(directText)) return directText;
+      const parentItem = link.closest('ul')?.parentElement;
+      if (parentItem) {
+        const clone = parentItem.cloneNode(true);
+        clone.querySelectorAll('ul').forEach((nested) => nested.remove());
+        const parentText = clone.textContent.trim().replace(/\s+/g, ' ');
+        if (parentText) {
+          return parentText;
+        }
+      }
+      return directText;
+    };
+
+    const escapeHtml = (value) => String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+
+    const enhanceHome = () => {
+      if (!document.body.classList.contains('page-index')) return;
+      const source = document.querySelector('.home-source');
+      const grid = document.getElementById('note-grid');
+      const stats = document.getElementById('console-stats');
+      const externalPanel = document.getElementById('external-panel');
+      const topicStrip = document.getElementById('topic-strip');
+      const search = document.getElementById('console-search');
+      if (!source || !grid || !stats || !externalPanel || !topicStrip || !search) return;
+
+      const seen = new Set();
+      const links = Array.from(source.querySelectorAll('a[href]'))
+        .map((link) => {
+          const href = link.getAttribute('href') || '';
+          const text = titleForLink(link);
+          return { text, href, topic: topicFor(text, href), year: yearFor(text, href) };
+        });
+      const notes = links
+        .filter((note) => note.text && !note.href.startsWith('http') && !seen.has(note.href) && seen.add(note.href));
+      const externalLinks = links
+        .filter((note) => note.text && importantExternal(note.href));
+
+      const topics = ['All', ...Array.from(new Set(notes.map((note) => note.topic))).sort()];
+      let activeTopic = 'All';
+
+      const renderStats = () => {
+        const years = notes.map((note) => note.year).filter((year) => year.length === 4 && /^\d{4}/.test(year));
+        const latest = years.length ? Math.max(...years.map(Number)) : 'N/A';
+        const oldest = years.length ? Math.min(...years.map(Number)) : 'N/A';
+        stats.innerHTML = [
+          ['Notes', notes.length],
+          ['Resources', externalLinks.length],
+          ['Topics', topics.length - 1],
+          ['Latest', latest],
+        ].map(([label, value]) => '<div class="stat-tile"><span>' + label + '</span><strong>' + value + '</strong></div>').join('');
+        const signal = document.getElementById('signal-count');
+        if (signal) signal.textContent = notes.length + ' links indexed';
+      };
+
+      const renderExternal = () => {
+        externalPanel.innerHTML =
+          '<div class="section-heading"><span>Published / Learning</span><strong>Red Hat resources</strong></div>' +
+          '<div class="external-grid">' +
+          externalLinks.map((note) =>
+            '<a class="resource-card" href="' + escapeHtml(note.href) + '" target="_blank" rel="noopener">' +
+            '<span class="note-meta"><span>' + escapeHtml(note.year) + '</span><span>' + escapeHtml(note.topic) + '</span></span>' +
+            '<strong>' + escapeHtml(note.text) + '</strong>' +
+            '<small>' + escapeHtml(note.href) + '</small>' +
+            '</a>'
+          ).join('') +
+          '</div>';
+      };
+
+      const renderTopics = () => {
+        topicStrip.innerHTML = topics.map((topic) => '<button class="topic-chip' + (topic === activeTopic ? ' active' : '') + '" type="button" data-topic="' + escapeHtml(topic) + '">' + escapeHtml(topic) + '</button>').join('');
+        topicStrip.querySelectorAll('button').forEach((button) => {
+          button.addEventListener('click', () => {
+            activeTopic = button.dataset.topic || 'All';
+            renderTopics();
+            renderCards();
+          });
+        });
+      };
+
+      const renderCards = () => {
+        const query = search.value.trim().toLowerCase();
+        const filtered = notes.filter((note) => {
+          const topicMatch = activeTopic === 'All' || note.topic === activeTopic;
+          const queryMatch = !query || (note.text + ' ' + note.href + ' ' + note.topic + ' ' + note.year).toLowerCase().includes(query);
+          return topicMatch && queryMatch;
+        });
+        grid.innerHTML = filtered.map((note) =>
+          '<a class="note-card" href="' + escapeHtml(note.href) + '">' +
+          '<span class="note-meta"><span>' + escapeHtml(note.year) + '</span><span>' + escapeHtml(note.topic) + '</span></span>' +
+          '<strong>' + escapeHtml(note.text) + '</strong>' +
+          '<small>' + escapeHtml(note.href) + '</small>' +
+          '</a>'
+        ).join('') || '<p class="empty-state">No matching notes.</p>';
+      };
+
+      const drawMap = () => {
+        const canvas = document.getElementById('knowledge-canvas');
+        if (!(canvas instanceof HTMLCanvasElement)) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        const width = canvas.width;
+        const height = canvas.height;
+        const nodes = notes.slice(0, 44).map((note, index) => {
+          const angle = (index / 44) * Math.PI * 2;
+          const ring = 90 + (index % 5) * 22;
+          return {
+            x: width / 2 + Math.cos(angle) * ring,
+            y: height / 2 + Math.sin(angle) * ring * 0.72,
+            topic: note.topic,
+          };
+        });
+        ctx.clearRect(0, 0, width, height);
+        ctx.strokeStyle = 'rgba(88, 166, 255, 0.14)';
+        ctx.lineWidth = 1;
+        nodes.forEach((node, index) => {
+          const next = nodes[(index + 7) % nodes.length];
+          ctx.beginPath();
+          ctx.moveTo(node.x, node.y);
+          ctx.lineTo(next.x, next.y);
+          ctx.stroke();
+        });
+        const palette = {
+          AI: '#a371f7',
+          Network: '#39d0d8',
+          Security: '#ff7b72',
+          Performance: '#f2cc60',
+          Install: '#7ee787',
+          RHEL: '#ff7b72',
+          Storage: '#d2a8ff',
+          DevOps: '#ffa657',
+          OpenShift: '#58a6ff',
+        };
+        nodes.forEach((node) => {
+          ctx.fillStyle = palette[node.topic] || '#58a6ff';
+          ctx.beginPath();
+          ctx.arc(node.x, node.y, 3.4, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      };
+
+      search.addEventListener('input', renderCards);
+      renderStats();
+      renderExternal();
+      renderTopics();
+      renderCards();
+      drawMap();
+      document.body.classList.add('home-enhanced');
+    };
+
+    const enhanceCodeBlocks = () => {
+      document.querySelectorAll('pre').forEach((pre) => {
+        if (pre.classList.contains('mermaid') || pre.querySelector('.copy-code')) return;
+        const button = document.createElement('button');
+        button.className = 'copy-code';
+        button.type = 'button';
+        button.textContent = 'Copy';
+        button.addEventListener('click', async () => {
+          await navigator.clipboard.writeText(pre.textContent || '');
+          button.textContent = 'Copied';
+          setTimeout(() => { button.textContent = 'Copy'; }, 1200);
+        });
+        pre.appendChild(button);
+      });
+    };
+
+    window.addEventListener('scroll', updateReadingProgress, { passive: true });
+    window.addEventListener('pageshow', (event) => {
+      if (event.persisted) checkForSiteUpdate();
+    });
+    document.addEventListener('DOMContentLoaded', async () => {
+      checkForSiteUpdate();
+      cacheBustPageAssets();
+      updateReadingProgress();
+      enhanceHome();
+      enhanceCodeBlocks();
+      // pandoc 输出 mermaid 为 <pre class="mermaid"><code>...</code></pre>
+      // 需要转成 <div class="mermaid">...</div> 供 mermaid.js 渲染
+      document.querySelectorAll('pre.mermaid').forEach(pre => {
+        const div = document.createElement('div');
+        div.classList.add('mermaid');
+        div.textContent = pre.textContent;
+        pre.replaceWith(div);
+      });
+      // 也处理 <pre><code class="language-mermaid"> 形式（备用）
+      document.querySelectorAll('pre code.language-mermaid').forEach(code => {
+        const div = document.createElement('div');
+        div.classList.add('mermaid');
+        div.textContent = code.textContent;
+        code.closest('pre').replaceWith(div);
+      });
+      await mermaid.run();
+    });
+  </script>
+</body>
+
+</html>

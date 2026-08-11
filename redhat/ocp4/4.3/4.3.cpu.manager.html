@@ -1,0 +1,1445 @@
+<!DOCTYPE html>
+<html lang="zh" dir="ltr">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="generator" content="pandoc" />
+  <meta name="site-build-id" content="fbe91b569ae8" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <title>cpu manager | wandering.star notes</title>
+  <meta name="description"
+    content="Wandering field notes on OpenShift, RHEL, AI infrastructure, and platform operations." />
+  <!-- Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-E3FRMDB7L2"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-E3FRMDB7L2');
+  </script>
+  <style>
+  html {
+    color: #1a1a1a;
+    background-color: #fdfdfd;
+  }
+  body {
+    margin: 0 auto;
+    max-width: 36em;
+    padding-left: 50px;
+    padding-right: 50px;
+    padding-top: 50px;
+    padding-bottom: 50px;
+    hyphens: auto;
+    overflow-wrap: break-word;
+    text-rendering: optimizeLegibility;
+    font-kerning: normal;
+  }
+  @media (max-width: 600px) {
+    body {
+      font-size: 0.9em;
+      padding: 12px;
+    }
+    h1 {
+      font-size: 1.8em;
+    }
+  }
+  @media print {
+    html {
+      background-color: white;
+    }
+    body {
+      background-color: transparent;
+      color: black;
+      font-size: 12pt;
+    }
+    p, h2, h3 {
+      orphans: 3;
+      widows: 3;
+    }
+    h2, h3, h4 {
+      page-break-after: avoid;
+    }
+  }
+  p {
+    margin: 1em 0;
+  }
+  a {
+    color: #1a1a1a;
+  }
+  a:visited {
+    color: #1a1a1a;
+  }
+  img {
+    max-width: 100%;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.4em;
+  }
+  h5, h6 {
+    font-size: 1em;
+    font-style: italic;
+  }
+  h6 {
+    font-weight: normal;
+  }
+  ol, ul {
+    padding-left: 1.7em;
+    margin-top: 1em;
+  }
+  li > ol, li > ul {
+    margin-top: 0;
+  }
+  blockquote {
+    margin: 1em 0 1em 1.7em;
+    padding-left: 1em;
+    border-left: 2px solid #e6e6e6;
+    color: #606060;
+  }
+  code {
+    font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+    font-size: 85%;
+    margin: 0;
+    hyphens: manual;
+  }
+  pre {
+    margin: 1em 0;
+    overflow: auto;
+  }
+  pre code {
+    padding: 0;
+    overflow: visible;
+    overflow-wrap: normal;
+  }
+  .sourceCode {
+   background-color: transparent;
+   overflow: visible;
+  }
+  hr {
+    background-color: #1a1a1a;
+    border: none;
+    height: 1px;
+    margin: 1em 0;
+  }
+  table {
+    margin: 1em 0;
+    border-collapse: collapse;
+    width: 100%;
+    overflow-x: auto;
+    display: block;
+    font-variant-numeric: lining-nums tabular-nums;
+  }
+  table caption {
+    margin-bottom: 0.75em;
+  }
+  tbody {
+    margin-top: 0.5em;
+    border-top: 1px solid #1a1a1a;
+    border-bottom: 1px solid #1a1a1a;
+  }
+  th {
+    border-top: 1px solid #1a1a1a;
+    padding: 0.25em 0.5em 0.25em 0.5em;
+  }
+  td {
+    padding: 0.125em 0.5em 0.25em 0.5em;
+  }
+  header {
+    margin-bottom: 4em;
+    text-align: center;
+  }
+  #TOC li {
+    list-style: none;
+  }
+  #TOC ul {
+    padding-left: 1.3em;
+  }
+  #TOC > ul {
+    padding-left: 0;
+  }
+  #TOC a:not(:hover) {
+    text-decoration: none;
+  }
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  div.columns{display: flex; gap: min(4vw, 1.5em);}
+  div.column{flex: auto; overflow-x: auto;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  /* The extra [class] is a hack that increases specificity enough to
+     override a similar rule in reveal.js */
+  ul.task-list[class]{list-style: none;}
+  ul.task-list li input[type="checkbox"] {
+    font-size: inherit;
+    width: 0.8em;
+    margin: 0 0.8em 0.2em -1.6em;
+    vertical-align: middle;
+  }
+  .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  /* CSS for syntax highlighting */
+  pre > code.sourceCode { white-space: pre; position: relative; }
+  pre > code.sourceCode > span { line-height: 1.25; }
+  pre > code.sourceCode > span:empty { height: 1.2em; }
+  .sourceCode { overflow: visible; }
+  code.sourceCode > span { color: inherit; text-decoration: inherit; }
+  div.sourceCode { margin: 1em 0; }
+  pre.sourceCode { margin: 0; }
+  @media screen {
+  div.sourceCode { overflow: auto; }
+  }
+  @media print {
+  pre > code.sourceCode { white-space: pre-wrap; }
+  pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+  }
+  pre.numberSource code
+    { counter-reset: source-line 0; }
+  pre.numberSource code > span
+    { position: relative; left: -4em; counter-increment: source-line; }
+  pre.numberSource code > span > a:first-child::before
+    { content: counter(source-line);
+      position: relative; left: -1em; text-align: right; vertical-align: baseline;
+      border: none; display: inline-block;
+      -webkit-touch-callout: none; -webkit-user-select: none;
+      -khtml-user-select: none; -moz-user-select: none;
+      -ms-user-select: none; user-select: none;
+      padding: 0 4px; width: 4em;
+    }
+  pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+  div.sourceCode
+    { color: #cccccc; background-color: #303030; }
+  @media screen {
+  pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+  }
+  code span.al { color: #ffcfaf; } /* Alert */
+  code span.an { color: #7f9f7f; font-weight: bold; } /* Annotation */
+  code span.at { } /* Attribute */
+  code span.bn { color: #dca3a3; } /* BaseN */
+  code span.bu { } /* BuiltIn */
+  code span.cf { color: #f0dfaf; } /* ControlFlow */
+  code span.ch { color: #dca3a3; } /* Char */
+  code span.cn { color: #dca3a3; font-weight: bold; } /* Constant */
+  code span.co { color: #7f9f7f; } /* Comment */
+  code span.cv { color: #7f9f7f; font-weight: bold; } /* CommentVar */
+  code span.do { color: #7f9f7f; } /* Documentation */
+  code span.dt { color: #dfdfbf; } /* DataType */
+  code span.dv { color: #dcdccc; } /* DecVal */
+  code span.er { color: #c3bf9f; } /* Error */
+  code span.ex { } /* Extension */
+  code span.fl { color: #c0bed1; } /* Float */
+  code span.fu { color: #efef8f; } /* Function */
+  code span.im { } /* Import */
+  code span.in { color: #7f9f7f; font-weight: bold; } /* Information */
+  code span.kw { color: #f0dfaf; } /* Keyword */
+  code span.op { color: #f0efd0; } /* Operator */
+  code span.ot { color: #efef8f; } /* Other */
+  code span.pp { color: #ffcfaf; font-weight: bold; } /* Preprocessor */
+  code span.sc { color: #dca3a3; } /* SpecialChar */
+  code span.ss { color: #cc9393; } /* SpecialString */
+  code span.st { color: #cc9393; } /* String */
+  code span.va { } /* Variable */
+  code span.vs { color: #cc9393; } /* VerbatimString */
+  code span.wa { color: #7f9f7f; font-weight: bold; } /* Warning */
+  </style>
+  <link rel="stylesheet" href="../../../style.css?v=fbe91b569ae8" />
+  </head>
+
+<body class="page-article">
+  <div class="reading-progress" aria-hidden="true"></div>
+  <div class="console-backdrop" aria-hidden="true"></div>
+  <nav class="site-nav">
+    <div class="nav-inner">
+      <a class="nav-brand" href="../../../index.html">wandering.star<span>notes</span></a>
+      <div class="nav-links">
+        <a href="https://github.com/wangzheng422/docker_env" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://www.youtube.com/@wangzheng422" target="_blank" rel="noopener">YouTube</a>
+      </div>
+    </div>
+  </nav>
+
+  <main>
+            <a class="back-link" href="../../../index.html">← Back to Index</a>
+        <div class="article-layout">
+            <aside class="toc-panel">
+        <div class="toc-title">ON THIS PAGE</div>
+        <ul>
+        <li><a href="#cpu-manager" id="toc-cpu-manager">cpu
+        manager</a></li>
+        </ul>
+      </aside>
+            <article class="markdown-body article-shell">
+        <h1 id="cpu-manager">cpu manager</h1>
+        <p>https://docs.openshift.com/container-platform/4.3/scalability_and_performance/using-cpu-manager.html</p>
+        <p>video</p>
+        <ul>
+        <li>https://youtu.be/gzdb2AURhvo</li>
+        <li>https://www.bilibili.com/video/BV1Ua4y1t7aQ/</li>
+        </ul>
+        <div class="sourceCode" id="cb1"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> get node</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> label node ip-10-0-138-181.us-west-2.compute.internal cpumanager=true</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> label node worker-0 cpumanager=true</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> label node infra0.hsc.redhat.ren <span class="at">--overwrite</span> cpumanager=false</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> label node worker-0.ocpsc.redhat.ren <span class="at">--overwrite</span> cpumanager=true</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> label node worker-1.ocpsc.redhat.ren <span class="at">--overwrite</span> cpumanager=true</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> label node worker-2.ocpsc.redhat.ren <span class="at">--overwrite</span> cpumanager=true</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> label node worker-3.ocpsc.redhat.ren <span class="at">--overwrite</span> cpumanager=true</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> get machineconfigpool worker <span class="at">-o</span> yaml</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="co"># oc edit machineconfigpool worker</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="co"># metadata:</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="co">#   creationTimestamp: 2019-xx-xxx</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="co">#   generation: 3</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a><span class="co">#   labels:</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a><span class="co">#     custom-kubelet: cpumanager-enabled</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> patch machineconfigpool worker <span class="at">-p</span> <span class="st">&#39;{&quot;metadata&quot;:{&quot;labels&quot;: { &quot;custom-kubelet&quot;: &quot;cpumanager-enabled&quot; } } }&#39;</span> <span class="at">--type</span><span class="op">=</span>merge</span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> <span class="op">&lt;&lt; EOF</span> <span class="op">&gt;</span> cpumanager-kubeletconfig.yaml</span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a><span class="st">apiVersion: machineconfiguration.openshift.io/v1</span></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a><span class="st">kind: KubeletConfig</span></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a><span class="st">metadata:</span></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a><span class="st">  name: cpumanager-enabled</span></span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a><span class="st">spec:</span></span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a><span class="st">  machineConfigPoolSelector:</span></span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a><span class="st">    matchLabels:</span></span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a><span class="st">      custom-kubelet: cpumanager-enabled</span></span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a><span class="st">  kubeletConfig:</span></span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a><span class="st">     cpuManagerPolicy: static</span></span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a><span class="st">     cpuManagerReconcilePeriod: 6s</span></span>
+<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a><span class="op">EOF</span></span>
+<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> apply <span class="at">-f</span> cpumanager-kubeletconfig.yaml</span>
+<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a><span class="bu">alias</span> urldecode=<span class="st">&#39;python3 -c &quot;import sys, urllib.parse as ul; \</span></span>
+<span id="cb1-38"><a href="#cb1-38" aria-hidden="true" tabindex="-1"></a><span class="st">    print(ul.unquote_plus(sys.argv[1]))&quot;&#39;</span></span>
+<span id="cb1-39"><a href="#cb1-39" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-40"><a href="#cb1-40" aria-hidden="true" tabindex="-1"></a><span class="bu">alias</span> urlencode=<span class="st">&#39;python3 -c &quot;import sys, urllib.parse as ul; \</span></span>
+<span id="cb1-41"><a href="#cb1-41" aria-hidden="true" tabindex="-1"></a><span class="st">    print (ul.quote_plus(sys.argv[1]))&quot;&#39;</span></span>
+<span id="cb1-42"><a href="#cb1-42" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-43"><a href="#cb1-43" aria-hidden="true" tabindex="-1"></a><span class="va">worker_mc_kubelet_yaml</span><span class="op">=</span><span class="va">$(</span><span class="ex">oc</span> get mc <span class="kw">|</span> <span class="fu">grep</span> kubelet <span class="kw">|</span> <span class="fu">grep</span> 99 <span class="kw">|</span> <span class="fu">awk</span> <span class="st">&#39;{print $1}&#39;</span><span class="va">)</span></span>
+<span id="cb1-44"><a href="#cb1-44" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-45"><a href="#cb1-45" aria-hidden="true" tabindex="-1"></a><span class="ex">urldecode</span> <span class="va">$(</span><span class="ex">oc</span> get mc <span class="va">${worker_mc_kubelet_yaml}</span> <span class="at">-o</span> json <span class="kw">|</span> <span class="ex">jq</span> <span class="at">-r</span> .spec.config.storage.files<span class="pp">[</span><span class="ss">0</span><span class="pp">]</span>.contents.source <span class="kw">|</span> <span class="fu">sed</span> <span class="st">&quot;s/data:text\/plain,//g&quot;</span><span class="va">)</span> <span class="kw">|</span> <span class="ex">jq</span></span>
+<span id="cb1-46"><a href="#cb1-46" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-47"><a href="#cb1-47" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> debug node/infra0.hsc.redhat.ren</span>
+<span id="cb1-48"><a href="#cb1-48" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> /host/etc/kubernetes/kubelet.conf <span class="kw">|</span> <span class="fu">grep</span> cpuManager</span>
+<span id="cb1-49"><a href="#cb1-49" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-50"><a href="#cb1-50" aria-hidden="true" tabindex="-1"></a><span class="co"># cat /etc/kubernetes/kubelet.conf | grep cpuManager</span></span>
+<span id="cb1-51"><a href="#cb1-51" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-52"><a href="#cb1-52" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> <span class="op">&lt;&lt; EOF</span> <span class="op">&gt;</span> cpumanager-pod.yaml</span>
+<span id="cb1-53"><a href="#cb1-53" aria-hidden="true" tabindex="-1"></a><span class="st">apiVersion: v1</span></span>
+<span id="cb1-54"><a href="#cb1-54" aria-hidden="true" tabindex="-1"></a><span class="st">kind: Pod</span></span>
+<span id="cb1-55"><a href="#cb1-55" aria-hidden="true" tabindex="-1"></a><span class="st">metadata:</span></span>
+<span id="cb1-56"><a href="#cb1-56" aria-hidden="true" tabindex="-1"></a><span class="st">  generateName: cpumanager-</span></span>
+<span id="cb1-57"><a href="#cb1-57" aria-hidden="true" tabindex="-1"></a><span class="st">spec:</span></span>
+<span id="cb1-58"><a href="#cb1-58" aria-hidden="true" tabindex="-1"></a><span class="st">  containers:</span></span>
+<span id="cb1-59"><a href="#cb1-59" aria-hidden="true" tabindex="-1"></a><span class="st">  - name: cpumanager</span></span>
+<span id="cb1-60"><a href="#cb1-60" aria-hidden="true" tabindex="-1"></a><span class="st">    image: gcr.io/google_containers/pause-amd64:3.0</span></span>
+<span id="cb1-61"><a href="#cb1-61" aria-hidden="true" tabindex="-1"></a><span class="st">    resources:</span></span>
+<span id="cb1-62"><a href="#cb1-62" aria-hidden="true" tabindex="-1"></a><span class="st">      requests:</span></span>
+<span id="cb1-63"><a href="#cb1-63" aria-hidden="true" tabindex="-1"></a><span class="st">        cpu: 1</span></span>
+<span id="cb1-64"><a href="#cb1-64" aria-hidden="true" tabindex="-1"></a><span class="st">        memory: &quot;1G&quot;</span></span>
+<span id="cb1-65"><a href="#cb1-65" aria-hidden="true" tabindex="-1"></a><span class="st">      limits:</span></span>
+<span id="cb1-66"><a href="#cb1-66" aria-hidden="true" tabindex="-1"></a><span class="st">        cpu: 1</span></span>
+<span id="cb1-67"><a href="#cb1-67" aria-hidden="true" tabindex="-1"></a><span class="st">        memory: &quot;1G&quot;</span></span>
+<span id="cb1-68"><a href="#cb1-68" aria-hidden="true" tabindex="-1"></a><span class="st">  nodeSelector:</span></span>
+<span id="cb1-69"><a href="#cb1-69" aria-hidden="true" tabindex="-1"></a><span class="st">    cpumanager: &quot;true&quot;</span></span>
+<span id="cb1-70"><a href="#cb1-70" aria-hidden="true" tabindex="-1"></a><span class="op">EOF</span></span>
+<span id="cb1-71"><a href="#cb1-71" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> apply <span class="at">-f</span> cpumanager-pod.yaml</span>
+<span id="cb1-72"><a href="#cb1-72" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-73"><a href="#cb1-73" aria-hidden="true" tabindex="-1"></a><span class="ex">systemctl</span> status</span>
+<span id="cb1-74"><a href="#cb1-74" aria-hidden="true" tabindex="-1"></a><span class="co"># └─kubepods.slice</span></span>
+<span id="cb1-75"><a href="#cb1-75" aria-hidden="true" tabindex="-1"></a><span class="co">#   ├─kubepods-podcc529083_9d0a_43aa_9d9f_1fc0dc3b626b.slice</span></span>
+<span id="cb1-76"><a href="#cb1-76" aria-hidden="true" tabindex="-1"></a><span class="co">#   │ ├─crio-conmon-b67ba6af381740b5f9b459482e41a14d4ced2cd8e9431598d84066d20027ef06.scope</span></span>
+<span id="cb1-77"><a href="#cb1-77" aria-hidden="true" tabindex="-1"></a><span class="co">#   │ │ └─1434963 /usr/libexec/crio/conmon -s -c b67ba6af381740b5f9b459482e41a14d4ced2cd8e9431598d84066d20027ef06 -n k8s_cpumanager_&gt;            │ ├─crio-conmon-4ab85736504471dcca960aea960ca01ab0fa582439e444d407ac8d001d6dbd2b.scope</span></span>
+<span id="cb1-78"><a href="#cb1-78" aria-hidden="true" tabindex="-1"></a><span class="co">#   │ │ └─1434127 /usr/libexec/crio/conmon -s -c 4ab85736504471dcca960aea960ca01ab0fa582439e444d407ac8d001d6dbd2b -n k8s_POD_cpumana&gt;            │ ├─crio-b67ba6af381740b5f9b459482e41a14d4ced2cd8e9431598d84066d20027ef06.scope</span></span>
+<span id="cb1-79"><a href="#cb1-79" aria-hidden="true" tabindex="-1"></a><span class="co">#   │ │ └─1434975 /pause</span></span>
+<span id="cb1-80"><a href="#cb1-80" aria-hidden="true" tabindex="-1"></a><span class="co">#   │ └─crio-4ab85736504471dcca960aea960ca01ab0fa582439e444d407ac8d001d6dbd2b.scope</span></span>
+<span id="cb1-81"><a href="#cb1-81" aria-hidden="true" tabindex="-1"></a><span class="co">#   │   └─1434151 /usr/bin/pod</span></span>
+<span id="cb1-82"><a href="#cb1-82" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-83"><a href="#cb1-83" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> /sys/fs/cgroup/cpuset/kubepods.slice/kubepods-podcc529083_9d0a_43aa_9d9f_1fc0dc3b626b.slice/crio-b67ba6af381740b5f9b459482e41a14d4ced2cd8e9431598d84066d20027ef06.scope</span>
+<span id="cb1-84"><a href="#cb1-84" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-85"><a href="#cb1-85" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i <span class="kw">in</span> <span class="kw">`</span><span class="fu">ls</span> cpuset.cpus tasks<span class="kw">`</span> <span class="kw">;</span> <span class="cf">do</span> <span class="bu">echo</span> <span class="at">-n</span> <span class="st">&quot;</span><span class="va">$i</span><span class="st"> &quot;</span><span class="kw">;</span> <span class="fu">cat</span> <span class="va">$i</span> <span class="kw">;</span> <span class="cf">done</span></span>
+<span id="cb1-86"><a href="#cb1-86" aria-hidden="true" tabindex="-1"></a><span class="co"># cpuset.cpus 12</span></span>
+<span id="cb1-87"><a href="#cb1-87" aria-hidden="true" tabindex="-1"></a><span class="co"># tasks 30894</span></span>
+<span id="cb1-88"><a href="#cb1-88" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-89"><a href="#cb1-89" aria-hidden="true" tabindex="-1"></a><span class="fu">grep</span> Cpus_allowed_list /proc/1434975/status</span>
+<span id="cb1-90"><a href="#cb1-90" aria-hidden="true" tabindex="-1"></a><span class="co"># Cpus_allowed_list:      12</span></span>
+<span id="cb1-91"><a href="#cb1-91" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-92"><a href="#cb1-92" aria-hidden="true" tabindex="-1"></a><span class="ex">systemctl</span> status</span>
+<span id="cb1-93"><a href="#cb1-93" aria-hidden="true" tabindex="-1"></a><span class="co"># ├─kubepods-burstable.slice</span></span>
+<span id="cb1-94"><a href="#cb1-94" aria-hidden="true" tabindex="-1"></a><span class="co"># │ ├─kubepods-burstable-podb8410218_65e9_4ec2_b944_6f0f1709e6a9.slice</span></span>
+<span id="cb1-95"><a href="#cb1-95" aria-hidden="true" tabindex="-1"></a><span class="co"># │ │ │ └─6696 /usr/bin/configmap-reload --webhook-url=http://localhost:8080/-/reload --volume-dir=/etc/serving-certs-ca-bundle</span></span>
+<span id="cb1-96"><a href="#cb1-96" aria-hidden="true" tabindex="-1"></a><span class="co"># │ │ ├─crio-conmon-958273b72d8d6f1a06a640bd158aa1f5dcc9372b232c79af9f3731068b0bcb9f.scope</span></span>
+<span id="cb1-97"><a href="#cb1-97" aria-hidden="true" tabindex="-1"></a><span class="co"># │ │ │ └─6922 /usr/libexec/crio/conmon -s -c 958273b72d8d6f1a06a640bd158aa1f5dcc9372b232c79af9f3731068b0bcb9f -n k8s_kube-rbac-pr&gt;</span></span>
+<span id="cb1-98"><a href="#cb1-98" aria-hidden="true" tabindex="-1"></a><span class="co"># │ │ ├─crio-conmon-dc78df658a47a6bcad1772c5f0154c058b3b517f924c842eb9ba2c878edf86a3.scope</span></span>
+<span id="cb1-99"><a href="#cb1-99" aria-hidden="true" tabindex="-1"></a><span class="co"># │ │ │ └─6256 /usr/libexec/crio/conmon -s -c dc78df658a47a6bcad1772c5f0154c058b3b517f924c842eb9ba2c878edf86a3 -n k8s_telemeter-cl&gt;</span></span>
+<span id="cb1-100"><a href="#cb1-100" aria-hidden="true" tabindex="-1"></a><span class="co"># │ │ ├─crio-958273b72d8d6f1a06a640bd158aa1f5dcc9372b232c79af9f3731068b0bcb9f.scope</span></span>
+<span id="cb1-101"><a href="#cb1-101" aria-hidden="true" tabindex="-1"></a><span class="co"># │ │ │ └─6958 /usr/bin/kube-rbac-proxy --secure-listen-address=:8443 --upstream=http://127.0.0.1:8080/ --tls-cert-file=/etc/tls/p&gt;</span></span>
+<span id="cb1-102"><a href="#cb1-102" aria-hidden="true" tabindex="-1"></a><span class="co"># │ │ ├─crio-conmon-7a9aaeff818804cb48c6de76ef604e1241717ef25f9d2e31502bca5e03a0a126.scope</span></span>
+<span id="cb1-103"><a href="#cb1-103" aria-hidden="true" tabindex="-1"></a><span class="co"># │ │ │ └─5215 /usr/libexec/crio/conmon -s -c 7a9aaeff818804cb48c6de76ef604e1241717ef25f9d2e31502bca5e03a0a126 -n k8s_POD_telemete&gt;</span></span>
+<span id="cb1-104"><a href="#cb1-104" aria-hidden="true" tabindex="-1"></a><span class="co"># │ │ ├─crio-dc78df658a47a6bcad1772c5f0154c058b3b517f924c842eb9ba2c878edf86a3.scope</span></span>
+<span id="cb1-105"><a href="#cb1-105" aria-hidden="true" tabindex="-1"></a><span class="co"># │ │ │ └─6321 /usr/bin/telemeter-client --id=02b8c3b4-9aed-4268-b1b7-84c998b50184 --from=https://prometheus-k8s.openshift-monitor&gt;</span></span>
+<span id="cb1-106"><a href="#cb1-106" aria-hidden="true" tabindex="-1"></a><span class="co"># │ │ ├─crio-conmon-6cefa86b950deb57dac809b57246fb553e0c96fc31ae1cd7b8efa43207995749.scope</span></span>
+<span id="cb1-107"><a href="#cb1-107" aria-hidden="true" tabindex="-1"></a><span class="co"># │ │ │ └─6635 /usr/libexec/crio/conmon -s -c 6cefa86b950deb57dac809b57246fb553e0c96fc31ae1cd7b8efa43207995749 -n k8s_reload_telem&gt;</span></span>
+<span id="cb1-108"><a href="#cb1-108" aria-hidden="true" tabindex="-1"></a><span class="co"># │ │ └─crio-7a9aaeff818804cb48c6de76ef604e1241717ef25f9d2e31502bca5e03a0a126.scope</span></span>
+<span id="cb1-109"><a href="#cb1-109" aria-hidden="true" tabindex="-1"></a><span class="co"># │ │   └─5292 /usr/bin/pod</span></span>
+<span id="cb1-110"><a href="#cb1-110" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-111"><a href="#cb1-111" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> /sys/fs/cgroup/cpuset/kubepods.slice/kubepods-burstable.slice/kubepods-burstable-podb8410218_65e9_4ec2_b944_6f0f1709e6a9.slice/crio-dc78df658a47a6bcad1772c5f0154c058b3b517f924c842eb9ba2c878edf86a3.scope/cpuset.cpus</span>
+<span id="cb1-112"><a href="#cb1-112" aria-hidden="true" tabindex="-1"></a><span class="co"># 0-1,3</span></span>
+<span id="cb1-113"><a href="#cb1-113" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-114"><a href="#cb1-114" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> describe node ip-10-0-138-181.us-west-2.compute.internal</span>
+<span id="cb1-115"><a href="#cb1-115" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-116"><a href="#cb1-116" aria-hidden="true" tabindex="-1"></a><span class="co"># 可以看到其他pod被限制了使用12号cpu，有一些进程不被限制，是控制进程。</span></span>
+<span id="cb1-117"><a href="#cb1-117" aria-hidden="true" tabindex="-1"></a><span class="co"># cd /sys/fs/cgroup/cpuset/kubepods.slice/kubepods-burstable.slice/</span></span>
+<span id="cb1-118"><a href="#cb1-118" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> /sys/fs/cgroup/cpuset/kubepods.slice/kubepods-besteffort.slice</span>
+<span id="cb1-119"><a href="#cb1-119" aria-hidden="true" tabindex="-1"></a><span class="fu">find</span> . <span class="at">-name</span> cpuset.cpus <span class="kw">|</span> <span class="fu">grep</span> crio <span class="kw">|</span> <span class="fu">xargs</span> <span class="at">-I</span> DEMO cat DEMO</span>
+<span id="cb1-120"><a href="#cb1-120" aria-hidden="true" tabindex="-1"></a><span class="co"># 0-11,13-23</span></span>
+<span id="cb1-121"><a href="#cb1-121" aria-hidden="true" tabindex="-1"></a><span class="co"># 0-23</span></span>
+<span id="cb1-122"><a href="#cb1-122" aria-hidden="true" tabindex="-1"></a><span class="co"># 0-11,13-23</span></span>
+<span id="cb1-123"><a href="#cb1-123" aria-hidden="true" tabindex="-1"></a><span class="co"># 0-23</span></span>
+<span id="cb1-124"><a href="#cb1-124" aria-hidden="true" tabindex="-1"></a><span class="co"># 0-11,13-23</span></span>
+<span id="cb1-125"><a href="#cb1-125" aria-hidden="true" tabindex="-1"></a><span class="co"># 0-23</span></span>
+<span id="cb1-126"><a href="#cb1-126" aria-hidden="true" tabindex="-1"></a><span class="co"># 0-11,13-23</span></span>
+<span id="cb1-127"><a href="#cb1-127" aria-hidden="true" tabindex="-1"></a><span class="co"># 0-23</span></span>
+<span id="cb1-128"><a href="#cb1-128" aria-hidden="true" tabindex="-1"></a><span class="co"># 0-11,13-23</span></span>
+<span id="cb1-129"><a href="#cb1-129" aria-hidden="true" tabindex="-1"></a><span class="co"># 0-23</span></span>
+<span id="cb1-130"><a href="#cb1-130" aria-hidden="true" tabindex="-1"></a><span class="co"># 0-23</span></span>
+<span id="cb1-131"><a href="#cb1-131" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-132"><a href="#cb1-132" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-133"><a href="#cb1-133" aria-hidden="true" tabindex="-1"></a><span class="co"># in pod</span></span>
+<span id="cb1-134"><a href="#cb1-134" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> /sys/fs/cgroup/cpuset/cpuset.cpus</span>
+<span id="cb1-135"><a href="#cb1-135" aria-hidden="true" tabindex="-1"></a><span class="co"># 0-1,19</span></span>
+<span id="cb1-136"><a href="#cb1-136" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-137"><a href="#cb1-137" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> /proc/1/status <span class="kw">|</span> <span class="fu">grep</span> <span class="at">-i</span> cpus_allow</span>
+<span id="cb1-138"><a href="#cb1-138" aria-hidden="true" tabindex="-1"></a><span class="co"># Cpus_allowed:   7fffc</span></span>
+<span id="cb1-139"><a href="#cb1-139" aria-hidden="true" tabindex="-1"></a><span class="co"># Cpus_allowed_list:      2-18</span></span>
+<span id="cb1-140"><a href="#cb1-140" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-141"><a href="#cb1-141" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> get pod <span class="at">-A</span> <span class="kw">|</span> <span class="fu">grep</span> Running <span class="kw">|</span> <span class="fu">awk</span> <span class="st">&#39;{print $1 &quot;\t&quot; $2}&#39;</span> <span class="op">&gt;</span> list</span>
+<span id="cb1-142"><a href="#cb1-142" aria-hidden="true" tabindex="-1"></a><span class="cf">while</span> <span class="bu">read</span> <span class="at">-r</span> <span class="va">pod</span><span class="kw">;</span> <span class="cf">do</span></span>
+<span id="cb1-143"><a href="#cb1-143" aria-hidden="true" tabindex="-1"></a>  <span class="bu">echo</span> <span class="st">&quot;</span><span class="va">$pod</span><span class="st">&quot;</span></span>
+<span id="cb1-144"><a href="#cb1-144" aria-hidden="true" tabindex="-1"></a>  <span class="ex">oc</span> exec <span class="at">-n</span> <span class="va">$pod</span> <span class="at">--</span> cat /sys/fs/cgroup/cpuset/cpuset.cpus</span>
+<span id="cb1-145"><a href="#cb1-145" aria-hidden="true" tabindex="-1"></a>  <span class="ex">oc</span> exec <span class="at">-n</span> <span class="va">$pod</span> <span class="at">--</span> cat /proc/1/status <span class="kw">|</span> <span class="fu">grep</span> <span class="at">-i</span> cpus_allow</span>
+<span id="cb1-146"><a href="#cb1-146" aria-hidden="true" tabindex="-1"></a><span class="cf">done</span> <span class="op">&lt;</span> list</span>
+<span id="cb1-147"><a href="#cb1-147" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-148"><a href="#cb1-148" aria-hidden="true" tabindex="-1"></a><span class="fu">ls</span> /proc <span class="kw">|</span> <span class="fu">egrep</span> <span class="st">&#39;^[0-9]+$&#39;</span> <span class="kw">|</span> <span class="fu">xargs</span> <span class="at">-I</span> DEMO echo <span class="st">&quot; grep -s -i name /proc/DEMO/status | tr -d &#39;\n&#39;; echo -n -e &#39;\t&#39;; grep -s -i cpus_allowed_list /proc/DEMO/status ; &quot;</span> <span class="kw">|</span> <span class="fu">sh</span></span>
+<span id="cb1-149"><a href="#cb1-149" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   systemd Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-150"><a href="#cb1-150" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   ksoftirqd/0     Cpus_allowed_list:      0</span></span>
+<span id="cb1-151"><a href="#cb1-151" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   migration/10    Cpus_allowed_list:      10</span></span>
+<span id="cb1-152"><a href="#cb1-152" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   posixcputmr/10  Cpus_allowed_list:      10</span></span>
+<span id="cb1-153"><a href="#cb1-153" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   rcuc/10 Cpus_allowed_list:      10</span></span>
+<span id="cb1-154"><a href="#cb1-154" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   ksoftirqd/10    Cpus_allowed_list:      10</span></span>
+<span id="cb1-155"><a href="#cb1-155" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kworker/10:0-mm_percpu_wq       Cpus_allowed_list:      10</span></span>
+<span id="cb1-156"><a href="#cb1-156" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kworker/10:0H   Cpus_allowed_list:      10</span></span>
+<span id="cb1-157"><a href="#cb1-157" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   rcuop/10        Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-158"><a href="#cb1-158" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   cpuhp/11        Cpus_allowed_list:      11</span></span>
+<span id="cb1-159"><a href="#cb1-159" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   watchdog/11     Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-160"><a href="#cb1-160" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   migration/11    Cpus_allowed_list:      11</span></span>
+<span id="cb1-161"><a href="#cb1-161" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   systemd-journal Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-162"><a href="#cb1-162" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   rcu_preempt     Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-163"><a href="#cb1-163" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   posixcputmr/11  Cpus_allowed_list:      11</span></span>
+<span id="cb1-164"><a href="#cb1-164" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   rcuc/11 Cpus_allowed_list:      11</span></span>
+<span id="cb1-165"><a href="#cb1-165" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   systemd-udevd   Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-166"><a href="#cb1-166" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   ksoftirqd/11    Cpus_allowed_list:      11</span></span>
+<span id="cb1-167"><a href="#cb1-167" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kworker/11:0-mm_percpu_wq       Cpus_allowed_list:      11</span></span>
+<span id="cb1-168"><a href="#cb1-168" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/149-ioat-ms Cpus_allowed_list:      0</span></span>
+<span id="cb1-169"><a href="#cb1-169" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/151-ioat-ms Cpus_allowed_list:      1</span></span>
+<span id="cb1-170"><a href="#cb1-170" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/152-ioat-ms Cpus_allowed_list:      0</span></span>
+<span id="cb1-171"><a href="#cb1-171" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kworker/11:0H   Cpus_allowed_list:      11</span></span>
+<span id="cb1-172"><a href="#cb1-172" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/153-ioat-ms Cpus_allowed_list:      1</span></span>
+<span id="cb1-173"><a href="#cb1-173" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/154-ioat-ms Cpus_allowed_list:      0</span></span>
+<span id="cb1-174"><a href="#cb1-174" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/155-ioat-ms Cpus_allowed_list:      1</span></span>
+<span id="cb1-175"><a href="#cb1-175" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/156-ioat-ms Cpus_allowed_list:      1</span></span>
+<span id="cb1-176"><a href="#cb1-176" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/157-mei_me  Cpus_allowed_list:      0</span></span>
+<span id="cb1-177"><a href="#cb1-177" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/158-ioat-ms Cpus_allowed_list:      0</span></span>
+<span id="cb1-178"><a href="#cb1-178" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/16-i801_smb Cpus_allowed_list:      1</span></span>
+<span id="cb1-179"><a href="#cb1-179" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   rcub/2  Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-180"><a href="#cb1-180" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kipmi0  Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-181"><a href="#cb1-181" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   ib-comp-wq      Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-182"><a href="#cb1-182" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kworker/u41:0   Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-183"><a href="#cb1-183" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   ib-comp-unb-wq  Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-184"><a href="#cb1-184" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   ib_mcast        Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-185"><a href="#cb1-185" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   rcuop/11        Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-186"><a href="#cb1-186" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   ib_nl_sa_wq     Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-187"><a href="#cb1-187" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bnxt_re Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-188"><a href="#cb1-188" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/159-bnxt_qp Cpus_allowed_list:      0</span></span>
+<span id="cb1-189"><a href="#cb1-189" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bnxt_qplib_nq   Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-190"><a href="#cb1-190" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/160-bnxt_qp Cpus_allowed_list:      1</span></span>
+<span id="cb1-191"><a href="#cb1-191" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   ttm_swap        Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-192"><a href="#cb1-192" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bnxt_qplib_nq   Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-193"><a href="#cb1-193" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/161-bnxt_qp Cpus_allowed_list:      1</span></span>
+<span id="cb1-194"><a href="#cb1-194" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   cpuhp/12        Cpus_allowed_list:      12</span></span>
+<span id="cb1-195"><a href="#cb1-195" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bnxt_qplib_nq   Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-196"><a href="#cb1-196" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/162-bnxt_qp Cpus_allowed_list:      1</span></span>
+<span id="cb1-197"><a href="#cb1-197" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bnxt_qplib_nq   Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-198"><a href="#cb1-198" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/163-bnxt_qp Cpus_allowed_list:      1</span></span>
+<span id="cb1-199"><a href="#cb1-199" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bnxt_qplib_nq   Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-200"><a href="#cb1-200" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/164-bnxt_qp Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-201"><a href="#cb1-201" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bnxt_qplib_nq   Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-202"><a href="#cb1-202" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/165-bnxt_qp Cpus_allowed_list:      1</span></span>
+<span id="cb1-203"><a href="#cb1-203" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bnxt_qplib_nq   Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-204"><a href="#cb1-204" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/166-bnxt_qp Cpus_allowed_list:      1</span></span>
+<span id="cb1-205"><a href="#cb1-205" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   watchdog/12     Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-206"><a href="#cb1-206" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bnxt_qplib_nq   Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-207"><a href="#cb1-207" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/167-bnxt_qp Cpus_allowed_list:      1</span></span>
+<span id="cb1-208"><a href="#cb1-208" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   ib_mad1 Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-209"><a href="#cb1-209" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/168-bnxt_qp Cpus_allowed_list:      1</span></span>
+<span id="cb1-210"><a href="#cb1-210" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bnxt_qplib_nq   Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-211"><a href="#cb1-211" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/169-bnxt_qp Cpus_allowed_list:      0</span></span>
+<span id="cb1-212"><a href="#cb1-212" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bnxt_qplib_nq   Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-213"><a href="#cb1-213" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/170-bnxt_qp Cpus_allowed_list:      1</span></span>
+<span id="cb1-214"><a href="#cb1-214" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bnxt_qplib_nq   Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-215"><a href="#cb1-215" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   migration/12    Cpus_allowed_list:      12</span></span>
+<span id="cb1-216"><a href="#cb1-216" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/171-bnxt_qp Cpus_allowed_list:      0</span></span>
+<span id="cb1-217"><a href="#cb1-217" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bnxt_qplib_nq   Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-218"><a href="#cb1-218" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/172-bnxt_qp Cpus_allowed_list:      0</span></span>
+<span id="cb1-219"><a href="#cb1-219" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bnxt_qplib_nq   Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-220"><a href="#cb1-220" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/173-bnxt_qp Cpus_allowed_list:      0</span></span>
+<span id="cb1-221"><a href="#cb1-221" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bnxt_qplib_nq   Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-222"><a href="#cb1-222" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/174-bnxt_qp Cpus_allowed_list:      0</span></span>
+<span id="cb1-223"><a href="#cb1-223" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bnxt_qplib_nq   Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-224"><a href="#cb1-224" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/175-bnxt_qp Cpus_allowed_list:      0</span></span>
+<span id="cb1-225"><a href="#cb1-225" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bnxt_qplib_nq   Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-226"><a href="#cb1-226" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   rcub/1  Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-227"><a href="#cb1-227" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   posixcputmr/12  Cpus_allowed_list:      12</span></span>
+<span id="cb1-228"><a href="#cb1-228" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/176-bnxt_qp Cpus_allowed_list:      0</span></span>
+<span id="cb1-229"><a href="#cb1-229" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   nfit    Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-230"><a href="#cb1-230" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   ib_mad1 Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-231"><a href="#cb1-231" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   rcuc/12 Cpus_allowed_list:      12</span></span>
+<span id="cb1-232"><a href="#cb1-232" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   rdma-ndd        Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-233"><a href="#cb1-233" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   ksoftirqd/12    Cpus_allowed_list:      12</span></span>
+<span id="cb1-234"><a href="#cb1-234" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   rdma_cm Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-235"><a href="#cb1-235" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kworker/12:0-mm_percpu_wq       Cpus_allowed_list:      12</span></span>
+<span id="cb1-236"><a href="#cb1-236" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   iw_cxgb4        Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-237"><a href="#cb1-237" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kworker/12:0H   Cpus_allowed_list:      12</span></span>
+<span id="cb1-238"><a href="#cb1-238" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   Register_iWARP_ Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-239"><a href="#cb1-239" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   rcuop/12        Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-240"><a href="#cb1-240" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   rpciod  Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-241"><a href="#cb1-241" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   xprtiod Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-242"><a href="#cb1-242" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   cpuhp/13        Cpus_allowed_list:      13</span></span>
+<span id="cb1-243"><a href="#cb1-243" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   watchdog/13     Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-244"><a href="#cb1-244" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   migration/13    Cpus_allowed_list:      13</span></span>
+<span id="cb1-245"><a href="#cb1-245" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   posixcputmr/13  Cpus_allowed_list:      13</span></span>
+<span id="cb1-246"><a href="#cb1-246" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/119-i40e-ve Cpus_allowed_list:      0</span></span>
+<span id="cb1-247"><a href="#cb1-247" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/120-i40e-ve Cpus_allowed_list:      1</span></span>
+<span id="cb1-248"><a href="#cb1-248" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/121-i40e-ve Cpus_allowed_list:      0</span></span>
+<span id="cb1-249"><a href="#cb1-249" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/122-i40e-ve Cpus_allowed_list:      1</span></span>
+<span id="cb1-250"><a href="#cb1-250" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/123-i40e-ve Cpus_allowed_list:      0</span></span>
+<span id="cb1-251"><a href="#cb1-251" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/124-i40e-ve Cpus_allowed_list:      1</span></span>
+<span id="cb1-252"><a href="#cb1-252" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/125-i40e-ve Cpus_allowed_list:      0</span></span>
+<span id="cb1-253"><a href="#cb1-253" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/126-i40e-ve Cpus_allowed_list:      1</span></span>
+<span id="cb1-254"><a href="#cb1-254" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/127-i40e-ve Cpus_allowed_list:      0</span></span>
+<span id="cb1-255"><a href="#cb1-255" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/128-i40e-ve Cpus_allowed_list:      1</span></span>
+<span id="cb1-256"><a href="#cb1-256" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/129-i40e-ve Cpus_allowed_list:      0</span></span>
+<span id="cb1-257"><a href="#cb1-257" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/130-i40e-ve Cpus_allowed_list:      0</span></span>
+<span id="cb1-258"><a href="#cb1-258" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/131-i40e-ve Cpus_allowed_list:      0</span></span>
+<span id="cb1-259"><a href="#cb1-259" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/132-i40e-ve Cpus_allowed_list:      1</span></span>
+<span id="cb1-260"><a href="#cb1-260" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/133-i40e-ve Cpus_allowed_list:      1</span></span>
+<span id="cb1-261"><a href="#cb1-261" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/134-i40e-ve Cpus_allowed_list:      0</span></span>
+<span id="cb1-262"><a href="#cb1-262" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/135-i40e-ve Cpus_allowed_list:      1</span></span>
+<span id="cb1-263"><a href="#cb1-263" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/136-i40e-ve Cpus_allowed_list:      1</span></span>
+<span id="cb1-264"><a href="#cb1-264" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/137-i40e-ve Cpus_allowed_list:      0</span></span>
+<span id="cb1-265"><a href="#cb1-265" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/138-i40e-ve Cpus_allowed_list:      0</span></span>
+<span id="cb1-266"><a href="#cb1-266" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   conmon  Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-267"><a href="#cb1-267" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   pod     Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-268"><a href="#cb1-268" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   conmon  Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-269"><a href="#cb1-269" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   sleep   Cpus_allowed_list:      2-18</span></span>
+<span id="cb1-270"><a href="#cb1-270" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   runc    Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-271"><a href="#cb1-271" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bash    Cpus_allowed_list:      2-18</span></span>
+<span id="cb1-272"><a href="#cb1-272" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   runc    Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-273"><a href="#cb1-273" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bash    Cpus_allowed_list:      2-18</span></span>
+<span id="cb1-274"><a href="#cb1-274" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   runc    Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-275"><a href="#cb1-275" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bash    Cpus_allowed_list:      2-18</span></span>
+<span id="cb1-276"><a href="#cb1-276" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   runc    Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-277"><a href="#cb1-277" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bash    Cpus_allowed_list:      2-18</span></span>
+<span id="cb1-278"><a href="#cb1-278" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   rcuc/0  Cpus_allowed_list:      0</span></span>
+<span id="cb1-279"><a href="#cb1-279" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   rcuc/13 Cpus_allowed_list:      13</span></span>
+<span id="cb1-280"><a href="#cb1-280" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   jbd2/sda1-8     Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-281"><a href="#cb1-281" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   ext4-rsv-conver Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-282"><a href="#cb1-282" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   ksoftirqd/13    Cpus_allowed_list:      13</span></span>
+<span id="cb1-283"><a href="#cb1-283" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kworker/13:0-mm_percpu_wq       Cpus_allowed_list:      13</span></span>
+<span id="cb1-284"><a href="#cb1-284" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kworker/13:0H   Cpus_allowed_list:      13</span></span>
+<span id="cb1-285"><a href="#cb1-285" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   srp_remove      Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-286"><a href="#cb1-286" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   licManager      Cpus_allowed_list:      2-18</span></span>
+<span id="cb1-287"><a href="#cb1-287" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   sh      Cpus_allowed_list:      2-18</span></span>
+<span id="cb1-288"><a href="#cb1-288" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   rcuop/13        Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-289"><a href="#cb1-289" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   post-office     Cpus_allowed_list:      2-18</span></span>
+<span id="cb1-290"><a href="#cb1-290" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   oam     Cpus_allowed_list:      2-18</span></span>
+<span id="cb1-291"><a href="#cb1-291" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   tr069-v2        Cpus_allowed_list:      2-18</span></span>
+<span id="cb1-292"><a href="#cb1-292" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   ftp-func        Cpus_allowed_list:      2-18</span></span>
+<span id="cb1-293"><a href="#cb1-293" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   o-ru-controller Cpus_allowed_list:      2-18</span></span>
+<span id="cb1-294"><a href="#cb1-294" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   lighttpd        Cpus_allowed_list:      2-18</span></span>
+<span id="cb1-295"><a href="#cb1-295" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   lighttpd        Cpus_allowed_list:      2-18</span></span>
+<span id="cb1-296"><a href="#cb1-296" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   gnb_cu_oam      Cpus_allowed_list:      2-18</span></span>
+<span id="cb1-297"><a href="#cb1-297" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2-18</span></span>
+<span id="cb1-298"><a href="#cb1-298" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   duoam   Cpus_allowed_list:      17-18</span></span>
+<span id="cb1-299"><a href="#cb1-299" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   gnb_cu_son      Cpus_allowed_list:      2-4</span></span>
+<span id="cb1-300"><a href="#cb1-300" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   target_completi Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-301"><a href="#cb1-301" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   xcopy_wq        Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-302"><a href="#cb1-302" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   cpuhp/14        Cpus_allowed_list:      14</span></span>
+<span id="cb1-303"><a href="#cb1-303" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   licManager      Cpus_allowed_list:      2-18</span></span>
+<span id="cb1-304"><a href="#cb1-304" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   sh      Cpus_allowed_list:      2-18</span></span>
+<span id="cb1-305"><a href="#cb1-305" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   post-office     Cpus_allowed_list:      2-18</span></span>
+<span id="cb1-306"><a href="#cb1-306" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   oam     Cpus_allowed_list:      2-18</span></span>
+<span id="cb1-307"><a href="#cb1-307" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   tr069-v2        Cpus_allowed_list:      2-18</span></span>
+<span id="cb1-308"><a href="#cb1-308" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   ftp-func        Cpus_allowed_list:      2-18</span></span>
+<span id="cb1-309"><a href="#cb1-309" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   o-ru-controller Cpus_allowed_list:      2-18</span></span>
+<span id="cb1-310"><a href="#cb1-310" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   lighttpd        Cpus_allowed_list:      2-18</span></span>
+<span id="cb1-311"><a href="#cb1-311" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   lighttpd        Cpus_allowed_list:      2-18</span></span>
+<span id="cb1-312"><a href="#cb1-312" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   gnb_cu_oam      Cpus_allowed_list:      2-18</span></span>
+<span id="cb1-313"><a href="#cb1-313" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      18</span></span>
+<span id="cb1-314"><a href="#cb1-314" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   watchdog/14     Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-315"><a href="#cb1-315" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   duoam   Cpus_allowed_list:      17-18</span></span>
+<span id="cb1-316"><a href="#cb1-316" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   migration/14    Cpus_allowed_list:      14</span></span>
+<span id="cb1-317"><a href="#cb1-317" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   licManager      Cpus_allowed_list:      2-18</span></span>
+<span id="cb1-318"><a href="#cb1-318" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   sh      Cpus_allowed_list:      2-18</span></span>
+<span id="cb1-319"><a href="#cb1-319" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   post-office     Cpus_allowed_list:      2-18</span></span>
+<span id="cb1-320"><a href="#cb1-320" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   oam     Cpus_allowed_list:      2-18</span></span>
+<span id="cb1-321"><a href="#cb1-321" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   tr069-v2        Cpus_allowed_list:      2-18</span></span>
+<span id="cb1-322"><a href="#cb1-322" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   ftp-func        Cpus_allowed_list:      2-18</span></span>
+<span id="cb1-323"><a href="#cb1-323" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   o-ru-controller Cpus_allowed_list:      2-18</span></span>
+<span id="cb1-324"><a href="#cb1-324" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   lighttpd        Cpus_allowed_list:      2-18</span></span>
+<span id="cb1-325"><a href="#cb1-325" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   lighttpd        Cpus_allowed_list:      2-18</span></span>
+<span id="cb1-326"><a href="#cb1-326" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   gnb_cu_oam      Cpus_allowed_list:      2-3</span></span>
+<span id="cb1-327"><a href="#cb1-327" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   gnb_cu_pdcp     Cpus_allowed_list:      2-5</span></span>
+<span id="cb1-328"><a href="#cb1-328" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      18</span></span>
+<span id="cb1-329"><a href="#cb1-329" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      18</span></span>
+<span id="cb1-330"><a href="#cb1-330" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      18</span></span>
+<span id="cb1-331"><a href="#cb1-331" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      18</span></span>
+<span id="cb1-332"><a href="#cb1-332" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   duoam   Cpus_allowed_list:      17-18</span></span>
+<span id="cb1-333"><a href="#cb1-333" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   dumgr   Cpus_allowed_list:      17-18</span></span>
+<span id="cb1-334"><a href="#cb1-334" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   gnb_du_layer2   Cpus_allowed_list:      5</span></span>
+<span id="cb1-335"><a href="#cb1-335" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-336"><a href="#cb1-336" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-337"><a href="#cb1-337" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-338"><a href="#cb1-338" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-339"><a href="#cb1-339" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-340"><a href="#cb1-340" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-341"><a href="#cb1-341" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-342"><a href="#cb1-342" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-343"><a href="#cb1-343" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-344"><a href="#cb1-344" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-345"><a href="#cb1-345" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-346"><a href="#cb1-346" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-347"><a href="#cb1-347" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-348"><a href="#cb1-348" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-349"><a href="#cb1-349" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-350"><a href="#cb1-350" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-351"><a href="#cb1-351" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-352"><a href="#cb1-352" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-353"><a href="#cb1-353" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-354"><a href="#cb1-354" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-355"><a href="#cb1-355" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   gnb_cu_son      Cpus_allowed_list:      2-4</span></span>
+<span id="cb1-356"><a href="#cb1-356" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   gnb_cu_l3       Cpus_allowed_list:      7-9</span></span>
+<span id="cb1-357"><a href="#cb1-357" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   posixcputmr/14  Cpus_allowed_list:      14</span></span>
+<span id="cb1-358"><a href="#cb1-358" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   auditd  Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-359"><a href="#cb1-359" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   rcuc/14 Cpus_allowed_list:      14</span></span>
+<span id="cb1-360"><a href="#cb1-360" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   licManager      Cpus_allowed_list:      2-18</span></span>
+<span id="cb1-361"><a href="#cb1-361" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   sh      Cpus_allowed_list:      2-18</span></span>
+<span id="cb1-362"><a href="#cb1-362" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   post-office     Cpus_allowed_list:      2-18</span></span>
+<span id="cb1-363"><a href="#cb1-363" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   oam     Cpus_allowed_list:      2-18</span></span>
+<span id="cb1-364"><a href="#cb1-364" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   tr069-v2        Cpus_allowed_list:      2-18</span></span>
+<span id="cb1-365"><a href="#cb1-365" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   ftp-func        Cpus_allowed_list:      2-18</span></span>
+<span id="cb1-366"><a href="#cb1-366" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   o-ru-controller Cpus_allowed_list:      2-18</span></span>
+<span id="cb1-367"><a href="#cb1-367" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   lighttpd        Cpus_allowed_list:      2-18</span></span>
+<span id="cb1-368"><a href="#cb1-368" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   lighttpd        Cpus_allowed_list:      2-18</span></span>
+<span id="cb1-369"><a href="#cb1-369" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   gnb_cu_oam      Cpus_allowed_list:      2-3</span></span>
+<span id="cb1-370"><a href="#cb1-370" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   gnb_cu_pdcp     Cpus_allowed_list:      2-5</span></span>
+<span id="cb1-371"><a href="#cb1-371" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      18</span></span>
+<span id="cb1-372"><a href="#cb1-372" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      18</span></span>
+<span id="cb1-373"><a href="#cb1-373" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      18</span></span>
+<span id="cb1-374"><a href="#cb1-374" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      18</span></span>
+<span id="cb1-375"><a href="#cb1-375" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   duoam   Cpus_allowed_list:      17-18</span></span>
+<span id="cb1-376"><a href="#cb1-376" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   dumgr   Cpus_allowed_list:      17-18</span></span>
+<span id="cb1-377"><a href="#cb1-377" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   gnb_du_layer2   Cpus_allowed_list:      5</span></span>
+<span id="cb1-378"><a href="#cb1-378" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-379"><a href="#cb1-379" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-380"><a href="#cb1-380" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-381"><a href="#cb1-381" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-382"><a href="#cb1-382" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-383"><a href="#cb1-383" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-384"><a href="#cb1-384" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-385"><a href="#cb1-385" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-386"><a href="#cb1-386" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-387"><a href="#cb1-387" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-388"><a href="#cb1-388" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-389"><a href="#cb1-389" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-390"><a href="#cb1-390" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-391"><a href="#cb1-391" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-392"><a href="#cb1-392" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-393"><a href="#cb1-393" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-394"><a href="#cb1-394" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-395"><a href="#cb1-395" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-396"><a href="#cb1-396" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-397"><a href="#cb1-397" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-398"><a href="#cb1-398" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   gnb_cu_son      Cpus_allowed_list:      2-4</span></span>
+<span id="cb1-399"><a href="#cb1-399" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   gnb_cu_l3       Cpus_allowed_list:      7-9</span></span>
+<span id="cb1-400"><a href="#cb1-400" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   posixcputmr/0   Cpus_allowed_list:      0</span></span>
+<span id="cb1-401"><a href="#cb1-401" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   ksoftirqd/14    Cpus_allowed_list:      14</span></span>
+<span id="cb1-402"><a href="#cb1-402" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kworker/14:0-mm_percpu_wq       Cpus_allowed_list:      14</span></span>
+<span id="cb1-403"><a href="#cb1-403" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   chronyd Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-404"><a href="#cb1-404" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   sssd    Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-405"><a href="#cb1-405" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kworker/14:0H   Cpus_allowed_list:      14</span></span>
+<span id="cb1-406"><a href="#cb1-406" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   dbus-daemon     Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-407"><a href="#cb1-407" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   licManager      Cpus_allowed_list:      2-18</span></span>
+<span id="cb1-408"><a href="#cb1-408" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   sh      Cpus_allowed_list:      2-18</span></span>
+<span id="cb1-409"><a href="#cb1-409" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   rcuop/14        Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-410"><a href="#cb1-410" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   post-office     Cpus_allowed_list:      2-18</span></span>
+<span id="cb1-411"><a href="#cb1-411" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   oam     Cpus_allowed_list:      2-18</span></span>
+<span id="cb1-412"><a href="#cb1-412" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   tr069-v2        Cpus_allowed_list:      2-18</span></span>
+<span id="cb1-413"><a href="#cb1-413" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   ftp-func        Cpus_allowed_list:      2-18</span></span>
+<span id="cb1-414"><a href="#cb1-414" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   o-ru-controller Cpus_allowed_list:      2-18</span></span>
+<span id="cb1-415"><a href="#cb1-415" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   lighttpd        Cpus_allowed_list:      2-18</span></span>
+<span id="cb1-416"><a href="#cb1-416" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   lighttpd        Cpus_allowed_list:      2-18</span></span>
+<span id="cb1-417"><a href="#cb1-417" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   gnb_cu_oam      Cpus_allowed_list:      2-3</span></span>
+<span id="cb1-418"><a href="#cb1-418" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   gnb_cu_pdcp     Cpus_allowed_list:      2-4,9</span></span>
+<span id="cb1-419"><a href="#cb1-419" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      18</span></span>
+<span id="cb1-420"><a href="#cb1-420" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      18</span></span>
+<span id="cb1-421"><a href="#cb1-421" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      18</span></span>
+<span id="cb1-422"><a href="#cb1-422" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      18</span></span>
+<span id="cb1-423"><a href="#cb1-423" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   duoam   Cpus_allowed_list:      17-18</span></span>
+<span id="cb1-424"><a href="#cb1-424" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   dumgr   Cpus_allowed_list:      17-18</span></span>
+<span id="cb1-425"><a href="#cb1-425" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   gnb_du_layer2   Cpus_allowed_list:      5</span></span>
+<span id="cb1-426"><a href="#cb1-426" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-427"><a href="#cb1-427" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-428"><a href="#cb1-428" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-429"><a href="#cb1-429" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-430"><a href="#cb1-430" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-431"><a href="#cb1-431" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-432"><a href="#cb1-432" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-433"><a href="#cb1-433" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-434"><a href="#cb1-434" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-435"><a href="#cb1-435" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-436"><a href="#cb1-436" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-437"><a href="#cb1-437" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-438"><a href="#cb1-438" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-439"><a href="#cb1-439" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-440"><a href="#cb1-440" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-441"><a href="#cb1-441" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-442"><a href="#cb1-442" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-443"><a href="#cb1-443" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-444"><a href="#cb1-444" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-445"><a href="#cb1-445" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-446"><a href="#cb1-446" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   gnb_cu_son      Cpus_allowed_list:      2-4</span></span>
+<span id="cb1-447"><a href="#cb1-447" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   gnb_cu_rrm      Cpus_allowed_list:      5-6</span></span>
+<span id="cb1-448"><a href="#cb1-448" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   gnb_cu_l3       Cpus_allowed_list:      2-18</span></span>
+<span id="cb1-449"><a href="#cb1-449" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   cpuhp/15        Cpus_allowed_list:      15</span></span>
+<span id="cb1-450"><a href="#cb1-450" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   watchdog/15     Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-451"><a href="#cb1-451" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   migration/15    Cpus_allowed_list:      15</span></span>
+<span id="cb1-452"><a href="#cb1-452" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   posixcputmr/15  Cpus_allowed_list:      15</span></span>
+<span id="cb1-453"><a href="#cb1-453" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   sssd_be Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-454"><a href="#cb1-454" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   licManager      Cpus_allowed_list:      2-18</span></span>
+<span id="cb1-455"><a href="#cb1-455" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   sh      Cpus_allowed_list:      2-18</span></span>
+<span id="cb1-456"><a href="#cb1-456" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   post-office     Cpus_allowed_list:      2-18</span></span>
+<span id="cb1-457"><a href="#cb1-457" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   oam     Cpus_allowed_list:      2-18</span></span>
+<span id="cb1-458"><a href="#cb1-458" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   tr069-v2        Cpus_allowed_list:      2-18</span></span>
+<span id="cb1-459"><a href="#cb1-459" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   ftp-func        Cpus_allowed_list:      2-18</span></span>
+<span id="cb1-460"><a href="#cb1-460" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   o-ru-controller Cpus_allowed_list:      2-18</span></span>
+<span id="cb1-461"><a href="#cb1-461" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   lighttpd        Cpus_allowed_list:      2-18</span></span>
+<span id="cb1-462"><a href="#cb1-462" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   lighttpd        Cpus_allowed_list:      2-18</span></span>
+<span id="cb1-463"><a href="#cb1-463" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   gnb_cu_oam      Cpus_allowed_list:      2-3</span></span>
+<span id="cb1-464"><a href="#cb1-464" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   gnb_cu_pdcp     Cpus_allowed_list:      2-4,9</span></span>
+<span id="cb1-465"><a href="#cb1-465" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      18</span></span>
+<span id="cb1-466"><a href="#cb1-466" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      18</span></span>
+<span id="cb1-467"><a href="#cb1-467" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      18</span></span>
+<span id="cb1-468"><a href="#cb1-468" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      18</span></span>
+<span id="cb1-469"><a href="#cb1-469" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   duoam   Cpus_allowed_list:      17-18</span></span>
+<span id="cb1-470"><a href="#cb1-470" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   dumgr   Cpus_allowed_list:      17-18</span></span>
+<span id="cb1-471"><a href="#cb1-471" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   gnb_du_layer2   Cpus_allowed_list:      5</span></span>
+<span id="cb1-472"><a href="#cb1-472" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-473"><a href="#cb1-473" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-474"><a href="#cb1-474" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-475"><a href="#cb1-475" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-476"><a href="#cb1-476" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-477"><a href="#cb1-477" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-478"><a href="#cb1-478" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-479"><a href="#cb1-479" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-480"><a href="#cb1-480" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-481"><a href="#cb1-481" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-482"><a href="#cb1-482" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-483"><a href="#cb1-483" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-484"><a href="#cb1-484" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-485"><a href="#cb1-485" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-486"><a href="#cb1-486" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-487"><a href="#cb1-487" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-488"><a href="#cb1-488" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-489"><a href="#cb1-489" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-490"><a href="#cb1-490" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-491"><a href="#cb1-491" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bin_reader      Cpus_allowed_list:      2</span></span>
+<span id="cb1-492"><a href="#cb1-492" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   gnb_cu_son      Cpus_allowed_list:      2-4</span></span>
+<span id="cb1-493"><a href="#cb1-493" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   gnb_cu_rrm      Cpus_allowed_list:      5-6</span></span>
+<span id="cb1-494"><a href="#cb1-494" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   gnb_cu_l3       Cpus_allowed_list:      2-18</span></span>
+<span id="cb1-495"><a href="#cb1-495" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kworker/u40:0-events_unbound    Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-496"><a href="#cb1-496" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   rcuc/15 Cpus_allowed_list:      15</span></span>
+<span id="cb1-497"><a href="#cb1-497" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   ksoftirqd/15    Cpus_allowed_list:      15</span></span>
+<span id="cb1-498"><a href="#cb1-498" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   migration/0     Cpus_allowed_list:      0</span></span>
+<span id="cb1-499"><a href="#cb1-499" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kworker/15:0-mm_percpu_wq       Cpus_allowed_list:      15</span></span>
+<span id="cb1-500"><a href="#cb1-500" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   sssd_nss        Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-501"><a href="#cb1-501" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kworker/15:0H   Cpus_allowed_list:      15</span></span>
+<span id="cb1-502"><a href="#cb1-502" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   systemd-logind  Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-503"><a href="#cb1-503" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   rcuop/15        Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-504"><a href="#cb1-504" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   vim     Cpus_allowed_list:      2-18</span></span>
+<span id="cb1-505"><a href="#cb1-505" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   ovsdb-server    Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-506"><a href="#cb1-506" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   cpuhp/16        Cpus_allowed_list:      16</span></span>
+<span id="cb1-507"><a href="#cb1-507" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   watchdog/16     Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-508"><a href="#cb1-508" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   migration/16    Cpus_allowed_list:      16</span></span>
+<span id="cb1-509"><a href="#cb1-509" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   posixcputmr/16  Cpus_allowed_list:      16</span></span>
+<span id="cb1-510"><a href="#cb1-510" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   rcuc/16 Cpus_allowed_list:      16</span></span>
+<span id="cb1-511"><a href="#cb1-511" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   ksoftirqd/16    Cpus_allowed_list:      16</span></span>
+<span id="cb1-512"><a href="#cb1-512" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kworker/16:0-mm_percpu_wq       Cpus_allowed_list:      16</span></span>
+<span id="cb1-513"><a href="#cb1-513" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   watchdog/0      Cpus_allowed_list:      0</span></span>
+<span id="cb1-514"><a href="#cb1-514" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kworker/16:0H   Cpus_allowed_list:      16</span></span>
+<span id="cb1-515"><a href="#cb1-515" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   rcuop/16        Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-516"><a href="#cb1-516" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   cpuhp/17        Cpus_allowed_list:      17</span></span>
+<span id="cb1-517"><a href="#cb1-517" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   ovs-vswitchd    Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-518"><a href="#cb1-518" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   watchdog/17     Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-519"><a href="#cb1-519" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kworker/u40:1-events_unbound    Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-520"><a href="#cb1-520" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   migration/17    Cpus_allowed_list:      17</span></span>
+<span id="cb1-521"><a href="#cb1-521" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kworker/0:0-events      Cpus_allowed_list:      0</span></span>
+<span id="cb1-522"><a href="#cb1-522" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   posixcputmr/17  Cpus_allowed_list:      17</span></span>
+<span id="cb1-523"><a href="#cb1-523" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   rcuc/17 Cpus_allowed_list:      17</span></span>
+<span id="cb1-524"><a href="#cb1-524" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   NetworkManager  Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-525"><a href="#cb1-525" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kworker/0:1-events      Cpus_allowed_list:      0</span></span>
+<span id="cb1-526"><a href="#cb1-526" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   ksoftirqd/17    Cpus_allowed_list:      17</span></span>
+<span id="cb1-527"><a href="#cb1-527" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kworker/u40:2-events_unbound    Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-528"><a href="#cb1-528" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   sshd    Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-529"><a href="#cb1-529" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   sshd    Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-530"><a href="#cb1-530" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bash    Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-531"><a href="#cb1-531" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   sudo    Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-532"><a href="#cb1-532" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bash    Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-533"><a href="#cb1-533" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kworker/17:0-mm_percpu_wq       Cpus_allowed_list:      17</span></span>
+<span id="cb1-534"><a href="#cb1-534" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/79-i40e-ens Cpus_allowed_list:      1</span></span>
+<span id="cb1-535"><a href="#cb1-535" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/80-i40e-ens Cpus_allowed_list:      0</span></span>
+<span id="cb1-536"><a href="#cb1-536" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/81-i40e-ens Cpus_allowed_list:      0</span></span>
+<span id="cb1-537"><a href="#cb1-537" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/82-i40e-ens Cpus_allowed_list:      1</span></span>
+<span id="cb1-538"><a href="#cb1-538" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kworker/17:0H   Cpus_allowed_list:      17</span></span>
+<span id="cb1-539"><a href="#cb1-539" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/83-i40e-ens Cpus_allowed_list:      0</span></span>
+<span id="cb1-540"><a href="#cb1-540" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/84-i40e-ens Cpus_allowed_list:      0</span></span>
+<span id="cb1-541"><a href="#cb1-541" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kworker/1:1-xfs-cil/dm-0        Cpus_allowed_list:      1</span></span>
+<span id="cb1-542"><a href="#cb1-542" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/85-i40e-ens Cpus_allowed_list:      0</span></span>
+<span id="cb1-543"><a href="#cb1-543" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/86-i40e-ens Cpus_allowed_list:      0</span></span>
+<span id="cb1-544"><a href="#cb1-544" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/87-i40e-ens Cpus_allowed_list:      0</span></span>
+<span id="cb1-545"><a href="#cb1-545" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/88-i40e-ens Cpus_allowed_list:      0</span></span>
+<span id="cb1-546"><a href="#cb1-546" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/89-i40e-ens Cpus_allowed_list:      0</span></span>
+<span id="cb1-547"><a href="#cb1-547" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/90-i40e-ens Cpus_allowed_list:      0</span></span>
+<span id="cb1-548"><a href="#cb1-548" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/91-i40e-ens Cpus_allowed_list:      0</span></span>
+<span id="cb1-549"><a href="#cb1-549" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/92-i40e-ens Cpus_allowed_list:      0</span></span>
+<span id="cb1-550"><a href="#cb1-550" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   cpuhp/0 Cpus_allowed_list:      0</span></span>
+<span id="cb1-551"><a href="#cb1-551" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   rcuop/17        Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-552"><a href="#cb1-552" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/93-i40e-ens Cpus_allowed_list:      1</span></span>
+<span id="cb1-553"><a href="#cb1-553" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/94-i40e-ens Cpus_allowed_list:      0</span></span>
+<span id="cb1-554"><a href="#cb1-554" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/95-i40e-ens Cpus_allowed_list:      1</span></span>
+<span id="cb1-555"><a href="#cb1-555" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/96-i40e-ens Cpus_allowed_list:      0</span></span>
+<span id="cb1-556"><a href="#cb1-556" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/97-i40e-ens Cpus_allowed_list:      1</span></span>
+<span id="cb1-557"><a href="#cb1-557" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/98-i40e-ens Cpus_allowed_list:      1</span></span>
+<span id="cb1-558"><a href="#cb1-558" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kworker/1:4-xfs-cil/dm-0        Cpus_allowed_list:      1</span></span>
+<span id="cb1-559"><a href="#cb1-559" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   cpuhp/18        Cpus_allowed_list:      18</span></span>
+<span id="cb1-560"><a href="#cb1-560" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kworker/0:0H-xfs-log/dm-0       Cpus_allowed_list:      0</span></span>
+<span id="cb1-561"><a href="#cb1-561" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kworker/u40:3-events_unbound    Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-562"><a href="#cb1-562" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   watchdog/18     Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-563"><a href="#cb1-563" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kworker/1:0-events      Cpus_allowed_list:      1</span></span>
+<span id="cb1-564"><a href="#cb1-564" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   migration/18    Cpus_allowed_list:      18</span></span>
+<span id="cb1-565"><a href="#cb1-565" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   sleep   Cpus_allowed_list:      0-1,19</span></span>
+<span id="cb1-566"><a href="#cb1-566" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   sleep   Cpus_allowed_list:      0-1,19</span></span>
+<span id="cb1-567"><a href="#cb1-567" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   sh      Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-568"><a href="#cb1-568" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   posixcputmr/18  Cpus_allowed_list:      18</span></span>
+<span id="cb1-569"><a href="#cb1-569" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   agetty  Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-570"><a href="#cb1-570" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   agetty  Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-571"><a href="#cb1-571" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   rcuc/18 Cpus_allowed_list:      18</span></span>
+<span id="cb1-572"><a href="#cb1-572" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   ksoftirqd/18    Cpus_allowed_list:      18</span></span>
+<span id="cb1-573"><a href="#cb1-573" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kworker/18:0-mm_percpu_wq       Cpus_allowed_list:      18</span></span>
+<span id="cb1-574"><a href="#cb1-574" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kworker/18:0H   Cpus_allowed_list:      18</span></span>
+<span id="cb1-575"><a href="#cb1-575" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   rcuop/18        Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-576"><a href="#cb1-576" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   cpuhp/1 Cpus_allowed_list:      1</span></span>
+<span id="cb1-577"><a href="#cb1-577" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   cpuhp/19        Cpus_allowed_list:      19</span></span>
+<span id="cb1-578"><a href="#cb1-578" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/70-ens81f0n Cpus_allowed_list:      0</span></span>
+<span id="cb1-579"><a href="#cb1-579" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/71-ens81f0n Cpus_allowed_list:      1</span></span>
+<span id="cb1-580"><a href="#cb1-580" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/72-ens81f0n Cpus_allowed_list:      0</span></span>
+<span id="cb1-581"><a href="#cb1-581" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/73-ens81f0n Cpus_allowed_list:      1</span></span>
+<span id="cb1-582"><a href="#cb1-582" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/74-ens81f0n Cpus_allowed_list:      0</span></span>
+<span id="cb1-583"><a href="#cb1-583" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   watchdog/19     Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-584"><a href="#cb1-584" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/75-ens81f0n Cpus_allowed_list:      1</span></span>
+<span id="cb1-585"><a href="#cb1-585" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/76-ens81f0n Cpus_allowed_list:      0</span></span>
+<span id="cb1-586"><a href="#cb1-586" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/77-ens81f0n Cpus_allowed_list:      1</span></span>
+<span id="cb1-587"><a href="#cb1-587" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   migration/19    Cpus_allowed_list:      19</span></span>
+<span id="cb1-588"><a href="#cb1-588" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   posixcputmr/19  Cpus_allowed_list:      19</span></span>
+<span id="cb1-589"><a href="#cb1-589" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   rcuc/19 Cpus_allowed_list:      19</span></span>
+<span id="cb1-590"><a href="#cb1-590" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/110-ens81f1 Cpus_allowed_list:      0</span></span>
+<span id="cb1-591"><a href="#cb1-591" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/111-ens81f1 Cpus_allowed_list:      1</span></span>
+<span id="cb1-592"><a href="#cb1-592" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/112-ens81f1 Cpus_allowed_list:      0</span></span>
+<span id="cb1-593"><a href="#cb1-593" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/113-ens81f1 Cpus_allowed_list:      1</span></span>
+<span id="cb1-594"><a href="#cb1-594" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/114-ens81f1 Cpus_allowed_list:      0</span></span>
+<span id="cb1-595"><a href="#cb1-595" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/115-ens81f1 Cpus_allowed_list:      1</span></span>
+<span id="cb1-596"><a href="#cb1-596" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/116-ens81f1 Cpus_allowed_list:      0</span></span>
+<span id="cb1-597"><a href="#cb1-597" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/117-ens81f1 Cpus_allowed_list:      1</span></span>
+<span id="cb1-598"><a href="#cb1-598" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   ksoftirqd/19    Cpus_allowed_list:      19</span></span>
+<span id="cb1-599"><a href="#cb1-599" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kworker/19:0-mm_percpu_wq       Cpus_allowed_list:      19</span></span>
+<span id="cb1-600"><a href="#cb1-600" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kworker/19:0H   Cpus_allowed_list:      19</span></span>
+<span id="cb1-601"><a href="#cb1-601" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   rcuop/19        Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-602"><a href="#cb1-602" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   watchdog/1      Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-603"><a href="#cb1-603" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/4-ttyS0     Cpus_allowed_list:      0</span></span>
+<span id="cb1-604"><a href="#cb1-604" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kdevtmpfs       Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-605"><a href="#cb1-605" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   netns   Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-606"><a href="#cb1-606" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   rcu_tasks_kthre Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-607"><a href="#cb1-607" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kauditd Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-608"><a href="#cb1-608" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   sshd    Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-609"><a href="#cb1-609" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   rpcbind Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-610"><a href="#cb1-610" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   rpc.statd       Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-611"><a href="#cb1-611" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   khungtaskd      Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-612"><a href="#cb1-612" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   oom_reaper      Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-613"><a href="#cb1-613" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kthreadd        Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-614"><a href="#cb1-614" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   migration/1     Cpus_allowed_list:      1</span></span>
+<span id="cb1-615"><a href="#cb1-615" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   writeback       Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-616"><a href="#cb1-616" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kcompactd0      Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-617"><a href="#cb1-617" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   ksmd    Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-618"><a href="#cb1-618" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   crypto  Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-619"><a href="#cb1-619" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kintegrityd     Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-620"><a href="#cb1-620" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kblockd Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-621"><a href="#cb1-621" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/9-acpi      Cpus_allowed_list:      0</span></span>
+<span id="cb1-622"><a href="#cb1-622" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   tpm_dev_wq      Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-623"><a href="#cb1-623" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   posixcputmr/1   Cpus_allowed_list:      1</span></span>
+<span id="cb1-624"><a href="#cb1-624" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   md      Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-625"><a href="#cb1-625" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   crio    Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-626"><a href="#cb1-626" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   edac-poller     Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-627"><a href="#cb1-627" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   watchdogd       Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-628"><a href="#cb1-628" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   rcuc/1  Cpus_allowed_list:      1</span></span>
+<span id="cb1-629"><a href="#cb1-629" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   conmon  Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-630"><a href="#cb1-630" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   conmon  Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-631"><a href="#cb1-631" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   conmon  Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-632"><a href="#cb1-632" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   conmon  Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-633"><a href="#cb1-633" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   conmon  Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-634"><a href="#cb1-634" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   conmon  Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-635"><a href="#cb1-635" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   ksoftirqd/1     Cpus_allowed_list:      1</span></span>
+<span id="cb1-636"><a href="#cb1-636" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kswapd0 Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-637"><a href="#cb1-637" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   pod     Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-638"><a href="#cb1-638" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   pod     Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-639"><a href="#cb1-639" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   pod     Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-640"><a href="#cb1-640" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   pod     Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-641"><a href="#cb1-641" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   pod     Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-642"><a href="#cb1-642" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   pod     Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-643"><a href="#cb1-643" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   conmon  Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-644"><a href="#cb1-644" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kworker/2:1-mm_percpu_wq        Cpus_allowed_list:      2</span></span>
+<span id="cb1-645"><a href="#cb1-645" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   pod     Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-646"><a href="#cb1-646" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kworker/3:1-mm_percpu_wq        Cpus_allowed_list:      3</span></span>
+<span id="cb1-647"><a href="#cb1-647" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kworker/4:1-mm_percpu_wq        Cpus_allowed_list:      4</span></span>
+<span id="cb1-648"><a href="#cb1-648" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kworker/1:1H-kblockd    Cpus_allowed_list:      1</span></span>
+<span id="cb1-649"><a href="#cb1-649" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kworker/5:1-mm_percpu_wq        Cpus_allowed_list:      5</span></span>
+<span id="cb1-650"><a href="#cb1-650" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kworker/6:1-mm_percpu_wq        Cpus_allowed_list:      6</span></span>
+<span id="cb1-651"><a href="#cb1-651" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kworker/7:1-mm_percpu_wq        Cpus_allowed_list:      7</span></span>
+<span id="cb1-652"><a href="#cb1-652" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kworker/8:1-mm_percpu_wq        Cpus_allowed_list:      8</span></span>
+<span id="cb1-653"><a href="#cb1-653" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kworker/9:1-mm_percpu_wq        Cpus_allowed_list:      9</span></span>
+<span id="cb1-654"><a href="#cb1-654" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kworker/10:1-mm_percpu_wq       Cpus_allowed_list:      10</span></span>
+<span id="cb1-655"><a href="#cb1-655" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kworker/11:1-mm_percpu_wq       Cpus_allowed_list:      11</span></span>
+<span id="cb1-656"><a href="#cb1-656" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kworker/12:1-mm_percpu_wq       Cpus_allowed_list:      12</span></span>
+<span id="cb1-657"><a href="#cb1-657" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kworker/13:1-mm_percpu_wq       Cpus_allowed_list:      13</span></span>
+<span id="cb1-658"><a href="#cb1-658" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   conmon  Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-659"><a href="#cb1-659" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   conmon  Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-660"><a href="#cb1-660" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kworker/14:1-mm_percpu_wq       Cpus_allowed_list:      14</span></span>
+<span id="cb1-661"><a href="#cb1-661" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kworker/15:1-mm_percpu_wq       Cpus_allowed_list:      15</span></span>
+<span id="cb1-662"><a href="#cb1-662" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   cpuhp/2 Cpus_allowed_list:      2</span></span>
+<span id="cb1-663"><a href="#cb1-663" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kworker/16:1-mm_percpu_wq       Cpus_allowed_list:      16</span></span>
+<span id="cb1-664"><a href="#cb1-664" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   sh      Cpus_allowed_list:      0-1,19</span></span>
+<span id="cb1-665"><a href="#cb1-665" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kworker/17:1-mm_percpu_wq       Cpus_allowed_list:      17</span></span>
+<span id="cb1-666"><a href="#cb1-666" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   tail    Cpus_allowed_list:      0-1,19</span></span>
+<span id="cb1-667"><a href="#cb1-667" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kworker/18:1-mm_percpu_wq       Cpus_allowed_list:      18</span></span>
+<span id="cb1-668"><a href="#cb1-668" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kworker/19:1-mm_percpu_wq       Cpus_allowed_list:      19</span></span>
+<span id="cb1-669"><a href="#cb1-669" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   conmon  Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-670"><a href="#cb1-670" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   conmon  Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-671"><a href="#cb1-671" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   watchdog/2      Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-672"><a href="#cb1-672" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kubelet Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-673"><a href="#cb1-673" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   systemd Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-674"><a href="#cb1-674" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   (sd-pam)        Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-675"><a href="#cb1-675" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   podman pause    Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-676"><a href="#cb1-676" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   machine-config- Cpus_allowed_list:      0-1,19</span></span>
+<span id="cb1-677"><a href="#cb1-677" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kworker/0:1H-kblockd    Cpus_allowed_list:      0</span></span>
+<span id="cb1-678"><a href="#cb1-678" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   openshift-sdn-n Cpus_allowed_list:      0-1,19</span></span>
+<span id="cb1-679"><a href="#cb1-679" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   migration/2     Cpus_allowed_list:      2</span></span>
+<span id="cb1-680"><a href="#cb1-680" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   conmon  Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-681"><a href="#cb1-681" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   run     Cpus_allowed_list:      0-1,19</span></span>
+<span id="cb1-682"><a href="#cb1-682" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   posixcputmr/2   Cpus_allowed_list:      2</span></span>
+<span id="cb1-683"><a href="#cb1-683" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   rcu_gp  Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-684"><a href="#cb1-684" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   rcuc/2  Cpus_allowed_list:      2</span></span>
+<span id="cb1-685"><a href="#cb1-685" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   conmon  Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-686"><a href="#cb1-686" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   conmon  Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-687"><a href="#cb1-687" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   oauth-proxy     Cpus_allowed_list:      0-1,19</span></span>
+<span id="cb1-688"><a href="#cb1-688" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kube-rbac-proxy Cpus_allowed_list:      0-1,19</span></span>
+<span id="cb1-689"><a href="#cb1-689" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   openshift-tuned Cpus_allowed_list:      0-1,19</span></span>
+<span id="cb1-690"><a href="#cb1-690" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   ksoftirqd/2     Cpus_allowed_list:      2</span></span>
+<span id="cb1-691"><a href="#cb1-691" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kworker/1:2H-kblockd    Cpus_allowed_list:      1</span></span>
+<span id="cb1-692"><a href="#cb1-692" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   polkitd Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-693"><a href="#cb1-693" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kworker/2:0-mm_percpu_wq        Cpus_allowed_list:      2</span></span>
+<span id="cb1-694"><a href="#cb1-694" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   journalctl      Cpus_allowed_list:      0-1,19</span></span>
+<span id="cb1-695"><a href="#cb1-695" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kworker/2:0H    Cpus_allowed_list:      2</span></span>
+<span id="cb1-696"><a href="#cb1-696" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   conmon  Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-697"><a href="#cb1-697" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   node_exporter   Cpus_allowed_list:      0-1,19</span></span>
+<span id="cb1-698"><a href="#cb1-698" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   rcuop/2 Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-699"><a href="#cb1-699" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   conmon  Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-700"><a href="#cb1-700" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kthrotld        Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-701"><a href="#cb1-701" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/24-PCIe PME Cpus_allowed_list:      1</span></span>
+<span id="cb1-702"><a href="#cb1-702" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/26-PCIe PME Cpus_allowed_list:      1</span></span>
+<span id="cb1-703"><a href="#cb1-703" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kube-rbac-proxy Cpus_allowed_list:      0-1,19</span></span>
+<span id="cb1-704"><a href="#cb1-704" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/26-pciehp   Cpus_allowed_list:      1</span></span>
+<span id="cb1-705"><a href="#cb1-705" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/26-s-pciehp Cpus_allowed_list:      1</span></span>
+<span id="cb1-706"><a href="#cb1-706" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/27-PCIe PME Cpus_allowed_list:      1</span></span>
+<span id="cb1-707"><a href="#cb1-707" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   cpuhp/3 Cpus_allowed_list:      3</span></span>
+<span id="cb1-708"><a href="#cb1-708" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/65-PCIe PME Cpus_allowed_list:      0</span></span>
+<span id="cb1-709"><a href="#cb1-709" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/65-aerdrv   Cpus_allowed_list:      0</span></span>
+<span id="cb1-710"><a href="#cb1-710" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/65-s-aerdrv Cpus_allowed_list:      0</span></span>
+<span id="cb1-711"><a href="#cb1-711" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   acpi_thermal_pm Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-712"><a href="#cb1-712" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kmpath_rdacd    Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-713"><a href="#cb1-713" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kaluad  Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-714"><a href="#cb1-714" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/66-xhci_hcd Cpus_allowed_list:      1</span></span>
+<span id="cb1-715"><a href="#cb1-715" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/8-rtc0      Cpus_allowed_list:      0</span></span>
+<span id="cb1-716"><a href="#cb1-716" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   ipv6_addrconf   Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-717"><a href="#cb1-717" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kstrp   Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-718"><a href="#cb1-718" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   watchdog/3      Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-719"><a href="#cb1-719" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   migration/3     Cpus_allowed_list:      3</span></span>
+<span id="cb1-720"><a href="#cb1-720" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   posixcputmr/3   Cpus_allowed_list:      3</span></span>
+<span id="cb1-721"><a href="#cb1-721" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   rcuc/3  Cpus_allowed_list:      3</span></span>
+<span id="cb1-722"><a href="#cb1-722" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   conmon  Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-723"><a href="#cb1-723" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   pod     Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-724"><a href="#cb1-724" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   conmon  Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-725"><a href="#cb1-725" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   network-metrics Cpus_allowed_list:      0-1,19</span></span>
+<span id="cb1-726"><a href="#cb1-726" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   conmon  Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-727"><a href="#cb1-727" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   rcu_par_gp      Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-728"><a href="#cb1-728" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   ksoftirqd/3     Cpus_allowed_list:      3</span></span>
+<span id="cb1-729"><a href="#cb1-729" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   pod     Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-730"><a href="#cb1-730" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   conmon  Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-731"><a href="#cb1-731" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kube-rbac-proxy Cpus_allowed_list:      0-1,19</span></span>
+<span id="cb1-732"><a href="#cb1-732" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   conmon  Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-733"><a href="#cb1-733" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kworker/3:0-mm_percpu_wq        Cpus_allowed_list:      3</span></span>
+<span id="cb1-734"><a href="#cb1-734" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   entrypoint.sh   Cpus_allowed_list:      0-1,19</span></span>
+<span id="cb1-735"><a href="#cb1-735" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   conmon  Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-736"><a href="#cb1-736" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   coredns Cpus_allowed_list:      0-1,19</span></span>
+<span id="cb1-737"><a href="#cb1-737" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kworker/3:0H    Cpus_allowed_list:      3</span></span>
+<span id="cb1-738"><a href="#cb1-738" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   rcuop/3 Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-739"><a href="#cb1-739" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   conmon  Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-740"><a href="#cb1-740" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kube-rbac-proxy Cpus_allowed_list:      0-1,19</span></span>
+<span id="cb1-741"><a href="#cb1-741" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   cpuhp/4 Cpus_allowed_list:      4</span></span>
+<span id="cb1-742"><a href="#cb1-742" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   conmon  Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-743"><a href="#cb1-743" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bash    Cpus_allowed_list:      0-1,19</span></span>
+<span id="cb1-744"><a href="#cb1-744" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   watchdog/4      Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-745"><a href="#cb1-745" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   migration/4     Cpus_allowed_list:      4</span></span>
+<span id="cb1-746"><a href="#cb1-746" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   posixcputmr/4   Cpus_allowed_list:      4</span></span>
+<span id="cb1-747"><a href="#cb1-747" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   tuned   Cpus_allowed_list:      0-1,19</span></span>
+<span id="cb1-748"><a href="#cb1-748" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   rcuc/4  Cpus_allowed_list:      4</span></span>
+<span id="cb1-749"><a href="#cb1-749" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   ksoftirqd/4     Cpus_allowed_list:      4</span></span>
+<span id="cb1-750"><a href="#cb1-750" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irqbalance      Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-751"><a href="#cb1-751" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   stalld  Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-752"><a href="#cb1-752" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kworker/4:0-mm_percpu_wq        Cpus_allowed_list:      4</span></span>
+<span id="cb1-753"><a href="#cb1-753" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kworker/4:0H    Cpus_allowed_list:      4</span></span>
+<span id="cb1-754"><a href="#cb1-754" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   iscsi_eh        Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-755"><a href="#cb1-755" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   rcuop/4 Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-756"><a href="#cb1-756" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   cpuhp/5 Cpus_allowed_list:      5</span></span>
+<span id="cb1-757"><a href="#cb1-757" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   watchdog/5      Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-758"><a href="#cb1-758" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   migration/5     Cpus_allowed_list:      5</span></span>
+<span id="cb1-759"><a href="#cb1-759" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   posixcputmr/5   Cpus_allowed_list:      5</span></span>
+<span id="cb1-760"><a href="#cb1-760" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   rcuc/5  Cpus_allowed_list:      5</span></span>
+<span id="cb1-761"><a href="#cb1-761" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   ksoftirqd/5     Cpus_allowed_list:      5</span></span>
+<span id="cb1-762"><a href="#cb1-762" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kworker/5:0-mm_percpu_wq        Cpus_allowed_list:      5</span></span>
+<span id="cb1-763"><a href="#cb1-763" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kworker/5:0H    Cpus_allowed_list:      5</span></span>
+<span id="cb1-764"><a href="#cb1-764" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   rcuop/5 Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-765"><a href="#cb1-765" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   cpuhp/6 Cpus_allowed_list:      6</span></span>
+<span id="cb1-766"><a href="#cb1-766" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   watchdog/6      Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-767"><a href="#cb1-767" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   cnic_wq Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-768"><a href="#cb1-768" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bnx2i_thread/0  Cpus_allowed_list:      0</span></span>
+<span id="cb1-769"><a href="#cb1-769" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bnx2i_thread/1  Cpus_allowed_list:      1</span></span>
+<span id="cb1-770"><a href="#cb1-770" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bnx2i_thread/2  Cpus_allowed_list:      2</span></span>
+<span id="cb1-771"><a href="#cb1-771" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bnx2i_thread/3  Cpus_allowed_list:      3</span></span>
+<span id="cb1-772"><a href="#cb1-772" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bnx2i_thread/4  Cpus_allowed_list:      4</span></span>
+<span id="cb1-773"><a href="#cb1-773" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bnx2i_thread/5  Cpus_allowed_list:      5</span></span>
+<span id="cb1-774"><a href="#cb1-774" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bnx2i_thread/6  Cpus_allowed_list:      6</span></span>
+<span id="cb1-775"><a href="#cb1-775" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   migration/6     Cpus_allowed_list:      6</span></span>
+<span id="cb1-776"><a href="#cb1-776" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bnx2i_thread/7  Cpus_allowed_list:      7</span></span>
+<span id="cb1-777"><a href="#cb1-777" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bnx2i_thread/8  Cpus_allowed_list:      8</span></span>
+<span id="cb1-778"><a href="#cb1-778" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bnx2i_thread/9  Cpus_allowed_list:      9</span></span>
+<span id="cb1-779"><a href="#cb1-779" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bnx2i_thread/10 Cpus_allowed_list:      10</span></span>
+<span id="cb1-780"><a href="#cb1-780" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bnx2i_thread/11 Cpus_allowed_list:      11</span></span>
+<span id="cb1-781"><a href="#cb1-781" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bnx2i_thread/12 Cpus_allowed_list:      12</span></span>
+<span id="cb1-782"><a href="#cb1-782" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bnx2i_thread/13 Cpus_allowed_list:      13</span></span>
+<span id="cb1-783"><a href="#cb1-783" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bnx2i_thread/14 Cpus_allowed_list:      14</span></span>
+<span id="cb1-784"><a href="#cb1-784" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bnx2i_thread/15 Cpus_allowed_list:      15</span></span>
+<span id="cb1-785"><a href="#cb1-785" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bnx2i_thread/16 Cpus_allowed_list:      16</span></span>
+<span id="cb1-786"><a href="#cb1-786" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   posixcputmr/6   Cpus_allowed_list:      6</span></span>
+<span id="cb1-787"><a href="#cb1-787" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bnx2i_thread/17 Cpus_allowed_list:      17</span></span>
+<span id="cb1-788"><a href="#cb1-788" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bnx2i_thread/18 Cpus_allowed_list:      18</span></span>
+<span id="cb1-789"><a href="#cb1-789" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bnx2i_thread/19 Cpus_allowed_list:      19</span></span>
+<span id="cb1-790"><a href="#cb1-790" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   rcuc/6  Cpus_allowed_list:      6</span></span>
+<span id="cb1-791"><a href="#cb1-791" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   ksoftirqd/6     Cpus_allowed_list:      6</span></span>
+<span id="cb1-792"><a href="#cb1-792" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kworker/6:0-mm_percpu_wq        Cpus_allowed_list:      6</span></span>
+<span id="cb1-793"><a href="#cb1-793" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kmpathd Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-794"><a href="#cb1-794" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kworker/6:0H    Cpus_allowed_list:      6</span></span>
+<span id="cb1-795"><a href="#cb1-795" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kmpath_handlerd Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-796"><a href="#cb1-796" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   rcuop/6 Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-797"><a href="#cb1-797" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   cpuhp/7 Cpus_allowed_list:      7</span></span>
+<span id="cb1-798"><a href="#cb1-798" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   watchdog/7      Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-799"><a href="#cb1-799" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   migration/7     Cpus_allowed_list:      7</span></span>
+<span id="cb1-800"><a href="#cb1-800" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   posixcputmr/7   Cpus_allowed_list:      7</span></span>
+<span id="cb1-801"><a href="#cb1-801" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   rcuc/7  Cpus_allowed_list:      7</span></span>
+<span id="cb1-802"><a href="#cb1-802" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   ksoftirqd/7     Cpus_allowed_list:      7</span></span>
+<span id="cb1-803"><a href="#cb1-803" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kworker/7:0-mm_percpu_wq        Cpus_allowed_list:      7</span></span>
+<span id="cb1-804"><a href="#cb1-804" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kworker/7:0H    Cpus_allowed_list:      7</span></span>
+<span id="cb1-805"><a href="#cb1-805" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   ata_sff Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-806"><a href="#cb1-806" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   i40e    Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-807"><a href="#cb1-807" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   rcuop/7 Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-808"><a href="#cb1-808" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   bnxt_pf_wq      Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-809"><a href="#cb1-809" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/67-ahci[000 Cpus_allowed_list:      0</span></span>
+<span id="cb1-810"><a href="#cb1-810" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   scsi_eh_0       Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-811"><a href="#cb1-811" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   scsi_tmf_0      Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-812"><a href="#cb1-812" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   scsi_eh_1       Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-813"><a href="#cb1-813" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   scsi_tmf_1      Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-814"><a href="#cb1-814" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   scsi_eh_2       Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-815"><a href="#cb1-815" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   scsi_tmf_2      Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-816"><a href="#cb1-816" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   cpuhp/8 Cpus_allowed_list:      8</span></span>
+<span id="cb1-817"><a href="#cb1-817" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   scsi_eh_3       Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-818"><a href="#cb1-818" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   scsi_tmf_3      Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-819"><a href="#cb1-819" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   scsi_eh_4       Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-820"><a href="#cb1-820" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   scsi_tmf_4      Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-821"><a href="#cb1-821" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   scsi_eh_5       Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-822"><a href="#cb1-822" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   scsi_tmf_5      Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-823"><a href="#cb1-823" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   watchdog/8      Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-824"><a href="#cb1-824" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/99-i40e-000 Cpus_allowed_list:      0</span></span>
+<span id="cb1-825"><a href="#cb1-825" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/78-i40e-000 Cpus_allowed_list:      0</span></span>
+<span id="cb1-826"><a href="#cb1-826" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/109-ahci[00 Cpus_allowed_list:      1</span></span>
+<span id="cb1-827"><a href="#cb1-827" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   scsi_eh_6       Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-828"><a href="#cb1-828" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   migration/8     Cpus_allowed_list:      8</span></span>
+<span id="cb1-829"><a href="#cb1-829" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   scsi_tmf_6      Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-830"><a href="#cb1-830" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   scsi_eh_7       Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-831"><a href="#cb1-831" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   scsi_tmf_7      Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-832"><a href="#cb1-832" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   scsi_eh_8       Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-833"><a href="#cb1-833" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   scsi_tmf_8      Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-834"><a href="#cb1-834" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   scsi_eh_9       Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-835"><a href="#cb1-835" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   scsi_tmf_9      Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-836"><a href="#cb1-836" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   scsi_eh_10      Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-837"><a href="#cb1-837" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   scsi_tmf_10     Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-838"><a href="#cb1-838" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   posixcputmr/8   Cpus_allowed_list:      8</span></span>
+<span id="cb1-839"><a href="#cb1-839" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   scsi_eh_11      Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-840"><a href="#cb1-840" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   scsi_tmf_11     Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-841"><a href="#cb1-841" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   scsi_eh_12      Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-842"><a href="#cb1-842" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   scsi_tmf_12     Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-843"><a href="#cb1-843" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   scsi_eh_13      Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-844"><a href="#cb1-844" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   scsi_tmf_13     Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-845"><a href="#cb1-845" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/139-i40e-00 Cpus_allowed_list:      0</span></span>
+<span id="cb1-846"><a href="#cb1-846" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   rcuc/8  Cpus_allowed_list:      8</span></span>
+<span id="cb1-847"><a href="#cb1-847" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   irq/118-i40e-00 Cpus_allowed_list:      1</span></span>
+<span id="cb1-848"><a href="#cb1-848" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   ksoftirqd/8     Cpus_allowed_list:      8</span></span>
+<span id="cb1-849"><a href="#cb1-849" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kworker/8:0-mm_percpu_wq        Cpus_allowed_list:      8</span></span>
+<span id="cb1-850"><a href="#cb1-850" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kworker/8:0H    Cpus_allowed_list:      8</span></span>
+<span id="cb1-851"><a href="#cb1-851" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   rcuop/8 Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-852"><a href="#cb1-852" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   cpuhp/9 Cpus_allowed_list:      9</span></span>
+<span id="cb1-853"><a href="#cb1-853" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   mm_percpu_wq    Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-854"><a href="#cb1-854" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   watchdog/9      Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-855"><a href="#cb1-855" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   migration/9     Cpus_allowed_list:      9</span></span>
+<span id="cb1-856"><a href="#cb1-856" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   posixcputmr/9   Cpus_allowed_list:      9</span></span>
+<span id="cb1-857"><a href="#cb1-857" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kdmflush        Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-858"><a href="#cb1-858" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   rcuc/9  Cpus_allowed_list:      9</span></span>
+<span id="cb1-859"><a href="#cb1-859" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   xfsalloc        Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-860"><a href="#cb1-860" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   xfs_mru_cache   Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-861"><a href="#cb1-861" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   ksoftirqd/9     Cpus_allowed_list:      9</span></span>
+<span id="cb1-862"><a href="#cb1-862" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   xfs-buf/dm-0    Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-863"><a href="#cb1-863" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   xfs-conv/dm-0   Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-864"><a href="#cb1-864" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   xfs-cil/dm-0    Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-865"><a href="#cb1-865" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   xfs-reclaim/dm- Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-866"><a href="#cb1-866" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   xfs-log/dm-0    Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-867"><a href="#cb1-867" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   xfs-eofblocks/d Cpus_allowed_list:      0-19</span></span>
+<span id="cb1-868"><a href="#cb1-868" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   xfsaild/dm-0    Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-869"><a href="#cb1-869" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kworker/9:0-mm_percpu_wq        Cpus_allowed_list:      9</span></span>
+<span id="cb1-870"><a href="#cb1-870" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   kworker/9:0H    Cpus_allowed_list:      9</span></span>
+<span id="cb1-871"><a href="#cb1-871" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   rcuop/9 Cpus_allowed_list:      0-1</span></span>
+<span id="cb1-872"><a href="#cb1-872" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   cpuhp/10        Cpus_allowed_list:      10</span></span>
+<span id="cb1-873"><a href="#cb1-873" aria-hidden="true" tabindex="-1"></a><span class="co"># Name:   watchdog/10     Cpus_allowed_list:      0-19</span></span></code></pre></div>
+      </article>
+    </div>
+      </main>
+
+  <footer>
+    <p>
+      Licensed under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank"
+        rel="noopener">CC-BY-NC-SA 4.0</a>
+      &nbsp;·&nbsp;
+      <a href="https://github.com/wangzheng422/docker_env" target="_blank" rel="noopener">wangzheng422/docker_env</a>
+    </p>
+  </footer>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: false, theme: 'dark' });
+
+    const SITE_BUILD_ID = 'fbe91b569ae8';
+    const SITE_HOME_URL = '../../../index.html';
+
+    const getBuildIdFromHtml = (html) => {
+      const match = String(html).match(/<meta[^>]+name=["']site-build-id["'][^>]+content=["']([^"']+)["']/i)
+        || String(html).match(/<meta[^>]+content=["']([^"']+)["'][^>]+name=["']site-build-id["']/i);
+      return match ? match[1] : '';
+    };
+
+    const checkForSiteUpdate = async () => {
+      if (!SITE_BUILD_ID || window.location.protocol === 'file:') return;
+      try {
+        const probeUrl = new URL(SITE_HOME_URL || './index.html', window.location.href);
+        probeUrl.searchParams.set('site_cache_probe', Date.now().toString());
+        const response = await fetch(probeUrl.toString(), { cache: 'no-store' });
+        if (!response.ok) return;
+        const latestBuildId = getBuildIdFromHtml(await response.text());
+        if (!latestBuildId || latestBuildId === SITE_BUILD_ID) return;
+        if (sessionStorage.getItem('site-build-refresh') === latestBuildId) return;
+        sessionStorage.setItem('site-build-refresh', latestBuildId);
+        const freshUrl = new URL(window.location.href);
+        freshUrl.searchParams.set('v', latestBuildId);
+        window.location.replace(freshUrl.toString());
+      } catch (error) {
+        // Network errors should not block reading the current page.
+      }
+    };
+
+    const versionedLocalUrl = (rawUrl) => {
+      if (!rawUrl || /^(https?:)?\/\//i.test(rawUrl) || /^(data|blob|mailto):/i.test(rawUrl)) return rawUrl;
+      const url = new URL(rawUrl, window.location.href);
+      if (url.searchParams.has('v')) return rawUrl;
+      url.searchParams.set('v', SITE_BUILD_ID);
+      return url.toString();
+    };
+
+    const cacheBustPageAssets = () => {
+      document.querySelectorAll('img[src], video[src], audio[src], source[src]').forEach((node) => {
+        const src = node.getAttribute('src');
+        const versioned = versionedLocalUrl(src);
+        if (versioned !== src) node.setAttribute('src', versioned);
+      });
+    };
+
+    const updateReadingProgress = () => {
+      const progress = document.querySelector('.reading-progress');
+      if (!progress) return;
+      const scrollable = document.documentElement.scrollHeight - window.innerHeight;
+      const ratio = scrollable > 0 ? window.scrollY / scrollable : 0;
+      progress.style.transform = 'scaleX(' + Math.min(1, Math.max(0, ratio)) + ')';
+    };
+
+    const topicFor = (text, href) => {
+      const haystack = (text + ' ' + href).toLowerCase();
+      if (/developers\.redhat\.com|redhatquickcourses|github\.com\/redhatquickcourses/.test(haystack)) return 'Red Hat';
+      if (/ai|llm|gpu|vllm|llama|model|rhaiis/.test(haystack)) return 'AI';
+      if (/network|ovn|bgp|dns|egress|ingress|metallb|nic|route/.test(haystack)) return 'Network';
+      if (/cert|tls|sso|keycloak|rhbk|security|compliance/.test(haystack)) return 'Security';
+      if (/perf|profile|throttling|heap|debug/.test(haystack)) return 'Performance';
+      if (/install|ipi|upi|sno|disconnected|bootstrap/.test(haystack)) return 'Install';
+      if (/rhel|coreos|rhcos|kernel|rpm|ostree/.test(haystack)) return 'RHEL';
+      if (/backup|storage|nfs|odf|ocs|ceph|dr/.test(haystack)) return 'Storage';
+      if (/pipeline|gitops|ansible|aap|rhdh|devops/.test(haystack)) return 'DevOps';
+      return 'OpenShift';
+    };
+
+    const yearFor = (text, href) => {
+      const match = (text + ' ' + href).match(/20\d{2}/);
+      return match ? match[0] : 'Notes';
+    };
+
+    const importantExternal = (href) =>
+      /developers\.redhat\.com|redhatquickcourses\.github\.io/i.test(href);
+
+    const titleForLink = (link) => {
+      const href = link.getAttribute('href') || '';
+      const directText = link.textContent.trim().replace(/\s+/g, ' ');
+      if (!/^https?:\/\//.test(directText)) return directText;
+      const parentItem = link.closest('ul')?.parentElement;
+      if (parentItem) {
+        const clone = parentItem.cloneNode(true);
+        clone.querySelectorAll('ul').forEach((nested) => nested.remove());
+        const parentText = clone.textContent.trim().replace(/\s+/g, ' ');
+        if (parentText) {
+          return parentText;
+        }
+      }
+      return directText;
+    };
+
+    const escapeHtml = (value) => String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+
+    const enhanceHome = () => {
+      if (!document.body.classList.contains('page-index')) return;
+      const source = document.querySelector('.home-source');
+      const grid = document.getElementById('note-grid');
+      const stats = document.getElementById('console-stats');
+      const externalPanel = document.getElementById('external-panel');
+      const topicStrip = document.getElementById('topic-strip');
+      const search = document.getElementById('console-search');
+      if (!source || !grid || !stats || !externalPanel || !topicStrip || !search) return;
+
+      const seen = new Set();
+      const links = Array.from(source.querySelectorAll('a[href]'))
+        .map((link) => {
+          const href = link.getAttribute('href') || '';
+          const text = titleForLink(link);
+          return { text, href, topic: topicFor(text, href), year: yearFor(text, href) };
+        });
+      const notes = links
+        .filter((note) => note.text && !note.href.startsWith('http') && !seen.has(note.href) && seen.add(note.href));
+      const externalLinks = links
+        .filter((note) => note.text && importantExternal(note.href));
+
+      const topics = ['All', ...Array.from(new Set(notes.map((note) => note.topic))).sort()];
+      let activeTopic = 'All';
+
+      const renderStats = () => {
+        const years = notes.map((note) => note.year).filter((year) => year.length === 4 && /^\d{4}/.test(year));
+        const latest = years.length ? Math.max(...years.map(Number)) : 'N/A';
+        const oldest = years.length ? Math.min(...years.map(Number)) : 'N/A';
+        stats.innerHTML = [
+          ['Notes', notes.length],
+          ['Resources', externalLinks.length],
+          ['Topics', topics.length - 1],
+          ['Latest', latest],
+        ].map(([label, value]) => '<div class="stat-tile"><span>' + label + '</span><strong>' + value + '</strong></div>').join('');
+        const signal = document.getElementById('signal-count');
+        if (signal) signal.textContent = notes.length + ' links indexed';
+      };
+
+      const renderExternal = () => {
+        externalPanel.innerHTML =
+          '<div class="section-heading"><span>Published / Learning</span><strong>Red Hat resources</strong></div>' +
+          '<div class="external-grid">' +
+          externalLinks.map((note) =>
+            '<a class="resource-card" href="' + escapeHtml(note.href) + '" target="_blank" rel="noopener">' +
+            '<span class="note-meta"><span>' + escapeHtml(note.year) + '</span><span>' + escapeHtml(note.topic) + '</span></span>' +
+            '<strong>' + escapeHtml(note.text) + '</strong>' +
+            '<small>' + escapeHtml(note.href) + '</small>' +
+            '</a>'
+          ).join('') +
+          '</div>';
+      };
+
+      const renderTopics = () => {
+        topicStrip.innerHTML = topics.map((topic) => '<button class="topic-chip' + (topic === activeTopic ? ' active' : '') + '" type="button" data-topic="' + escapeHtml(topic) + '">' + escapeHtml(topic) + '</button>').join('');
+        topicStrip.querySelectorAll('button').forEach((button) => {
+          button.addEventListener('click', () => {
+            activeTopic = button.dataset.topic || 'All';
+            renderTopics();
+            renderCards();
+          });
+        });
+      };
+
+      const renderCards = () => {
+        const query = search.value.trim().toLowerCase();
+        const filtered = notes.filter((note) => {
+          const topicMatch = activeTopic === 'All' || note.topic === activeTopic;
+          const queryMatch = !query || (note.text + ' ' + note.href + ' ' + note.topic + ' ' + note.year).toLowerCase().includes(query);
+          return topicMatch && queryMatch;
+        });
+        grid.innerHTML = filtered.map((note) =>
+          '<a class="note-card" href="' + escapeHtml(note.href) + '">' +
+          '<span class="note-meta"><span>' + escapeHtml(note.year) + '</span><span>' + escapeHtml(note.topic) + '</span></span>' +
+          '<strong>' + escapeHtml(note.text) + '</strong>' +
+          '<small>' + escapeHtml(note.href) + '</small>' +
+          '</a>'
+        ).join('') || '<p class="empty-state">No matching notes.</p>';
+      };
+
+      const drawMap = () => {
+        const canvas = document.getElementById('knowledge-canvas');
+        if (!(canvas instanceof HTMLCanvasElement)) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        const width = canvas.width;
+        const height = canvas.height;
+        const nodes = notes.slice(0, 44).map((note, index) => {
+          const angle = (index / 44) * Math.PI * 2;
+          const ring = 90 + (index % 5) * 22;
+          return {
+            x: width / 2 + Math.cos(angle) * ring,
+            y: height / 2 + Math.sin(angle) * ring * 0.72,
+            topic: note.topic,
+          };
+        });
+        ctx.clearRect(0, 0, width, height);
+        ctx.strokeStyle = 'rgba(88, 166, 255, 0.14)';
+        ctx.lineWidth = 1;
+        nodes.forEach((node, index) => {
+          const next = nodes[(index + 7) % nodes.length];
+          ctx.beginPath();
+          ctx.moveTo(node.x, node.y);
+          ctx.lineTo(next.x, next.y);
+          ctx.stroke();
+        });
+        const palette = {
+          AI: '#a371f7',
+          Network: '#39d0d8',
+          Security: '#ff7b72',
+          Performance: '#f2cc60',
+          Install: '#7ee787',
+          RHEL: '#ff7b72',
+          Storage: '#d2a8ff',
+          DevOps: '#ffa657',
+          OpenShift: '#58a6ff',
+        };
+        nodes.forEach((node) => {
+          ctx.fillStyle = palette[node.topic] || '#58a6ff';
+          ctx.beginPath();
+          ctx.arc(node.x, node.y, 3.4, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      };
+
+      search.addEventListener('input', renderCards);
+      renderStats();
+      renderExternal();
+      renderTopics();
+      renderCards();
+      drawMap();
+      document.body.classList.add('home-enhanced');
+    };
+
+    const enhanceCodeBlocks = () => {
+      document.querySelectorAll('pre').forEach((pre) => {
+        if (pre.classList.contains('mermaid') || pre.querySelector('.copy-code')) return;
+        const button = document.createElement('button');
+        button.className = 'copy-code';
+        button.type = 'button';
+        button.textContent = 'Copy';
+        button.addEventListener('click', async () => {
+          await navigator.clipboard.writeText(pre.textContent || '');
+          button.textContent = 'Copied';
+          setTimeout(() => { button.textContent = 'Copy'; }, 1200);
+        });
+        pre.appendChild(button);
+      });
+    };
+
+    window.addEventListener('scroll', updateReadingProgress, { passive: true });
+    window.addEventListener('pageshow', (event) => {
+      if (event.persisted) checkForSiteUpdate();
+    });
+    document.addEventListener('DOMContentLoaded', async () => {
+      checkForSiteUpdate();
+      cacheBustPageAssets();
+      updateReadingProgress();
+      enhanceHome();
+      enhanceCodeBlocks();
+      // pandoc 输出 mermaid 为 <pre class="mermaid"><code>...</code></pre>
+      // 需要转成 <div class="mermaid">...</div> 供 mermaid.js 渲染
+      document.querySelectorAll('pre.mermaid').forEach(pre => {
+        const div = document.createElement('div');
+        div.classList.add('mermaid');
+        div.textContent = pre.textContent;
+        pre.replaceWith(div);
+      });
+      // 也处理 <pre><code class="language-mermaid"> 形式（备用）
+      document.querySelectorAll('pre code.language-mermaid').forEach(code => {
+        const div = document.createElement('div');
+        div.classList.add('mermaid');
+        div.textContent = code.textContent;
+        code.closest('pre').replaceWith(div);
+      });
+      await mermaid.run();
+    });
+  </script>
+</body>
+
+</html>

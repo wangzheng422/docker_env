@@ -1,0 +1,1665 @@
+<!DOCTYPE html>
+<html lang="zh" dir="ltr">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="generator" content="pandoc" />
+  <meta name="site-build-id" content="fbe91b569ae8" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <title>Debugging MetaX MCCL Performance Issues | wandering.star notes</title>
+  <meta name="description"
+    content="Wandering field notes on OpenShift, RHEL, AI infrastructure, and platform operations." />
+  <!-- Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-E3FRMDB7L2"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-E3FRMDB7L2');
+  </script>
+  <style>
+  html {
+    color: #1a1a1a;
+    background-color: #fdfdfd;
+  }
+  body {
+    margin: 0 auto;
+    max-width: 36em;
+    padding-left: 50px;
+    padding-right: 50px;
+    padding-top: 50px;
+    padding-bottom: 50px;
+    hyphens: auto;
+    overflow-wrap: break-word;
+    text-rendering: optimizeLegibility;
+    font-kerning: normal;
+  }
+  @media (max-width: 600px) {
+    body {
+      font-size: 0.9em;
+      padding: 12px;
+    }
+    h1 {
+      font-size: 1.8em;
+    }
+  }
+  @media print {
+    html {
+      background-color: white;
+    }
+    body {
+      background-color: transparent;
+      color: black;
+      font-size: 12pt;
+    }
+    p, h2, h3 {
+      orphans: 3;
+      widows: 3;
+    }
+    h2, h3, h4 {
+      page-break-after: avoid;
+    }
+  }
+  p {
+    margin: 1em 0;
+  }
+  a {
+    color: #1a1a1a;
+  }
+  a:visited {
+    color: #1a1a1a;
+  }
+  img {
+    max-width: 100%;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.4em;
+  }
+  h5, h6 {
+    font-size: 1em;
+    font-style: italic;
+  }
+  h6 {
+    font-weight: normal;
+  }
+  ol, ul {
+    padding-left: 1.7em;
+    margin-top: 1em;
+  }
+  li > ol, li > ul {
+    margin-top: 0;
+  }
+  blockquote {
+    margin: 1em 0 1em 1.7em;
+    padding-left: 1em;
+    border-left: 2px solid #e6e6e6;
+    color: #606060;
+  }
+  code {
+    font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+    font-size: 85%;
+    margin: 0;
+    hyphens: manual;
+  }
+  pre {
+    margin: 1em 0;
+    overflow: auto;
+  }
+  pre code {
+    padding: 0;
+    overflow: visible;
+    overflow-wrap: normal;
+  }
+  .sourceCode {
+   background-color: transparent;
+   overflow: visible;
+  }
+  hr {
+    background-color: #1a1a1a;
+    border: none;
+    height: 1px;
+    margin: 1em 0;
+  }
+  table {
+    margin: 1em 0;
+    border-collapse: collapse;
+    width: 100%;
+    overflow-x: auto;
+    display: block;
+    font-variant-numeric: lining-nums tabular-nums;
+  }
+  table caption {
+    margin-bottom: 0.75em;
+  }
+  tbody {
+    margin-top: 0.5em;
+    border-top: 1px solid #1a1a1a;
+    border-bottom: 1px solid #1a1a1a;
+  }
+  th {
+    border-top: 1px solid #1a1a1a;
+    padding: 0.25em 0.5em 0.25em 0.5em;
+  }
+  td {
+    padding: 0.125em 0.5em 0.25em 0.5em;
+  }
+  header {
+    margin-bottom: 4em;
+    text-align: center;
+  }
+  #TOC li {
+    list-style: none;
+  }
+  #TOC ul {
+    padding-left: 1.3em;
+  }
+  #TOC > ul {
+    padding-left: 0;
+  }
+  #TOC a:not(:hover) {
+    text-decoration: none;
+  }
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  div.columns{display: flex; gap: min(4vw, 1.5em);}
+  div.column{flex: auto; overflow-x: auto;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  /* The extra [class] is a hack that increases specificity enough to
+     override a similar rule in reveal.js */
+  ul.task-list[class]{list-style: none;}
+  ul.task-list li input[type="checkbox"] {
+    font-size: inherit;
+    width: 0.8em;
+    margin: 0 0.8em 0.2em -1.6em;
+    vertical-align: middle;
+  }
+  .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  /* CSS for syntax highlighting */
+  pre > code.sourceCode { white-space: pre; position: relative; }
+  pre > code.sourceCode > span { line-height: 1.25; }
+  pre > code.sourceCode > span:empty { height: 1.2em; }
+  .sourceCode { overflow: visible; }
+  code.sourceCode > span { color: inherit; text-decoration: inherit; }
+  div.sourceCode { margin: 1em 0; }
+  pre.sourceCode { margin: 0; }
+  @media screen {
+  div.sourceCode { overflow: auto; }
+  }
+  @media print {
+  pre > code.sourceCode { white-space: pre-wrap; }
+  pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+  }
+  pre.numberSource code
+    { counter-reset: source-line 0; }
+  pre.numberSource code > span
+    { position: relative; left: -4em; counter-increment: source-line; }
+  pre.numberSource code > span > a:first-child::before
+    { content: counter(source-line);
+      position: relative; left: -1em; text-align: right; vertical-align: baseline;
+      border: none; display: inline-block;
+      -webkit-touch-callout: none; -webkit-user-select: none;
+      -khtml-user-select: none; -moz-user-select: none;
+      -ms-user-select: none; user-select: none;
+      padding: 0 4px; width: 4em;
+    }
+  pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+  div.sourceCode
+    { color: #cccccc; background-color: #303030; }
+  @media screen {
+  pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+  }
+  code span.al { color: #ffcfaf; } /* Alert */
+  code span.an { color: #7f9f7f; font-weight: bold; } /* Annotation */
+  code span.at { } /* Attribute */
+  code span.bn { color: #dca3a3; } /* BaseN */
+  code span.bu { } /* BuiltIn */
+  code span.cf { color: #f0dfaf; } /* ControlFlow */
+  code span.ch { color: #dca3a3; } /* Char */
+  code span.cn { color: #dca3a3; font-weight: bold; } /* Constant */
+  code span.co { color: #7f9f7f; } /* Comment */
+  code span.cv { color: #7f9f7f; font-weight: bold; } /* CommentVar */
+  code span.do { color: #7f9f7f; } /* Documentation */
+  code span.dt { color: #dfdfbf; } /* DataType */
+  code span.dv { color: #dcdccc; } /* DecVal */
+  code span.er { color: #c3bf9f; } /* Error */
+  code span.ex { } /* Extension */
+  code span.fl { color: #c0bed1; } /* Float */
+  code span.fu { color: #efef8f; } /* Function */
+  code span.im { } /* Import */
+  code span.in { color: #7f9f7f; font-weight: bold; } /* Information */
+  code span.kw { color: #f0dfaf; } /* Keyword */
+  code span.op { color: #f0efd0; } /* Operator */
+  code span.ot { color: #efef8f; } /* Other */
+  code span.pp { color: #ffcfaf; font-weight: bold; } /* Preprocessor */
+  code span.sc { color: #dca3a3; } /* SpecialChar */
+  code span.ss { color: #cc9393; } /* SpecialString */
+  code span.st { color: #cc9393; } /* String */
+  code span.va { } /* Variable */
+  code span.vs { color: #cc9393; } /* VerbatimString */
+  code span.wa { color: #7f9f7f; font-weight: bold; } /* Warning */
+  </style>
+  <link rel="stylesheet" href="../../../style.css?v=fbe91b569ae8" />
+  </head>
+
+<body class="page-article">
+  <div class="reading-progress" aria-hidden="true"></div>
+  <div class="console-backdrop" aria-hidden="true"></div>
+  <nav class="site-nav">
+    <div class="nav-inner">
+      <a class="nav-brand" href="../../../index.html">wandering.star<span>notes</span></a>
+      <div class="nav-links">
+        <a href="https://github.com/wangzheng422/docker_env" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://www.youtube.com/@wangzheng422" target="_blank" rel="noopener">YouTube</a>
+      </div>
+    </div>
+  </nav>
+
+  <main>
+            <a class="back-link" href="../../../index.html">← Back to Index</a>
+        <div class="article-layout">
+            <aside class="toc-panel">
+        <div class="toc-title">ON THIS PAGE</div>
+        <ul>
+        <li><a href="#debugging-metax-mccl-performance-issues"
+        id="toc-debugging-metax-mccl-performance-issues">Debugging MetaX
+        MCCL Performance Issues</a>
+        <ul>
+        <li><a href="#introduction" id="toc-introduction">1.
+        Introduction</a>
+        <ul>
+        <li><a href="#environment-setup" id="toc-environment-setup">1.1.
+        Environment Setup</a></li>
+        <li><a href="#initial-problem-observation"
+        id="toc-initial-problem-observation">1.2. Initial Problem
+        Observation</a></li>
+        </ul></li>
+        <li><a href="#initial-environment-assessment"
+        id="toc-initial-environment-assessment">2. Initial Environment
+        Assessment</a>
+        <ul>
+        <li><a href="#gpu-configuration" id="toc-gpu-configuration">2.1.
+        GPU Configuration</a></li>
+        <li><a href="#pci-device-configuration"
+        id="toc-pci-device-configuration">2.2. PCI Device
+        Configuration</a></li>
+        <li><a href="#cpu-power-and-frequency-settings"
+        id="toc-cpu-power-and-frequency-settings">2.3. CPU Power and
+        Frequency Settings</a></li>
+        <li><a href="#infiniband-network-configuration"
+        id="toc-infiniband-network-configuration">2.4. InfiniBand
+        Network Configuration</a></li>
+        <li><a href="#gpu-and-nic-topology"
+        id="toc-gpu-and-nic-topology">2.5. GPU and NIC Topology</a></li>
+        </ul></li>
+        <li><a href="#performance-benchmarking-and-analysis"
+        id="toc-performance-benchmarking-and-analysis">3. Performance
+        Benchmarking and Analysis</a>
+        <ul>
+        <li><a href="#single-node-mccl-performance"
+        id="toc-single-node-mccl-performance">3.1. Single-Node MCCL
+        Performance</a></li>
+        <li><a href="#multi-node-mccl-performance"
+        id="toc-multi-node-mccl-performance">3.2. Multi-Node MCCL
+        Performance</a></li>
+        </ul></li>
+        <li><a href="#deep-dive-into-the-debugging-process"
+        id="toc-deep-dive-into-the-debugging-process">4. Deep Dive into
+        the Debugging Process</a>
+        <ul>
+        <li><a href="#ib-network-layer-debugging"
+        id="toc-ib-network-layer-debugging">4.1. IB Network Layer
+        Debugging</a></li>
+        <li><a href="#ib-gpu-layer-debugging"
+        id="toc-ib-gpu-layer-debugging">4.2. IB + GPU Layer
+        Debugging</a></li>
+        <li><a href="#mcclnccl-layer-debugging"
+        id="toc-mcclnccl-layer-debugging">4.3. MCCL/NCCL Layer
+        Debugging</a></li>
+        </ul></li>
+        <li><a href="#root-cause-analysis-and-resolution"
+        id="toc-root-cause-analysis-and-resolution">5. Root Cause
+        Analysis and Resolution</a>
+        <ul>
+        <li><a
+        href="#the-breakthrough-a-missing-kernel-file-and-disabled-gpudirect-rdma"
+        id="toc-the-breakthrough-a-missing-kernel-file-and-disabled-gpudirect-rdma">5.1.
+        The Breakthrough: A Missing Kernel File and Disabled GPUDirect
+        RDMA</a></li>
+        <li><a href="#the-root-cause-a-kernel-patch"
+        id="toc-the-root-cause-a-kernel-patch">5.2. The Root Cause: A
+        Kernel Patch</a></li>
+        <li><a href="#the-solution-kernel-downgrade"
+        id="toc-the-solution-kernel-downgrade">5.3. The Solution: Kernel
+        Downgrade</a></li>
+        </ul></li>
+        <li><a href="#conclusion" id="toc-conclusion">6.
+        Conclusion</a></li>
+        </ul></li>
+        </ul>
+      </aside>
+            <article class="markdown-body article-shell">
+        <h1 id="debugging-metax-mccl-performance-issues">Debugging MetaX
+        MCCL Performance Issues</h1>
+        <h2 id="introduction">1. Introduction</h2>
+        <p>This document provides a detailed walkthrough of the process
+        for debugging performance issues with MetaX MCCL (MetaX
+        Collective Communication Library) in a multi-node GPU
+        environment. The primary goal is to ensure efficient cross-node
+        communication for distributed workloads, such as large-scale
+        model inference (e.g., vLLM).</p>
+        <p>The debugging process is critical for identifying and
+        resolving bottlenecks that can severely impact the performance
+        of distributed applications. By systematically examining each
+        layer of the technology stack—from the physical network to the
+        communication libraries—we can pinpoint the root cause of
+        performance degradation and implement effective solutions.</p>
+        <h3 id="environment-setup">1.1. Environment Setup</h3>
+        <p>The test environment consists of two physical machines, each
+        equipped with eight MetaX GPUs and interconnected via a 400G
+        InfiniBand (IB) network. This high-speed interconnect is
+        essential for achieving optimal performance in distributed GPU
+        computing.</p>
+        <p><img src="./files/metax.perf.drawio.png" /></p>
+        <h3 id="initial-problem-observation">1.2. Initial Problem
+        Observation</h3>
+        <p>The initial problem was observed during multi-node inference
+        tasks. While single-node inference performed as expected,
+        scaling to a two-node configuration resulted in a significant
+        performance drop, with a nearly tenfold decrease in throughput.
+        This indicated a potential issue with the cross-node
+        communication setup.</p>
+        <p>This document outlines the systematic approach taken to
+        diagnose and resolve this performance issue, starting from the
+        foundational network layer and progressing up to the MCCL/NCCL
+        communication layer.</p>
+        <h2 id="initial-environment-assessment">2. Initial Environment
+        Assessment</h2>
+        <p>Before diving into performance testing, it’s crucial to
+        establish a baseline understanding of the system’s hardware and
+        software configuration. This section details the commands used
+        to gather information about the GPUs, PCI devices, CPU power
+        settings, and InfiniBand network configuration.</p>
+        <h3 id="gpu-configuration">2.1. GPU Configuration</h3>
+        <p>The <code>mx-smi</code> command provides a snapshot of the
+        GPU status on each node, confirming that all eight MetaX C500
+        GPUs are correctly detected and operational.</p>
+        <div class="sourceCode" id="cb1"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">[root@mx-sh-demo</span> perf]# mx-smi</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="ex">mx-smi</span>  version: 2.2.3</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="ex">===================</span> MetaX System Management Interface Log ===================</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="ex">Timestamp</span>                                         : Fri Dec 12 16:34:07 2025</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="ex">Attached</span> GPUs                                     : 8</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="ex">+---------------------------------------------------------------------------------+</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="kw">|</span> <span class="ex">MX-SMI</span> 2.2.3                        Kernel Mode Driver Version: 3.5.0           <span class="kw">|</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="kw">|</span> <span class="ex">MACA</span> Version: 2.32.0.6              BIOS Version: 1.26.1.0                      <span class="kw">|</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="kw">|</span><span class="ex">------------------------------------+---------------------+----------------------+</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="kw">|</span> <span class="ex">GPU</span>         NAME                   <span class="kw">|</span> <span class="ex">Bus-id</span>              <span class="kw">|</span> <span class="ex">GPU-Util</span>             <span class="kw">|</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="kw">|</span> <span class="ex">Temp</span>        Pwr:Usage/Cap          <span class="kw">|</span> <span class="ex">Memory-Usage</span>        <span class="kw">|</span>                      <span class="kw">|</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="kw">|</span><span class="ex">====================================+=====================+======================</span><span class="kw">|</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="kw">|</span> <span class="ex">0</span>           MetaX C500             <span class="kw">|</span> <span class="ex">0000:08:00.0</span>        <span class="kw">|</span> <span class="ex">0%</span>                   <span class="kw">|</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="kw">|</span> <span class="ex">31C</span>         35W / 350W             <span class="kw">|</span> <span class="ex">858/65536</span> MiB       <span class="kw">|</span>                      <span class="kw">|</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="ex">+------------------------------------+---------------------+----------------------+</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a><span class="kw">|</span> <span class="ex">1</span>           MetaX C500             <span class="kw">|</span> <span class="ex">0000:09:00.0</span>        <span class="kw">|</span> <span class="ex">0%</span>                   <span class="kw">|</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a><span class="kw">|</span> <span class="ex">33C</span>         32W / 350W             <span class="kw">|</span> <span class="ex">858/65536</span> MiB       <span class="kw">|</span>                      <span class="kw">|</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a><span class="ex">+------------------------------------+---------------------+----------------------+</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a><span class="kw">|</span> <span class="ex">2</span>           MetaX C500             <span class="kw">|</span> <span class="ex">0000:0e:00.0</span>        <span class="kw">|</span> <span class="ex">0%</span>                   <span class="kw">|</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a><span class="kw">|</span> <span class="ex">32C</span>         39W / 350W             <span class="kw">|</span> <span class="ex">858/65536</span> MiB       <span class="kw">|</span>                      <span class="kw">|</span></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a><span class="ex">+------------------------------------+---------------------+----------------------+</span></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a><span class="kw">|</span> <span class="ex">3</span>           MetaX C500             <span class="kw">|</span> <span class="ex">0000:11:00.0</span>        <span class="kw">|</span> <span class="ex">0%</span>                   <span class="kw">|</span></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a><span class="kw">|</span> <span class="ex">31C</span>         36W / 350W             <span class="kw">|</span> <span class="ex">858/65536</span> MiB       <span class="kw">|</span>                      <span class="kw">|</span></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a><span class="ex">+------------------------------------+---------------------+----------------------+</span></span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a><span class="kw">|</span> <span class="ex">4</span>           MetaX C500             <span class="kw">|</span> <span class="ex">0000:32:00.0</span>        <span class="kw">|</span> <span class="ex">0%</span>                   <span class="kw">|</span></span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a><span class="kw">|</span> <span class="ex">31C</span>         40W / 350W             <span class="kw">|</span> <span class="ex">858/65536</span> MiB       <span class="kw">|</span>                      <span class="kw">|</span></span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a><span class="ex">+------------------------------------+---------------------+----------------------+</span></span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a><span class="kw">|</span> <span class="ex">5</span>           MetaX C500             <span class="kw">|</span> <span class="ex">0000:38:00.0</span>        <span class="kw">|</span> <span class="ex">0%</span>                   <span class="kw">|</span></span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a><span class="kw">|</span> <span class="ex">31C</span>         35W / 350W             <span class="kw">|</span> <span class="ex">858/65536</span> MiB       <span class="kw">|</span>                      <span class="kw">|</span></span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a><span class="ex">+------------------------------------+---------------------+----------------------+</span></span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a><span class="kw">|</span> <span class="ex">6</span>           MetaX C500             <span class="kw">|</span> <span class="ex">0000:3b:00.0</span>        <span class="kw">|</span> <span class="ex">0%</span>                   <span class="kw">|</span></span>
+<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a><span class="kw">|</span> <span class="ex">32C</span>         38W / 350W             <span class="kw">|</span> <span class="ex">858/65536</span> MiB       <span class="kw">|</span>                      <span class="kw">|</span></span>
+<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a><span class="ex">+------------------------------------+---------------------+----------------------+</span></span>
+<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a><span class="kw">|</span> <span class="ex">7</span>           MetaX C500             <span class="kw">|</span> <span class="ex">0000:3c:00.0</span>        <span class="kw">|</span> <span class="ex">0%</span>                   <span class="kw">|</span></span>
+<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a><span class="kw">|</span> <span class="ex">32C</span>         38W / 350W             <span class="kw">|</span> <span class="ex">858/65536</span> MiB       <span class="kw">|</span>                      <span class="kw">|</span></span>
+<span id="cb1-38"><a href="#cb1-38" aria-hidden="true" tabindex="-1"></a><span class="ex">+------------------------------------+---------------------+----------------------+</span></span>
+<span id="cb1-39"><a href="#cb1-39" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-40"><a href="#cb1-40" aria-hidden="true" tabindex="-1"></a><span class="ex">+---------------------------------------------------------------------------------+</span></span>
+<span id="cb1-41"><a href="#cb1-41" aria-hidden="true" tabindex="-1"></a><span class="kw">|</span> <span class="ex">Process:</span>                                                                        <span class="kw">|</span></span>
+<span id="cb1-42"><a href="#cb1-42" aria-hidden="true" tabindex="-1"></a><span class="kw">|</span>  <span class="ex">GPU</span>                    PID         Process Name                 GPU Memory     <span class="kw">|</span></span>
+<span id="cb1-43"><a href="#cb1-43" aria-hidden="true" tabindex="-1"></a><span class="kw">|</span>                                                                  <span class="ex">Usage</span><span class="er">(</span><span class="ex">MiB</span><span class="kw">)</span>     <span class="kw">|</span></span>
+<span id="cb1-44"><a href="#cb1-44" aria-hidden="true" tabindex="-1"></a><span class="kw">|</span><span class="ex">=================================================================================</span><span class="kw">|</span></span>
+<span id="cb1-45"><a href="#cb1-45" aria-hidden="true" tabindex="-1"></a><span class="kw">|</span>  <span class="ex">no</span> process found                                                               <span class="kw">|</span></span>
+<span id="cb1-46"><a href="#cb1-46" aria-hidden="true" tabindex="-1"></a><span class="ex">+---------------------------------------------------------------------------------+</span></span>
+<span id="cb1-47"><a href="#cb1-47" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-48"><a href="#cb1-48" aria-hidden="true" tabindex="-1"></a><span class="ex">End</span> of Log</span></code></pre></div>
+        <h3 id="pci-device-configuration">2.2. PCI Device
+        Configuration</h3>
+        <p>The <code>lspci</code> command is used to inspect the PCI
+        device settings, specifically the Access Control Services (ACS)
+        capabilities. ACS is a critical feature for enabling direct
+        peer-to-peer communication between devices, such as GPUs and
+        network interface cards (NICs), without involving the CPU.</p>
+        <div class="sourceCode" id="cb2"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">lspci</span> <span class="at">-vvv</span> <span class="kw">|</span> <span class="fu">grep</span> ACSCtl</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>                <span class="ex">ACSCtl:</span> SrcValid- TransBlk- ReqRedir- CmpltRedir- UpstreamFwd- EgressCtrl- DirectTrans-</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>                <span class="ex">ACSCtl:</span> SrcValid- TransBlk- ReqRedir- CmpltRedir- UpstreamFwd- EgressCtrl- DirectTrans-</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>                <span class="ex">ACSCtl:</span> SrcValid- TransBlk- ReqRedir- CmpltRedir- UpstreamFwd- EgressCtrl- DirectTrans-</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>                <span class="ex">ACSCtl:</span> SrcValid- TransBlk- ReqRedir- CmpltRedir- UpstreamFwd- EgressCtrl- DirectTrans-</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>                <span class="ex">ACSCtl:</span> SrcValid- TransBlk- ReqRedir- CmpltRedir- UpstreamFwd- EgressCtrl- DirectTrans-</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>                <span class="ex">ACSCtl:</span> SrcValid- TransBlk- ReqRedir- CmpltRedir- UpstreamFwd- EgressCtrl- DirectTrans-</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>                <span class="ex">ACSCtl:</span> SrcValid- TransBlk- ReqRedir- CmpltRedir- UpstreamFwd- EgressCtrl- DirectTrans-</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>                <span class="ex">ACSCtl:</span> SrcValid- TransBlk- ReqRedir- CmpltRedir- UpstreamFwd- EgressCtrl- DirectTrans-</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>                <span class="ex">ACSCtl:</span> SrcValid- TransBlk- ReqRedir- CmpltRedir- UpstreamFwd- EgressCtrl- DirectTrans-</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>                <span class="ex">ACSCtl:</span> SrcValid- TransBlk- ReqRedir- CmpltRedir- UpstreamFwd- EgressCtrl- DirectTrans-</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>                <span class="ex">ACSCtl:</span> SrcValid- TransBlk- ReqRedir- CmpltRedir- UpstreamFwd- EgressCtrl- DirectTrans-</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>                <span class="ex">ACSCtl:</span> SrcValid- TransBlk- ReqRedir- CmpltRedir- UpstreamFwd- EgressCtrl- DirectTrans-</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>                <span class="ex">ACSCtl:</span> SrcValid- TransBlk- ReqRedir- CmpltRedir- UpstreamFwd- EgressCtrl- DirectTrans-</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>                <span class="ex">ACSCtl:</span> SrcValid- TransBlk- ReqRedir- CmpltRedir- UpstreamFwd- EgressCtrl- DirectTrans-</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>                <span class="ex">ACSCtl:</span> SrcValid- TransBlk- ReqRedir- CmpltRedir- UpstreamFwd- EgressCtrl- DirectTrans-</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>                <span class="ex">ACSCtl:</span> SrcValid- TransBlk- ReqRedir- CmpltRedir- UpstreamFwd- EgressCtrl- DirectTrans-</span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>                <span class="ex">ACSCtl:</span> SrcValid- TransBlk- ReqRedir- CmpltRedir- UpstreamFwd- EgressCtrl- DirectTrans-</span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>                <span class="ex">ACSCtl:</span> SrcValid- TransBlk- ReqRedir- CmpltRedir- UpstreamFwd- EgressCtrl- DirectTrans-</span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>                <span class="ex">ACSCtl:</span> SrcValid- TransBlk- ReqRedir- CmpltRedir- UpstreamFwd- EgressCtrl- DirectTrans-</span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>                <span class="ex">ACSCtl:</span> SrcValid- TransBlk- ReqRedir- CmpltRedir- UpstreamFwd- EgressCtrl- DirectTrans-</span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>                <span class="ex">ACSCtl:</span> SrcValid- TransBlk- ReqRedir- CmpltRedir- UpstreamFwd- EgressCtrl- DirectTrans-</span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>                <span class="ex">ACSCtl:</span> SrcValid- TransBlk- ReqRedir- CmpltRedir- UpstreamFwd- EgressCtrl- DirectTrans-</span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>                <span class="ex">ACSCtl:</span> SrcValid- TransBlk- ReqRedir- CmpltRedir- UpstreamFwd- EgressCtrl- DirectTrans-</span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>                <span class="ex">ACSCtl:</span> SrcValid- TransBlk- ReqRedir- CmpltRedir- UpstreamFwd- EgressCtrl- DirectTrans-</span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>                <span class="ex">ACSCtl:</span> SrcValid- TransBlk- ReqRedir- CmpltRedir- UpstreamFwd- EgressCtrl- DirectTrans-</span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>                <span class="ex">ACSCtl:</span> SrcValid- TransBlk- ReqRedir- CmpltRedir- UpstreamFwd- EgressCtrl- DirectTrans-</span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a>                <span class="ex">ACSCtl:</span> SrcValid- TransBlk- ReqRedir- CmpltRedir- UpstreamFwd- EgressCtrl- DirectTrans-</span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a>                <span class="ex">ACSCtl:</span> SrcValid- TransBlk- ReqRedir- CmpltRedir- UpstreamFwd- EgressCtrl- DirectTrans-</span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a>                <span class="ex">ACSCtl:</span> SrcValid- TransBlk- ReqRedir- CmpltRedir- UpstreamFwd- EgressCtrl- DirectTrans-</span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a>                <span class="ex">ACSCtl:</span> SrcValid- TransBlk- ReqRedir- CmpltRedir- UpstreamFwd- EgressCtrl- DirectTrans-</span>
+<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a>                <span class="ex">ACSCtl:</span> SrcValid- TransBlk- ReqRedir- CmpltRedir- UpstreamFwd- EgressCtrl- DirectTrans-</span>
+<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a>                <span class="ex">ACSCtl:</span> SrcValid- TransBlk- ReqRedir- CmpltRedir- UpstreamFwd- EgressCtrl- DirectTrans-</span>
+<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a>                <span class="ex">ACSCtl:</span> SrcValid- TransBlk- ReqRedir- CmpltRedir- UpstreamFwd- EgressCtrl- DirectTrans-</span>
+<span id="cb2-35"><a href="#cb2-35" aria-hidden="true" tabindex="-1"></a>                <span class="ex">ACSCtl:</span> SrcValid- TransBlk- ReqRedir- CmpltRedir- UpstreamFwd- EgressCtrl- DirectTrans-</span>
+<span id="cb2-36"><a href="#cb2-36" aria-hidden="true" tabindex="-1"></a>                <span class="ex">ACSCtl:</span> SrcValid- TransBlk- ReqRedir- CmpltRedir- UpstreamFwd- EgressCtrl- DirectTrans-</span>
+<span id="cb2-37"><a href="#cb2-37" aria-hidden="true" tabindex="-1"></a>                <span class="ex">ACSCtl:</span> SrcValid- TransBlk- ReqRedir- CmpltRedir- UpstreamFwd- EgressCtrl- DirectTrans-</span>
+<span id="cb2-38"><a href="#cb2-38" aria-hidden="true" tabindex="-1"></a>                <span class="ex">ACSCtl:</span> SrcValid- TransBlk- ReqRedir- CmpltRedir- UpstreamFwd- EgressCtrl- DirectTrans-</span>
+<span id="cb2-39"><a href="#cb2-39" aria-hidden="true" tabindex="-1"></a>                <span class="ex">ACSCtl:</span> SrcValid- TransBlk- ReqRedir- CmpltRedir- UpstreamFwd- EgressCtrl- DirectTrans-</span>
+<span id="cb2-40"><a href="#cb2-40" aria-hidden="true" tabindex="-1"></a>                <span class="ex">ACSCtl:</span> SrcValid- TransBlk- ReqRedir- CmpltRedir- UpstreamFwd- EgressCtrl- DirectTrans-</span>
+<span id="cb2-41"><a href="#cb2-41" aria-hidden="true" tabindex="-1"></a>                <span class="ex">ACSCtl:</span> SrcValid- TransBlk- ReqRedir- CmpltRedir- UpstreamFwd- EgressCtrl- DirectTrans-</span>
+<span id="cb2-42"><a href="#cb2-42" aria-hidden="true" tabindex="-1"></a>                <span class="ex">ACSCtl:</span> SrcValid- TransBlk- ReqRedir- CmpltRedir- UpstreamFwd- EgressCtrl- DirectTrans-</span></code></pre></div>
+        <h3 id="cpu-power-and-frequency-settings">2.3. CPU Power and
+        Frequency Settings</h3>
+        <p>To ensure maximum performance, the CPU governor should be set
+        to “performance” mode. This prevents the CPU from throttling
+        down, which could otherwise introduce latency in
+        communication-intensive applications.</p>
+        <div class="sourceCode" id="cb3"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">[root@10-7-96-17</span> perf]# cpupower frequency-info</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="ex">analyzing</span> CPU 31:</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  <span class="ex">driver:</span> intel_pstate</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="ex">CPUs</span> which run at the same hardware frequency: 31</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  <span class="ex">CPUs</span> which need to have their frequency coordinated by software: 31</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>  <span class="ex">maximum</span> transition latency:  Cannot determine or is not supported.</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>  <span class="ex">hardware</span> limits: 800 MHz <span class="at">-</span> 3.80 GHz</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>  <span class="ex">available</span> cpufreq governors: performance powersave</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>  <span class="ex">current</span> policy: frequency should be within 800 MHz and 3.80 GHz.</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>                  <span class="ex">The</span> governor <span class="st">&quot;performance&quot;</span> may decide which speed to use</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>                  <span class="ex">within</span> this range.</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>  <span class="ex">current</span> CPU frequency: Unable to call hardware</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>  <span class="ex">current</span> CPU frequency: 3.00 GHz <span class="er">(</span><span class="ex">asserted</span> by call to kernel<span class="kw">)</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>  <span class="ex">boost</span> state support:</span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>    <span class="ex">Supported:</span> yes</span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>    <span class="ex">Active:</span> yes</span></code></pre></div>
+        <h3 id="infiniband-network-configuration">2.4. InfiniBand
+        Network Configuration</h3>
+        <p>The <code>ibdev2netdev</code> and <code>show_gids</code>
+        commands are used to verify the InfiniBand network setup. This
+        includes confirming that the IB cards are active and that the
+        network interfaces are up.</p>
+        <div class="sourceCode" id="cb4"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">[root@10-7-96-17</span> perf]# ibdev2netdev <span class="at">-v</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="ex">0000:12:00.0</span> mlx5_0 <span class="er">(</span><span class="ex">MT4129</span> <span class="at">-</span> MCX75310AAS-NEAT<span class="kw">)</span> <span class="ex">NVIDIA</span> ConnectX-7 HHHL Adapter card, 400GbE / NDR IB <span class="er">(</span><span class="ex">default</span> mode<span class="kw">)</span><span class="ex">,</span> Single-port OSFP, PCIe 5.0 x16, Crypto Disabled, Secure Boot Enabled                                              fw 28.43.3608 port 1 <span class="er">(</span><span class="ex">ACTIVE</span><span class="kw">)</span> <span class="ex">==</span><span class="op">&gt;</span> ib0 <span class="er">(</span><span class="ex">Up</span><span class="kw">)</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="ex">0000:33:00.0</span> mlx5_1 <span class="er">(</span><span class="ex">MT4129</span> <span class="at">-</span> MCX75310AAS-NEAT<span class="kw">)</span> <span class="ex">NVIDIA</span> ConnectX-7 HHHL Adapter card, 400GbE / NDR IB <span class="er">(</span><span class="ex">default</span> mode<span class="kw">)</span><span class="ex">,</span> Single-port OSFP, PCIe 5.0 x16, Crypto Disabled, Secure Boot Enabled                                              fw 28.43.3608 port 1 <span class="er">(</span><span class="ex">ACTIVE</span><span class="kw">)</span> <span class="ex">==</span><span class="op">&gt;</span> ib1 <span class="er">(</span><span class="ex">Up</span><span class="kw">)</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="ex">0000:57:00.0</span> mlx5_2 <span class="er">(</span><span class="ex">MT41692</span> <span class="at">-</span> 900-9D3B6-00SV-AA0<span class="kw">)</span> <span class="ex">BlueField-3</span> P-Series DPU 200GbE/NDR200 dual-port QSFP-DD112, PCIe Gen5.0 x16 FHHL, Crypto Disabled, 32GB DDR5, BMC, Tall Bracket                                                       fw 32.43.1014 port 1 <span class="er">(</span><span class="ex">ACTIVE</span><span class="kw">)</span> <span class="ex">==</span><span class="op">&gt;</span> net1 <span class="er">(</span><span class="ex">Up</span><span class="kw">)</span></span></code></pre></div>
+        <div class="sourceCode" id="cb5"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="ex">[root@10-7-96-17</span> perf]# show_gids</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="ex">DEV</span>     PORT    INDEX   GID                                     IPv4            VER     DEV</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="ex">---</span>     <span class="at">----</span>    <span class="at">-----</span>   <span class="at">---</span>                                     <span class="at">------------</span>    <span class="at">---</span>     <span class="at">---</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="ex">mlx5_0</span>  1       0       fe80:0000:0000:0000:a088:c203:005a:ab6c                 v1</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="ex">mlx5_1</span>  1       0       fe80:0000:0000:0000:a088:c203:005a:b73c                 v1</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="ex">mlx5_2</span>  1       0       fe80:0000:0000:0000:c670:bdff:feb9:317a                 v1      net1</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="ex">mlx5_2</span>  1       1       fe80:0000:0000:0000:c670:bdff:feb9:317a                 v2      net1</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="ex">mlx5_2</span>  1       2       0000:0000:0000:0000:0000:ffff:0a07:6011 10.7.96.17      v1      net1</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a><span class="ex">mlx5_2</span>  1       3       0000:0000:0000:0000:0000:ffff:0a07:6011 10.7.96.17      v2      net1</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a><span class="ex">mlx5_2</span>  1       4       fe80:0000:0000:0000:6f95:4aae:2415:caab                 v1      net1</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a><span class="ex">mlx5_2</span>  1       5       fe80:0000:0000:0000:6f95:4aae:2415:caab                 v2      net1</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a><span class="va">n_gids_found</span><span class="op">=</span>8</span></code></pre></div>
+        <h3 id="gpu-and-nic-topology">2.5. GPU and NIC Topology</h3>
+        <p>The <code>mx-smi topo -n</code> command is crucial for
+        understanding the topology of the GPUs and NICs within a node.
+        This helps identify the optimal pairings of GPUs and NICs for
+        low-latency communication and can reveal potential NUMA-related
+        performance issues.</p>
+        <div class="sourceCode" id="cb6"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="ex">[root@10-7-96-17</span> perf]# mx-smi topo <span class="at">-n</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="ex">mx-smi</span>  version: 2.2.3</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="ex">===================</span> MetaX System Management Interface Log ===================</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="ex">Timestamp</span>                                         : Sun Dec  7 22:34:56 2025</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a><span class="ex">Attached</span> GPUs                                     : 8</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a><span class="ex">Device</span> link type matrix</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>        <span class="ex">GPU0</span>    GPU1    GPU2    GPU3    GPU4    GPU5    GPU6    GPU7    NIC0    NIC1    NIC2    Node Affinity  CPU Affinity</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a><span class="ex">GPU0</span>    X       MX      MX      MX      NODE    NODE    NODE    NODE    PXB     NODE    NODE    0              0-55,112-167</span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a><span class="ex">GPU1</span>    MX      X       MX      MX      NODE    NODE    NODE    NODE    PXB     NODE    NODE    0              0-55,112-167</span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a><span class="ex">GPU2</span>    MX      MX      X       MX      NODE    NODE    NODE    NODE    PXB     NODE    NODE    0              0-55,112-167</span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a><span class="ex">GPU3</span>    MX      MX      MX      X       NODE    NODE    NODE    NODE    PIX     NODE    NODE    0              0-55,112-167</span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a><span class="ex">GPU4</span>    NODE    NODE    NODE    NODE    X       MX      MX      MX      NODE    PIX     NODE    0              0-55,112-167</span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a><span class="ex">GPU5</span>    NODE    NODE    NODE    NODE    MX      X       MX      MX      NODE    PXB     NODE    0              0-55,112-167</span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a><span class="ex">GPU6</span>    NODE    NODE    NODE    NODE    MX      MX      X       MX      NODE    PXB     NODE    0              0-55,112-167</span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a><span class="ex">GPU7</span>    NODE    NODE    NODE    NODE    MX      MX      MX      X       NODE    PXB     NODE    0              0-55,112-167</span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a><span class="ex">NIC0</span>    PXB     PXB     PXB     PIX     NODE    NODE    NODE    NODE    X       NODE    NODE</span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a><span class="ex">NIC1</span>    NODE    NODE    NODE    NODE    PIX     PXB     PXB     PXB     NODE    X       NODE</span>
+<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a><span class="ex">NIC2</span>    NODE    NODE    NODE    NODE    NODE    NODE    NODE    NODE    NODE    NODE    X</span>
+<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a><span class="ex">Legend:</span></span>
+<span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a>  <span class="ex">X</span>    = Self</span>
+<span id="cb6-24"><a href="#cb6-24" aria-hidden="true" tabindex="-1"></a>  <span class="ex">SYS</span>  = Connection traversing PCIe as well as the SMP interconnect between NUMA nodes <span class="er">(</span><span class="ex">e.g.,</span> QPI/UPI<span class="kw">)</span></span>
+<span id="cb6-25"><a href="#cb6-25" aria-hidden="true" tabindex="-1"></a>  <span class="ex">NODE</span> = Connection traversing PCIe as well as the interconnect between PCIe Host Bridges within a NUMA node</span>
+<span id="cb6-26"><a href="#cb6-26" aria-hidden="true" tabindex="-1"></a>  <span class="ex">PHB</span>  = Connection traversing PCIe as well as a PCIe Host Bridge <span class="er">(</span><span class="ex">typically</span> the CPU<span class="kw">)</span></span>
+<span id="cb6-27"><a href="#cb6-27" aria-hidden="true" tabindex="-1"></a>  <span class="ex">PXB</span>  = Connection traversing multiple PCIe bridges <span class="er">(</span><span class="ex">without</span> traversing the PCIe Host Bridge<span class="kw">)</span></span>
+<span id="cb6-28"><a href="#cb6-28" aria-hidden="true" tabindex="-1"></a>  <span class="ex">PIX</span>  = Connection traversing at most a single PCIe bridge</span>
+<span id="cb6-29"><a href="#cb6-29" aria-hidden="true" tabindex="-1"></a>  <span class="ex">MX</span>   = Connection traversing MetaXLink</span>
+<span id="cb6-30"><a href="#cb6-30" aria-hidden="true" tabindex="-1"></a>  <span class="ex">NA</span>   = Connection type is unknown</span>
+<span id="cb6-31"><a href="#cb6-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-32"><a href="#cb6-32" aria-hidden="true" tabindex="-1"></a><span class="ex">NIC</span> Legend:</span>
+<span id="cb6-33"><a href="#cb6-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-34"><a href="#cb6-34" aria-hidden="true" tabindex="-1"></a>  <span class="ex">NIC0:</span> mlx5_0</span>
+<span id="cb6-35"><a href="#cb6-35" aria-hidden="true" tabindex="-1"></a>  <span class="ex">NIC1:</span> mlx5_1</span>
+<span id="cb6-36"><a href="#cb6-36" aria-hidden="true" tabindex="-1"></a>  <span class="ex">NIC2:</span> mlx5_2</span></code></pre></div>
+        <p>The <code>lspci -vt</code> command provides a tree view of
+        the PCI devices, which can be used to further understand the
+        physical layout of the GPUs and NICs on the PCI bus.</p>
+        <div class="sourceCode" id="cb7"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="ex">lspci</span> <span class="at">-vt</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="ex">.......</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a> <span class="ex">+-[0000:2d]-+-00.0</span>  Intel Corporation Ice Lake Memory Map/VT-d</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a> <span class="kw">|</span>           <span class="ex">+-00.1</span>  Intel Corporation Ice Lake Mesh 2 PCIe</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a> <span class="kw">|</span>           <span class="ex">+-00.2</span>  Intel Corporation Ice Lake RAS</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a> <span class="kw">|</span>           <span class="ex">+-00.4</span>  Intel Corporation Device 0b23</span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a> <span class="kw">|</span>           <span class="ex">\-01.0-[2e-3f]----00.0-[2f-3f]--+-00.0-[30-33]----00.0-[31-33]--+-00.0-[32]----00.0</span>  Device 9999:4001</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a> <span class="kw">|</span>                                           <span class="kw">|</span>                               <span class="ex">\-10.0-[33]----00.0</span>  Mellanox Technologies MT2910 Family <span class="pp">[</span><span class="ss">ConnectX</span><span class="pp">-</span><span class="ss">7</span><span class="pp">]</span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a> <span class="kw">|</span>                                           <span class="ex">+-04.0-[34-35]----00.0-[35]--</span></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a> <span class="kw">|</span>                                           <span class="ex">+-08.0-[36-38]----00.0-[37-38]----10.0-[38]----00.0</span>  Device 9999:4001</span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a> <span class="kw">|</span>                                           <span class="ex">+-0c.0-[39-3c]----00.0-[3a-3c]--+-00.0-[3b]----00.0</span>  Device 9999:4001</span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a> <span class="kw">|</span>                                           <span class="kw">|</span>                               <span class="ex">\-10.0-[3c]----00.0</span>  Device 9999:4001</span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a> <span class="kw">|</span>                                           <span class="ex">\-10.0-[3d-3f]----00.0-[3e-3f]----00.0-[3f]--</span></span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a> <span class="ex">+-[0000:03]-+-00.0</span>  Intel Corporation Ice Lake Memory Map/VT-d</span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a> <span class="kw">|</span>           <span class="ex">+-00.1</span>  Intel Corporation Ice Lake Mesh 2 PCIe</span>
+<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a> <span class="kw">|</span>           <span class="ex">+-00.2</span>  Intel Corporation Ice Lake RAS</span>
+<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a> <span class="kw">|</span>           <span class="ex">+-00.4</span>  Intel Corporation Device 0b23</span>
+<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a> <span class="kw">|</span>           <span class="ex">\-01.0-[04-15]----00.0-[05-15]--+-00.0-[06-09]----00.0-[07-09]--+-00.0-[08]----00.0</span>  Device 9999:4001</span>
+<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a> <span class="kw">|</span>                                           <span class="kw">|</span>                               <span class="ex">\-10.0-[09]----00.0</span>  Device 9999:4001</span>
+<span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a> <span class="kw">|</span>                                           <span class="ex">+-04.0-[0a-0b]----00.0-[0b]--</span></span>
+<span id="cb7-21"><a href="#cb7-21" aria-hidden="true" tabindex="-1"></a> <span class="kw">|</span>                                           <span class="ex">+-08.0-[0c-0e]----00.0-[0d-0e]----10.0-[0e]----00.0</span>  Device 9999:4001</span>
+<span id="cb7-22"><a href="#cb7-22" aria-hidden="true" tabindex="-1"></a> <span class="kw">|</span>                                           <span class="ex">+-0c.0-[0f-12]----00.0-[10-12]--+-00.0-[11]----00.0</span>  Device 9999:4001</span>
+<span id="cb7-23"><a href="#cb7-23" aria-hidden="true" tabindex="-1"></a> <span class="kw">|</span>                                           <span class="kw">|</span>                               <span class="ex">\-10.0-[12]----00.0</span>  Mellanox Technologies MT2910 Family <span class="pp">[</span><span class="ss">ConnectX</span><span class="pp">-</span><span class="ss">7</span><span class="pp">]</span></span>
+<span id="cb7-24"><a href="#cb7-24" aria-hidden="true" tabindex="-1"></a> <span class="kw">|</span>                                           <span class="ex">\-10.0-[13-15]----00.0-[14-15]----00.0-[15]--</span></span></code></pre></div>
+        <h2 id="performance-benchmarking-and-analysis">3. Performance
+        Benchmarking and Analysis</h2>
+        <p>With the environment details established, the next step is to
+        perform a series of benchmarks to quantify the performance of
+        the system at different layers. This section covers the results
+        of single-node and multi-node MCCL performance tests, as well as
+        lower-level InfiniBand benchmarks.</p>
+        <h3 id="single-node-mccl-performance">3.1. Single-Node MCCL
+        Performance</h3>
+        <p>The <code>mccl.sh</code> script is used to run the
+        <code>all_reduce_perf</code> benchmark on a single node with
+        eight GPUs. This establishes a performance baseline for
+        intra-node communication.</p>
+        <div class="sourceCode" id="cb8"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="kw">(</span><span class="ex">base</span><span class="kw">)</span> <span class="ex">[root@10-7-96-17</span> perf]# cat mccl.sh</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="co">#!/bin/bash</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a><span class="bu">export</span> <span class="va">MACA_PATH</span><span class="op">=</span>/opt/maca</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="bu">export</span> <span class="va">LD_LIBRARY_PATH</span><span class="op">=</span><span class="va">${MACA_PATH}</span>/lib:<span class="va">${MACA_PATH}</span>/ompi/lib</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a><span class="bu">export</span> <span class="va">FORCE_ACTIVE_WAIT</span><span class="op">=</span>2</span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a><span class="va">GPU_NUM</span><span class="op">=</span>4</span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="kw">[[</span> <span class="va">$1</span> <span class="ot">-gt</span> 0 <span class="kw">&amp;&amp;</span> <span class="va">$1</span> <span class="ot">-lt</span> 65 <span class="kw">]];</span> <span class="cf">then</span></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>  <span class="va">GPU_NUM</span><span class="op">=</span><span class="va">$1</span></span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a><span class="cf">fi</span></span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a><span class="va">TEST_DIR</span><span class="op">=</span><span class="va">${MACA_PATH}</span>/samples/mccl_tests/perf/mccl_perf</span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a><span class="co">#BENCH_NAMES=&quot;all_reduce_perf all_gather_perf reduce_scatter_perf sendrecv_perf alltoall_perf&quot;</span></span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a><span class="va">BENCH_NAMES</span><span class="op">=</span>all_reduce_perf</span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a><span class="va">MPI_PROCESS_NUM</span><span class="op">=</span><span class="va">${GPU_NUM}</span></span>
+<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a><span class="va">MPI_RUN_OPT</span><span class="op">=</span><span class="st">&quot;--allow-run-as-root -mca pml ^ucx -mca osc ^ucx -mca btl ^openib&quot;</span></span>
+<span id="cb8-20"><a href="#cb8-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-21"><a href="#cb8-21" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> BENCH <span class="kw">in</span> <span class="va">${BENCH_NAMES}</span><span class="kw">;</span> <span class="cf">do</span></span>
+<span id="cb8-22"><a href="#cb8-22" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="at">-n</span> <span class="st">&quot;The test is </span><span class="va">${BENCH}</span><span class="st">, the maca version is &quot;</span> <span class="kw">&amp;&amp;</span> <span class="fu">realpath</span> <span class="va">${MACA_PATH}</span></span>
+<span id="cb8-23"><a href="#cb8-23" aria-hidden="true" tabindex="-1"></a><span class="va">${MACA_PATH}</span><span class="ex">/ompi/bin/mpirun</span> <span class="at">-np</span> <span class="va">${MPI_PROCESS_NUM}</span> <span class="va">${MPI_RUN_OPT}</span> <span class="va">${TEST_DIR}</span>/<span class="va">${BENCH}</span> <span class="at">-b</span> 1K <span class="at">-e</span> 1G <span class="at">-d</span> bfloat16 <span class="at">-f</span> 2 <span class="at">-g</span> 1 <span class="at">-n</span> 10</span>
+<span id="cb8-24"><a href="#cb8-24" aria-hidden="true" tabindex="-1"></a><span class="cf">done</span></span></code></pre></div>
+        <p>The results of the single-node benchmark show good
+        performance, with the bus bandwidth scaling up as the message
+        size increases. This confirms that intra-node communication is
+        functioning correctly.</p>
+        <div class="sourceCode" id="cb9"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="ex">[root@mx-sh-demo</span> perf]# bash mccl.sh 8</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="ex">The</span> test is all_reduce_perf, the maca version is /opt/maca-2.32.0</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="ex">main_process</span> = 545654</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a><span class="ex">===============================</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="co"># nThread 1 nGpus 1 minBytes 1024 maxBytes 1073741824 step: 2(factor) warmup iters: 5 iters: 10 agg iters: 1 validation: 1 graph: 0</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a><span class="co">#</span></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Using devices</span></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a><span class="co">#   Rank  0 Pid 545654 on mx-sh-demo device  0 [0x08] MetaX C500</span></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a><span class="co">#   Rank  1 Pid 545655 on mx-sh-demo device  1 [0x09] MetaX C500</span></span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a><span class="co">#   Rank  2 Pid 545656 on mx-sh-demo device  2 [0x0e] MetaX C500</span></span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a><span class="co">#   Rank  3 Pid 545657 on mx-sh-demo device  3 [0x11] MetaX C500</span></span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a><span class="co">#   Rank  4 Pid 545658 on mx-sh-demo device  4 [0x32] MetaX C500</span></span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a><span class="co">#   Rank  5 Pid 545659 on mx-sh-demo device  5 [0x38] MetaX C500</span></span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a><span class="co">#   Rank  6 Pid 545660 on mx-sh-demo device  6 [0x3b] MetaX C500</span></span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a><span class="co">#   Rank  7 Pid 545661 on mx-sh-demo device  7 [0x3c] MetaX C500</span></span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a><span class="co">#</span></span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a><span class="co">#                                                           ┌----- out-of-place ------┐       ┌------ in-place -------┐</span></span>
+<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a><span class="co">#        size         count      type   redop    root      time    algbw   busbw   #wrong    time   algbw   busbw   #wrong</span></span>
+<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a><span class="co">#         (B)    (elements)                                (us)   (GB/s)  (GB/s)              (us)  (GB/s)  (GB/s)</span></span>
+<span id="cb9-20"><a href="#cb9-20" aria-hidden="true" tabindex="-1"></a><span class="co">#        1024           512  bfloat16     sum     -1      15.31    0.07    0.12      0      13.91    0.07    0.13      0</span></span>
+<span id="cb9-21"><a href="#cb9-21" aria-hidden="true" tabindex="-1"></a><span class="co">#        2048          1024  bfloat16     sum     -1      14.55    0.14    0.25      0      13.82    0.15    0.26      0</span></span>
+<span id="cb9-22"><a href="#cb9-22" aria-hidden="true" tabindex="-1"></a><span class="co">#        4096          2048  bfloat16     sum     -1      15.02    0.27    0.48      0      14.81    0.28    0.48      0</span></span>
+<span id="cb9-23"><a href="#cb9-23" aria-hidden="true" tabindex="-1"></a><span class="co">#        8192          4096  bfloat16     sum     -1      21.91    0.37    0.65      0      21.30    0.38    0.67      0</span></span>
+<span id="cb9-24"><a href="#cb9-24" aria-hidden="true" tabindex="-1"></a><span class="co">#       16384          8192  bfloat16     sum     -1      21.88    0.75    1.31      0      24.84    0.66    1.15      0</span></span>
+<span id="cb9-25"><a href="#cb9-25" aria-hidden="true" tabindex="-1"></a><span class="co">#       32768         16384  bfloat16     sum     -1      24.73    1.32    2.32      0      24.29    1.35    2.36      0</span></span>
+<span id="cb9-26"><a href="#cb9-26" aria-hidden="true" tabindex="-1"></a><span class="co">#       65536         32768  bfloat16     sum     -1      26.00    2.52    4.41      0      25.63    2.56    4.48      0</span></span>
+<span id="cb9-27"><a href="#cb9-27" aria-hidden="true" tabindex="-1"></a><span class="co">#      131072         65536  bfloat16     sum     -1      28.31    4.63    8.10      0      28.37    4.62    8.09      0</span></span>
+<span id="cb9-28"><a href="#cb9-28" aria-hidden="true" tabindex="-1"></a><span class="co">#      262144        131072  bfloat16     sum     -1      37.28    7.03   12.31      0      36.68    7.15   12.51      0</span></span>
+<span id="cb9-29"><a href="#cb9-29" aria-hidden="true" tabindex="-1"></a><span class="co">#      524288        262144  bfloat16     sum     -1      46.54   11.26   19.71      0      46.42   11.29   19.76      0</span></span>
+<span id="cb9-30"><a href="#cb9-30" aria-hidden="true" tabindex="-1"></a><span class="co">#     1048576        524288  bfloat16     sum     -1      72.89   14.38   25.17      0      64.17   16.34   28.60      0</span></span>
+<span id="cb9-31"><a href="#cb9-31" aria-hidden="true" tabindex="-1"></a><span class="co">#     2097152       1048576  bfloat16     sum     -1     105.62   19.85   34.75      0     104.79   20.01   35.02      0</span></span>
+<span id="cb9-32"><a href="#cb9-32" aria-hidden="true" tabindex="-1"></a><span class="co">#     4194304       2097152  bfloat16     sum     -1     169.97   24.68   43.18      0     169.33   24.77   43.35      0</span></span>
+<span id="cb9-33"><a href="#cb9-33" aria-hidden="true" tabindex="-1"></a><span class="co">#     8388608       4194304  bfloat16     sum     -1     321.15   26.12   45.71      0     321.67   26.08   45.64      0</span></span>
+<span id="cb9-34"><a href="#cb9-34" aria-hidden="true" tabindex="-1"></a><span class="co">#    16777216       8388608  bfloat16     sum     -1     556.36   30.16   52.77      0     555.66   30.19   52.84      0</span></span>
+<span id="cb9-35"><a href="#cb9-35" aria-hidden="true" tabindex="-1"></a><span class="co">#    33554432      16777216  bfloat16     sum     -1    1037.13   32.35   56.62      0    1034.46   32.44   56.76      0</span></span>
+<span id="cb9-36"><a href="#cb9-36" aria-hidden="true" tabindex="-1"></a><span class="co">#    67108864      33554432  bfloat16     sum     -1    1944.65   34.51   60.39      0    1947.95   34.45   60.29      0</span></span>
+<span id="cb9-37"><a href="#cb9-37" aria-hidden="true" tabindex="-1"></a><span class="co">#   134217728      67108864  bfloat16     sum     -1    3795.68   35.36   61.88      0    3793.51   35.38   61.92      0</span></span>
+<span id="cb9-38"><a href="#cb9-38" aria-hidden="true" tabindex="-1"></a><span class="co">#   268435456     134217728  bfloat16     sum     -1    7385.35   36.35   63.61      0    7384.01   36.35   63.62      0</span></span>
+<span id="cb9-39"><a href="#cb9-39" aria-hidden="true" tabindex="-1"></a><span class="co">#   536870912     268435456  bfloat16     sum     -1   14556.12   36.88   64.54      0   14568.25   36.85   64.49      0</span></span>
+<span id="cb9-40"><a href="#cb9-40" aria-hidden="true" tabindex="-1"></a><span class="co">#  1073741824     536870912  bfloat16     sum     -1   28874.52   37.19   65.08      0   28880.77   37.18   65.06      0</span></span>
+<span id="cb9-41"><a href="#cb9-41" aria-hidden="true" tabindex="-1"></a><span class="co"># Out of bounds values : 0 OK</span></span>
+<span id="cb9-42"><a href="#cb9-42" aria-hidden="true" tabindex="-1"></a><span class="co"># Avg bus bandwidth    : 29.7818</span></span>
+<span id="cb9-43"><a href="#cb9-43" aria-hidden="true" tabindex="-1"></a><span class="co">#</span></span></code></pre></div>
+        <h3 id="multi-node-mccl-performance">3.2. Multi-Node MCCL
+        Performance</h3>
+        <p>The <code>cluster.wzh.sh</code> script is used to run the
+        <code>all_reduce_perf</code> benchmark across two nodes, with
+        eight GPUs per node. This test is designed to expose any issues
+        with inter-node communication.</p>
+        <div class="sourceCode" id="cb10"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="ex">sh-5.1#</span> cat cluster.wzh.sh</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="co">#!/bin/bash</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a><span class="va">MACA_PATH</span><span class="op">=</span>/opt/maca</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a><span class="va">HOST_IP</span><span class="op">=</span>10.2.122.225:8,10.2.122.226:8</span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a><span class="va">IP_MASK</span><span class="op">=</span>10.2.122.0/24</span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a><span class="va">GPU_NUM</span><span class="op">=</span>16</span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="kw">[[</span> <span class="ot">-z</span> <span class="st">&quot;</span><span class="va">$1</span><span class="st">&quot;</span> <span class="kw">||</span> <span class="ot">-z</span> <span class="st">&quot;</span><span class="va">$2</span><span class="st">&quot;</span> <span class="kw">||</span> <span class="ot">-z</span> <span class="st">&quot;</span><span class="va">$3</span><span class="st">&quot;</span> <span class="kw">||</span> <span class="ot">-z</span> <span class="st">&quot;</span><span class="va">$4</span><span class="st">&quot;</span> <span class="kw">]];</span> <span class="cf">then</span></span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>  <span class="bu">echo</span> <span class="st">&quot;Use the default ip addr. Run with parameters for custom ip addr, for example: bash cluster.sh ip_1 ip_2 ip_mask gpu_num&quot;</span></span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a><span class="cf">else</span></span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>  <span class="va">HOST_IP</span><span class="op">=</span><span class="va">$1</span>,<span class="va">$2</span></span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a>  <span class="va">IP_MASK</span><span class="op">=</span><span class="va">$3</span></span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a>  <span class="va">GPU_NUM</span><span class="op">=</span><span class="va">$4</span></span>
+<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a><span class="cf">fi</span></span>
+<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-18"><a href="#cb10-18" aria-hidden="true" tabindex="-1"></a><span class="va">IB_PORT</span><span class="op">=</span>mlx5_0,mlx5_1</span>
+<span id="cb10-19"><a href="#cb10-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-20"><a href="#cb10-20" aria-hidden="true" tabindex="-1"></a><span class="va">TEST_DIR</span><span class="op">=</span>/opt/maca/samples/mccl_tests/perf/mccl_perf</span>
+<span id="cb10-21"><a href="#cb10-21" aria-hidden="true" tabindex="-1"></a><span class="co">#BENCH_NAMES=&quot;all_reduce_perf all_gather_perf reduce_scatter_perf sendrecv_perf alltoall_perf&quot;</span></span>
+<span id="cb10-22"><a href="#cb10-22" aria-hidden="true" tabindex="-1"></a><span class="va">BENCH_NAMES</span><span class="op">=</span><span class="st">&quot;all_reduce_perf&quot;</span></span>
+<span id="cb10-23"><a href="#cb10-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-24"><a href="#cb10-24" aria-hidden="true" tabindex="-1"></a><span class="va">PERF_ENV</span><span class="op">=</span><span class="st">&quot;-x FORCE_ACTIVE_WAIT=2&quot;</span></span>
+<span id="cb10-25"><a href="#cb10-25" aria-hidden="true" tabindex="-1"></a><span class="va">LIB_PATH_ENV</span><span class="op">=</span><span class="st">&quot;-x LD_LIBRARY_PATH=</span><span class="va">${MACA_PATH}</span><span class="st">/lib:/</span><span class="va">${MACA_PATH}</span><span class="st">/ompi/lib&quot;</span></span>
+<span id="cb10-26"><a href="#cb10-26" aria-hidden="true" tabindex="-1"></a><span class="va">ENV_VAR</span><span class="op">=</span><span class="st">&quot;-x MCCL_IB_HCA=</span><span class="va">${IB_PORT}</span><span class="st"> -x MCCL_NET_GDR_LEVEL=PHB -x MCCL_DEBUG=INFO -x MCCL_DEBUG_SUBSYS=INIT,NET -x MCCL_IB_PCI_RELAXED_ORDERING=1 -x MCCL_CROSS_NIC=1 </span><span class="va">${PERF_ENV}</span><span class="st"> </span><span class="va">${LIB_PATH_ENV}</span><span class="st">&quot;</span></span>
+<span id="cb10-27"><a href="#cb10-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-28"><a href="#cb10-28" aria-hidden="true" tabindex="-1"></a><span class="va">MPI_PROCESS_NUM</span><span class="op">=</span><span class="va">${GPU_NUM}</span></span>
+<span id="cb10-29"><a href="#cb10-29" aria-hidden="true" tabindex="-1"></a><span class="va">MPI_RUN_OPT</span><span class="op">=</span><span class="st">&quot;-mca btl_tcp_if_include </span><span class="va">${IP_MASK}</span><span class="st"> -mca oob_tcp_if_include </span><span class="va">${IP_MASK}</span><span class="st"> -mca pml ^ucx -mca osc ^ucx -mca btl ^openib&quot;</span></span>
+<span id="cb10-30"><a href="#cb10-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-31"><a href="#cb10-31" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> BENCH <span class="kw">in</span> <span class="va">${BENCH_NAMES}</span><span class="kw">;</span> <span class="cf">do</span></span>
+<span id="cb10-32"><a href="#cb10-32" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="at">-n</span> <span class="st">&quot;The test is </span><span class="va">${BENCH}</span><span class="st">, the maca version is &quot;</span> <span class="kw">&amp;&amp;</span> <span class="fu">realpath</span> <span class="va">${MACA_PATH}</span></span>
+<span id="cb10-33"><a href="#cb10-33" aria-hidden="true" tabindex="-1"></a><span class="va">${MACA_PATH}</span><span class="ex">/ompi/bin/mpirun</span> <span class="at">--allow-run-as-root</span> <span class="at">-np</span> <span class="va">${MPI_PROCESS_NUM}</span> <span class="va">${MPI_RUN_OPT}</span> <span class="at">-host</span> <span class="va">${HOST_IP}</span> <span class="va">${ENV_VAR}</span> <span class="va">${TEST_DIR}</span>/<span class="va">${BENCH}</span> <span class="at">-b</span> 1K <span class="at">-e</span> 1G <span class="at">-d</span> float <span class="at">-f</span> 2 <span class="at">-g</span> 1  <span class="at">-n</span> 10</span>
+<span id="cb10-34"><a href="#cb10-34" aria-hidden="true" tabindex="-1"></a><span class="cf">done</span></span></code></pre></div>
+        <p>The results of the multi-node benchmark reveal a severe
+        performance degradation. The average bus bandwidth is only 4.57
+        GB/s, which is approximately one-tenth of the single-node
+        performance. This dramatic drop strongly suggests a problem with
+        the inter-node communication path.</p>
+        <div class="sourceCode" id="cb11"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="ex">[root@10-7-96-17</span> perf]# ip_01=10.7.96.17:8</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="va">ip_02</span><span class="op">=</span>10.7.96.189:8</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a><span class="va">ipmask</span><span class="op">=</span>10.0.0.0/8</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> /opt/maca/samples/mccl_tests/perf</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a><span class="fu">bash</span> cluster.sh <span class="va">$ip_01</span> <span class="va">$ip_02</span> <span class="va">$ipmask</span> 16</span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a><span class="ex">The</span> test is all_reduce_perf, the maca version is /opt/maca-2.32.0</span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a><span class="ex">main_process</span> = 893596</span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a><span class="ex">===============================</span></span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a><span class="co"># nThread 1 nGpus 1 minBytes 1024 maxBytes 1073741824 step: 2(factor) warmup iters: 5 iters: 10 agg iters: 1 validation: 1 graph: 0</span></span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a><span class="co">#</span></span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Using devices</span></span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a><span class="co">#   Rank  0 Pid 893596 on 10-7-96-17 device  0 [0x08] MetaX C500</span></span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a><span class="co">#   Rank  1 Pid 893597 on 10-7-96-17 device  1 [0x09] MetaX C500</span></span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a><span class="co">#   Rank  2 Pid 893598 on 10-7-96-17 device  2 [0x0e] MetaX C500</span></span>
+<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a><span class="co">#   Rank  3 Pid 893599 on 10-7-96-17 device  3 [0x11] MetaX C500</span></span>
+<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a><span class="co">#   Rank  4 Pid 893600 on 10-7-96-17 device  4 [0x32] MetaX C500</span></span>
+<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a><span class="co">#   Rank  5 Pid 893601 on 10-7-96-17 device  5 [0x38] MetaX C500</span></span>
+<span id="cb11-18"><a href="#cb11-18" aria-hidden="true" tabindex="-1"></a><span class="co">#   Rank  6 Pid 893602 on 10-7-96-17 device  6 [0x3b] MetaX C500</span></span>
+<span id="cb11-19"><a href="#cb11-19" aria-hidden="true" tabindex="-1"></a><span class="co">#   Rank  7 Pid 893603 on 10-7-96-17 device  7 [0x3c] MetaX C500</span></span>
+<span id="cb11-20"><a href="#cb11-20" aria-hidden="true" tabindex="-1"></a><span class="co">#   Rank  8 Pid 1043923 on 10-7-96-189 device  0 [0x08] MetaX C500</span></span>
+<span id="cb11-21"><a href="#cb11-21" aria-hidden="true" tabindex="-1"></a><span class="co">#   Rank  9 Pid 1043924 on 10-7-96-189 device  1 [0x09] MetaX C500</span></span>
+<span id="cb11-22"><a href="#cb11-22" aria-hidden="true" tabindex="-1"></a><span class="co">#   Rank 10 Pid 1043925 on 10-7-96-189 device  2 [0x0e] MetaX C500</span></span>
+<span id="cb11-23"><a href="#cb11-23" aria-hidden="true" tabindex="-1"></a><span class="co">#   Rank 11 Pid 1043926 on 10-7-96-189 device  3 [0x11] MetaX C500</span></span>
+<span id="cb11-24"><a href="#cb11-24" aria-hidden="true" tabindex="-1"></a><span class="co">#   Rank 12 Pid 1043927 on 10-7-96-189 device  4 [0x32] MetaX C500</span></span>
+<span id="cb11-25"><a href="#cb11-25" aria-hidden="true" tabindex="-1"></a><span class="co">#   Rank 13 Pid 1043928 on 10-7-96-189 device  5 [0x38] MetaX C500</span></span>
+<span id="cb11-26"><a href="#cb11-26" aria-hidden="true" tabindex="-1"></a><span class="co">#   Rank 14 Pid 1043929 on 10-7-96-189 device  6 [0x3b] MetaX C500</span></span>
+<span id="cb11-27"><a href="#cb11-27" aria-hidden="true" tabindex="-1"></a><span class="co">#   Rank 15 Pid 1043930 on 10-7-96-189 device  7 [0x3c] MetaX C500</span></span>
+<span id="cb11-28"><a href="#cb11-28" aria-hidden="true" tabindex="-1"></a><span class="co">#</span></span>
+<span id="cb11-29"><a href="#cb11-29" aria-hidden="true" tabindex="-1"></a><span class="co">#                                                           ┌----- out-of-place ------┐       ┌------ in-place -------┐</span></span>
+<span id="cb11-30"><a href="#cb11-30" aria-hidden="true" tabindex="-1"></a><span class="co">#        size         count      type   redop    root      time    algbw   busbw   #wrong    time   algbw   busbw   #wrong</span></span>
+<span id="cb11-31"><a href="#cb11-31" aria-hidden="true" tabindex="-1"></a><span class="co">#         (B)    (elements)                                (us)   (GB/s)  (GB/s)              (us)  (GB/s)  (GB/s)</span></span>
+<span id="cb11-32"><a href="#cb11-32" aria-hidden="true" tabindex="-1"></a><span class="co">#        1024           256     float     sum     -1      52.37    0.02    0.04      0      51.08    0.02    0.04      0</span></span>
+<span id="cb11-33"><a href="#cb11-33" aria-hidden="true" tabindex="-1"></a><span class="co">#        2048           512     float     sum     -1      51.31    0.04    0.07      0      50.92    0.04    0.08      0</span></span>
+<span id="cb11-34"><a href="#cb11-34" aria-hidden="true" tabindex="-1"></a><span class="co">#        4096          1024     float     sum     -1      54.01    0.08    0.14      0      49.48    0.08    0.16      0</span></span>
+<span id="cb11-35"><a href="#cb11-35" aria-hidden="true" tabindex="-1"></a><span class="co">#        8192          2048     float     sum     -1      54.04    0.15    0.28      0      51.61    0.16    0.30      0</span></span>
+<span id="cb11-36"><a href="#cb11-36" aria-hidden="true" tabindex="-1"></a><span class="co">#       16384          4096     float     sum     -1      54.91    0.30    0.56      0      54.96    0.30    0.56      0</span></span>
+<span id="cb11-37"><a href="#cb11-37" aria-hidden="true" tabindex="-1"></a><span class="co">#       32768          8192     float     sum     -1      55.25    0.59    1.11      0      57.42    0.57    1.07      0</span></span>
+<span id="cb11-38"><a href="#cb11-38" aria-hidden="true" tabindex="-1"></a><span class="co">#       65536         16384     float     sum     -1     133.46    0.49    0.92      0     128.24    0.51    0.96      0</span></span>
+<span id="cb11-39"><a href="#cb11-39" aria-hidden="true" tabindex="-1"></a><span class="co">#      131072         32768     float     sum     -1     134.61    0.97    1.83      0      134.68    0.97    1.82      0</span></span>
+<span id="cb11-40"><a href="#cb11-40" aria-hidden="true" tabindex="-1"></a><span class="co">#      262144         65536     float     sum     -1     151.12    1.73    3.25      0     147.33    1.78    3.34      0</span></span>
+<span id="cb11-41"><a href="#cb11-41" aria-hidden="true" tabindex="-1"></a><span class="co">#      524288        131072     float     sum     -1     184.26    2.85    5.33      0     199.35    2.63    4.93      0</span></span>
+<span id="cb11-42"><a href="#cb11-42" aria-hidden="true" tabindex="-1"></a><span class="co">#     1048576        262144     float     sum     -1     319.75    3.28    6.15      0     302.24    3.47    6.51      0</span></span>
+<span id="cb11-43"><a href="#cb11-43" aria-hidden="true" tabindex="-1"></a><span class="co">#     2097152        524288     float     sum     -1     477.18    4.39    8.24      0     456.18    4.60    8.62      0</span></span>
+<span id="cb11-44"><a href="#cb11-44" aria-hidden="true" tabindex="-1"></a><span class="co">#     4194304       1048576     float     sum     -1    1066.67    3.93    7.37      0    1212.09    3.46    6.49      0</span></span>
+<span id="cb11-45"><a href="#cb11-45" aria-hidden="true" tabindex="-1"></a><span class="co">#     8388608       2097152     float     sum     -1    2799.44    3.00    5.62      0    2760.69    3.04    5.70      0</span></span>
+<span id="cb11-46"><a href="#cb11-46" aria-hidden="true" tabindex="-1"></a><span class="co">#    16777216       4194304     float     sum     -1    5263.12    3.19    5.98      0    5420.20    3.10    5.80      0</span></span>
+<span id="cb11-47"><a href="#cb11-47" aria-hidden="true" tabindex="-1"></a><span class="co">#    33554432       8388608     float     sum     -1    7216.15    4.65    8.72      0    7200.62    4.66    8.74      0</span></span>
+<span id="cb11-48"><a href="#cb11-48" aria-hidden="true" tabindex="-1"></a><span class="co">#    67108864      16777216     float     sum     -1   14575.55    4.60    8.63      0   14659.58    4.58    8.58      0</span></span>
+<span id="cb11-49"><a href="#cb11-49" aria-hidden="true" tabindex="-1"></a><span class="co">#   134217728      33554432     float     sum     -1   30554.81    4.39    8.24      0   30956.78    4.34    8.13      0</span></span>
+<span id="cb11-50"><a href="#cb11-50" aria-hidden="true" tabindex="-1"></a><span class="co">#   268435456      67108864     float     sum     -1   62193.91    4.32    8.09      0   62029.53    4.33    8.11      0</span></span>
+<span id="cb11-51"><a href="#cb11-51" aria-hidden="true" tabindex="-1"></a><span class="co">#   536870912     134217728     float     sum     -1  127512.25    4.21    7.89      0  128140.98    4.19    7.86      0</span></span>
+<span id="cb11-52"><a href="#cb11-52" aria-hidden="true" tabindex="-1"></a><span class="co">#  1073741824     268435456     float     sum     -1  253028.59    4.24    7.96      0  259465.60    4.14    7.76      0</span></span>
+<span id="cb11-53"><a href="#cb11-53" aria-hidden="true" tabindex="-1"></a><span class="co"># Out of bounds values : 0 OK</span></span>
+<span id="cb11-54"><a href="#cb11-54" aria-hidden="true" tabindex="-1"></a><span class="co"># Avg bus bandwidth    : 4.57073</span></span>
+<span id="cb11-55"><a href="#cb11-55" aria-hidden="true" tabindex="-1"></a><span class="co">#</span></span></code></pre></div>
+        <p>To make sure the traffic goes through IB card, we check the
+        counters on the interface.</p>
+        <div class="sourceCode" id="cb12"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="ex">[root@10-7-96-17</span> perf]# show_counters mlx5_0</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="ex">Port</span> 1 hw counters:</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a><span class="ex">duplicate_request:</span> 0</span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a><span class="ex">implied_nak_seq_err:</span> 0</span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a><span class="ex">lifespan:</span> 10</span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a><span class="ex">local_ack_timeout_err:</span> 0</span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a><span class="ex">out_of_buffer:</span> 0</span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a><span class="ex">out_of_sequence:</span> 0</span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a><span class="ex">packet_seq_err:</span> 0</span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a><span class="ex">req_cqe_error:</span> 0</span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a><span class="ex">req_cqe_flush_error:</span> 0</span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a><span class="ex">req_remote_access_errors:</span> 0</span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a><span class="ex">req_remote_invalid_request:</span> 0</span>
+<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a><span class="ex">req_rnr_retries_exceeded:</span> 0</span>
+<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a><span class="ex">req_transport_retries_exceeded:</span> 0</span>
+<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a><span class="ex">resp_cqe_error:</span> 0</span>
+<span id="cb12-17"><a href="#cb12-17" aria-hidden="true" tabindex="-1"></a><span class="ex">resp_cqe_flush_error:</span> 0</span>
+<span id="cb12-18"><a href="#cb12-18" aria-hidden="true" tabindex="-1"></a><span class="ex">resp_local_length_error:</span> 0</span>
+<span id="cb12-19"><a href="#cb12-19" aria-hidden="true" tabindex="-1"></a><span class="ex">resp_remote_access_errors:</span> 0</span>
+<span id="cb12-20"><a href="#cb12-20" aria-hidden="true" tabindex="-1"></a><span class="ex">rnr_nak_retry_err:</span> 0</span>
+<span id="cb12-21"><a href="#cb12-21" aria-hidden="true" tabindex="-1"></a><span class="ex">roce_adp_retrans:</span> 0</span>
+<span id="cb12-22"><a href="#cb12-22" aria-hidden="true" tabindex="-1"></a><span class="ex">roce_adp_retrans_to:</span> 0</span>
+<span id="cb12-23"><a href="#cb12-23" aria-hidden="true" tabindex="-1"></a><span class="ex">roce_slow_restart:</span> 0</span>
+<span id="cb12-24"><a href="#cb12-24" aria-hidden="true" tabindex="-1"></a><span class="ex">roce_slow_restart_cnps:</span> 0</span>
+<span id="cb12-25"><a href="#cb12-25" aria-hidden="true" tabindex="-1"></a><span class="ex">roce_slow_restart_trans:</span> 0</span>
+<span id="cb12-26"><a href="#cb12-26" aria-hidden="true" tabindex="-1"></a><span class="ex">rx_atomic_requests:</span> 0</span>
+<span id="cb12-27"><a href="#cb12-27" aria-hidden="true" tabindex="-1"></a><span class="ex">rx_dct_connect:</span> 0</span>
+<span id="cb12-28"><a href="#cb12-28" aria-hidden="true" tabindex="-1"></a><span class="ex">rx_icrc_encapsulated:</span> 0</span>
+<span id="cb12-29"><a href="#cb12-29" aria-hidden="true" tabindex="-1"></a><span class="ex">rx_read_requests:</span> 0</span>
+<span id="cb12-30"><a href="#cb12-30" aria-hidden="true" tabindex="-1"></a><span class="ex">rx_write_requests:</span> 143924</span></code></pre></div>
+        <h2 id="deep-dive-into-the-debugging-process">4. Deep Dive into
+        the Debugging Process</h2>
+        <p>The significant performance gap between single-node and
+        multi-node tests points to a bottleneck in the inter-node
+        communication path. To systematically isolate the issue, we
+        adopt a bottom-up debugging approach, starting from the physical
+        InfiniBand layer and moving up the stack.</p>
+        <p>The debugging principles for multi-node GPU + InfiniBand
+        networks are as follows:</p>
+        <ol type="1">
+        <li><strong>IB Network Layer:</strong> Ensure traffic flows
+        correctly through the IB NICs.</li>
+        <li><strong>IB + GPU Layer:</strong> Verify that traffic can
+        flow from the GPU, through the IB NIC, to the remote node.</li>
+        <li><strong>MCCL/NCCL Layer:</strong> Use a map-reduce program
+        running on the GPUs to test the end-to-end data path.</li>
+        <li><strong>Application Layer:</strong> Test the final
+        application (e.g., the inference service).</li>
+        </ol>
+        <pre class="mermaid"><code>graph TD
+    subgraph Debugging Approach
+        D[1. IB Network Layer&lt;br/&gt;Raw Bandwidth Test] --&gt; C{2. IB + GPU Layer&lt;br/&gt;GPU-to-NIC DMA/RDMA};
+        C --&gt; B{3. MCCL/NCCL Layer&lt;br/&gt;Map-Reduce on GPUs};
+        B --&gt; A[4. Application Layer&lt;br/&gt;e.g., vLLM Inference];
+    end
+
+    style D fill:#f99,stroke:#333,stroke-width:2px
+    style C fill:#cfc,stroke:#333,stroke-width:2px
+    style B fill:#ccf,stroke:#333,stroke-width:2px
+    style A fill:#f9f,stroke:#333,stroke-width:2px</code></pre>
+        <h3 id="ib-network-layer-debugging">4.1. IB Network Layer
+        Debugging</h3>
+        <p>We begin by testing the raw bandwidth of the InfiniBand
+        network using the <code>ib_write_bw</code> utility. This test
+        measures the bandwidth between two nodes without involving the
+        GPUs.</p>
+        <p>First, start the <code>ib_write_bw</code> server on the
+        remote node:</p>
+        <div class="sourceCode" id="cb14"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="ex">/opt/maca/samples/mccl_tests/ib_perf/tests/ib_write_bw</span> <span class="at">-d</span> mlx5_0 <span class="at">--report_gbits</span> <span class="at">-F</span> <span class="at">-a</span></span></code></pre></div>
+        <p>Then, run the client on the local node and observe the
+        results:</p>
+        <div class="sourceCode" id="cb15"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="ex">[root@10-7-96-17</span> perf]# /opt/maca/samples/mccl_tests/ib_perf/tests/ib_write_bw <span class="at">-d</span> mlx5_0 <span class="at">--report_gbits</span> 10.7.96.189 <span class="at">-F</span> <span class="at">-a</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="ex">---------------------------------------------------------------------------------------</span></span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>                    <span class="ex">RDMA_Write</span> BW Test</span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a> <span class="ex">Dual-port</span>       : OFF          Device         : mlx5_0</span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a> <span class="ex">Number</span> of qps   : 1            Transport type : IB</span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a> <span class="ex">Connection</span> type : RC           Using SRQ      : OFF</span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a> <span class="ex">PCIe</span> relax order: ON</span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a> <span class="ex">ibv_wr*</span> API     : ON</span>
+<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a> <span class="ex">TX</span> depth        : 128</span>
+<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a> <span class="ex">CQ</span> Moderation   : 100</span>
+<span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a> <span class="ex">Mtu</span>             : 4096<span class="pp">[</span><span class="ss">B</span><span class="pp">]</span></span>
+<span id="cb15-12"><a href="#cb15-12" aria-hidden="true" tabindex="-1"></a> <span class="ex">Link</span> type       : IB</span>
+<span id="cb15-13"><a href="#cb15-13" aria-hidden="true" tabindex="-1"></a> <span class="ex">Max</span> inline data : 0<span class="pp">[</span><span class="ss">B</span><span class="pp">]</span></span>
+<span id="cb15-14"><a href="#cb15-14" aria-hidden="true" tabindex="-1"></a> <span class="ex">rdma_cm</span> QPs     : OFF</span>
+<span id="cb15-15"><a href="#cb15-15" aria-hidden="true" tabindex="-1"></a> <span class="ex">Use</span> MACA memory : OFF</span>
+<span id="cb15-16"><a href="#cb15-16" aria-hidden="true" tabindex="-1"></a> <span class="ex">Data</span> ex. method : Ethernet</span>
+<span id="cb15-17"><a href="#cb15-17" aria-hidden="true" tabindex="-1"></a><span class="ex">---------------------------------------------------------------------------------------</span></span>
+<span id="cb15-18"><a href="#cb15-18" aria-hidden="true" tabindex="-1"></a> <span class="bu">local</span> <span class="va">address</span>: <span class="va">LID</span> 0x0e <span class="va">QPN</span> 0x0289 <span class="va">PSN</span> 0x3a2f43 <span class="va">RKey</span> 0x1fff00 <span class="va">VAddr</span> 0x007f66a9bff000</span>
+<span id="cb15-19"><a href="#cb15-19" aria-hidden="true" tabindex="-1"></a> <span class="ex">remote</span> address: LID 0x0a QPN 0x028b PSN 0x4055a3 RKey 0x1fff00 VAddr 0x007fc5ae9ff000</span>
+<span id="cb15-20"><a href="#cb15-20" aria-hidden="true" tabindex="-1"></a><span class="ex">---------------------------------------------------------------------------------------</span></span>
+<span id="cb15-21"><a href="#cb15-21" aria-hidden="true" tabindex="-1"></a> <span class="co">#bytes     #iterations    BW peak[Gb/sec]    BW average[Gb/sec]   MsgRate[Mpps]</span></span>
+<span id="cb15-22"><a href="#cb15-22" aria-hidden="true" tabindex="-1"></a> <span class="ex">2</span>          5000           0.057868            0.057270            3.579360</span>
+<span id="cb15-23"><a href="#cb15-23" aria-hidden="true" tabindex="-1"></a> <span class="ex">4</span>          5000             0.11               0.11               3.465332</span>
+<span id="cb15-24"><a href="#cb15-24" aria-hidden="true" tabindex="-1"></a> <span class="ex">8</span>          5000             0.22               0.22               3.469740</span>
+<span id="cb15-25"><a href="#cb15-25" aria-hidden="true" tabindex="-1"></a> <span class="ex">16</span>         5000             0.45               0.44               3.456194</span>
+<span id="cb15-26"><a href="#cb15-26" aria-hidden="true" tabindex="-1"></a> <span class="ex">32</span>         5000             0.93               0.93               3.646256</span>
+<span id="cb15-27"><a href="#cb15-27" aria-hidden="true" tabindex="-1"></a> <span class="ex">64</span>         5000             1.78               1.77               3.464702</span>
+<span id="cb15-28"><a href="#cb15-28" aria-hidden="true" tabindex="-1"></a> <span class="ex">128</span>        5000             3.56               3.55               3.468473</span>
+<span id="cb15-29"><a href="#cb15-29" aria-hidden="true" tabindex="-1"></a> <span class="ex">256</span>        5000             7.11               7.09               3.460713</span>
+<span id="cb15-30"><a href="#cb15-30" aria-hidden="true" tabindex="-1"></a> <span class="ex">512</span>        5000             15.46              15.45              3.772055</span>
+<span id="cb15-31"><a href="#cb15-31" aria-hidden="true" tabindex="-1"></a> <span class="ex">1024</span>       5000             28.35              28.29              3.453461</span>
+<span id="cb15-32"><a href="#cb15-32" aria-hidden="true" tabindex="-1"></a> <span class="ex">2048</span>       5000             56.69              56.63              3.456640</span>
+<span id="cb15-33"><a href="#cb15-33" aria-hidden="true" tabindex="-1"></a> <span class="ex">4096</span>       5000             113.39             113.15             3.453037</span>
+<span id="cb15-34"><a href="#cb15-34" aria-hidden="true" tabindex="-1"></a> <span class="ex">8192</span>       5000             182.05             181.90             2.775527</span>
+<span id="cb15-35"><a href="#cb15-35" aria-hidden="true" tabindex="-1"></a> <span class="ex">16384</span>      5000             229.76             229.66             1.752139</span>
+<span id="cb15-36"><a href="#cb15-36" aria-hidden="true" tabindex="-1"></a> <span class="ex">32768</span>      5000             369.75             296.48             1.130967</span>
+<span id="cb15-37"><a href="#cb15-37" aria-hidden="true" tabindex="-1"></a> <span class="ex">65536</span>      5000             383.26             355.27             0.677615</span>
+<span id="cb15-38"><a href="#cb15-38" aria-hidden="true" tabindex="-1"></a> <span class="ex">131072</span>     5000             387.73             376.13             0.358701</span>
+<span id="cb15-39"><a href="#cb15-39" aria-hidden="true" tabindex="-1"></a> <span class="ex">262144</span>     5000             390.69             390.66             0.186281</span>
+<span id="cb15-40"><a href="#cb15-40" aria-hidden="true" tabindex="-1"></a> <span class="ex">524288</span>     5000             391.86             391.75             0.093401</span>
+<span id="cb15-41"><a href="#cb15-41" aria-hidden="true" tabindex="-1"></a> <span class="ex">1048576</span>    5000             391.87             391.85             0.046713</span>
+<span id="cb15-42"><a href="#cb15-42" aria-hidden="true" tabindex="-1"></a> <span class="ex">2097152</span>    5000             392.12             392.11             0.023372</span>
+<span id="cb15-43"><a href="#cb15-43" aria-hidden="true" tabindex="-1"></a> <span class="ex">4194304</span>    5000             392.33             392.32             0.011692</span>
+<span id="cb15-44"><a href="#cb15-44" aria-hidden="true" tabindex="-1"></a> <span class="ex">8388608</span>    5000             392.25             392.25             0.005845</span>
+<span id="cb15-45"><a href="#cb15-45" aria-hidden="true" tabindex="-1"></a><span class="ex">---------------------------------------------------------------------------------------</span></span></code></pre></div>
+        <p>The results show that the InfiniBand network is capable of
+        reaching near line rate (approximately 400 Gb/s), which confirms
+        that the physical network layer is functioning correctly.</p>
+        <h3 id="ib-gpu-layer-debugging">4.2. IB + GPU Layer
+        Debugging</h3>
+        <p>Next, we test the communication path from the GPU to the
+        InfiniBand network. This test simulates traffic originating from
+        the GPU memory and being sent directly to the NIC buffer via DMA
+        (Direct Memory Access). This helps verify that the system’s DMA
+        and RDMA (Remote Direct Memory Access) capabilities are working
+        as expected, and that a local GPU can write directly to a remote
+        GPU’s memory.</p>
+        <p>We start the <code>ib_write_bw</code> server on the remote
+        node with the <code>--use_maca=0</code> flag, which specifies
+        that GPU 0 should be used for the test.</p>
+        <div class="sourceCode" id="cb16"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="ex">/opt/maca/samples/mccl_tests/ib_perf/tests/ib_write_bw</span> <span class="at">-d</span> mlx5_0 <span class="at">--report_gbits</span> <span class="at">-F</span> <span class="at">-a</span> <span class="at">--use_maca</span><span class="op">=</span>0</span></code></pre></div>
+        <p>Then, we run the client on the local node, also with the
+        <code>--use_maca=0</code> flag:</p>
+        <div class="sourceCode" id="cb17"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="ex">[root@10-7-96-17</span> perf]# /opt/maca/samples/mccl_tests/ib_perf/tests/ib_write_bw <span class="at">-d</span> mlx5_0 <span class="at">--report_gbits</span> 10.7.96.189 <span class="at">-F</span> <span class="at">-a</span> <span class="at">--use_maca</span><span class="op">=</span>0</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a><span class="ex">Using</span> maca Device with ID: 0, Name: MetaX C500, PCI Bus ID: 0x8, metax Arch: xcore1000</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a><span class="ex">allocated</span> 16777216 bytes of GPU buffer d_A:0x7f3b4c000000</span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a><span class="ex">---------------------------------------------------------------------------------------</span></span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>                    <span class="ex">RDMA_Write</span> BW Test</span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a> <span class="ex">Dual-port</span>       : OFF          Device         : mlx5_0</span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a> <span class="ex">Number</span> of qps   : 1            Transport type : IB</span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a> <span class="ex">Connection</span> type : RC           Using SRQ      : OFF</span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a> <span class="ex">PCIe</span> relax order: ON</span>
+<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a> <span class="ex">ibv_wr*</span> API     : ON</span>
+<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a> <span class="ex">TX</span> depth        : 128</span>
+<span id="cb17-12"><a href="#cb17-12" aria-hidden="true" tabindex="-1"></a> <span class="ex">CQ</span> Moderation   : 100</span>
+<span id="cb17-13"><a href="#cb17-13" aria-hidden="true" tabindex="-1"></a> <span class="ex">Mtu</span>             : 4096<span class="pp">[</span><span class="ss">B</span><span class="pp">]</span></span>
+<span id="cb17-14"><a href="#cb17-14" aria-hidden="true" tabindex="-1"></a> <span class="ex">Link</span> type       : IB</span>
+<span id="cb17-15"><a href="#cb17-15" aria-hidden="true" tabindex="-1"></a> <span class="ex">Max</span> inline data : 0<span class="pp">[</span><span class="ss">B</span><span class="pp">]</span></span>
+<span id="cb17-16"><a href="#cb17-16" aria-hidden="true" tabindex="-1"></a> <span class="ex">rdma_cm</span> QPs     : OFF</span>
+<span id="cb17-17"><a href="#cb17-17" aria-hidden="true" tabindex="-1"></a> <span class="ex">Use</span> MACA memory : ON</span>
+<span id="cb17-18"><a href="#cb17-18" aria-hidden="true" tabindex="-1"></a> <span class="ex">Data</span> ex. method : Ethernet</span>
+<span id="cb17-19"><a href="#cb17-19" aria-hidden="true" tabindex="-1"></a><span class="ex">---------------------------------------------------------------------------------------</span></span>
+<span id="cb17-20"><a href="#cb17-20" aria-hidden="true" tabindex="-1"></a> <span class="bu">local</span> <span class="va">address</span>: <span class="va">LID</span> 0x0e <span class="va">QPN</span> 0x028a <span class="va">PSN</span> 0x1a4ddc <span class="va">RKey</span> 0x1fff7f <span class="va">VAddr</span> 0x007f3b4c800000</span>
+<span id="cb17-21"><a href="#cb17-21" aria-hidden="true" tabindex="-1"></a> <span class="ex">remote</span> address: LID 0x0a QPN 0x028c PSN 0xfbcc68 RKey 0x1fff80 VAddr 0x007f7c94800000</span>
+<span id="cb17-22"><a href="#cb17-22" aria-hidden="true" tabindex="-1"></a><span class="ex">---------------------------------------------------------------------------------------</span></span>
+<span id="cb17-23"><a href="#cb17-23" aria-hidden="true" tabindex="-1"></a> <span class="co">#bytes     #iterations    BW peak[Gb/sec]    BW average[Gb/sec]   MsgRate[Mpps]</span></span>
+<span id="cb17-24"><a href="#cb17-24" aria-hidden="true" tabindex="-1"></a> <span class="ex">2</span>          5000           0.069567            0.068741            4.296314</span>
+<span id="cb17-25"><a href="#cb17-25" aria-hidden="true" tabindex="-1"></a> <span class="ex">4</span>          5000             0.12               0.12               3.765015</span>
+<span id="cb17-26"><a href="#cb17-26" aria-hidden="true" tabindex="-1"></a> <span class="ex">8</span>          5000             0.22               0.22               3.449237</span>
+<span id="cb17-27"><a href="#cb17-27" aria-hidden="true" tabindex="-1"></a> <span class="ex">16</span>         5000             0.44               0.44               3.455658</span>
+<span id="cb17-28"><a href="#cb17-28" aria-hidden="true" tabindex="-1"></a> <span class="ex">32</span>         5000             0.93               0.93               3.635270</span>
+<span id="cb17-29"><a href="#cb17-29" aria-hidden="true" tabindex="-1"></a> <span class="ex">64</span>         5000             1.77               1.77               3.457880</span>
+<span id="cb17-30"><a href="#cb17-30" aria-hidden="true" tabindex="-1"></a> <span class="ex">128</span>        5000             3.54               3.53               3.446820</span>
+<span id="cb17-31"><a href="#cb17-31" aria-hidden="true" tabindex="-1"></a> <span class="ex">256</span>        5000             7.07               7.07               3.451033</span>
+<span id="cb17-32"><a href="#cb17-32" aria-hidden="true" tabindex="-1"></a> <span class="ex">512</span>        5000             14.15              14.08              3.437557</span>
+<span id="cb17-33"><a href="#cb17-33" aria-hidden="true" tabindex="-1"></a> <span class="ex">1024</span>       5000             28.20              27.92              3.408096</span>
+<span id="cb17-34"><a href="#cb17-34" aria-hidden="true" tabindex="-1"></a> <span class="ex">2048</span>       5000             56.69              56.44              3.444702</span>
+<span id="cb17-35"><a href="#cb17-35" aria-hidden="true" tabindex="-1"></a> <span class="ex">4096</span>       5000             114.18             114.00             3.478855</span>
+<span id="cb17-36"><a href="#cb17-36" aria-hidden="true" tabindex="-1"></a> <span class="ex">8192</span>       5000             224.06             223.57             3.411355</span>
+<span id="cb17-37"><a href="#cb17-37" aria-hidden="true" tabindex="-1"></a> <span class="ex">16384</span>      5000             340.46             339.93             2.593465</span>
+<span id="cb17-38"><a href="#cb17-38" aria-hidden="true" tabindex="-1"></a> <span class="ex">32768</span>      5000             371.32             371.25             1.416214</span>
+<span id="cb17-39"><a href="#cb17-39" aria-hidden="true" tabindex="-1"></a> <span class="ex">65536</span>      5000             386.80             386.65             0.737485</span>
+<span id="cb17-40"><a href="#cb17-40" aria-hidden="true" tabindex="-1"></a> <span class="ex">131072</span>     5000             389.74             389.69             0.371638</span>
+<span id="cb17-41"><a href="#cb17-41" aria-hidden="true" tabindex="-1"></a> <span class="ex">262144</span>     5000             391.01             390.98             0.186431</span>
+<span id="cb17-42"><a href="#cb17-42" aria-hidden="true" tabindex="-1"></a> <span class="ex">524288</span>     5000             391.73             391.73             0.093395</span>
+<span id="cb17-43"><a href="#cb17-43" aria-hidden="true" tabindex="-1"></a> <span class="ex">1048576</span>    5000             392.45             392.44             0.046783</span>
+<span id="cb17-44"><a href="#cb17-44" aria-hidden="true" tabindex="-1"></a> <span class="ex">2097152</span>    5000             392.43             392.43             0.023391</span>
+<span id="cb17-45"><a href="#cb17-45" aria-hidden="true" tabindex="-1"></a> <span class="ex">4194304</span>    5000             392.52             392.52             0.011698</span>
+<span id="cb17-46"><a href="#cb17-46" aria-hidden="true" tabindex="-1"></a> <span class="ex">8388608</span>    5000             392.57             392.57             0.005850</span>
+<span id="cb17-47"><a href="#cb17-47" aria-hidden="true" tabindex="-1"></a><span class="ex">---------------------------------------------------------------------------------------</span></span>
+<span id="cb17-48"><a href="#cb17-48" aria-hidden="true" tabindex="-1"></a><span class="ex">deallocating</span> GPU buffer 0x7f3b4c000000</span></code></pre></div>
+        <p>The results again show near line-rate performance, indicating
+        that there are no major issues with the operating system
+        configuration or the GPU-to-IB data path.</p>
+        <p>To be thorough, we also test a cross-GPU/NIC configuration to
+        see if there are any performance penalties when a GPU on one
+        NUMA node communicates with a NIC on another NUMA node.</p>
+        <div class="sourceCode" id="cb18"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="co"># On remote node</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a><span class="co"># /opt/maca/samples/mccl_tests/ib_perf/tests/ib_write_bw -d mlx5_0 --report_gbits -F -a --use_maca=0</span></span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a><span class="co"># On local node</span></span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a><span class="ex">[root@10-7-96-17</span> perf]# /opt/maca/samples/mccl_tests/ib_perf/tests/ib_write_bw <span class="at">-d</span> mlx5_1 <span class="at">--report_gbits</span> 10.7.96.189 <span class="at">-F</span> <span class="at">-a</span> <span class="at">--use_maca</span><span class="op">=</span>4</span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a><span class="ex">Using</span> maca Device with ID: 4, Name: MetaX C500, PCI Bus ID: 0x32, metax Arch: xcore1000</span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a><span class="ex">allocated</span> 16777216 bytes of GPU buffer d_A:0x7f45f0000000</span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a><span class="ex">---------------------------------------------------------------------------------------</span></span>
+<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a>                    <span class="ex">RDMA_Write</span> BW Test</span>
+<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a> <span class="ex">Dual-port</span>       : OFF          Device         : mlx5_1</span>
+<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a> <span class="ex">Number</span> of qps   : 1            Transport type : IB</span>
+<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a> <span class="ex">Connection</span> type : RC           Using SRQ      : OFF</span>
+<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a> <span class="ex">PCIe</span> relax order: ON</span>
+<span id="cb18-14"><a href="#cb18-14" aria-hidden="true" tabindex="-1"></a> <span class="ex">ibv_wr*</span> API     : ON</span>
+<span id="cb18-15"><a href="#cb18-15" aria-hidden="true" tabindex="-1"></a> <span class="ex">TX</span> depth        : 128</span>
+<span id="cb18-16"><a href="#cb18-16" aria-hidden="true" tabindex="-1"></a> <span class="ex">CQ</span> Moderation   : 100</span>
+<span id="cb18-17"><a href="#cb18-17" aria-hidden="true" tabindex="-1"></a> <span class="ex">Mtu</span>             : 4096<span class="pp">[</span><span class="ss">B</span><span class="pp">]</span></span>
+<span id="cb18-18"><a href="#cb18-18" aria-hidden="true" tabindex="-1"></a> <span class="ex">Link</span> type       : IB</span>
+<span id="cb18-19"><a href="#cb18-19" aria-hidden="true" tabindex="-1"></a> <span class="ex">Max</span> inline data : 0<span class="pp">[</span><span class="ss">B</span><span class="pp">]</span></span>
+<span id="cb18-20"><a href="#cb18-20" aria-hidden="true" tabindex="-1"></a> <span class="ex">rdma_cm</span> QPs     : OFF</span>
+<span id="cb18-21"><a href="#cb18-21" aria-hidden="true" tabindex="-1"></a> <span class="ex">Use</span> MACA memory : ON</span>
+<span id="cb18-22"><a href="#cb18-22" aria-hidden="true" tabindex="-1"></a> <span class="ex">Data</span> ex. method : Ethernet</span>
+<span id="cb18-23"><a href="#cb18-23" aria-hidden="true" tabindex="-1"></a><span class="ex">---------------------------------------------------------------------------------------</span></span>
+<span id="cb18-24"><a href="#cb18-24" aria-hidden="true" tabindex="-1"></a> <span class="bu">local</span> <span class="va">address</span>: <span class="va">LID</span> 0x09 <span class="va">QPN</span> 0x0289 <span class="va">PSN</span> 0x1421aa <span class="va">RKey</span> 0x1fff7f <span class="va">VAddr</span> 0x007f45f0800000</span>
+<span id="cb18-25"><a href="#cb18-25" aria-hidden="true" tabindex="-1"></a> <span class="ex">remote</span> address: LID 0x0a QPN 0x028d PSN 0xc330ae RKey 0x1fff81 VAddr 0x007fa4a4800000</span>
+<span id="cb18-26"><a href="#cb18-26" aria-hidden="true" tabindex="-1"></a><span class="ex">---------------------------------------------------------------------------------------</span></span>
+<span id="cb18-27"><a href="#cb18-27" aria-hidden="true" tabindex="-1"></a> <span class="co">#bytes     #iterations    BW peak[Gb/sec]    BW average[Gb/sec]   MsgRate[Mpps]</span></span>
+<span id="cb18-28"><a href="#cb18-28" aria-hidden="true" tabindex="-1"></a> <span class="ex">2</span>          5000           0.062380            0.061382            3.836366</span>
+<span id="cb18-29"><a href="#cb18-29" aria-hidden="true" tabindex="-1"></a> <span class="ex">4</span>          5000             0.10               0.10               3.216321</span>
+<span id="cb18-30"><a href="#cb18-30" aria-hidden="true" tabindex="-1"></a> <span class="ex">8</span>          5000             0.21               0.21               3.222860</span>
+<span id="cb18-31"><a href="#cb18-31" aria-hidden="true" tabindex="-1"></a> <span class="ex">16</span>         5000             0.41               0.41               3.215393</span>
+<span id="cb18-32"><a href="#cb18-32" aria-hidden="true" tabindex="-1"></a> <span class="ex">32</span>         5000             0.83               0.82               3.219248</span>
+<span id="cb18-33"><a href="#cb18-33" aria-hidden="true" tabindex="-1"></a> <span class="ex">64</span>         5000             1.66               1.65               3.228149</span>
+<span id="cb18-34"><a href="#cb18-34" aria-hidden="true" tabindex="-1"></a> <span class="ex">128</span>        5000             3.30               3.29               3.211092</span>
+<span id="cb18-35"><a href="#cb18-35" aria-hidden="true" tabindex="-1"></a> <span class="ex">256</span>        5000             6.61               6.58               3.212704</span>
+<span id="cb18-36"><a href="#cb18-36" aria-hidden="true" tabindex="-1"></a> <span class="ex">512</span>        5000             13.19              13.15              3.210719</span>
+<span id="cb18-37"><a href="#cb18-37" aria-hidden="true" tabindex="-1"></a> <span class="ex">1024</span>       5000             26.17              25.98              3.171753</span>
+<span id="cb18-38"><a href="#cb18-38" aria-hidden="true" tabindex="-1"></a> <span class="ex">2048</span>       5000             52.85              52.74              3.218862</span>
+<span id="cb18-39"><a href="#cb18-39" aria-hidden="true" tabindex="-1"></a> <span class="ex">4096</span>       5000             106.57             106.24             3.242138</span>
+<span id="cb18-40"><a href="#cb18-40" aria-hidden="true" tabindex="-1"></a> <span class="ex">8192</span>       5000             212.44             212.15             3.237175</span>
+<span id="cb18-41"><a href="#cb18-41" aria-hidden="true" tabindex="-1"></a> <span class="ex">16384</span>      5000             335.66             334.94             2.555425</span>
+<span id="cb18-42"><a href="#cb18-42" aria-hidden="true" tabindex="-1"></a> <span class="ex">32768</span>      5000             370.79             370.75             1.414287</span>
+<span id="cb18-43"><a href="#cb18-43" aria-hidden="true" tabindex="-1"></a> <span class="ex">65536</span>      5000             385.52             385.46             0.735213</span>
+<span id="cb18-44"><a href="#cb18-44" aria-hidden="true" tabindex="-1"></a> <span class="ex">131072</span>     5000             389.60             389.59             0.371543</span>
+<span id="cb18-45"><a href="#cb18-45" aria-hidden="true" tabindex="-1"></a> <span class="ex">262144</span>     5000             391.05             391.01             0.186449</span>
+<span id="cb18-46"><a href="#cb18-46" aria-hidden="true" tabindex="-1"></a> <span class="ex">524288</span>     5000             391.82             391.81             0.093415</span>
+<span id="cb18-47"><a href="#cb18-47" aria-hidden="true" tabindex="-1"></a> <span class="ex">1048576</span>    5000             392.39             392.38             0.046776</span>
+<span id="cb18-48"><a href="#cb18-48" aria-hidden="true" tabindex="-1"></a> <span class="ex">2097152</span>    5000             392.48             392.48             0.023394</span>
+<span id="cb18-49"><a href="#cb18-49" aria-hidden="true" tabindex="-1"></a> <span class="ex">4194304</span>    5000             392.49             392.49             0.011697</span>
+<span id="cb18-50"><a href="#cb18-50" aria-hidden="true" tabindex="-1"></a> <span class="ex">8388608</span>    5000             392.53             392.51             0.005849</span>
+<span id="cb18-51"><a href="#cb18-51" aria-hidden="true" tabindex="-1"></a><span class="ex">---------------------------------------------------------------------------------------</span></span>
+<span id="cb18-52"><a href="#cb18-52" aria-hidden="true" tabindex="-1"></a><span class="ex">deallocating</span> GPU buffer 0x7f45f0000000</span></code></pre></div>
+        <p>The cross-GPU/NIC test also achieves near line-rate
+        performance, which strongly suggests that the issue lies within
+        the MCCL/NCCL layer itself.</p>
+        <h3 id="mcclnccl-layer-debugging">4.3. MCCL/NCCL Layer
+        Debugging</h3>
+        <p>To further isolate the problem, we modify the
+        <code>cluster.wzh.sh</code> script to run the benchmark on a
+        single GPU on each node. This helps determine if the performance
+        issue is related to multi-GPU or multi-NIC interactions within
+        MCCL/NCCL.</p>
+        <div class="sourceCode" id="cb19"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="ex">[root@10-7-96-17</span> perf]# cat cluster.wzh.sh</span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a><span class="co">#!/bin/bash</span></span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a><span class="va">MACA_PATH</span><span class="op">=</span>/opt/maca</span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a><span class="va">HOST_IP</span><span class="op">=</span>10.2.122.225:8,10.2.122.226:8</span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a><span class="va">IP_MASK</span><span class="op">=</span>10.2.122.0/24</span>
+<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a><span class="va">GPU_NUM</span><span class="op">=</span>16</span>
+<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="kw">[[</span> <span class="ot">-z</span> <span class="st">&quot;</span><span class="va">$1</span><span class="st">&quot;</span> <span class="kw">||</span> <span class="ot">-z</span> <span class="st">&quot;</span><span class="va">$2</span><span class="st">&quot;</span> <span class="kw">||</span> <span class="ot">-z</span> <span class="st">&quot;</span><span class="va">$3</span><span class="st">&quot;</span> <span class="kw">||</span> <span class="ot">-z</span> <span class="st">&quot;</span><span class="va">$4</span><span class="st">&quot;</span> <span class="kw">]];</span> <span class="cf">then</span></span>
+<span id="cb19-11"><a href="#cb19-11" aria-hidden="true" tabindex="-1"></a>  <span class="bu">echo</span> <span class="st">&quot;Use the default ip addr. Run with parameters for custom ip addr, for example: bash cluster.sh ip_1 ip_2 ip_mask gpu_num&quot;</span></span>
+<span id="cb19-12"><a href="#cb19-12" aria-hidden="true" tabindex="-1"></a><span class="cf">else</span></span>
+<span id="cb19-13"><a href="#cb19-13" aria-hidden="true" tabindex="-1"></a>  <span class="va">HOST_IP</span><span class="op">=</span><span class="va">$1</span>,<span class="va">$2</span></span>
+<span id="cb19-14"><a href="#cb19-14" aria-hidden="true" tabindex="-1"></a>  <span class="va">IP_MASK</span><span class="op">=</span><span class="va">$3</span></span>
+<span id="cb19-15"><a href="#cb19-15" aria-hidden="true" tabindex="-1"></a>  <span class="va">GPU_NUM</span><span class="op">=</span><span class="va">$4</span></span>
+<span id="cb19-16"><a href="#cb19-16" aria-hidden="true" tabindex="-1"></a><span class="cf">fi</span></span>
+<span id="cb19-17"><a href="#cb19-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-18"><a href="#cb19-18" aria-hidden="true" tabindex="-1"></a><span class="co">#IB_PORT=mlx5_0,mlx5_1</span></span>
+<span id="cb19-19"><a href="#cb19-19" aria-hidden="true" tabindex="-1"></a><span class="va">IB_PORT</span><span class="op">=</span>mlx5_0</span>
+<span id="cb19-20"><a href="#cb19-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-21"><a href="#cb19-21" aria-hidden="true" tabindex="-1"></a><span class="va">TEST_DIR</span><span class="op">=</span>/opt/maca/samples/mccl_tests/perf/mccl_perf</span>
+<span id="cb19-22"><a href="#cb19-22" aria-hidden="true" tabindex="-1"></a><span class="co">#BENCH_NAMES=&quot;all_reduce_perf all_gather_perf reduce_scatter_perf sendrecv_perf alltoall_perf&quot;</span></span>
+<span id="cb19-23"><a href="#cb19-23" aria-hidden="true" tabindex="-1"></a><span class="va">BENCH_NAMES</span><span class="op">=</span><span class="st">&quot;all_reduce_perf&quot;</span></span>
+<span id="cb19-24"><a href="#cb19-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-25"><a href="#cb19-25" aria-hidden="true" tabindex="-1"></a><span class="va">PERF_ENV</span><span class="op">=</span><span class="st">&quot;-x FORCE_ACTIVE_WAIT=0 -x MCCL_IB_POLL_NUM=10000&quot;</span></span>
+<span id="cb19-26"><a href="#cb19-26" aria-hidden="true" tabindex="-1"></a><span class="va">LIB_PATH_ENV</span><span class="op">=</span><span class="st">&quot;-x LD_LIBRARY_PATH=</span><span class="va">${MACA_PATH}</span><span class="st">/lib:/</span><span class="va">${MACA_PATH}</span><span class="st">/ompi/lib&quot;</span></span>
+<span id="cb19-27"><a href="#cb19-27" aria-hidden="true" tabindex="-1"></a><span class="va">ENV_VAR</span><span class="op">=</span><span class="st">&quot;-x MCCL_IB_HCA=</span><span class="va">${IB_PORT}</span><span class="st"> -x MACA_VISIBLE_DEVICES=0 -x MCCL_CROSS_NIC=1 </span><span class="va">${PERF_ENV}</span><span class="st"> </span><span class="va">${LIB_PATH_ENV}</span><span class="st">&quot;</span></span>
+<span id="cb19-28"><a href="#cb19-28" aria-hidden="true" tabindex="-1"></a><span class="co">#ENV_VAR=&quot;-x MCCL_IB_HCA=${IB_PORT} -x MACA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 -x MCCL_CROSS_NIC=1 ${PERF_ENV} ${LIB_PATH_ENV}&quot;</span></span>
+<span id="cb19-29"><a href="#cb19-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-30"><a href="#cb19-30" aria-hidden="true" tabindex="-1"></a><span class="va">MPI_PROCESS_NUM</span><span class="op">=</span><span class="va">${GPU_NUM}</span></span>
+<span id="cb19-31"><a href="#cb19-31" aria-hidden="true" tabindex="-1"></a><span class="va">MPI_RUN_OPT</span><span class="op">=</span><span class="st">&quot;-mca btl_tcp_if_include </span><span class="va">${IP_MASK}</span><span class="st"> -mca oob_tcp_if_include </span><span class="va">${IP_MASK}</span><span class="st"> -mca pml ^ucx -mca osc ^ucx -mca btl ^openib&quot;</span></span>
+<span id="cb19-32"><a href="#cb19-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-33"><a href="#cb19-33" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> BENCH <span class="kw">in</span> <span class="va">${BENCH_NAMES}</span><span class="kw">;</span> <span class="cf">do</span></span>
+<span id="cb19-34"><a href="#cb19-34" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="at">-n</span> <span class="st">&quot;The test is </span><span class="va">${BENCH}</span><span class="st">, the maca version is &quot;</span> <span class="kw">&amp;&amp;</span> <span class="fu">realpath</span> <span class="va">${MACA_PATH}</span></span>
+<span id="cb19-35"><a href="#cb19-35" aria-hidden="true" tabindex="-1"></a><span class="va">${MACA_PATH}</span><span class="ex">/ompi/bin/mpirun</span> <span class="at">--allow-run-as-root</span> <span class="at">--bind-to</span> core <span class="at">--map-by</span> socket  <span class="at">-np</span> <span class="va">${MPI_PROCESS_NUM}</span> <span class="va">${MPI_RUN_OPT}</span> <span class="at">-host</span> <span class="va">${HOST_IP}</span> <span class="va">${ENV_VAR}</span> <span class="va">${TEST_DIR}</span>/<span class="va">${BENCH}</span> <span class="at">-b</span> 1K <span class="at">-e</span> 1G <span class="at">-d</span> float <span class="at">-f</span> 2 <span class="at">-g</span> 1 <span class="at">-n</span> 10</span>
+<span id="cb19-36"><a href="#cb19-36" aria-hidden="true" tabindex="-1"></a><span class="cf">done</span></span></code></pre></div>
+        <p>The results of the single-GPU-per-node test show a slight
+        improvement in performance, but the bandwidth is still far below
+        the expected level.</p>
+        <div class="sourceCode" id="cb20"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="ex">[root@10-7-96-17</span> perf]#</span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a><span class="va">ip_01</span><span class="op">=</span>10.7.96.17:1</span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a><span class="va">ip_02</span><span class="op">=</span>10.7.96.189:1</span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a><span class="va">ipmask</span><span class="op">=</span>10.0.0.0/8</span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> /opt/maca/samples/mccl_tests/perf</span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a><span class="fu">bash</span> cluster.wzh.sh <span class="va">$ip_01</span> <span class="va">$ip_02</span> <span class="va">$ipmask</span> 2</span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a><span class="ex">The</span> test is all_reduce_perf, the maca version is /opt/maca-2.32.0</span>
+<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a><span class="ex">main_process</span> = 910795</span>
+<span id="cb20-9"><a href="#cb20-9" aria-hidden="true" tabindex="-1"></a><span class="ex">===============================</span></span>
+<span id="cb20-10"><a href="#cb20-10" aria-hidden="true" tabindex="-1"></a><span class="co"># nThread 1 nGpus 1 minBytes 1024 maxBytes 1073741824 step: 2(factor) warmup iters: 5 iters: 10 agg iters: 1 validation: 1 graph: 0</span></span>
+<span id="cb20-11"><a href="#cb20-11" aria-hidden="true" tabindex="-1"></a><span class="co">#</span></span>
+<span id="cb20-12"><a href="#cb20-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Using devices</span></span>
+<span id="cb20-13"><a href="#cb20-13" aria-hidden="true" tabindex="-1"></a><span class="co">#   Rank  0 Pid 910795 on 10-7-96-17 device  0 [0x08] MetaX C500</span></span>
+<span id="cb20-14"><a href="#cb20-14" aria-hidden="true" tabindex="-1"></a><span class="co">#   Rank  1 Pid 1060984 on 10-7-96-189 device  0 [0x08] MetaX C500</span></span>
+<span id="cb20-15"><a href="#cb20-15" aria-hidden="true" tabindex="-1"></a><span class="co">#</span></span>
+<span id="cb20-16"><a href="#cb20-16" aria-hidden="true" tabindex="-1"></a><span class="co">#                                                           ┌----- out-of-place ------┐       ┌------ in-place -------┐</span></span>
+<span id="cb20-17"><a href="#cb20-17" aria-hidden="true" tabindex="-1"></a><span class="co">#        size         count      type   redop    root      time    algbw   busbw   #wrong    time   algbw   busbw   #wrong</span></span>
+<span id="cb20-18"><a href="#cb20-18" aria-hidden="true" tabindex="-1"></a><span class="co">#         (B)    (elements)                                (us)   (GB/s)  (GB/s)              (us)  (GB/s)  (GB/s)</span></span>
+<span id="cb20-19"><a href="#cb20-19" aria-hidden="true" tabindex="-1"></a><span class="co">#        1024           256     float     sum     -1      30.12    0.03    0.03      0      27.98    0.04    0.04      0</span></span>
+<span id="cb20-20"><a href="#cb20-20" aria-hidden="true" tabindex="-1"></a><span class="co">#        2048           512     float     sum     -1      30.41    0.07    0.07      0      31.03    0.07    0.07      0</span></span>
+<span id="cb20-21"><a href="#cb20-21" aria-hidden="true" tabindex="-1"></a><span class="co">#        4096          1024     float     sum     -1      32.53    0.13    0.13      0      31.44    0.13    0.13      0</span></span>
+<span id="cb20-22"><a href="#cb20-22" aria-hidden="true" tabindex="-1"></a><span class="co">#        8192          2048     float     sum     -1      33.92    0.24    0.24      0      31.02    0.26    0.26      0</span></span>
+<span id="cb20-23"><a href="#cb20-23" aria-hidden="true" tabindex="-1"></a><span class="co">#       16384          4096     float     sum     -1      36.98    0.44    0.44      0      37.11    0.44    0.44      0</span></span>
+<span id="cb20-24"><a href="#cb20-24" aria-hidden="true" tabindex="-1"></a><span class="co">#       32768          8192     float     sum     -1      42.99    0.76    0.76      0      43.04    0.76    0.76      0</span></span>
+<span id="cb20-25"><a href="#cb20-25" aria-hidden="true" tabindex="-1"></a><span class="co">#       65536         16384     float     sum     -1      54.78    1.20    1.20      0      52.21    1.26    1.26      0</span></span>
+<span id="cb20-26"><a href="#cb20-26" aria-hidden="true" tabindex="-1"></a><span class="co">#      131072         32768     float     sum     -1      61.56    2.13    2.13      0      58.88    2.23    2.23      0</span></span>
+<span id="cb20-27"><a href="#cb20-27" aria-hidden="true" tabindex="-1"></a><span class="co">#      262144         65536     float     sum     -1      69.40    3.78    3.78      0      70.75    3.71    3.71      0</span></span>
+<span id="cb20-28"><a href="#cb20-28" aria-hidden="true" tabindex="-1"></a><span class="co">#      524288        131072     float     sum     -1      82.00    6.39    6.39      0      83.95    6.25    6.25      0</span></span>
+<span id="cb20-29"><a href="#cb20-29" aria-hidden="true" tabindex="-1"></a><span class="co">#     1048576        262144     float     sum     -1     125.46    8.36    8.36      0     124.66    8.41    8.41      0</span></span>
+<span id="cb20-30"><a href="#cb20-30" aria-hidden="true" tabindex="-1"></a><span class="co">#     2097152        524288     float     sum     -1     197.08   10.64   10.64      0     203.31   10.32   10.32      0</span></span>
+<span id="cb20-31"><a href="#cb20-31" aria-hidden="true" tabindex="-1"></a><span class="co">#     4194304       1048576     float     sum     -1     396.82   10.57   10.57      0     391.09   10.72   10.72      0</span></span>
+<span id="cb20-32"><a href="#cb20-32" aria-hidden="true" tabindex="-1"></a><span class="co">#     8388608       2097152     float     sum     -1     701.02   11.97   11.97      0     714.30   11.74   11.74      0</span></span>
+<span id="cb20-33"><a href="#cb20-33" aria-hidden="true" tabindex="-1"></a><span class="co">#    16777216       4194304     float     sum     -1    1333.76   12.58   12.58      0    1320.30   12.71   12.71      0</span></span>
+<span id="cb20-34"><a href="#cb20-34" aria-hidden="true" tabindex="-1"></a><span class="co">#    33554432       8388608     float     sum     -1    2738.63   12.25   12.25      0    2447.86   13.71   13.71      0</span></span>
+<span id="cb20-35"><a href="#cb20-35" aria-hidden="true" tabindex="-1"></a><span class="co">#    67108864      16777216     float     sum     -1    4849.54   13.84   13.84      0    5115.59   13.12   13.12      0</span></span>
+<span id="cb20-36"><a href="#cb20-36" aria-hidden="true" tabindex="-1"></a><span class="co">#   134217728      33554432     float     sum     -1   10043.14   13.36   13.36      0    9946.74   13.49   13.49      0</span></span>
+<span id="cb20-37"><a href="#cb20-37" aria-hidden="true" tabindex="-1"></a><span class="co">#   268435456      67108864     float     sum     -1   20221.11   13.28   13.28      0   19919.85   13.48   13.48      0</span></span>
+<span id="cb20-38"><a href="#cb20-38" aria-hidden="true" tabindex="-1"></a><span class="co">#   536870912     134217728     float     sum     -1   45089.10   11.91   11.91      0   46802.72   11.47   11.47      0</span></span>
+<span id="cb20-39"><a href="#cb20-39" aria-hidden="true" tabindex="-1"></a><span class="co">#  1073741824     268435456     float     sum     -1   85887.30   12.50   12.50      0   86762.12   12.38   12.38      0</span></span>
+<span id="cb20-40"><a href="#cb20-40" aria-hidden="true" tabindex="-1"></a><span class="co"># Out of bounds values : 0 OK</span></span>
+<span id="cb20-41"><a href="#cb20-41" aria-hidden="true" tabindex="-1"></a><span class="co"># Avg bus bandwidth    : 6.97858</span></span>
+<span id="cb20-42"><a href="#cb20-42" aria-hidden="true" tabindex="-1"></a><span class="co">#</span></span></code></pre></div>
+        <h2 id="root-cause-analysis-and-resolution">5. Root Cause
+        Analysis and Resolution</h2>
+        <p>At this point, the debugging process had hit a standstill.
+        The low-level network tests passed with flying colors, yet the
+        MCCL/NCCL benchmarks showed abysmal performance. The MCCL/NCCL
+        logs confirmed that traffic was indeed flowing over the
+        InfiniBand network, but something was clearly amiss.</p>
+        <h3
+        id="the-breakthrough-a-missing-kernel-file-and-disabled-gpudirect-rdma">5.1.
+        The Breakthrough: A Missing Kernel File and Disabled GPUDirect
+        RDMA</h3>
+        <p>After extensive debugging and consultation with MetaX
+        support, a critical breakthrough was made. The investigation
+        revealed that a specific kernel file,
+        <code>/sys/kernel/mm/memory_peers/mxcd/version</code>, was
+        absent from the system. This file is essential for the proper
+        functioning of GPUDirect RDMA (GDR), a technology that enables
+        direct data exchange between GPUs and third-party peer devices,
+        such as network interface cards (NICs), bypassing the CPU and
+        system memory.</p>
+        <p>The <code>/sys/kernel/mm/memory_peers/mxcd/version</code>
+        file is created by the Mellanox InfiniBand kernel driver when it
+        is invoked by the <code>metax.ko</code> kernel module. Its
+        absence was a clear indication of a breakdown in the interaction
+        between the MetaX and Mellanox drivers. Without this file, the
+        MetaX Collective Communication Library (MCCL) is unable to
+        detect the availability of GDR.</p>
+        <p>When GDR is not detected, MCCL falls back to a less efficient
+        communication path where data is transferred from the GPU to the
+        CPU’s main memory, and then from the CPU’s memory to the
+        InfiniBand NIC. This involvement of the CPU in the data path
+        introduces significant latency and becomes a major performance
+        bottleneck, which explained the drastic performance drop
+        observed in the multi-node benchmarks. The traffic, instead of
+        flowing directly from GPU to NIC, was being inefficiently routed
+        through the CPU, negating the benefits of the high-speed
+        InfiniBand network.</p>
+        <p>To investigate further, we rebuilt the Mellanox OFED driver
+        from the source RPM:</p>
+        <div class="sourceCode" id="cb21"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="ex">rpmbuild</span> <span class="at">--recompile</span> SRPMS/mlnx-ofa_kernel-24.10-OFED.24.10.3.2.5.1.src.rpm <span class="op">&amp;&gt;</span> build.log</span></code></pre></div>
+        <p>We then searched the source code for references to
+        “memory_peer” to understand how the missing file was
+        created:</p>
+        <div class="sourceCode" id="cb22"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="fu">find</span> . <span class="at">-type</span> f <span class="at">-exec</span> grep <span class="at">-H</span> memory_peer {} <span class="dt">\;</span></span></code></pre></div>
+        <p>This led us to the relevant section of the source code in
+        <code>./BUILD/mlnx-ofa_kernel-24.10/obj/default/drivers/infiniband/core/peer_mem.c</code>:</p>
+        <div class="sourceCode" id="cb23"><pre
+        class="sourceCode cpp"><code class="sourceCode cpp"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="co">//............................</span></span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a><span class="dt">void</span> <span class="op">*</span></span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>ib_register_peer_memory_client<span class="op">(</span><span class="at">const</span> <span class="kw">struct</span> peer_memory_client <span class="op">*</span>peer_client<span class="op">,</span></span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a>                               invalidate_peer_memory <span class="op">*</span>invalidate_callback<span class="op">)</span></span>
+<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a>        <span class="kw">struct</span> ib_peer_memory_client <span class="op">*</span>ib_peer_client<span class="op">;</span></span>
+<span id="cb23-8"><a href="#cb23-8" aria-hidden="true" tabindex="-1"></a><span class="pp">#ifdef HAVE_MM_KOBJ_EXPORTED</span></span>
+<span id="cb23-9"><a href="#cb23-9" aria-hidden="true" tabindex="-1"></a>        <span class="dt">int</span> ret<span class="op">;</span></span>
+<span id="cb23-10"><a href="#cb23-10" aria-hidden="true" tabindex="-1"></a><span class="pp">#endif</span></span>
+<span id="cb23-11"><a href="#cb23-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-12"><a href="#cb23-12" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="op">(</span>ib_memory_peer_check_mandatory<span class="op">(</span>peer_client<span class="op">))</span></span>
+<span id="cb23-13"><a href="#cb23-13" aria-hidden="true" tabindex="-1"></a>                <span class="cf">return</span> NULL<span class="op">;</span></span>
+<span id="cb23-14"><a href="#cb23-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-15"><a href="#cb23-15" aria-hidden="true" tabindex="-1"></a>        ib_peer_client <span class="op">=</span> kzalloc<span class="op">(</span><span class="kw">sizeof</span><span class="op">(*</span>ib_peer_client<span class="op">),</span> GFP_KERNEL<span class="op">);</span></span>
+<span id="cb23-16"><a href="#cb23-16" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="op">(!</span>ib_peer_client<span class="op">)</span></span>
+<span id="cb23-17"><a href="#cb23-17" aria-hidden="true" tabindex="-1"></a>                <span class="cf">return</span> NULL<span class="op">;</span></span>
+<span id="cb23-18"><a href="#cb23-18" aria-hidden="true" tabindex="-1"></a>        kobject_init<span class="op">(&amp;</span>ib_peer_client<span class="op">-&gt;</span>kobj<span class="op">,</span> <span class="op">&amp;</span><span class="dt">peer_mem_type</span><span class="op">);</span></span>
+<span id="cb23-19"><a href="#cb23-19" aria-hidden="true" tabindex="-1"></a>        refcount_set<span class="op">(&amp;</span>ib_peer_client<span class="op">-&gt;</span>usecnt<span class="op">,</span> <span class="dv">1</span><span class="op">);</span></span>
+<span id="cb23-20"><a href="#cb23-20" aria-hidden="true" tabindex="-1"></a>        init_completion<span class="op">(&amp;</span>ib_peer_client<span class="op">-&gt;</span>usecnt_zero<span class="op">);</span></span>
+<span id="cb23-21"><a href="#cb23-21" aria-hidden="true" tabindex="-1"></a>        ib_peer_client<span class="op">-&gt;</span>peer_mem <span class="op">=</span> peer_client<span class="op">;</span></span>
+<span id="cb23-22"><a href="#cb23-22" aria-hidden="true" tabindex="-1"></a>        xa_init_flags<span class="op">(&amp;</span>ib_peer_client<span class="op">-&gt;</span>umem_xa<span class="op">,</span> XA_FLAGS_ALLOC<span class="op">);</span></span>
+<span id="cb23-23"><a href="#cb23-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-24"><a href="#cb23-24" aria-hidden="true" tabindex="-1"></a>        <span class="co">/*</span></span>
+<span id="cb23-25"><a href="#cb23-25" aria-hidden="true" tabindex="-1"></a><span class="co">         * If the peer wants the invalidation_callback then all memory users</span></span>
+<span id="cb23-26"><a href="#cb23-26" aria-hidden="true" tabindex="-1"></a><span class="co">         * linked to that peer must support invalidation.</span></span>
+<span id="cb23-27"><a href="#cb23-27" aria-hidden="true" tabindex="-1"></a><span class="co">         */</span></span>
+<span id="cb23-28"><a href="#cb23-28" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="op">(</span>invalidate_callback<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb23-29"><a href="#cb23-29" aria-hidden="true" tabindex="-1"></a>                <span class="op">*</span>invalidate_callback <span class="op">=</span> ib_invalidate_peer_memory<span class="op">;</span></span>
+<span id="cb23-30"><a href="#cb23-30" aria-hidden="true" tabindex="-1"></a>                ib_peer_client<span class="op">-&gt;</span>invalidation_required <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span>
+<span id="cb23-31"><a href="#cb23-31" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb23-32"><a href="#cb23-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-33"><a href="#cb23-33" aria-hidden="true" tabindex="-1"></a>        mutex_lock<span class="op">(&amp;</span>peer_memory_mutex<span class="op">);</span></span>
+<span id="cb23-34"><a href="#cb23-34" aria-hidden="true" tabindex="-1"></a><span class="pp">#ifdef HAVE_MM_KOBJ_EXPORTED</span></span>
+<span id="cb23-35"><a href="#cb23-35" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="op">(!</span>peers_kobj<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb23-36"><a href="#cb23-36" aria-hidden="true" tabindex="-1"></a>                <span class="co">/* Created under /sys/kernel/mm */</span></span>
+<span id="cb23-37"><a href="#cb23-37" aria-hidden="true" tabindex="-1"></a>                peers_kobj <span class="op">=</span> kobject_create_and_add<span class="op">(</span><span class="st">&quot;memory_peers&quot;</span><span class="op">,</span> mm_kobj<span class="op">);</span></span>
+<span id="cb23-38"><a href="#cb23-38" aria-hidden="true" tabindex="-1"></a>                <span class="cf">if</span> <span class="op">(!</span>peers_kobj<span class="op">)</span></span>
+<span id="cb23-39"><a href="#cb23-39" aria-hidden="true" tabindex="-1"></a>                        <span class="cf">goto</span> err_unlock<span class="op">;</span></span>
+<span id="cb23-40"><a href="#cb23-40" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb23-41"><a href="#cb23-41" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-42"><a href="#cb23-42" aria-hidden="true" tabindex="-1"></a>        ret <span class="op">=</span> kobject_add<span class="op">(&amp;</span>ib_peer_client<span class="op">-&gt;</span>kobj<span class="op">,</span> peers_kobj<span class="op">,</span> peer_client<span class="op">-&gt;</span>name<span class="op">);</span></span>
+<span id="cb23-43"><a href="#cb23-43" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="op">(</span>ret<span class="op">)</span></span>
+<span id="cb23-44"><a href="#cb23-44" aria-hidden="true" tabindex="-1"></a>                <span class="cf">goto</span> err_parent<span class="op">;</span></span>
+<span id="cb23-45"><a href="#cb23-45" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-46"><a href="#cb23-46" aria-hidden="true" tabindex="-1"></a>        ret <span class="op">=</span> sysfs_create_group<span class="op">(&amp;</span>ib_peer_client<span class="op">-&gt;</span>kobj<span class="op">,</span></span>
+<span id="cb23-47"><a href="#cb23-47" aria-hidden="true" tabindex="-1"></a>                                 <span class="op">&amp;</span>peer_mem_attr_group<span class="op">);</span></span>
+<span id="cb23-48"><a href="#cb23-48" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="op">(</span>ret<span class="op">)</span></span>
+<span id="cb23-49"><a href="#cb23-49" aria-hidden="true" tabindex="-1"></a>                <span class="cf">goto</span> err_parent<span class="op">;</span></span>
+<span id="cb23-50"><a href="#cb23-50" aria-hidden="true" tabindex="-1"></a><span class="pp">#endif</span></span>
+<span id="cb23-51"><a href="#cb23-51" aria-hidden="true" tabindex="-1"></a>        list_add_tail<span class="op">(&amp;</span>ib_peer_client<span class="op">-&gt;</span>core_peer_list<span class="op">,</span> <span class="op">&amp;</span>peer_memory_list<span class="op">);</span></span>
+<span id="cb23-52"><a href="#cb23-52" aria-hidden="true" tabindex="-1"></a>        mutex_unlock<span class="op">(&amp;</span>peer_memory_mutex<span class="op">);</span></span>
+<span id="cb23-53"><a href="#cb23-53" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> ib_peer_client<span class="op">;</span></span>
+<span id="cb23-54"><a href="#cb23-54" aria-hidden="true" tabindex="-1"></a><span class="pp">#ifdef HAVE_MM_KOBJ_EXPORTED</span></span>
+<span id="cb23-55"><a href="#cb23-55" aria-hidden="true" tabindex="-1"></a>err_parent<span class="op">:</span></span>
+<span id="cb23-56"><a href="#cb23-56" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="op">(</span>list_empty<span class="op">(&amp;</span>peer_memory_list<span class="op">))</span> <span class="op">{</span></span>
+<span id="cb23-57"><a href="#cb23-57" aria-hidden="true" tabindex="-1"></a>                kobject_put<span class="op">(</span>peers_kobj<span class="op">);</span></span>
+<span id="cb23-58"><a href="#cb23-58" aria-hidden="true" tabindex="-1"></a>                peers_kobj <span class="op">=</span> NULL<span class="op">;</span></span>
+<span id="cb23-59"><a href="#cb23-59" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb23-60"><a href="#cb23-60" aria-hidden="true" tabindex="-1"></a>err_unlock<span class="op">:</span></span>
+<span id="cb23-61"><a href="#cb23-61" aria-hidden="true" tabindex="-1"></a>        mutex_unlock<span class="op">(&amp;</span>peer_memory_mutex<span class="op">);</span></span>
+<span id="cb23-62"><a href="#cb23-62" aria-hidden="true" tabindex="-1"></a>        kobject_put<span class="op">(&amp;</span>ib_peer_client<span class="op">-&gt;</span>kobj<span class="op">);</span></span>
+<span id="cb23-63"><a href="#cb23-63" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> NULL<span class="op">;</span></span>
+<span id="cb23-64"><a href="#cb23-64" aria-hidden="true" tabindex="-1"></a><span class="pp">#endif</span></span>
+<span id="cb23-65"><a href="#cb23-65" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb23-66"><a href="#cb23-66" aria-hidden="true" tabindex="-1"></a>EXPORT_SYMBOL<span class="op">(</span>ib_register_peer_memory_client<span class="op">);</span></span>
+<span id="cb23-67"><a href="#cb23-67" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-68"><a href="#cb23-68" aria-hidden="true" tabindex="-1"></a><span class="co">//............................</span></span></code></pre></div>
+        <p>The code revealed that the creation of the
+        <code>memory_peers</code> directory is contingent on the
+        <code>HAVE_MM_KOBJ_EXPORTED</code> flag being defined during the
+        driver compilation. This flag is set based on whether the
+        <code>mm_kobj</code> symbol is exported by the kernel.</p>
+        <h3 id="the-root-cause-a-kernel-patch">5.2. The Root Cause: A
+        Kernel Patch</h3>
+        <p>Further investigation of the OFED build process showed that
+        the <code>configure</code> script checks for the
+        <code>mm_kobj</code> symbol in the kernel’s symbol table. A
+        check of the running kernel’s symbols confirmed our
+        suspicions:</p>
+        <div class="sourceCode" id="cb24"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="co"># On RHEL 9.4, this command would return the symbol</span></span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a><span class="fu">grep</span> <span class="st">&quot;__ksymtab_mm_kobj&quot;</span> /proc/kallsyms</span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a><span class="co"># ffffffffa7485b2c r __ksymtab_mm_kobj</span></span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a><span class="co"># On RHEL 9.6, this command returns nothing</span></span>
+<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a><span class="fu">grep</span> <span class="st">&quot;mm_kobj&quot;</span> /usr/src/kernels/<span class="va">$(</span><span class="fu">uname</span> <span class="at">-r</span><span class="va">)</span>/Module.symvers</span></code></pre></div>
+        <p>The <code>mm_kobj</code> symbol was not being exported by the
+        RHEL 9.6 kernel. A search of the RHEL kernel git repository
+        revealed that a patch had been introduced in October that
+        removed the export of <code>mm_kobj</code>:</p>
+        <ul>
+        <li><strong>RHEL Gitlab Commit:</strong> <a
+        href="https://gitlab.com/redhat/centos-stream/src/kernel/centos-stream-9/-/commit/f5f98e718ccbadf22fae8f73625542a68ee79132">https://gitlab.com/redhat/centos-stream/src/kernel/centos-stream-9/-/commit/f5f98e718ccbadf22fae8f73625542a68ee79132</a></li>
+        <li><strong>Upstream Kernel Patch:</strong> <a
+        href="https://lkml.kernel.org/r/2023080436-algebra-cabana-417d@gregkh">https://lkml.kernel.org/r/2023080436-algebra-cabana-417d@gregkh</a></li>
+        </ul>
+        <p>The relevant change in the kernel source was:</p>
+        <div class="sourceCode" id="cb25"><pre
+        class="sourceCode diff"><code class="sourceCode diff"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>struct kobject *mm_kobj;</span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a><span class="st">- EXPORT_SYMBOL_GPL(mm_kobj);</span></span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a>#ifdef CONFIG_SMP</span>
+<span id="cb25-5"><a href="#cb25-5" aria-hidden="true" tabindex="-1"></a>s32 vm_committed_as_batch = 32;</span></code></pre></div>
+        <p>Without the <code>mm_kobj</code> symbol exported, the OFED
+        driver was being compiled without the necessary logic to create
+        the <code>/sys/kernel/mm/memory_peers/mxcd/version</code> file,
+        which in turn prevented the MetaX driver from properly enabling
+        peer-to-peer communication.</p>
+        <h3 id="the-solution-kernel-downgrade">5.3. The Solution: Kernel
+        Downgrade</h3>
+        <p>The immediate solution was to downgrade the OpenShift cluster
+        from version 4.19 to 4.18, which reverted the kernel from RHEL
+        9.6 to 9.4. This restored the <code>mm_kobj</code> symbol export
+        and allowed the OFED and MetaX drivers to function
+        correctly.</p>
+        <p>After the downgrade, the multi-node MCCL benchmark was
+        re-run, and the results showed a dramatic improvement, with the
+        average bus bandwidth reaching 24.38 GB/s—a significant increase
+        from the previous 4.57 GB/s.</p>
+        <div class="sourceCode" id="cb26"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="fu">bash</span> cluster.wzh.sh <span class="va">$ip_01</span> <span class="va">$ip_02</span> <span class="va">$ipmask</span> 16</span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a><span class="ex">The</span> test is all_reduce_perf, the maca version is /opt/maca-2.32.0</span>
+<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a><span class="ex">Warning:</span> Permanently added <span class="st">&#39;10.66.1.214&#39;</span> <span class="er">(</span><span class="ex">ED25519</span><span class="kw">)</span> <span class="ex">to</span> the list of known hosts.</span>
+<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a><span class="ex">main_process</span> = 1021914</span>
+<span id="cb26-5"><a href="#cb26-5" aria-hidden="true" tabindex="-1"></a><span class="ex">===============================</span></span>
+<span id="cb26-6"><a href="#cb26-6" aria-hidden="true" tabindex="-1"></a><span class="co"># nThread 1 nGpus 1 minBytes 1024 maxBytes 1073741824 step: 2(factor) warmup iters: 5 iters: 10 agg iters: 1 validation: 1 graph: 0</span></span>
+<span id="cb26-7"><a href="#cb26-7" aria-hidden="true" tabindex="-1"></a><span class="co">#</span></span>
+<span id="cb26-8"><a href="#cb26-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Using devices</span></span>
+<span id="cb26-9"><a href="#cb26-9" aria-hidden="true" tabindex="-1"></a><span class="co">#   Rank  0 Pid 1021914 on mx-sh-demo device  0 [0x08] MetaX C500</span></span>
+<span id="cb26-10"><a href="#cb26-10" aria-hidden="true" tabindex="-1"></a><span class="co">#   Rank  1 Pid 1021915 on mx-sh-demo device  1 [0x09] MetaX C500</span></span>
+<span id="cb26-11"><a href="#cb26-11" aria-hidden="true" tabindex="-1"></a><span class="co">#   Rank  2 Pid 1021916 on mx-sh-demo device  2 [0x0e] MetaX C500</span></span>
+<span id="cb26-12"><a href="#cb26-12" aria-hidden="true" tabindex="-1"></a><span class="co">#   Rank  3 Pid 1021917 on mx-sh-demo device  3 [0x11] MetaX C500</span></span>
+<span id="cb26-13"><a href="#cb26-13" aria-hidden="true" tabindex="-1"></a><span class="co">#   Rank  4 Pid 1021918 on mx-sh-demo device  4 [0x32] MetaX C500</span></span>
+<span id="cb26-14"><a href="#cb26-14" aria-hidden="true" tabindex="-1"></a><span class="co">#   Rank  5 Pid 1021919 on mx-sh-demo device  5 [0x38] MetaX C500</span></span>
+<span id="cb26-15"><a href="#cb26-15" aria-hidden="true" tabindex="-1"></a><span class="co">#   Rank  6 Pid 1021920 on mx-sh-demo device  6 [0x3b] MetaX C500</span></span>
+<span id="cb26-16"><a href="#cb26-16" aria-hidden="true" tabindex="-1"></a><span class="co">#   Rank  7 Pid 1021921 on mx-sh-demo device  7 [0x3c] MetaX C500</span></span>
+<span id="cb26-17"><a href="#cb26-17" aria-hidden="true" tabindex="-1"></a><span class="co">#   Rank  8 Pid 837993 on mx-sh-demo-02 device  0 [0x08] MetaX C500</span></span>
+<span id="cb26-18"><a href="#cb26-18" aria-hidden="true" tabindex="-1"></a><span class="co">#   Rank  9 Pid 837994 on mx-sh-demo-02 device  1 [0x09] MetaX C500</span></span>
+<span id="cb26-19"><a href="#cb26-19" aria-hidden="true" tabindex="-1"></a><span class="co">#   Rank 10 Pid 837995 on mx-sh-demo-02 device  2 [0x0e] MetaX C500</span></span>
+<span id="cb26-20"><a href="#cb26-20" aria-hidden="true" tabindex="-1"></a><span class="co">#   Rank 11 Pid 837996 on mx-sh-demo-02 device  3 [0x11] MetaX C500</span></span>
+<span id="cb26-21"><a href="#cb26-21" aria-hidden="true" tabindex="-1"></a><span class="co">#   Rank 12 Pid 837997 on mx-sh-demo-02 device  4 [0x32] MetaX C500</span></span>
+<span id="cb26-22"><a href="#cb26-22" aria-hidden="true" tabindex="-1"></a><span class="co">#   Rank 13 Pid 837998 on mx-sh-demo-02 device  5 [0x38] MetaX C500</span></span>
+<span id="cb26-23"><a href="#cb26-23" aria-hidden="true" tabindex="-1"></a><span class="co">#   Rank 14 Pid 837999 on mx-sh-demo-02 device  6 [0x3b] MetaX C500</span></span>
+<span id="cb26-24"><a href="#cb26-24" aria-hidden="true" tabindex="-1"></a><span class="co">#   Rank 15 Pid 838000 on mx-sh-demo-02 device  7 [0x3c] MetaX C500</span></span>
+<span id="cb26-25"><a href="#cb26-25" aria-hidden="true" tabindex="-1"></a><span class="co">#</span></span>
+<span id="cb26-26"><a href="#cb26-26" aria-hidden="true" tabindex="-1"></a><span class="co">#                                                           ┌----- out-of-place ------┐       ┌------ in-place -------┐</span></span>
+<span id="cb26-27"><a href="#cb26-27" aria-hidden="true" tabindex="-1"></a><span class="co">#        size         count      type   redop    root      time    algbw   busbw   #wrong    time   algbw   busbw   #wrong</span></span>
+<span id="cb26-28"><a href="#cb26-28" aria-hidden="true" tabindex="-1"></a><span class="co">#         (B)    (elements)                                (us)   (GB/s)  (GB/s)              (us)  (GB/s)  (GB/s)</span></span>
+<span id="cb26-29"><a href="#cb26-29" aria-hidden="true" tabindex="-1"></a><span class="co">#        1024           256     float     sum     -1      52.73    0.02    0.04      0      48.65    0.02    0.04      0</span></span>
+<span id="cb26-30"><a href="#cb26-30" aria-hidden="true" tabindex="-1"></a><span class="co">#        2048           512     float     sum     -1      48.66    0.04    0.08      0      49.40    0.04    0.08      0</span></span>
+<span id="cb26-31"><a href="#cb26-31" aria-hidden="true" tabindex="-1"></a><span class="co">#        4096          1024     float     sum     -1      51.73    0.08    0.15      0      48.04    0.09    0.16      0</span></span>
+<span id="cb26-32"><a href="#cb26-32" aria-hidden="true" tabindex="-1"></a><span class="co">#        8192          2048     float     sum     -1      58.33    0.14    0.26      0      50.90    0.16    0.30      0</span></span>
+<span id="cb26-33"><a href="#cb26-33" aria-hidden="true" tabindex="-1"></a><span class="co">#       16384          4096     float     sum     -1      64.32    0.25    0.48      0      55.95    0.29    0.55      0</span></span>
+<span id="cb26-34"><a href="#cb26-34" aria-hidden="true" tabindex="-1"></a><span class="co">#       32768          8192     float     sum     -1      60.40    0.54    1.02      0      57.81    0.57    1.06      0</span></span>
+<span id="cb26-35"><a href="#cb26-35" aria-hidden="true" tabindex="-1"></a><span class="co">#       65536         16384     float     sum     -1     142.79    0.46    0.86      0     133.87    0.49    0.92      0</span></span>
+<span id="cb26-36"><a href="#cb26-36" aria-hidden="true" tabindex="-1"></a><span class="co">#      131072         32768     float     sum     -1     137.27    0.95    1.79      0     134.81    0.97    1.82      0</span></span>
+<span id="cb26-37"><a href="#cb26-37" aria-hidden="true" tabindex="-1"></a><span class="co">#      262144         65536     float     sum     -1     151.64    1.73    3.24      0     148.83    1.76    3.30      0</span></span>
+<span id="cb26-38"><a href="#cb26-38" aria-hidden="true" tabindex="-1"></a><span class="co">#      524288        131072     float     sum     -1     177.18    2.96    5.55      0     172.47    3.04    5.70      0</span></span>
+<span id="cb26-39"><a href="#cb26-39" aria-hidden="true" tabindex="-1"></a><span class="co">#     1048576        262144     float     sum     -1     223.48    4.69    8.80      0     214.00    4.90    9.19      0</span></span>
+<span id="cb26-40"><a href="#cb26-40" aria-hidden="true" tabindex="-1"></a><span class="co">#     2097152        524288     float     sum     -1     250.54    8.37   15.69      0     251.60    8.34   15.63      0</span></span>
+<span id="cb26-41"><a href="#cb26-41" aria-hidden="true" tabindex="-1"></a><span class="co">#     4194304       1048576     float     sum     -1     337.92   12.41   23.27      0     333.37   12.58   23.59      0</span></span>
+<span id="cb26-42"><a href="#cb26-42" aria-hidden="true" tabindex="-1"></a><span class="co">#     8388608       2097152     float     sum     -1     504.32   16.63   31.19      0     495.75   16.92   31.73      0</span></span>
+<span id="cb26-43"><a href="#cb26-43" aria-hidden="true" tabindex="-1"></a><span class="co">#    16777216       4194304     float     sum     -1     837.04   20.04   37.58      0     836.05   20.07   37.63      0</span></span>
+<span id="cb26-44"><a href="#cb26-44" aria-hidden="true" tabindex="-1"></a><span class="co">#    33554432       8388608     float     sum     -1    1296.42   25.88   48.53      0    1275.81   26.30   49.31      0</span></span>
+<span id="cb26-45"><a href="#cb26-45" aria-hidden="true" tabindex="-1"></a><span class="co">#    67108864      16777216     float     sum     -1    2141.67   31.33   58.75      0    2139.88   31.36   58.80      0</span></span>
+<span id="cb26-46"><a href="#cb26-46" aria-hidden="true" tabindex="-1"></a><span class="co">#   134217728      33554432     float     sum     -1    4090.72   32.81   61.52      0    4014.33   33.43   62.69      0</span></span>
+<span id="cb26-47"><a href="#cb26-47" aria-hidden="true" tabindex="-1"></a><span class="co">#   268435456      67108864     float     sum     -1    7489.42   35.84   67.20      0    7541.65   35.59   66.74      0</span></span>
+<span id="cb26-48"><a href="#cb26-48" aria-hidden="true" tabindex="-1"></a><span class="co">#   536870912     134217728     float     sum     -1   14155.02   37.93   71.11      0   14071.89   38.15   71.54      0</span></span>
+<span id="cb26-49"><a href="#cb26-49" aria-hidden="true" tabindex="-1"></a><span class="co">#  1073741824     268435456     float     sum     -1   27490.04   39.06   73.24      0   27560.95   38.96   73.05      0</span></span>
+<span id="cb26-50"><a href="#cb26-50" aria-hidden="true" tabindex="-1"></a><span class="co"># Out of bounds values : 0 OK</span></span>
+<span id="cb26-51"><a href="#cb26-51" aria-hidden="true" tabindex="-1"></a><span class="co"># Avg bus bandwidth    : 24.3851</span></span>
+<span id="cb26-52"><a href="#cb26-52" aria-hidden="true" tabindex="-1"></a><span class="co">#</span></span></code></pre></div>
+        <h2 id="conclusion">6. Conclusion</h2>
+        <p>This debugging journey highlights the importance of a
+        systematic, multi-layered approach to troubleshooting
+        performance issues in complex, high-performance computing
+        environments. The key takeaway is that effective cross-node
+        communication between GPUs over InfiniBand is not just a matter
+        of having the right hardware; it also depends on the intricate
+        interplay between device drivers and the operating system
+        kernel.</p>
+        <p>By ensuring that MCCL/NCCL can properly leverage the
+        underlying InfiniBand hardware, we can provide a robust and
+        efficient foundation for demanding distributed applications like
+        vLLM-based inference services. This ultimately leads to better
+        scalability and performance, enabling us to tackle ever-larger
+        and more complex AI workloads.</p>
+      </article>
+    </div>
+      </main>
+
+  <footer>
+    <p>
+      Licensed under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank"
+        rel="noopener">CC-BY-NC-SA 4.0</a>
+      &nbsp;·&nbsp;
+      <a href="https://github.com/wangzheng422/docker_env" target="_blank" rel="noopener">wangzheng422/docker_env</a>
+    </p>
+  </footer>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: false, theme: 'dark' });
+
+    const SITE_BUILD_ID = 'fbe91b569ae8';
+    const SITE_HOME_URL = '../../../index.html';
+
+    const getBuildIdFromHtml = (html) => {
+      const match = String(html).match(/<meta[^>]+name=["']site-build-id["'][^>]+content=["']([^"']+)["']/i)
+        || String(html).match(/<meta[^>]+content=["']([^"']+)["'][^>]+name=["']site-build-id["']/i);
+      return match ? match[1] : '';
+    };
+
+    const checkForSiteUpdate = async () => {
+      if (!SITE_BUILD_ID || window.location.protocol === 'file:') return;
+      try {
+        const probeUrl = new URL(SITE_HOME_URL || './index.html', window.location.href);
+        probeUrl.searchParams.set('site_cache_probe', Date.now().toString());
+        const response = await fetch(probeUrl.toString(), { cache: 'no-store' });
+        if (!response.ok) return;
+        const latestBuildId = getBuildIdFromHtml(await response.text());
+        if (!latestBuildId || latestBuildId === SITE_BUILD_ID) return;
+        if (sessionStorage.getItem('site-build-refresh') === latestBuildId) return;
+        sessionStorage.setItem('site-build-refresh', latestBuildId);
+        const freshUrl = new URL(window.location.href);
+        freshUrl.searchParams.set('v', latestBuildId);
+        window.location.replace(freshUrl.toString());
+      } catch (error) {
+        // Network errors should not block reading the current page.
+      }
+    };
+
+    const versionedLocalUrl = (rawUrl) => {
+      if (!rawUrl || /^(https?:)?\/\//i.test(rawUrl) || /^(data|blob|mailto):/i.test(rawUrl)) return rawUrl;
+      const url = new URL(rawUrl, window.location.href);
+      if (url.searchParams.has('v')) return rawUrl;
+      url.searchParams.set('v', SITE_BUILD_ID);
+      return url.toString();
+    };
+
+    const cacheBustPageAssets = () => {
+      document.querySelectorAll('img[src], video[src], audio[src], source[src]').forEach((node) => {
+        const src = node.getAttribute('src');
+        const versioned = versionedLocalUrl(src);
+        if (versioned !== src) node.setAttribute('src', versioned);
+      });
+    };
+
+    const updateReadingProgress = () => {
+      const progress = document.querySelector('.reading-progress');
+      if (!progress) return;
+      const scrollable = document.documentElement.scrollHeight - window.innerHeight;
+      const ratio = scrollable > 0 ? window.scrollY / scrollable : 0;
+      progress.style.transform = 'scaleX(' + Math.min(1, Math.max(0, ratio)) + ')';
+    };
+
+    const topicFor = (text, href) => {
+      const haystack = (text + ' ' + href).toLowerCase();
+      if (/developers\.redhat\.com|redhatquickcourses|github\.com\/redhatquickcourses/.test(haystack)) return 'Red Hat';
+      if (/ai|llm|gpu|vllm|llama|model|rhaiis/.test(haystack)) return 'AI';
+      if (/network|ovn|bgp|dns|egress|ingress|metallb|nic|route/.test(haystack)) return 'Network';
+      if (/cert|tls|sso|keycloak|rhbk|security|compliance/.test(haystack)) return 'Security';
+      if (/perf|profile|throttling|heap|debug/.test(haystack)) return 'Performance';
+      if (/install|ipi|upi|sno|disconnected|bootstrap/.test(haystack)) return 'Install';
+      if (/rhel|coreos|rhcos|kernel|rpm|ostree/.test(haystack)) return 'RHEL';
+      if (/backup|storage|nfs|odf|ocs|ceph|dr/.test(haystack)) return 'Storage';
+      if (/pipeline|gitops|ansible|aap|rhdh|devops/.test(haystack)) return 'DevOps';
+      return 'OpenShift';
+    };
+
+    const yearFor = (text, href) => {
+      const match = (text + ' ' + href).match(/20\d{2}/);
+      return match ? match[0] : 'Notes';
+    };
+
+    const importantExternal = (href) =>
+      /developers\.redhat\.com|redhatquickcourses\.github\.io/i.test(href);
+
+    const titleForLink = (link) => {
+      const href = link.getAttribute('href') || '';
+      const directText = link.textContent.trim().replace(/\s+/g, ' ');
+      if (!/^https?:\/\//.test(directText)) return directText;
+      const parentItem = link.closest('ul')?.parentElement;
+      if (parentItem) {
+        const clone = parentItem.cloneNode(true);
+        clone.querySelectorAll('ul').forEach((nested) => nested.remove());
+        const parentText = clone.textContent.trim().replace(/\s+/g, ' ');
+        if (parentText) {
+          return parentText;
+        }
+      }
+      return directText;
+    };
+
+    const escapeHtml = (value) => String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+
+    const enhanceHome = () => {
+      if (!document.body.classList.contains('page-index')) return;
+      const source = document.querySelector('.home-source');
+      const grid = document.getElementById('note-grid');
+      const stats = document.getElementById('console-stats');
+      const externalPanel = document.getElementById('external-panel');
+      const topicStrip = document.getElementById('topic-strip');
+      const search = document.getElementById('console-search');
+      if (!source || !grid || !stats || !externalPanel || !topicStrip || !search) return;
+
+      const seen = new Set();
+      const links = Array.from(source.querySelectorAll('a[href]'))
+        .map((link) => {
+          const href = link.getAttribute('href') || '';
+          const text = titleForLink(link);
+          return { text, href, topic: topicFor(text, href), year: yearFor(text, href) };
+        });
+      const notes = links
+        .filter((note) => note.text && !note.href.startsWith('http') && !seen.has(note.href) && seen.add(note.href));
+      const externalLinks = links
+        .filter((note) => note.text && importantExternal(note.href));
+
+      const topics = ['All', ...Array.from(new Set(notes.map((note) => note.topic))).sort()];
+      let activeTopic = 'All';
+
+      const renderStats = () => {
+        const years = notes.map((note) => note.year).filter((year) => year.length === 4 && /^\d{4}/.test(year));
+        const latest = years.length ? Math.max(...years.map(Number)) : 'N/A';
+        const oldest = years.length ? Math.min(...years.map(Number)) : 'N/A';
+        stats.innerHTML = [
+          ['Notes', notes.length],
+          ['Resources', externalLinks.length],
+          ['Topics', topics.length - 1],
+          ['Latest', latest],
+        ].map(([label, value]) => '<div class="stat-tile"><span>' + label + '</span><strong>' + value + '</strong></div>').join('');
+        const signal = document.getElementById('signal-count');
+        if (signal) signal.textContent = notes.length + ' links indexed';
+      };
+
+      const renderExternal = () => {
+        externalPanel.innerHTML =
+          '<div class="section-heading"><span>Published / Learning</span><strong>Red Hat resources</strong></div>' +
+          '<div class="external-grid">' +
+          externalLinks.map((note) =>
+            '<a class="resource-card" href="' + escapeHtml(note.href) + '" target="_blank" rel="noopener">' +
+            '<span class="note-meta"><span>' + escapeHtml(note.year) + '</span><span>' + escapeHtml(note.topic) + '</span></span>' +
+            '<strong>' + escapeHtml(note.text) + '</strong>' +
+            '<small>' + escapeHtml(note.href) + '</small>' +
+            '</a>'
+          ).join('') +
+          '</div>';
+      };
+
+      const renderTopics = () => {
+        topicStrip.innerHTML = topics.map((topic) => '<button class="topic-chip' + (topic === activeTopic ? ' active' : '') + '" type="button" data-topic="' + escapeHtml(topic) + '">' + escapeHtml(topic) + '</button>').join('');
+        topicStrip.querySelectorAll('button').forEach((button) => {
+          button.addEventListener('click', () => {
+            activeTopic = button.dataset.topic || 'All';
+            renderTopics();
+            renderCards();
+          });
+        });
+      };
+
+      const renderCards = () => {
+        const query = search.value.trim().toLowerCase();
+        const filtered = notes.filter((note) => {
+          const topicMatch = activeTopic === 'All' || note.topic === activeTopic;
+          const queryMatch = !query || (note.text + ' ' + note.href + ' ' + note.topic + ' ' + note.year).toLowerCase().includes(query);
+          return topicMatch && queryMatch;
+        });
+        grid.innerHTML = filtered.map((note) =>
+          '<a class="note-card" href="' + escapeHtml(note.href) + '">' +
+          '<span class="note-meta"><span>' + escapeHtml(note.year) + '</span><span>' + escapeHtml(note.topic) + '</span></span>' +
+          '<strong>' + escapeHtml(note.text) + '</strong>' +
+          '<small>' + escapeHtml(note.href) + '</small>' +
+          '</a>'
+        ).join('') || '<p class="empty-state">No matching notes.</p>';
+      };
+
+      const drawMap = () => {
+        const canvas = document.getElementById('knowledge-canvas');
+        if (!(canvas instanceof HTMLCanvasElement)) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        const width = canvas.width;
+        const height = canvas.height;
+        const nodes = notes.slice(0, 44).map((note, index) => {
+          const angle = (index / 44) * Math.PI * 2;
+          const ring = 90 + (index % 5) * 22;
+          return {
+            x: width / 2 + Math.cos(angle) * ring,
+            y: height / 2 + Math.sin(angle) * ring * 0.72,
+            topic: note.topic,
+          };
+        });
+        ctx.clearRect(0, 0, width, height);
+        ctx.strokeStyle = 'rgba(88, 166, 255, 0.14)';
+        ctx.lineWidth = 1;
+        nodes.forEach((node, index) => {
+          const next = nodes[(index + 7) % nodes.length];
+          ctx.beginPath();
+          ctx.moveTo(node.x, node.y);
+          ctx.lineTo(next.x, next.y);
+          ctx.stroke();
+        });
+        const palette = {
+          AI: '#a371f7',
+          Network: '#39d0d8',
+          Security: '#ff7b72',
+          Performance: '#f2cc60',
+          Install: '#7ee787',
+          RHEL: '#ff7b72',
+          Storage: '#d2a8ff',
+          DevOps: '#ffa657',
+          OpenShift: '#58a6ff',
+        };
+        nodes.forEach((node) => {
+          ctx.fillStyle = palette[node.topic] || '#58a6ff';
+          ctx.beginPath();
+          ctx.arc(node.x, node.y, 3.4, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      };
+
+      search.addEventListener('input', renderCards);
+      renderStats();
+      renderExternal();
+      renderTopics();
+      renderCards();
+      drawMap();
+      document.body.classList.add('home-enhanced');
+    };
+
+    const enhanceCodeBlocks = () => {
+      document.querySelectorAll('pre').forEach((pre) => {
+        if (pre.classList.contains('mermaid') || pre.querySelector('.copy-code')) return;
+        const button = document.createElement('button');
+        button.className = 'copy-code';
+        button.type = 'button';
+        button.textContent = 'Copy';
+        button.addEventListener('click', async () => {
+          await navigator.clipboard.writeText(pre.textContent || '');
+          button.textContent = 'Copied';
+          setTimeout(() => { button.textContent = 'Copy'; }, 1200);
+        });
+        pre.appendChild(button);
+      });
+    };
+
+    window.addEventListener('scroll', updateReadingProgress, { passive: true });
+    window.addEventListener('pageshow', (event) => {
+      if (event.persisted) checkForSiteUpdate();
+    });
+    document.addEventListener('DOMContentLoaded', async () => {
+      checkForSiteUpdate();
+      cacheBustPageAssets();
+      updateReadingProgress();
+      enhanceHome();
+      enhanceCodeBlocks();
+      // pandoc 输出 mermaid 为 <pre class="mermaid"><code>...</code></pre>
+      // 需要转成 <div class="mermaid">...</div> 供 mermaid.js 渲染
+      document.querySelectorAll('pre.mermaid').forEach(pre => {
+        const div = document.createElement('div');
+        div.classList.add('mermaid');
+        div.textContent = pre.textContent;
+        pre.replaceWith(div);
+      });
+      // 也处理 <pre><code class="language-mermaid"> 形式（备用）
+      document.querySelectorAll('pre code.language-mermaid').forEach(code => {
+        const div = document.createElement('div');
+        div.classList.add('mermaid');
+        div.textContent = code.textContent;
+        code.closest('pre').replaceWith(div);
+      });
+      await mermaid.run();
+    });
+  </script>
+</body>
+
+</html>

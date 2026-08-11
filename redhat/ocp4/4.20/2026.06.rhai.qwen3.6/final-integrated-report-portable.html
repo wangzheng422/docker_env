@@ -1,0 +1,1515 @@
+<!DOCTYPE html>
+<html lang="zh" dir="ltr">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="generator" content="pandoc" />
+  <meta name="site-build-id" content="fbe91b569ae8" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <title>Final Integrated Benchmark Report: Qwen3.6-27B-FP8 on Upstream vLLM and Red Hat RHAI vLLM | wandering.star notes</title>
+  <meta name="description"
+    content="Wandering field notes on OpenShift, RHEL, AI infrastructure, and platform operations." />
+  <!-- Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-E3FRMDB7L2"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-E3FRMDB7L2');
+  </script>
+  <style>
+  html {
+    color: #1a1a1a;
+    background-color: #fdfdfd;
+  }
+  body {
+    margin: 0 auto;
+    max-width: 36em;
+    padding-left: 50px;
+    padding-right: 50px;
+    padding-top: 50px;
+    padding-bottom: 50px;
+    hyphens: auto;
+    overflow-wrap: break-word;
+    text-rendering: optimizeLegibility;
+    font-kerning: normal;
+  }
+  @media (max-width: 600px) {
+    body {
+      font-size: 0.9em;
+      padding: 12px;
+    }
+    h1 {
+      font-size: 1.8em;
+    }
+  }
+  @media print {
+    html {
+      background-color: white;
+    }
+    body {
+      background-color: transparent;
+      color: black;
+      font-size: 12pt;
+    }
+    p, h2, h3 {
+      orphans: 3;
+      widows: 3;
+    }
+    h2, h3, h4 {
+      page-break-after: avoid;
+    }
+  }
+  p {
+    margin: 1em 0;
+  }
+  a {
+    color: #1a1a1a;
+  }
+  a:visited {
+    color: #1a1a1a;
+  }
+  img {
+    max-width: 100%;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.4em;
+  }
+  h5, h6 {
+    font-size: 1em;
+    font-style: italic;
+  }
+  h6 {
+    font-weight: normal;
+  }
+  ol, ul {
+    padding-left: 1.7em;
+    margin-top: 1em;
+  }
+  li > ol, li > ul {
+    margin-top: 0;
+  }
+  blockquote {
+    margin: 1em 0 1em 1.7em;
+    padding-left: 1em;
+    border-left: 2px solid #e6e6e6;
+    color: #606060;
+  }
+  code {
+    font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+    font-size: 85%;
+    margin: 0;
+    hyphens: manual;
+  }
+  pre {
+    margin: 1em 0;
+    overflow: auto;
+  }
+  pre code {
+    padding: 0;
+    overflow: visible;
+    overflow-wrap: normal;
+  }
+  .sourceCode {
+   background-color: transparent;
+   overflow: visible;
+  }
+  hr {
+    background-color: #1a1a1a;
+    border: none;
+    height: 1px;
+    margin: 1em 0;
+  }
+  table {
+    margin: 1em 0;
+    border-collapse: collapse;
+    width: 100%;
+    overflow-x: auto;
+    display: block;
+    font-variant-numeric: lining-nums tabular-nums;
+  }
+  table caption {
+    margin-bottom: 0.75em;
+  }
+  tbody {
+    margin-top: 0.5em;
+    border-top: 1px solid #1a1a1a;
+    border-bottom: 1px solid #1a1a1a;
+  }
+  th {
+    border-top: 1px solid #1a1a1a;
+    padding: 0.25em 0.5em 0.25em 0.5em;
+  }
+  td {
+    padding: 0.125em 0.5em 0.25em 0.5em;
+  }
+  header {
+    margin-bottom: 4em;
+    text-align: center;
+  }
+  #TOC li {
+    list-style: none;
+  }
+  #TOC ul {
+    padding-left: 1.3em;
+  }
+  #TOC > ul {
+    padding-left: 0;
+  }
+  #TOC a:not(:hover) {
+    text-decoration: none;
+  }
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  div.columns{display: flex; gap: min(4vw, 1.5em);}
+  div.column{flex: auto; overflow-x: auto;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  /* The extra [class] is a hack that increases specificity enough to
+     override a similar rule in reveal.js */
+  ul.task-list[class]{list-style: none;}
+  ul.task-list li input[type="checkbox"] {
+    font-size: inherit;
+    width: 0.8em;
+    margin: 0 0.8em 0.2em -1.6em;
+    vertical-align: middle;
+  }
+  .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+  <link rel="stylesheet" href="../../../../style.css?v=fbe91b569ae8" />
+  </head>
+
+<body class="page-article">
+  <div class="reading-progress" aria-hidden="true"></div>
+  <div class="console-backdrop" aria-hidden="true"></div>
+  <nav class="site-nav">
+    <div class="nav-inner">
+      <a class="nav-brand" href="../../../../index.html">wandering.star<span>notes</span></a>
+      <div class="nav-links">
+        <a href="https://github.com/wangzheng422/docker_env" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://www.youtube.com/@wangzheng422" target="_blank" rel="noopener">YouTube</a>
+      </div>
+    </div>
+  </nav>
+
+  <main>
+            <a class="back-link" href="../../../../index.html">← Back to Index</a>
+        <div class="article-layout">
+            <aside class="toc-panel">
+        <div class="toc-title">ON THIS PAGE</div>
+        <ul>
+        <li><a
+        href="#final-integrated-benchmark-report-qwen3.6-27b-fp8-on-upstream-vllm-and-red-hat-rhai-vllm"
+        id="toc-final-integrated-benchmark-report-qwen3.6-27b-fp8-on-upstream-vllm-and-red-hat-rhai-vllm">Final
+        Integrated Benchmark Report: Qwen3.6-27B-FP8 on Upstream vLLM
+        and Red Hat RHAI vLLM</a>
+        <ul>
+        <li><a href="#executive-summary"
+        id="toc-executive-summary">Executive Summary</a></li>
+        <li><a href="#target-host-and-runtime"
+        id="toc-target-host-and-runtime">Target Host and
+        Runtime</a></li>
+        <li><a href="#serving-stacks" id="toc-serving-stacks">Serving
+        Stacks</a></li>
+        <li><a href="#main-long-reasoning-benchmark"
+        id="toc-main-long-reasoning-benchmark">Main Long-Reasoning
+        Benchmark</a></li>
+        <li><a href="#vllm-built-in-benchmark-reference"
+        id="toc-vllm-built-in-benchmark-reference">vLLM Built-In
+        Benchmark Reference</a></li>
+        <li><a
+        href="#red-hat-rhai-vllm-3.4-parameter-search-and-recommended-range"
+        id="toc-red-hat-rhai-vllm-3.4-parameter-search-and-recommended-range">Red
+        Hat RHAI vLLM 3.4 Parameter Search and Recommended
+        Range</a></li>
+        <li><a href="#runtime-degradation-matrix"
+        id="toc-runtime-degradation-matrix">Runtime Degradation
+        Matrix</a></li>
+        <li><a href="#longer-16k-degradation-pilot"
+        id="toc-longer-16k-degradation-pilot">Longer 16K Degradation
+        Pilot</a></li>
+        <li><a href="#destructive-boundary-summary"
+        id="toc-destructive-boundary-summary">Destructive Boundary
+        Summary</a></li>
+        <li><a href="#recommendation"
+        id="toc-recommendation">Recommendation</a></li>
+        <li><a href="#evidence-package"
+        id="toc-evidence-package">Evidence Package</a></li>
+        </ul></li>
+        </ul>
+      </aside>
+            <article class="markdown-body article-shell">
+        <h1
+        id="final-integrated-benchmark-report-qwen3.6-27b-fp8-on-upstream-vllm-and-red-hat-rhai-vllm">Final
+        Integrated Benchmark Report: Qwen3.6-27B-FP8 on Upstream vLLM
+        and Red Hat RHAI vLLM</h1>
+        <table>
+        <colgroup>
+        <col style="width: 50%" />
+        <col style="width: 50%" />
+        </colgroup>
+        <thead>
+        <tr class="header">
+        <th>Field</th>
+        <th>Value</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr class="odd">
+        <td>Test date</td>
+        <td>2026-06-04</td>
+        </tr>
+        <tr class="even">
+        <td>Model</td>
+        <td><code>Qwen/Qwen3.6-27B-FP8</code></td>
+        </tr>
+        <tr class="odd">
+        <td>Target host</td>
+        <td>RHEL AI / rpm-ostree-like RHEL host reached over SSH through
+        proxy <code>127.0.0.1:5085</code></td>
+        </tr>
+        <tr class="even">
+        <td>GPU</td>
+        <td>4 x NVIDIA L4, 23034 MiB per GPU, driver 550.163.01, CUDA
+        12.4</td>
+        </tr>
+        <tr class="odd">
+        <td>Storage used</td>
+        <td>4 x approximately 800G NVMe XFS devices; benchmark
+        cache/results under <code>/mnt/bench-nvme*</code></td>
+        </tr>
+        <tr class="even">
+        <td>Runtime rule</td>
+        <td>Podman only; Docker was not used</td>
+        </tr>
+        <tr class="odd">
+        <td>Serving API</td>
+        <td>OpenAI-compatible API on port 8000 during each serving
+        run</td>
+        </tr>
+        </tbody>
+        </table>
+        <h2 id="executive-summary">Executive Summary</h2>
+        <p>All three serving stacks ran
+        <code>Qwen/Qwen3.6-27B-FP8</code> successfully under the
+        8K-input, 512-output, concurrency-4 GuideLLM long-reasoning
+        workload. Upstream vLLM 0.21, Red Hat RHAI vLLM 3.4, and
+        upstream latest, which resolved to vLLM 0.22.0 during this test,
+        each completed 12/12 GuideLLM requests without errors.</p>
+        <p>The recommended Red Hat RHAI vLLM 3.4 customer starting point
+        on this 4 x L4 host remains:</p>
+        <pre class="text"><code>tensor_parallel_size=4
+gpu_memory_utilization=0.84
+max_model_len=32768
+max_num_seqs=64
+max_num_batched_tokens=32768</code></pre>
+        <p>This configuration produced the best observed RHAI throughput
+        in the main GuideLLM run: 55.3 output tokens/s and 927.9 total
+        tokens/s. The <code>gpu_memory_utilization=0.88</code>,
+        <code>max_num_seqs=64</code>,
+        <code>max_num_batched_tokens=32768</code> variant also passed
+        the main long run and reduced RHAI p95 latency from 76.7s to
+        70.8s, but with lower output throughput.</p>
+        <p>The destructive runtime risk is now also measured. RHAI vLLM
+        3.4 can start successfully and pass health checks, then degrade
+        or fail later under long-context, agent-like concurrency when
+        the scheduling envelope is pushed too far:</p>
+        <ul>
+        <li><code>gpu_memory_utilization=0.88</code>,
+        <code>max_num_seqs=128</code>,
+        <code>max_num_batched_tokens=65536</code> stayed healthy through
+        c4, then at 12K c8 completed 8/16 target requests, produced 8
+        request errors, health became <code>not_ready</code>, and server
+        logs captured <code>EngineDeadError</code> plus HTTP 500
+        responses.</li>
+        <li><code>gpu_memory_utilization=0.84</code>,
+        <code>max_num_seqs=256</code>,
+        <code>max_num_batched_tokens=32768</code> stayed healthy through
+        c4, then at 12K c8 completed 8/16 target requests, health became
+        <code>not_ready</code>, p95 end-to-end latency reached 315.0s,
+        and p95 TPOT reached 724.2ms.</li>
+        <li>The 16K-input pilot for <code>0.88 / 128 / 65536</code> did
+        not crash, but it became extremely slow at c8: p95 latency
+        200.6s, p95 TTFT 82018ms, and p95 TPOT 209.0ms while health
+        still returned ready.</li>
+        </ul>
+        <h2 id="target-host-and-runtime">Target Host and Runtime</h2>
+        <p>The test target was an AWS EC2-style GPU host. It was a RHEL
+        AI / rpm-ostree-like system, so the test avoided mutable-root
+        assumptions: no changes were made under <code>/usr</code>, and
+        persistent high-write data stayed under <code>/var</code>-backed
+        paths and the NVMe mounts.</p>
+        <table>
+        <thead>
+        <tr class="header">
+        <th>Component</th>
+        <th>Observed value</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr class="odd">
+        <td>GPU</td>
+        <td>4 x NVIDIA L4</td>
+        </tr>
+        <tr class="even">
+        <td>GPU memory</td>
+        <td>23034 MiB per GPU</td>
+        </tr>
+        <tr class="odd">
+        <td>NVIDIA driver</td>
+        <td>550.163.01</td>
+        </tr>
+        <tr class="even">
+        <td>CUDA reported by driver</td>
+        <td>12.4</td>
+        </tr>
+        <tr class="odd">
+        <td>CPU</td>
+        <td>48 vCPU AMD EPYC 7R13</td>
+        </tr>
+        <tr class="even">
+        <td>System memory</td>
+        <td>Approximately 181 GiB</td>
+        </tr>
+        <tr class="odd">
+        <td>Container runtime</td>
+        <td>Podman 4.9.4-rhel</td>
+        </tr>
+        <tr class="even">
+        <td>Benchmark storage</td>
+        <td>4 x approximately 800G NVMe XFS</td>
+        </tr>
+        </tbody>
+        </table>
+        <table>
+        <colgroup>
+        <col style="width: 50%" />
+        <col style="width: 50%" />
+        </colgroup>
+        <thead>
+        <tr class="header">
+        <th>Mount</th>
+        <th>Purpose</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr class="odd">
+        <td><code>/mnt/bench-nvme1</code></td>
+        <td>Hugging Face cache and workspace root</td>
+        </tr>
+        <tr class="even">
+        <td><code>/mnt/bench-nvme2</code></td>
+        <td>Temporary directories, XDG cache, vLLM compile/cache
+        directories</td>
+        </tr>
+        <tr class="odd">
+        <td><code>/mnt/bench-nvme3</code></td>
+        <td>Benchmark logs, JSON/CSV/HTML outputs, result archives</td>
+        </tr>
+        <tr class="even">
+        <td><code>/mnt/bench-nvme4</code></td>
+        <td>Scratch/profile-ready space</td>
+        </tr>
+        </tbody>
+        </table>
+        <h2 id="serving-stacks">Serving Stacks</h2>
+        <table>
+        <colgroup>
+        <col style="width: 33%" />
+        <col style="width: 33%" />
+        <col style="width: 33%" />
+        </colgroup>
+        <thead>
+        <tr class="header">
+        <th>Stack</th>
+        <th>Image</th>
+        <th>Observed version</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr class="odd">
+        <td>Upstream vLLM 0.21</td>
+        <td><code>docker.io/vllm/vllm-openai:v0.21.0</code></td>
+        <td>vLLM 0.21.0</td>
+        </tr>
+        <tr class="even">
+        <td>Red Hat RHAI vLLM 3.4</td>
+        <td><code>registry.redhat.io/rhaii/vllm-cuda-rhel9:3.4.0</code></td>
+        <td>vLLM 0.18.0+rhaiv.7</td>
+        </tr>
+        <tr class="odd">
+        <td>Upstream latest</td>
+        <td><code>docker.io/vllm/vllm-openai:latest</code></td>
+        <td>vLLM 0.22.0 during this test</td>
+        </tr>
+        </tbody>
+        </table>
+        <p>All serving runs exposed the model through the
+        OpenAI-compatible API and used tensor parallelism across four
+        NVIDIA L4 GPUs.</p>
+        <h2 id="main-long-reasoning-benchmark">Main Long-Reasoning
+        Benchmark</h2>
+        <p>Workload: approximately 8K input tokens, 512 output tokens,
+        concurrency 4, 12 GuideLLM requests, 359-second measurement
+        window.</p>
+        <table style="width:100%;">
+        <colgroup>
+        <col style="width: 10%" />
+        <col style="width: 10%" />
+        <col style="width: 13%" />
+        <col style="width: 13%" />
+        <col style="width: 13%" />
+        <col style="width: 13%" />
+        <col style="width: 13%" />
+        <col style="width: 13%" />
+        </colgroup>
+        <thead>
+        <tr class="header">
+        <th>Stack</th>
+        <th>Scenario</th>
+        <th style="text-align: right;">OK/Err</th>
+        <th style="text-align: right;">Output tok/s</th>
+        <th style="text-align: right;">Total tok/s</th>
+        <th style="text-align: right;">Latency p50/p95</th>
+        <th style="text-align: right;">TTFT p50/p95</th>
+        <th style="text-align: right;">TPOT p50/p95</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr class="odd">
+        <td>upstream-v0.21</td>
+        <td>long-8k-512-c4</td>
+        <td style="text-align: right;">12/0</td>
+        <td style="text-align: right;">52.5</td>
+        <td style="text-align: right;">881.4</td>
+        <td style="text-align: right;">40.9s / 56.0s</td>
+        <td style="text-align: right;">4746ms / 18127ms</td>
+        <td style="text-align: right;">76.3ms / 92.1ms</td>
+        </tr>
+        <tr class="even">
+        <td>redhat-rhai-3.4-gmu84-seq64</td>
+        <td>long-8k-512-c4</td>
+        <td style="text-align: right;">12/0</td>
+        <td style="text-align: right;">55.3</td>
+        <td style="text-align: right;">927.9</td>
+        <td style="text-align: right;">45.4s / 76.7s</td>
+        <td style="text-align: right;">4890ms / 37097ms</td>
+        <td style="text-align: right;">88.8ms / 126.1ms</td>
+        </tr>
+        <tr class="odd">
+        <td>redhat-rhai-3.4-gmu88-seq64</td>
+        <td>long-8k-512-c4</td>
+        <td style="text-align: right;">12/0</td>
+        <td style="text-align: right;">51.4</td>
+        <td style="text-align: right;">863.0</td>
+        <td style="text-align: right;">41.9s / 70.8s</td>
+        <td style="text-align: right;">4907ms / 31196ms</td>
+        <td style="text-align: right;">88.9ms / 116.4ms</td>
+        </tr>
+        <tr class="even">
+        <td>upstream-latest-0.22</td>
+        <td>long-8k-512-c4</td>
+        <td style="text-align: right;">12/0</td>
+        <td style="text-align: right;">53.3</td>
+        <td style="text-align: right;">894.8</td>
+        <td style="text-align: right;">40.2s / 56.9s</td>
+        <td style="text-align: right;">5086ms / 18973ms</td>
+        <td style="text-align: right;">77.3ms / 99.3ms</td>
+        </tr>
+        </tbody>
+        </table>
+        <p><a href="images/guidellm-output-throughput.svg"><img
+        src="images/guidellm-output-throughput.svg"
+        alt="GuideLLM output throughput" /></a></p>
+        <p><a href="images/guidellm-total-throughput.svg"><img
+        src="images/guidellm-total-throughput.svg"
+        alt="GuideLLM total throughput" /></a></p>
+        <p><a href="images/guidellm-latency-profile.svg"><img
+        src="images/guidellm-latency-profile.svg"
+        alt="GuideLLM latency profile" /></a></p>
+        <h2 id="vllm-built-in-benchmark-reference">vLLM Built-In
+        Benchmark Reference</h2>
+        <p>The vLLM built-in benchmark was run for upstream vLLM 0.21 as
+        an additional reference point, separate from GuideLLM.</p>
+        <table style="width:100%;">
+        <colgroup>
+        <col style="width: 10%" />
+        <col style="width: 10%" />
+        <col style="width: 13%" />
+        <col style="width: 13%" />
+        <col style="width: 13%" />
+        <col style="width: 13%" />
+        <col style="width: 13%" />
+        <col style="width: 13%" />
+        </colgroup>
+        <thead>
+        <tr class="header">
+        <th>Stack</th>
+        <th>Scenario</th>
+        <th style="text-align: right;">OK/Err</th>
+        <th style="text-align: right;">Output tok/s</th>
+        <th style="text-align: right;">Total tok/s</th>
+        <th style="text-align: right;">Latency p50/p95</th>
+        <th style="text-align: right;">TTFT p50/p95</th>
+        <th style="text-align: right;">TPOT p50/p95</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr class="odd">
+        <td>upstream-v0.21</td>
+        <td>agent-concurrency-8k-512-c4</td>
+        <td style="text-align: right;">24/0</td>
+        <td style="text-align: right;">49.3</td>
+        <td style="text-align: right;">870.1</td>
+        <td style="text-align: right;">38.9s / 47.9s</td>
+        <td style="text-align: right;">4895ms / 12230ms</td>
+        <td style="text-align: right;">72.1ms / 76.4ms</td>
+        </tr>
+        <tr class="even">
+        <td>upstream-v0.21</td>
+        <td>long-single-4k-512</td>
+        <td style="text-align: right;">8/0</td>
+        <td style="text-align: right;">23.6</td>
+        <td style="text-align: right;">194.9</td>
+        <td style="text-align: right;">22.5s / 23.9s</td>
+        <td style="text-align: right;">2118ms / 2464ms</td>
+        <td style="text-align: right;">37.5ms / 37.9ms</td>
+        </tr>
+        </tbody>
+        </table>
+        <p><a href="images/vllm-benchmark-throughput.svg"><img
+        src="images/vllm-benchmark-throughput.svg"
+        alt="vLLM benchmark throughput" /></a></p>
+        <h2
+        id="red-hat-rhai-vllm-3.4-parameter-search-and-recommended-range">Red
+        Hat RHAI vLLM 3.4 Parameter Search and Recommended Range</h2>
+        <p>The first RHAI 3.4 default-style attempt with
+        <code>max_num_seqs=256</code> failed during sampler warmup with
+        CUDA OOM. Lowering <code>max_num_seqs</code> was required on
+        this 4 x L4 host before full long-run validation.</p>
+        <p>Startup and short chat probes passed for these RHAI 3.4
+        candidates:</p>
+        <table style="width:100%;">
+        <colgroup>
+        <col style="width: 10%" />
+        <col style="width: 13%" />
+        <col style="width: 13%" />
+        <col style="width: 13%" />
+        <col style="width: 13%" />
+        <col style="width: 13%" />
+        <col style="width: 10%" />
+        <col style="width: 13%" />
+        </colgroup>
+        <thead>
+        <tr class="header">
+        <th>Case</th>
+        <th style="text-align: right;">GPU memory utilization</th>
+        <th style="text-align: right;">max_num_seqs</th>
+        <th style="text-align: right;">max_num_batched_tokens</th>
+        <th style="text-align: right;">Ready</th>
+        <th style="text-align: right;">Exit code</th>
+        <th>OOMKilled</th>
+        <th style="text-align: right;">Chat HTTP</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr class="odd">
+        <td>gmu84-seq64-bt32768</td>
+        <td style="text-align: right;">0.84</td>
+        <td style="text-align: right;">64</td>
+        <td style="text-align: right;">32768</td>
+        <td style="text-align: right;">1</td>
+        <td style="text-align: right;">0</td>
+        <td>false</td>
+        <td style="text-align: right;">200</td>
+        </tr>
+        <tr class="even">
+        <td>gmu86-seq64-bt32768</td>
+        <td style="text-align: right;">0.86</td>
+        <td style="text-align: right;">64</td>
+        <td style="text-align: right;">32768</td>
+        <td style="text-align: right;">1</td>
+        <td style="text-align: right;">0</td>
+        <td>false</td>
+        <td style="text-align: right;">200</td>
+        </tr>
+        <tr class="odd">
+        <td>gmu88-seq64-bt32768</td>
+        <td style="text-align: right;">0.88</td>
+        <td style="text-align: right;">64</td>
+        <td style="text-align: right;">32768</td>
+        <td style="text-align: right;">1</td>
+        <td style="text-align: right;">0</td>
+        <td>false</td>
+        <td style="text-align: right;">200</td>
+        </tr>
+        <tr class="even">
+        <td>gmu84-seq128-bt32768</td>
+        <td style="text-align: right;">0.84</td>
+        <td style="text-align: right;">128</td>
+        <td style="text-align: right;">32768</td>
+        <td style="text-align: right;">1</td>
+        <td style="text-align: right;">0</td>
+        <td>false</td>
+        <td style="text-align: right;">200</td>
+        </tr>
+        </tbody>
+        </table>
+        <p>Two RHAI parameter sets received full GuideLLM long-run
+        validation:</p>
+        <table>
+        <colgroup>
+        <col style="width: 33%" />
+        <col style="width: 33%" />
+        <col style="width: 33%" />
+        </colgroup>
+        <thead>
+        <tr class="header">
+        <th>Configuration</th>
+        <th>Full long run status</th>
+        <th>Interpretation</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr class="odd">
+        <td><code>gpu_memory_utilization=0.84</code>,
+        <code>max_num_seqs=64</code>,
+        <code>max_num_batched_tokens=32768</code></td>
+        <td>Passed, 12/12 successful, 0 errors</td>
+        <td>Best observed RHAI throughput in the main long benchmark.
+        Recommended throughput-first setting.</td>
+        </tr>
+        <tr class="even">
+        <td><code>gpu_memory_utilization=0.88</code>,
+        <code>max_num_seqs=64</code>,
+        <code>max_num_batched_tokens=32768</code></td>
+        <td>Passed, 12/12 successful, 0 errors</td>
+        <td>Lower p95 latency than the 0.84 run, but lower output
+        throughput. Useful as a latency-balanced alternative.</td>
+        </tr>
+        </tbody>
+        </table>
+        <p>The <code>0.84 / 128 / 32768</code> case passed startup and
+        short chat probing, but it should not replace the recommended
+        setting without full long-run validation at the customer’s
+        target concurrency.</p>
+        <h2 id="runtime-degradation-matrix">Runtime Degradation
+        Matrix</h2>
+        <p>This matrix tested Red Hat RHAI vLLM 3.4 startup parameters
+        against a fixed long-agent workload shape: approximately 12K
+        input tokens, 640 output tokens, concurrency 1/2/4/8. It is the
+        key evidence for the destructive pattern that appears after
+        successful startup.</p>
+        <table>
+        <colgroup>
+        <col style="width: 7%" />
+        <col style="width: 10%" />
+        <col style="width: 10%" />
+        <col style="width: 10%" />
+        <col style="width: 7%" />
+        <col style="width: 10%" />
+        <col style="width: 10%" />
+        <col style="width: 10%" />
+        <col style="width: 10%" />
+        <col style="width: 10%" />
+        </colgroup>
+        <thead>
+        <tr class="header">
+        <th>Startup parameters</th>
+        <th style="text-align: right;">c</th>
+        <th style="text-align: right;">OK/Err/Target</th>
+        <th style="text-align: right;">Success</th>
+        <th>Health</th>
+        <th style="text-align: right;">GPU MiB</th>
+        <th style="text-align: right;">Out tok/s</th>
+        <th style="text-align: right;">Latency p95</th>
+        <th style="text-align: right;">TTFT p95</th>
+        <th style="text-align: right;">TPOT p95</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr class="odd">
+        <td>gmu .84 / seq 64 / bt 32K</td>
+        <td style="text-align: right;">1</td>
+        <td style="text-align: right;">4/0/4</td>
+        <td style="text-align: right;">100%</td>
+        <td>ready</td>
+        <td style="text-align: right;">76340</td>
+        <td style="text-align: right;">21.7</td>
+        <td style="text-align: right;">50.6s</td>
+        <td style="text-align: right;">18687ms</td>
+        <td style="text-align: right;">60.8ms</td>
+        </tr>
+        <tr class="even">
+        <td>gmu .84 / seq 64 / bt 32K</td>
+        <td style="text-align: right;">2</td>
+        <td style="text-align: right;">8/0/8</td>
+        <td style="text-align: right;">100%</td>
+        <td>ready</td>
+        <td style="text-align: right;">81188</td>
+        <td style="text-align: right;">33.5</td>
+        <td style="text-align: right;">57.6s</td>
+        <td style="text-align: right;">14833ms</td>
+        <td style="text-align: right;">80.6ms</td>
+        </tr>
+        <tr class="odd">
+        <td>gmu .84 / seq 64 / bt 32K</td>
+        <td style="text-align: right;">4</td>
+        <td style="text-align: right;">12/0/12</td>
+        <td style="text-align: right;">100%</td>
+        <td>ready</td>
+        <td style="text-align: right;">85540</td>
+        <td style="text-align: right;">46.8</td>
+        <td style="text-align: right;">88.3s</td>
+        <td style="text-align: right;">28406ms</td>
+        <td style="text-align: right;">109.3ms</td>
+        </tr>
+        <tr class="even">
+        <td>gmu .84 / seq 64 / bt 32K</td>
+        <td style="text-align: right;">8</td>
+        <td style="text-align: right;">16/0/16</td>
+        <td style="text-align: right;">100%</td>
+        <td>ready</td>
+        <td style="text-align: right;">85540</td>
+        <td style="text-align: right;">55.8</td>
+        <td style="text-align: right;">152.6s</td>
+        <td style="text-align: right;">60166ms</td>
+        <td style="text-align: right;">191.0ms</td>
+        </tr>
+        <tr class="odd">
+        <td>gmu .84 / seq 128 / bt 32K</td>
+        <td style="text-align: right;">1</td>
+        <td style="text-align: right;">4/0/4</td>
+        <td style="text-align: right;">100%</td>
+        <td>ready</td>
+        <td style="text-align: right;">78380</td>
+        <td style="text-align: right;">21.7</td>
+        <td style="text-align: right;">50.5s</td>
+        <td style="text-align: right;">18607ms</td>
+        <td style="text-align: right;">60.7ms</td>
+        </tr>
+        <tr class="even">
+        <td>gmu .84 / seq 128 / bt 32K</td>
+        <td style="text-align: right;">2</td>
+        <td style="text-align: right;">8/0/8</td>
+        <td style="text-align: right;">100%</td>
+        <td>ready</td>
+        <td style="text-align: right;">78380</td>
+        <td style="text-align: right;">30.9</td>
+        <td style="text-align: right;">57.4s</td>
+        <td style="text-align: right;">14558ms</td>
+        <td style="text-align: right;">73.1ms</td>
+        </tr>
+        <tr class="odd">
+        <td>gmu .84 / seq 128 / bt 32K</td>
+        <td style="text-align: right;">4</td>
+        <td style="text-align: right;">12/0/12</td>
+        <td style="text-align: right;">100%</td>
+        <td>ready</td>
+        <td style="text-align: right;">83836</td>
+        <td style="text-align: right;">44.3</td>
+        <td style="text-align: right;">88.3s</td>
+        <td style="text-align: right;">28268ms</td>
+        <td style="text-align: right;">109.5ms</td>
+        </tr>
+        <tr class="even">
+        <td>gmu .84 / seq 128 / bt 32K</td>
+        <td style="text-align: right;">8</td>
+        <td style="text-align: right;">16/0/16</td>
+        <td style="text-align: right;">100%</td>
+        <td>ready</td>
+        <td style="text-align: right;">88188</td>
+        <td style="text-align: right;">55.6</td>
+        <td style="text-align: right;">152.9s</td>
+        <td style="text-align: right;">59303ms</td>
+        <td style="text-align: right;">191.3ms</td>
+        </tr>
+        <tr class="odd">
+        <td>gmu .88 / seq 64 / bt 32K</td>
+        <td style="text-align: right;">1</td>
+        <td style="text-align: right;">4/0/4</td>
+        <td style="text-align: right;">100%</td>
+        <td>ready</td>
+        <td style="text-align: right;">79924</td>
+        <td style="text-align: right;">21.6</td>
+        <td style="text-align: right;">51.2s</td>
+        <td style="text-align: right;">19010ms</td>
+        <td style="text-align: right;">61.6ms</td>
+        </tr>
+        <tr class="even">
+        <td>gmu .88 / seq 64 / bt 32K</td>
+        <td style="text-align: right;">2</td>
+        <td style="text-align: right;">8/0/8</td>
+        <td style="text-align: right;">100%</td>
+        <td>ready</td>
+        <td style="text-align: right;">84772</td>
+        <td style="text-align: right;">33.6</td>
+        <td style="text-align: right;">57.5s</td>
+        <td style="text-align: right;">14792ms</td>
+        <td style="text-align: right;">80.6ms</td>
+        </tr>
+        <tr class="odd">
+        <td>gmu .88 / seq 64 / bt 32K</td>
+        <td style="text-align: right;">4</td>
+        <td style="text-align: right;">11/0/12</td>
+        <td style="text-align: right;">92%</td>
+        <td>ready</td>
+        <td style="text-align: right;">84772</td>
+        <td style="text-align: right;">45.4</td>
+        <td style="text-align: right;">86.6s</td>
+        <td style="text-align: right;">29329ms</td>
+        <td style="text-align: right;">104.1ms</td>
+        </tr>
+        <tr class="even">
+        <td>gmu .88 / seq 64 / bt 32K</td>
+        <td style="text-align: right;">8</td>
+        <td style="text-align: right;">16/0/16</td>
+        <td style="text-align: right;">100%</td>
+        <td>ready</td>
+        <td style="text-align: right;">89124</td>
+        <td style="text-align: right;">57.6</td>
+        <td style="text-align: right;">152.1s</td>
+        <td style="text-align: right;">58641ms</td>
+        <td style="text-align: right;">200.9ms</td>
+        </tr>
+        <tr class="odd">
+        <td>gmu .88 / seq 128 / bt 64K</td>
+        <td style="text-align: right;">1</td>
+        <td style="text-align: right;">4/0/4</td>
+        <td style="text-align: right;">100%</td>
+        <td>ready</td>
+        <td style="text-align: right;">70388</td>
+        <td style="text-align: right;">21.7</td>
+        <td style="text-align: right;">50.7s</td>
+        <td style="text-align: right;">18616ms</td>
+        <td style="text-align: right;">60.9ms</td>
+        </tr>
+        <tr class="even">
+        <td>gmu .88 / seq 128 / bt 64K</td>
+        <td style="text-align: right;">2</td>
+        <td style="text-align: right;">8/0/8</td>
+        <td style="text-align: right;">100%</td>
+        <td>ready</td>
+        <td style="text-align: right;">75004</td>
+        <td style="text-align: right;">33.5</td>
+        <td style="text-align: right;">57.6s</td>
+        <td style="text-align: right;">14867ms</td>
+        <td style="text-align: right;">80.7ms</td>
+        </tr>
+        <tr class="odd">
+        <td>gmu .88 / seq 128 / bt 64K</td>
+        <td style="text-align: right;">4</td>
+        <td style="text-align: right;">12/0/12</td>
+        <td style="text-align: right;">100%</td>
+        <td>ready</td>
+        <td style="text-align: right;">76628</td>
+        <td style="text-align: right;">45.2</td>
+        <td style="text-align: right;">87.6s</td>
+        <td style="text-align: right;">29084ms</td>
+        <td style="text-align: right;">109.5ms</td>
+        </tr>
+        <tr class="even">
+        <td>gmu .88 / seq 128 / bt 64K</td>
+        <td style="text-align: right;">8</td>
+        <td style="text-align: right;">8/8/16</td>
+        <td style="text-align: right;">50%</td>
+        <td>not_ready</td>
+        <td style="text-align: right;">21590</td>
+        <td style="text-align: right;">1083.1</td>
+        <td style="text-align: right;">11.7s</td>
+        <td style="text-align: right;">7563ms</td>
+        <td style="text-align: right;">26.9ms</td>
+        </tr>
+        <tr class="odd">
+        <td>gmu .84 / seq 256 / bt 32K</td>
+        <td style="text-align: right;">1</td>
+        <td style="text-align: right;">4/0/4</td>
+        <td style="text-align: right;">100%</td>
+        <td>ready</td>
+        <td style="text-align: right;">81760</td>
+        <td style="text-align: right;">21.6</td>
+        <td style="text-align: right;">51.0s</td>
+        <td style="text-align: right;">18695ms</td>
+        <td style="text-align: right;">61.3ms</td>
+        </tr>
+        <tr class="even">
+        <td>gmu .84 / seq 256 / bt 32K</td>
+        <td style="text-align: right;">2</td>
+        <td style="text-align: right;">8/0/8</td>
+        <td style="text-align: right;">100%</td>
+        <td>ready</td>
+        <td style="text-align: right;">86766</td>
+        <td style="text-align: right;">33.5</td>
+        <td style="text-align: right;">57.4s</td>
+        <td style="text-align: right;">14792ms</td>
+        <td style="text-align: right;">80.6ms</td>
+        </tr>
+        <tr class="odd">
+        <td>gmu .84 / seq 256 / bt 32K</td>
+        <td style="text-align: right;">4</td>
+        <td style="text-align: right;">12/0/12</td>
+        <td style="text-align: right;">100%</td>
+        <td>ready</td>
+        <td style="text-align: right;">87914</td>
+        <td style="text-align: right;">47.3</td>
+        <td style="text-align: right;">86.8s</td>
+        <td style="text-align: right;">29516ms</td>
+        <td style="text-align: right;">117.4ms</td>
+        </tr>
+        <tr class="even">
+        <td>gmu .84 / seq 256 / bt 32K</td>
+        <td style="text-align: right;">8</td>
+        <td style="text-align: right;">8/0/16</td>
+        <td style="text-align: right;">50%</td>
+        <td>not_ready</td>
+        <td style="text-align: right;">22170</td>
+        <td style="text-align: right;">9.8</td>
+        <td style="text-align: right;">315.0s</td>
+        <td style="text-align: right;">22468ms</td>
+        <td style="text-align: right;">724.2ms</td>
+        </tr>
+        </tbody>
+        </table>
+        <p>The throughput number for failed c8 rows should be read
+        together with success rate and health. For example,
+        <code>0.88 / 128 / 65536</code> reports high completed-request
+        throughput at c8 because half the workload failed quickly; the
+        governing signals are 50% success rate, <code>not_ready</code>
+        health, and <code>EngineDeadError</code>.</p>
+        <p><a href="images/matrix-latency-p95.svg"><img
+        src="images/matrix-latency-p95.svg"
+        alt="Runtime p95 latency vs concurrency" /></a></p>
+        <p><a href="images/matrix-ttft-p95.svg"><img
+        src="images/matrix-ttft-p95.svg"
+        alt="Runtime p95 TTFT vs concurrency" /></a></p>
+        <p><a href="images/matrix-tpot-p95.svg"><img
+        src="images/matrix-tpot-p95.svg"
+        alt="Runtime p95 TPOT vs concurrency" /></a></p>
+        <p><a href="images/matrix-output-throughput.svg"><img
+        src="images/matrix-output-throughput.svg"
+        alt="Runtime output throughput vs concurrency" /></a></p>
+        <p><a href="images/matrix-gpu-memory.svg"><img
+        src="images/matrix-gpu-memory.svg"
+        alt="Runtime GPU memory pressure vs concurrency" /></a></p>
+        <p><a href="images/matrix-success-rate.svg"><img
+        src="images/matrix-success-rate.svg"
+        alt="Runtime success rate vs concurrency" /></a></p>
+        <h2 id="longer-16k-degradation-pilot">Longer 16K Degradation
+        Pilot</h2>
+        <p>The 16K-input pilot used
+        <code>gpu_memory_utilization=0.88</code>,
+        <code>max_num_seqs=128</code>,
+        <code>max_num_batched_tokens=65536</code> with approximately 16K
+        input tokens and 768 output tokens. It demonstrates the
+        slow-response version of the same risk: at c8 the service still
+        answered health checks, but p95 latency and TTFT became
+        customer-visible failures.</p>
+        <table>
+        <colgroup>
+        <col style="width: 8%" />
+        <col style="width: 11%" />
+        <col style="width: 11%" />
+        <col style="width: 8%" />
+        <col style="width: 11%" />
+        <col style="width: 11%" />
+        <col style="width: 11%" />
+        <col style="width: 11%" />
+        <col style="width: 11%" />
+        </colgroup>
+        <thead>
+        <tr class="header">
+        <th>Startup parameters</th>
+        <th style="text-align: right;">c</th>
+        <th style="text-align: right;">OK/Err/Target</th>
+        <th>Health</th>
+        <th style="text-align: right;">GPU MiB</th>
+        <th style="text-align: right;">Out tok/s</th>
+        <th style="text-align: right;">Latency p95</th>
+        <th style="text-align: right;">TTFT p95</th>
+        <th style="text-align: right;">TPOT p95</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr class="odd">
+        <td>16K pilot: gmu .88 / seq 128 / bt 64K</td>
+        <td style="text-align: right;">1</td>
+        <td style="text-align: right;">4/0/4</td>
+        <td>ready</td>
+        <td style="text-align: right;">74620</td>
+        <td style="text-align: right;">21.4</td>
+        <td style="text-align: right;">58.0s</td>
+        <td style="text-align: right;">21407ms</td>
+        <td style="text-align: right;">60.4ms</td>
+        </tr>
+        <tr class="even">
+        <td>16K pilot: gmu .88 / seq 128 / bt 64K</td>
+        <td style="text-align: right;">2</td>
+        <td style="text-align: right;">8/0/8</td>
+        <td>ready</td>
+        <td style="text-align: right;">74620</td>
+        <td style="text-align: right;">29.9</td>
+        <td style="text-align: right;">69.6s</td>
+        <td style="text-align: right;">19469ms</td>
+        <td style="text-align: right;">75.1ms</td>
+        </tr>
+        <tr class="odd">
+        <td>16K pilot: gmu .88 / seq 128 / bt 64K</td>
+        <td style="text-align: right;">4</td>
+        <td style="text-align: right;">12/0/12</td>
+        <td>ready</td>
+        <td style="text-align: right;">89492</td>
+        <td style="text-align: right;">44.3</td>
+        <td style="text-align: right;">114.3s</td>
+        <td style="text-align: right;">40865ms</td>
+        <td style="text-align: right;">119.1ms</td>
+        </tr>
+        <tr class="even">
+        <td>16K pilot: gmu .88 / seq 128 / bt 64K</td>
+        <td style="text-align: right;">8</td>
+        <td style="text-align: right;">16/0/16</td>
+        <td>ready</td>
+        <td style="text-align: right;">89634</td>
+        <td style="text-align: right;">51.4</td>
+        <td style="text-align: right;">200.6s</td>
+        <td style="text-align: right;">82018ms</td>
+        <td style="text-align: right;">209.0ms</td>
+        </tr>
+        </tbody>
+        </table>
+        <p><a href="images/pilot-latency-p95.svg"><img
+        src="images/pilot-latency-p95.svg"
+        alt="16K pilot p95 latency vs concurrency" /></a></p>
+        <p><a href="images/pilot-tpot-p95.svg"><img
+        src="images/pilot-tpot-p95.svg"
+        alt="16K pilot p95 TPOT vs concurrency" /></a></p>
+        <h2 id="destructive-boundary-summary">Destructive Boundary
+        Summary</h2>
+        <table>
+        <colgroup>
+        <col style="width: 33%" />
+        <col style="width: 33%" />
+        <col style="width: 33%" />
+        </colgroup>
+        <thead>
+        <tr class="header">
+        <th>Stack</th>
+        <th>Destructive parameters</th>
+        <th>Failure mode</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr class="odd">
+        <td>Upstream vLLM 0.21</td>
+        <td><code>gpu_memory_utilization=0.999</code>,
+        <code>max_model_len=65536</code>, <code>max_num_seqs=256</code>,
+        <code>max_num_batched_tokens=131072</code></td>
+        <td>Startup admission failure. Container exited with code 1,
+        <code>OOMKilled=false</code>; free GPU memory was below the
+        target requested by utilization 0.999.</td>
+        </tr>
+        <tr class="even">
+        <td>Upstream latest / vLLM 0.22.0</td>
+        <td><code>gpu_memory_utilization=0.999</code>,
+        <code>max_model_len=65536</code>, <code>max_num_seqs=256</code>,
+        <code>max_num_batched_tokens=131072</code></td>
+        <td>Same startup admission failure as upstream v0.21.</td>
+        </tr>
+        <tr class="odd">
+        <td>Red Hat RHAI vLLM 3.4</td>
+        <td><code>gpu_memory_utilization=0.88</code>,
+        <code>max_num_seqs=128</code>,
+        <code>max_num_batched_tokens=65536</code></td>
+        <td>Successful startup, then runtime degradation/failure at 12K
+        c8: 8/16 target requests completed, 8 errors, health
+        <code>not_ready</code>, <code>EngineDeadError</code>, HTTP 500
+        responses.</td>
+        </tr>
+        <tr class="even">
+        <td>Red Hat RHAI vLLM 3.4</td>
+        <td><code>gpu_memory_utilization=0.84</code>,
+        <code>max_num_seqs=256</code>,
+        <code>max_num_batched_tokens=32768</code></td>
+        <td>Successful startup, then runtime degradation at 12K c8: 8/16
+        target requests completed, health <code>not_ready</code>, p95
+        latency 315.0s, p95 TPOT 724.2ms.</td>
+        </tr>
+        </tbody>
+        </table>
+        <h2 id="recommendation">Recommendation</h2>
+        <p>Use this RHAI vLLM 3.4 configuration as the customer-facing
+        starting point on this 4 x NVIDIA L4 host:</p>
+        <pre class="text"><code>tensor_parallel_size=4
+gpu_memory_utilization=0.84
+max_model_len=32768
+max_num_seqs=64
+max_num_batched_tokens=32768</code></pre>
+        <p>For latency-sensitive tests, evaluate this variant under the
+        customer’s actual workload:</p>
+        <pre class="text"><code>tensor_parallel_size=4
+gpu_memory_utilization=0.88
+max_model_len=32768
+max_num_seqs=64
+max_num_batched_tokens=32768</code></pre>
+        <p>Avoid treating <code>max_num_seqs</code>,
+        <code>max_num_batched_tokens</code>, and
+        <code>gpu_memory_utilization</code> as independent “more is
+        better” knobs on 4 x L4. This test shows three distinct risk
+        zones:</p>
+        <ul>
+        <li>Too much startup memory pressure can fail admission before
+        serving starts.</li>
+        <li>Larger scheduling envelopes can pass startup but degrade at
+        high long-context concurrency.</li>
+        <li>A service can remain health-ready while p95 latency and TTFT
+        are already unacceptable for interactive agent use.</li>
+        </ul>
+        <h2 id="evidence-package">Evidence Package</h2>
+        <table>
+        <colgroup>
+        <col style="width: 50%" />
+        <col style="width: 50%" />
+        </colgroup>
+        <thead>
+        <tr class="header">
+        <th>Artifact</th>
+        <th>Path</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr class="odd">
+        <td>Integrated final report</td>
+        <td><code>solution/solution-2026.06.04.15.54.md</code></td>
+        </tr>
+        <tr class="even">
+        <td>Main benchmark archive</td>
+        <td><code>solution/files/solution-2026-06-04-12-44/round2-benchmark-results-20260604T1244Z.tar.gz</code></td>
+        </tr>
+        <tr class="odd">
+        <td>Main benchmark manifest</td>
+        <td><code>solution/files/solution-2026-06-04-12-44/round2-benchmark-results-20260604T1244Z.manifest.txt</code></td>
+        </tr>
+        <tr class="even">
+        <td>Main benchmark CSV</td>
+        <td><code>solution/files/solution-2026-06-04-12-44/round2-summary.csv</code></td>
+        </tr>
+        <tr class="odd">
+        <td>Runtime degradation archive</td>
+        <td><code>solution/files/solution-2026-06-04-13-40/round4-degradation-results-20260604T072632Z.tar.gz</code></td>
+        </tr>
+        <tr class="even">
+        <td>Runtime degradation manifest</td>
+        <td><code>solution/files/solution-2026-06-04-13-40/round4-degradation-results-20260604T072632Z.manifest.txt</code></td>
+        </tr>
+        <tr class="odd">
+        <td>Runtime degradation CSV</td>
+        <td><code>solution/files/solution-2026-06-04-13-40/round4-degradation-summary.csv</code></td>
+        </tr>
+        <tr class="even">
+        <td>Command audit logs</td>
+        <td><code>steps/steps-2026.06.04.11.04.md</code>,
+        <code>steps/steps-2026.06.04.12.44.md</code>,
+        <code>steps/steps-2026.06.04.13.36.md</code>,
+        <code>steps/steps-2026.06.04.13.40.md</code>,
+        <code>steps/steps-2026.06.04.15.54.md</code></td>
+        </tr>
+        </tbody>
+        </table>
+        <p>Final cleanup was verified after the benchmark and
+        degradation work: no vLLM containers remained, no GPU processes
+        were running, and port 8000 had no listener.</p>
+      </article>
+    </div>
+      </main>
+
+  <footer>
+    <p>
+      Licensed under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank"
+        rel="noopener">CC-BY-NC-SA 4.0</a>
+      &nbsp;·&nbsp;
+      <a href="https://github.com/wangzheng422/docker_env" target="_blank" rel="noopener">wangzheng422/docker_env</a>
+    </p>
+  </footer>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: false, theme: 'dark' });
+
+    const SITE_BUILD_ID = 'fbe91b569ae8';
+    const SITE_HOME_URL = '../../../../index.html';
+
+    const getBuildIdFromHtml = (html) => {
+      const match = String(html).match(/<meta[^>]+name=["']site-build-id["'][^>]+content=["']([^"']+)["']/i)
+        || String(html).match(/<meta[^>]+content=["']([^"']+)["'][^>]+name=["']site-build-id["']/i);
+      return match ? match[1] : '';
+    };
+
+    const checkForSiteUpdate = async () => {
+      if (!SITE_BUILD_ID || window.location.protocol === 'file:') return;
+      try {
+        const probeUrl = new URL(SITE_HOME_URL || './index.html', window.location.href);
+        probeUrl.searchParams.set('site_cache_probe', Date.now().toString());
+        const response = await fetch(probeUrl.toString(), { cache: 'no-store' });
+        if (!response.ok) return;
+        const latestBuildId = getBuildIdFromHtml(await response.text());
+        if (!latestBuildId || latestBuildId === SITE_BUILD_ID) return;
+        if (sessionStorage.getItem('site-build-refresh') === latestBuildId) return;
+        sessionStorage.setItem('site-build-refresh', latestBuildId);
+        const freshUrl = new URL(window.location.href);
+        freshUrl.searchParams.set('v', latestBuildId);
+        window.location.replace(freshUrl.toString());
+      } catch (error) {
+        // Network errors should not block reading the current page.
+      }
+    };
+
+    const versionedLocalUrl = (rawUrl) => {
+      if (!rawUrl || /^(https?:)?\/\//i.test(rawUrl) || /^(data|blob|mailto):/i.test(rawUrl)) return rawUrl;
+      const url = new URL(rawUrl, window.location.href);
+      if (url.searchParams.has('v')) return rawUrl;
+      url.searchParams.set('v', SITE_BUILD_ID);
+      return url.toString();
+    };
+
+    const cacheBustPageAssets = () => {
+      document.querySelectorAll('img[src], video[src], audio[src], source[src]').forEach((node) => {
+        const src = node.getAttribute('src');
+        const versioned = versionedLocalUrl(src);
+        if (versioned !== src) node.setAttribute('src', versioned);
+      });
+    };
+
+    const updateReadingProgress = () => {
+      const progress = document.querySelector('.reading-progress');
+      if (!progress) return;
+      const scrollable = document.documentElement.scrollHeight - window.innerHeight;
+      const ratio = scrollable > 0 ? window.scrollY / scrollable : 0;
+      progress.style.transform = 'scaleX(' + Math.min(1, Math.max(0, ratio)) + ')';
+    };
+
+    const topicFor = (text, href) => {
+      const haystack = (text + ' ' + href).toLowerCase();
+      if (/developers\.redhat\.com|redhatquickcourses|github\.com\/redhatquickcourses/.test(haystack)) return 'Red Hat';
+      if (/ai|llm|gpu|vllm|llama|model|rhaiis/.test(haystack)) return 'AI';
+      if (/network|ovn|bgp|dns|egress|ingress|metallb|nic|route/.test(haystack)) return 'Network';
+      if (/cert|tls|sso|keycloak|rhbk|security|compliance/.test(haystack)) return 'Security';
+      if (/perf|profile|throttling|heap|debug/.test(haystack)) return 'Performance';
+      if (/install|ipi|upi|sno|disconnected|bootstrap/.test(haystack)) return 'Install';
+      if (/rhel|coreos|rhcos|kernel|rpm|ostree/.test(haystack)) return 'RHEL';
+      if (/backup|storage|nfs|odf|ocs|ceph|dr/.test(haystack)) return 'Storage';
+      if (/pipeline|gitops|ansible|aap|rhdh|devops/.test(haystack)) return 'DevOps';
+      return 'OpenShift';
+    };
+
+    const yearFor = (text, href) => {
+      const match = (text + ' ' + href).match(/20\d{2}/);
+      return match ? match[0] : 'Notes';
+    };
+
+    const importantExternal = (href) =>
+      /developers\.redhat\.com|redhatquickcourses\.github\.io/i.test(href);
+
+    const titleForLink = (link) => {
+      const href = link.getAttribute('href') || '';
+      const directText = link.textContent.trim().replace(/\s+/g, ' ');
+      if (!/^https?:\/\//.test(directText)) return directText;
+      const parentItem = link.closest('ul')?.parentElement;
+      if (parentItem) {
+        const clone = parentItem.cloneNode(true);
+        clone.querySelectorAll('ul').forEach((nested) => nested.remove());
+        const parentText = clone.textContent.trim().replace(/\s+/g, ' ');
+        if (parentText) {
+          return parentText;
+        }
+      }
+      return directText;
+    };
+
+    const escapeHtml = (value) => String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+
+    const enhanceHome = () => {
+      if (!document.body.classList.contains('page-index')) return;
+      const source = document.querySelector('.home-source');
+      const grid = document.getElementById('note-grid');
+      const stats = document.getElementById('console-stats');
+      const externalPanel = document.getElementById('external-panel');
+      const topicStrip = document.getElementById('topic-strip');
+      const search = document.getElementById('console-search');
+      if (!source || !grid || !stats || !externalPanel || !topicStrip || !search) return;
+
+      const seen = new Set();
+      const links = Array.from(source.querySelectorAll('a[href]'))
+        .map((link) => {
+          const href = link.getAttribute('href') || '';
+          const text = titleForLink(link);
+          return { text, href, topic: topicFor(text, href), year: yearFor(text, href) };
+        });
+      const notes = links
+        .filter((note) => note.text && !note.href.startsWith('http') && !seen.has(note.href) && seen.add(note.href));
+      const externalLinks = links
+        .filter((note) => note.text && importantExternal(note.href));
+
+      const topics = ['All', ...Array.from(new Set(notes.map((note) => note.topic))).sort()];
+      let activeTopic = 'All';
+
+      const renderStats = () => {
+        const years = notes.map((note) => note.year).filter((year) => year.length === 4 && /^\d{4}/.test(year));
+        const latest = years.length ? Math.max(...years.map(Number)) : 'N/A';
+        const oldest = years.length ? Math.min(...years.map(Number)) : 'N/A';
+        stats.innerHTML = [
+          ['Notes', notes.length],
+          ['Resources', externalLinks.length],
+          ['Topics', topics.length - 1],
+          ['Latest', latest],
+        ].map(([label, value]) => '<div class="stat-tile"><span>' + label + '</span><strong>' + value + '</strong></div>').join('');
+        const signal = document.getElementById('signal-count');
+        if (signal) signal.textContent = notes.length + ' links indexed';
+      };
+
+      const renderExternal = () => {
+        externalPanel.innerHTML =
+          '<div class="section-heading"><span>Published / Learning</span><strong>Red Hat resources</strong></div>' +
+          '<div class="external-grid">' +
+          externalLinks.map((note) =>
+            '<a class="resource-card" href="' + escapeHtml(note.href) + '" target="_blank" rel="noopener">' +
+            '<span class="note-meta"><span>' + escapeHtml(note.year) + '</span><span>' + escapeHtml(note.topic) + '</span></span>' +
+            '<strong>' + escapeHtml(note.text) + '</strong>' +
+            '<small>' + escapeHtml(note.href) + '</small>' +
+            '</a>'
+          ).join('') +
+          '</div>';
+      };
+
+      const renderTopics = () => {
+        topicStrip.innerHTML = topics.map((topic) => '<button class="topic-chip' + (topic === activeTopic ? ' active' : '') + '" type="button" data-topic="' + escapeHtml(topic) + '">' + escapeHtml(topic) + '</button>').join('');
+        topicStrip.querySelectorAll('button').forEach((button) => {
+          button.addEventListener('click', () => {
+            activeTopic = button.dataset.topic || 'All';
+            renderTopics();
+            renderCards();
+          });
+        });
+      };
+
+      const renderCards = () => {
+        const query = search.value.trim().toLowerCase();
+        const filtered = notes.filter((note) => {
+          const topicMatch = activeTopic === 'All' || note.topic === activeTopic;
+          const queryMatch = !query || (note.text + ' ' + note.href + ' ' + note.topic + ' ' + note.year).toLowerCase().includes(query);
+          return topicMatch && queryMatch;
+        });
+        grid.innerHTML = filtered.map((note) =>
+          '<a class="note-card" href="' + escapeHtml(note.href) + '">' +
+          '<span class="note-meta"><span>' + escapeHtml(note.year) + '</span><span>' + escapeHtml(note.topic) + '</span></span>' +
+          '<strong>' + escapeHtml(note.text) + '</strong>' +
+          '<small>' + escapeHtml(note.href) + '</small>' +
+          '</a>'
+        ).join('') || '<p class="empty-state">No matching notes.</p>';
+      };
+
+      const drawMap = () => {
+        const canvas = document.getElementById('knowledge-canvas');
+        if (!(canvas instanceof HTMLCanvasElement)) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        const width = canvas.width;
+        const height = canvas.height;
+        const nodes = notes.slice(0, 44).map((note, index) => {
+          const angle = (index / 44) * Math.PI * 2;
+          const ring = 90 + (index % 5) * 22;
+          return {
+            x: width / 2 + Math.cos(angle) * ring,
+            y: height / 2 + Math.sin(angle) * ring * 0.72,
+            topic: note.topic,
+          };
+        });
+        ctx.clearRect(0, 0, width, height);
+        ctx.strokeStyle = 'rgba(88, 166, 255, 0.14)';
+        ctx.lineWidth = 1;
+        nodes.forEach((node, index) => {
+          const next = nodes[(index + 7) % nodes.length];
+          ctx.beginPath();
+          ctx.moveTo(node.x, node.y);
+          ctx.lineTo(next.x, next.y);
+          ctx.stroke();
+        });
+        const palette = {
+          AI: '#a371f7',
+          Network: '#39d0d8',
+          Security: '#ff7b72',
+          Performance: '#f2cc60',
+          Install: '#7ee787',
+          RHEL: '#ff7b72',
+          Storage: '#d2a8ff',
+          DevOps: '#ffa657',
+          OpenShift: '#58a6ff',
+        };
+        nodes.forEach((node) => {
+          ctx.fillStyle = palette[node.topic] || '#58a6ff';
+          ctx.beginPath();
+          ctx.arc(node.x, node.y, 3.4, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      };
+
+      search.addEventListener('input', renderCards);
+      renderStats();
+      renderExternal();
+      renderTopics();
+      renderCards();
+      drawMap();
+      document.body.classList.add('home-enhanced');
+    };
+
+    const enhanceCodeBlocks = () => {
+      document.querySelectorAll('pre').forEach((pre) => {
+        if (pre.classList.contains('mermaid') || pre.querySelector('.copy-code')) return;
+        const button = document.createElement('button');
+        button.className = 'copy-code';
+        button.type = 'button';
+        button.textContent = 'Copy';
+        button.addEventListener('click', async () => {
+          await navigator.clipboard.writeText(pre.textContent || '');
+          button.textContent = 'Copied';
+          setTimeout(() => { button.textContent = 'Copy'; }, 1200);
+        });
+        pre.appendChild(button);
+      });
+    };
+
+    window.addEventListener('scroll', updateReadingProgress, { passive: true });
+    window.addEventListener('pageshow', (event) => {
+      if (event.persisted) checkForSiteUpdate();
+    });
+    document.addEventListener('DOMContentLoaded', async () => {
+      checkForSiteUpdate();
+      cacheBustPageAssets();
+      updateReadingProgress();
+      enhanceHome();
+      enhanceCodeBlocks();
+      // pandoc 输出 mermaid 为 <pre class="mermaid"><code>...</code></pre>
+      // 需要转成 <div class="mermaid">...</div> 供 mermaid.js 渲染
+      document.querySelectorAll('pre.mermaid').forEach(pre => {
+        const div = document.createElement('div');
+        div.classList.add('mermaid');
+        div.textContent = pre.textContent;
+        pre.replaceWith(div);
+      });
+      // 也处理 <pre><code class="language-mermaid"> 形式（备用）
+      document.querySelectorAll('pre code.language-mermaid').forEach(code => {
+        const div = document.createElement('div');
+        div.classList.add('mermaid');
+        div.textContent = code.textContent;
+        code.closest('pre').replaceWith(div);
+      });
+      await mermaid.run();
+    });
+  </script>
+</body>
+
+</html>

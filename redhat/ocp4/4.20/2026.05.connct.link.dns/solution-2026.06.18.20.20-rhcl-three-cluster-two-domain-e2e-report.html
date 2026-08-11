@@ -1,0 +1,2148 @@
+<!DOCTYPE html>
+<html lang="zh" dir="ltr">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="generator" content="pandoc" />
+  <meta name="site-build-id" content="fbe91b569ae8" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <title>RHCL Three-Cluster / Two-Domain GLB E2E Report | wandering.star notes</title>
+  <meta name="description"
+    content="Wandering field notes on OpenShift, RHEL, AI infrastructure, and platform operations." />
+  <!-- Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-E3FRMDB7L2"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-E3FRMDB7L2');
+  </script>
+  <style>
+  html {
+    color: #1a1a1a;
+    background-color: #fdfdfd;
+  }
+  body {
+    margin: 0 auto;
+    max-width: 36em;
+    padding-left: 50px;
+    padding-right: 50px;
+    padding-top: 50px;
+    padding-bottom: 50px;
+    hyphens: auto;
+    overflow-wrap: break-word;
+    text-rendering: optimizeLegibility;
+    font-kerning: normal;
+  }
+  @media (max-width: 600px) {
+    body {
+      font-size: 0.9em;
+      padding: 12px;
+    }
+    h1 {
+      font-size: 1.8em;
+    }
+  }
+  @media print {
+    html {
+      background-color: white;
+    }
+    body {
+      background-color: transparent;
+      color: black;
+      font-size: 12pt;
+    }
+    p, h2, h3 {
+      orphans: 3;
+      widows: 3;
+    }
+    h2, h3, h4 {
+      page-break-after: avoid;
+    }
+  }
+  p {
+    margin: 1em 0;
+  }
+  a {
+    color: #1a1a1a;
+  }
+  a:visited {
+    color: #1a1a1a;
+  }
+  img {
+    max-width: 100%;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.4em;
+  }
+  h5, h6 {
+    font-size: 1em;
+    font-style: italic;
+  }
+  h6 {
+    font-weight: normal;
+  }
+  ol, ul {
+    padding-left: 1.7em;
+    margin-top: 1em;
+  }
+  li > ol, li > ul {
+    margin-top: 0;
+  }
+  blockquote {
+    margin: 1em 0 1em 1.7em;
+    padding-left: 1em;
+    border-left: 2px solid #e6e6e6;
+    color: #606060;
+  }
+  code {
+    font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+    font-size: 85%;
+    margin: 0;
+    hyphens: manual;
+  }
+  pre {
+    margin: 1em 0;
+    overflow: auto;
+  }
+  pre code {
+    padding: 0;
+    overflow: visible;
+    overflow-wrap: normal;
+  }
+  .sourceCode {
+   background-color: transparent;
+   overflow: visible;
+  }
+  hr {
+    background-color: #1a1a1a;
+    border: none;
+    height: 1px;
+    margin: 1em 0;
+  }
+  table {
+    margin: 1em 0;
+    border-collapse: collapse;
+    width: 100%;
+    overflow-x: auto;
+    display: block;
+    font-variant-numeric: lining-nums tabular-nums;
+  }
+  table caption {
+    margin-bottom: 0.75em;
+  }
+  tbody {
+    margin-top: 0.5em;
+    border-top: 1px solid #1a1a1a;
+    border-bottom: 1px solid #1a1a1a;
+  }
+  th {
+    border-top: 1px solid #1a1a1a;
+    padding: 0.25em 0.5em 0.25em 0.5em;
+  }
+  td {
+    padding: 0.125em 0.5em 0.25em 0.5em;
+  }
+  header {
+    margin-bottom: 4em;
+    text-align: center;
+  }
+  #TOC li {
+    list-style: none;
+  }
+  #TOC ul {
+    padding-left: 1.3em;
+  }
+  #TOC > ul {
+    padding-left: 0;
+  }
+  #TOC a:not(:hover) {
+    text-decoration: none;
+  }
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  div.columns{display: flex; gap: min(4vw, 1.5em);}
+  div.column{flex: auto; overflow-x: auto;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  /* The extra [class] is a hack that increases specificity enough to
+     override a similar rule in reveal.js */
+  ul.task-list[class]{list-style: none;}
+  ul.task-list li input[type="checkbox"] {
+    font-size: inherit;
+    width: 0.8em;
+    margin: 0 0.8em 0.2em -1.6em;
+    vertical-align: middle;
+  }
+  .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  /* CSS for syntax highlighting */
+  pre > code.sourceCode { white-space: pre; position: relative; }
+  pre > code.sourceCode > span { line-height: 1.25; }
+  pre > code.sourceCode > span:empty { height: 1.2em; }
+  .sourceCode { overflow: visible; }
+  code.sourceCode > span { color: inherit; text-decoration: inherit; }
+  div.sourceCode { margin: 1em 0; }
+  pre.sourceCode { margin: 0; }
+  @media screen {
+  div.sourceCode { overflow: auto; }
+  }
+  @media print {
+  pre > code.sourceCode { white-space: pre-wrap; }
+  pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+  }
+  pre.numberSource code
+    { counter-reset: source-line 0; }
+  pre.numberSource code > span
+    { position: relative; left: -4em; counter-increment: source-line; }
+  pre.numberSource code > span > a:first-child::before
+    { content: counter(source-line);
+      position: relative; left: -1em; text-align: right; vertical-align: baseline;
+      border: none; display: inline-block;
+      -webkit-touch-callout: none; -webkit-user-select: none;
+      -khtml-user-select: none; -moz-user-select: none;
+      -ms-user-select: none; user-select: none;
+      padding: 0 4px; width: 4em;
+    }
+  pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+  div.sourceCode
+    { color: #cccccc; background-color: #303030; }
+  @media screen {
+  pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+  }
+  code span.al { color: #ffcfaf; } /* Alert */
+  code span.an { color: #7f9f7f; font-weight: bold; } /* Annotation */
+  code span.at { } /* Attribute */
+  code span.bn { color: #dca3a3; } /* BaseN */
+  code span.bu { } /* BuiltIn */
+  code span.cf { color: #f0dfaf; } /* ControlFlow */
+  code span.ch { color: #dca3a3; } /* Char */
+  code span.cn { color: #dca3a3; font-weight: bold; } /* Constant */
+  code span.co { color: #7f9f7f; } /* Comment */
+  code span.cv { color: #7f9f7f; font-weight: bold; } /* CommentVar */
+  code span.do { color: #7f9f7f; } /* Documentation */
+  code span.dt { color: #dfdfbf; } /* DataType */
+  code span.dv { color: #dcdccc; } /* DecVal */
+  code span.er { color: #c3bf9f; } /* Error */
+  code span.ex { } /* Extension */
+  code span.fl { color: #c0bed1; } /* Float */
+  code span.fu { color: #efef8f; } /* Function */
+  code span.im { } /* Import */
+  code span.in { color: #7f9f7f; font-weight: bold; } /* Information */
+  code span.kw { color: #f0dfaf; } /* Keyword */
+  code span.op { color: #f0efd0; } /* Operator */
+  code span.ot { color: #efef8f; } /* Other */
+  code span.pp { color: #ffcfaf; font-weight: bold; } /* Preprocessor */
+  code span.sc { color: #dca3a3; } /* SpecialChar */
+  code span.ss { color: #cc9393; } /* SpecialString */
+  code span.st { color: #cc9393; } /* String */
+  code span.va { } /* Variable */
+  code span.vs { color: #cc9393; } /* VerbatimString */
+  code span.wa { color: #7f9f7f; font-weight: bold; } /* Warning */
+  </style>
+  <link rel="stylesheet" href="../../../../style.css?v=fbe91b569ae8" />
+  </head>
+
+<body class="page-article">
+  <div class="reading-progress" aria-hidden="true"></div>
+  <div class="console-backdrop" aria-hidden="true"></div>
+  <nav class="site-nav">
+    <div class="nav-inner">
+      <a class="nav-brand" href="../../../../index.html">wandering.star<span>notes</span></a>
+      <div class="nav-links">
+        <a href="https://github.com/wangzheng422/docker_env" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://www.youtube.com/@wangzheng422" target="_blank" rel="noopener">YouTube</a>
+      </div>
+    </div>
+  </nav>
+
+  <main>
+            <a class="back-link" href="../../../../index.html">← Back to Index</a>
+        <div class="article-layout">
+            <aside class="toc-panel">
+        <div class="toc-title">ON THIS PAGE</div>
+        <ul>
+        <li><a href="#rhcl-three-cluster-two-domain-glb-e2e-report"
+        id="toc-rhcl-three-cluster-two-domain-glb-e2e-report">RHCL
+        Three-Cluster / Two-Domain GLB E2E Report</a>
+        <ul>
+        <li><a href="#executive-conclusion"
+        id="toc-executive-conclusion">1. Executive Conclusion</a></li>
+        <li><a href="#three-cluster-topology"
+        id="toc-three-cluster-topology">2. Three-Cluster
+        Topology</a></li>
+        <li><a href="#operator-installation"
+        id="toc-operator-installation">3. Operator Installation</a>
+        <ul>
+        <li><a href="#cert-manager-rhcl-and-metallb-operators"
+        id="toc-cert-manager-rhcl-and-metallb-operators">3.1
+        cert-manager, RHCL, and MetalLB operators</a></li>
+        </ul></li>
+        <li><a href="#rhcl-core-configuration"
+        id="toc-rhcl-core-configuration">4. RHCL Core Configuration</a>
+        <ul>
+        <li><a href="#gatewayclass-and-kuadrant-cr"
+        id="toc-gatewayclass-and-kuadrant-cr">4.1 GatewayClass and
+        Kuadrant CR</a></li>
+        <li><a href="#rhcl-dns-operator-identity-per-cluster"
+        id="toc-rhcl-dns-operator-identity-per-cluster">4.2 RHCL DNS
+        Operator identity per cluster</a></li>
+        </ul></li>
+        <li><a href="#metallb-and-fixed-vips"
+        id="toc-metallb-and-fixed-vips">5. MetalLB and Fixed
+        VIPs</a></li>
+        <li><a href="#rhcl-dns-provider-secret"
+        id="toc-rhcl-dns-provider-secret">6. RHCL DNS Provider
+        Secret</a></li>
+        <li><a href="#rhcl-cross-cluster-secrets-and-rbac"
+        id="toc-rhcl-cross-cluster-secrets-and-rbac">7. RHCL
+        Cross-Cluster Secrets and RBAC</a></li>
+        <li><a href="#active-groups-coredns-configuration"
+        id="toc-active-groups-coredns-configuration">8. Active-Groups
+        CoreDNS Configuration</a></li>
+        <li><a href="#demo-application" id="toc-demo-application">9.
+        Demo Application</a></li>
+        <li><a
+        href="#two-domain-gateway-httproute-dnspolicy-configuration"
+        id="toc-two-domain-gateway-httproute-dnspolicy-configuration">10.
+        Two-Domain Gateway / HTTPRoute / DNSPolicy
+        Configuration</a></li>
+        <li><a href="#test-method" id="toc-test-method">11. Test
+        Method</a></li>
+        <li><a href="#scenario-1-three-clusters-in-one-region"
+        id="toc-scenario-1-three-clusters-in-one-region">12. Scenario 1:
+        Three Clusters In One Region</a>
+        <ul>
+        <li><a href="#scenario-1-failure-demo-03-app-down"
+        id="toc-scenario-1-failure-demo-03-app-down">12.1 Scenario 1
+        Failure: demo-03 App Down</a></li>
+        </ul></li>
+        <li><a
+        href="#scenario-2-two-clusters-in-region-a-one-cluster-in-region-b"
+        id="toc-scenario-2-two-clusters-in-region-a-one-cluster-in-region-b">13.
+        Scenario 2: Two Clusters In Region A, One Cluster In Region
+        B</a>
+        <ul>
+        <li><a href="#scenario-2-failure-region-a-member-demo-02-down"
+        id="toc-scenario-2-failure-region-a-member-demo-02-down">13.1
+        Scenario 2 Failure: Region A Member demo-02 Down</a></li>
+        <li><a href="#scenario-2-failure-region-b-member-demo-03-down"
+        id="toc-scenario-2-failure-region-b-member-demo-03-down">13.2
+        Scenario 2 Failure: Region B Member demo-03 Down</a></li>
+        </ul></li>
+        <li><a href="#why-dnspolicy.weight0-alone-is-not-enough"
+        id="toc-why-dnspolicy.weight0-alone-is-not-enough">14. Why
+        <code>DNSPolicy.weight=0</code> Alone Is Not Enough</a></li>
+        <li><a href="#external-controller-recommendation"
+        id="toc-external-controller-recommendation">15. External
+        Controller Recommendation</a></li>
+        <li><a href="#avi-replacement-analysis"
+        id="toc-avi-replacement-analysis">16. Avi Replacement
+        Analysis</a>
+        <ul>
+        <li><a href="#what-rhcl-can-replace-based-on-this-e2e"
+        id="toc-what-rhcl-can-replace-based-on-this-e2e">16.1 What RHCL
+        can replace based on this E2E</a></li>
+        <li><a href="#what-rhcl-partially-replaces"
+        id="toc-what-rhcl-partially-replaces">16.2 What RHCL partially
+        replaces</a></li>
+        <li><a href="#what-rhcl-does-not-replace-in-this-poc"
+        id="toc-what-rhcl-does-not-replace-in-this-poc">16.3 What RHCL
+        does not replace in this PoC</a></li>
+        <li><a href="#recommended-customer-positioning"
+        id="toc-recommended-customer-positioning">16.4 Recommended
+        customer positioning</a></li>
+        </ul></li>
+        <li><a href="#final-conclusion" id="toc-final-conclusion">17.
+        Final Conclusion</a></li>
+        </ul></li>
+        </ul>
+      </aside>
+            <article class="markdown-body article-shell">
+        <h1 id="rhcl-three-cluster-two-domain-glb-e2e-report">RHCL
+        Three-Cluster / Two-Domain GLB E2E Report</h1>
+        <table>
+        <colgroup>
+        <col style="width: 50%" />
+        <col style="width: 50%" />
+        </colgroup>
+        <thead>
+        <tr class="header">
+        <th>Field</th>
+        <th>Value</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr class="odd">
+        <td>Date</td>
+        <td>2026-06-18</td>
+        </tr>
+        <tr class="even">
+        <td>Author</td>
+        <td>George Zheng Wang (SAA), zhengwan@redhat.com</td>
+        </tr>
+        <tr class="odd">
+        <td>Audience</td>
+        <td>Customer senior technical review</td>
+        </tr>
+        <tr class="even">
+        <td>Scope</td>
+        <td>Red Hat Connectivity Link / Kuadrant DNS based global load
+        balancing validation</td>
+        </tr>
+        <tr class="odd">
+        <td>Environment</td>
+        <td>Three single-node OpenShift clusters on AWS EC2 helper</td>
+        </tr>
+        <tr class="even">
+        <td>Helper users</td>
+        <td><code>sno</code>, <code>sno2</code>, <code>sno3</code></td>
+        </tr>
+        <tr class="odd">
+        <td>Cluster groups</td>
+        <td><code>demo-01</code>, <code>demo-02</code>,
+        <code>demo-03</code></td>
+        </tr>
+        <tr class="even">
+        <td>Tested domains</td>
+        <td><code>glb-a.kuadrant.wzhlab.top</code>,
+        <code>glb-b.kuadrant.wzhlab.top</code></td>
+        </tr>
+        <tr class="odd">
+        <td>Baseline domain</td>
+        <td><code>glb.kuadrant.wzhlab.top</code></td>
+        </tr>
+        </tbody>
+        </table>
+        <h2 id="executive-conclusion">1. Executive Conclusion</h2>
+        <p>This E2E validation proves that RHCL can publish two
+        independent application hostnames from three OpenShift clusters
+        and can remove a failed cluster from DNS answers after
+        application failure.</p>
+        <p>The validated design is:</p>
+        <pre class="text"><code>Per hostname:
+  Gateway + HTTPRoute + DNSPolicy
+  -&gt; DNSRecord
+  -&gt; DNSHealthCheckProbe
+  -&gt; Kuadrant CoreDNS answer
+  -&gt; Gateway VIP
+  -&gt; application Service and Pod
+
+For failover:
+  App failure
+  -&gt; DNSHealthCheckProbe becomes unhealthy
+  -&gt; controller/test logic removes the cluster group from that hostname active-groups TXT
+  -&gt; CoreDNS/RHCL converges
+  -&gt; bad Gateway VIP disappears from DNS answers</code></pre>
+        <p>The most important conclusion is:</p>
+        <pre class="text"><code>DNSPolicy.weight is useful for weighted distribution inside a bucket.
+active-groups is the reliable include/exclude switch for failover.
+DNSPolicy.weight=0 alone was not reliable enough as the only failover switch in this lab.</code></pre>
+        <p>From an Avi ALB/GSLB replacement perspective:</p>
+        <table>
+        <colgroup>
+        <col style="width: 33%" />
+        <col style="width: 33%" />
+        <col style="width: 33%" />
+        </colgroup>
+        <thead>
+        <tr class="header">
+        <th>Avi capability area</th>
+        <th>RHCL PoC result</th>
+        <th>Replacement conclusion</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr class="odd">
+        <td>Active/active DNS publication across clusters</td>
+        <td>Validated</td>
+        <td>Can replace for DNS-based multi-cluster active/active
+        publication.</td>
+        </tr>
+        <tr class="even">
+        <td>Weighted distribution among clusters in one
+        region/bucket</td>
+        <td>Validated</td>
+        <td>Can replace this part.</td>
+        </tr>
+        <tr class="odd">
+        <td>Health-based removal of failed app endpoint</td>
+        <td>Validated with active-groups convergence</td>
+        <td>Can replace with controller automation and explicit
+        convergence SLA.</td>
+        </tr>
+        <tr class="even">
+        <td>Multiple independent FQDNs with different policy</td>
+        <td>Validated</td>
+        <td>Can replace with per-hostname
+        Gateway/DNSPolicy/active-groups.</td>
+        </tr>
+        <tr class="odd">
+        <td>Multi-region survival when one site fails</td>
+        <td>Validated with caveat</td>
+        <td>Can provide survival/failover, but not full Avi GSLB policy
+        equivalence.</td>
+        </tr>
+        <tr class="even">
+        <td>Closest data center / best-performing data center</td>
+        <td>Not validated / not native in this PoC</td>
+        <td>Not a direct replacement without additional geo, ECS,
+        latency, or upstream DNS/GSLB layer.</td>
+        </tr>
+        <tr class="odd">
+        <td>Avi-style GSLB leader/site federation</td>
+        <td>Not provided by this PoC</td>
+        <td>Requires separate controller/control-plane design.</td>
+        </tr>
+        </tbody>
+        </table>
+        <h2 id="three-cluster-topology">2. Three-Cluster Topology</h2>
+        <table>
+        <colgroup>
+        <col style="width: 12%" />
+        <col style="width: 12%" />
+        <col style="width: 12%" />
+        <col style="width: 16%" />
+        <col style="width: 16%" />
+        <col style="width: 16%" />
+        <col style="width: 16%" />
+        </colgroup>
+        <thead>
+        <tr class="header">
+        <th>Cluster</th>
+        <th>Helper user</th>
+        <th>RHCL group</th>
+        <th style="text-align: right;">CoreDNS LB VIP</th>
+        <th style="text-align: right;">Baseline Gateway VIP</th>
+        <th style="text-align: right;">Domain A VIP</th>
+        <th style="text-align: right;">Domain B VIP</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr class="odd">
+        <td>demo-01</td>
+        <td><code>sno</code></td>
+        <td><code>demo-01</code></td>
+        <td style="text-align: right;"><code>192.168.99.210</code></td>
+        <td style="text-align: right;"><code>192.168.99.211</code></td>
+        <td style="text-align: right;"><code>192.168.99.212</code></td>
+        <td style="text-align: right;"><code>192.168.99.213</code></td>
+        </tr>
+        <tr class="even">
+        <td>demo-02</td>
+        <td><code>sno2</code></td>
+        <td><code>demo-02</code></td>
+        <td style="text-align: right;"><code>192.168.99.230</code></td>
+        <td style="text-align: right;"><code>192.168.99.221</code></td>
+        <td style="text-align: right;"><code>192.168.99.220</code></td>
+        <td style="text-align: right;"><code>192.168.99.222</code></td>
+        </tr>
+        <tr class="odd">
+        <td>demo-03</td>
+        <td><code>sno3</code></td>
+        <td><code>demo-03</code></td>
+        <td style="text-align: right;"><code>192.168.99.240</code></td>
+        <td style="text-align: right;"><code>192.168.99.241</code></td>
+        <td style="text-align: right;"><code>192.168.99.242</code></td>
+        <td style="text-align: right;"><code>192.168.99.243</code></td>
+        </tr>
+        </tbody>
+        </table>
+        <p>The upstream DNS model simulated an Infoblox-style delegated
+        subdomain:</p>
+        <pre class="text"><code>Parent DNS delegates kuadrant.wzhlab.top to the OpenShift-hosted Kuadrant CoreDNS VIPs.
+Kuadrant CoreDNS serves RHCL-generated records for application hostnames.
+Each OpenShift Gateway VIP is the actual HTTP entry point for the application.</code></pre>
+        <h2 id="operator-installation">3. Operator Installation</h2>
+        <p>The same operator installation pattern is applied to all
+        three clusters.</p>
+        <h3 id="cert-manager-rhcl-and-metallb-operators">3.1
+        cert-manager, RHCL, and MetalLB operators</h3>
+        <div class="sourceCode" id="cb4"><pre
+        class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">apiVersion</span><span class="kw">:</span><span class="at"> v1</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="fu">kind</span><span class="kw">:</span><span class="at"> Namespace</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="fu">metadata</span><span class="kw">:</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">name</span><span class="kw">:</span><span class="at"> cert-manager-operator</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="pp">---</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="fu">apiVersion</span><span class="kw">:</span><span class="at"> operators.coreos.com/v1</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="fu">kind</span><span class="kw">:</span><span class="at"> OperatorGroup</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="fu">metadata</span><span class="kw">:</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">name</span><span class="kw">:</span><span class="at"> cert-manager-operator</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">namespace</span><span class="kw">:</span><span class="at"> cert-manager-operator</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a><span class="fu">spec</span><span class="kw">:</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">targetNamespaces</span><span class="kw">:</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> cert-manager-operator</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a><span class="pp">---</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a><span class="fu">apiVersion</span><span class="kw">:</span><span class="at"> operators.coreos.com/v1alpha1</span></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a><span class="fu">kind</span><span class="kw">:</span><span class="at"> Subscription</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a><span class="fu">metadata</span><span class="kw">:</span></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">name</span><span class="kw">:</span><span class="at"> openshift-cert-manager-operator</span></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">namespace</span><span class="kw">:</span><span class="at"> cert-manager-operator</span></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a><span class="fu">spec</span><span class="kw">:</span></span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">channel</span><span class="kw">:</span><span class="at"> stable-v1.18</span></span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">installPlanApproval</span><span class="kw">:</span><span class="at"> Automatic</span></span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">name</span><span class="kw">:</span><span class="at"> openshift-cert-manager-operator</span></span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">source</span><span class="kw">:</span><span class="at"> redhat-operators</span></span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">sourceNamespace</span><span class="kw">:</span><span class="at"> openshift-marketplace</span></span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a><span class="pp">---</span></span>
+<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a><span class="fu">apiVersion</span><span class="kw">:</span><span class="at"> v1</span></span>
+<span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a><span class="fu">kind</span><span class="kw">:</span><span class="at"> Namespace</span></span>
+<span id="cb4-29"><a href="#cb4-29" aria-hidden="true" tabindex="-1"></a><span class="fu">metadata</span><span class="kw">:</span></span>
+<span id="cb4-30"><a href="#cb4-30" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">name</span><span class="kw">:</span><span class="at"> kuadrant-system</span></span>
+<span id="cb4-31"><a href="#cb4-31" aria-hidden="true" tabindex="-1"></a><span class="pp">---</span></span>
+<span id="cb4-32"><a href="#cb4-32" aria-hidden="true" tabindex="-1"></a><span class="fu">apiVersion</span><span class="kw">:</span><span class="at"> operators.coreos.com/v1</span></span>
+<span id="cb4-33"><a href="#cb4-33" aria-hidden="true" tabindex="-1"></a><span class="fu">kind</span><span class="kw">:</span><span class="at"> OperatorGroup</span></span>
+<span id="cb4-34"><a href="#cb4-34" aria-hidden="true" tabindex="-1"></a><span class="fu">metadata</span><span class="kw">:</span></span>
+<span id="cb4-35"><a href="#cb4-35" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">name</span><span class="kw">:</span><span class="at"> kuadrant-system</span></span>
+<span id="cb4-36"><a href="#cb4-36" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">namespace</span><span class="kw">:</span><span class="at"> kuadrant-system</span></span>
+<span id="cb4-37"><a href="#cb4-37" aria-hidden="true" tabindex="-1"></a><span class="fu">spec</span><span class="kw">:</span></span>
+<span id="cb4-38"><a href="#cb4-38" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">targetNamespaces</span><span class="kw">:</span></span>
+<span id="cb4-39"><a href="#cb4-39" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> kuadrant-system</span></span>
+<span id="cb4-40"><a href="#cb4-40" aria-hidden="true" tabindex="-1"></a><span class="pp">---</span></span>
+<span id="cb4-41"><a href="#cb4-41" aria-hidden="true" tabindex="-1"></a><span class="fu">apiVersion</span><span class="kw">:</span><span class="at"> operators.coreos.com/v1alpha1</span></span>
+<span id="cb4-42"><a href="#cb4-42" aria-hidden="true" tabindex="-1"></a><span class="fu">kind</span><span class="kw">:</span><span class="at"> Subscription</span></span>
+<span id="cb4-43"><a href="#cb4-43" aria-hidden="true" tabindex="-1"></a><span class="fu">metadata</span><span class="kw">:</span></span>
+<span id="cb4-44"><a href="#cb4-44" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">name</span><span class="kw">:</span><span class="at"> rhcl-operator</span></span>
+<span id="cb4-45"><a href="#cb4-45" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">namespace</span><span class="kw">:</span><span class="at"> kuadrant-system</span></span>
+<span id="cb4-46"><a href="#cb4-46" aria-hidden="true" tabindex="-1"></a><span class="fu">spec</span><span class="kw">:</span></span>
+<span id="cb4-47"><a href="#cb4-47" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">channel</span><span class="kw">:</span><span class="at"> stable</span></span>
+<span id="cb4-48"><a href="#cb4-48" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">installPlanApproval</span><span class="kw">:</span><span class="at"> Automatic</span></span>
+<span id="cb4-49"><a href="#cb4-49" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">name</span><span class="kw">:</span><span class="at"> rhcl-operator</span></span>
+<span id="cb4-50"><a href="#cb4-50" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">source</span><span class="kw">:</span><span class="at"> redhat-operators</span></span>
+<span id="cb4-51"><a href="#cb4-51" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">sourceNamespace</span><span class="kw">:</span><span class="at"> openshift-marketplace</span></span>
+<span id="cb4-52"><a href="#cb4-52" aria-hidden="true" tabindex="-1"></a><span class="pp">---</span></span>
+<span id="cb4-53"><a href="#cb4-53" aria-hidden="true" tabindex="-1"></a><span class="fu">apiVersion</span><span class="kw">:</span><span class="at"> v1</span></span>
+<span id="cb4-54"><a href="#cb4-54" aria-hidden="true" tabindex="-1"></a><span class="fu">kind</span><span class="kw">:</span><span class="at"> Namespace</span></span>
+<span id="cb4-55"><a href="#cb4-55" aria-hidden="true" tabindex="-1"></a><span class="fu">metadata</span><span class="kw">:</span></span>
+<span id="cb4-56"><a href="#cb4-56" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">name</span><span class="kw">:</span><span class="at"> metallb-system</span></span>
+<span id="cb4-57"><a href="#cb4-57" aria-hidden="true" tabindex="-1"></a><span class="pp">---</span></span>
+<span id="cb4-58"><a href="#cb4-58" aria-hidden="true" tabindex="-1"></a><span class="fu">apiVersion</span><span class="kw">:</span><span class="at"> operators.coreos.com/v1</span></span>
+<span id="cb4-59"><a href="#cb4-59" aria-hidden="true" tabindex="-1"></a><span class="fu">kind</span><span class="kw">:</span><span class="at"> OperatorGroup</span></span>
+<span id="cb4-60"><a href="#cb4-60" aria-hidden="true" tabindex="-1"></a><span class="fu">metadata</span><span class="kw">:</span></span>
+<span id="cb4-61"><a href="#cb4-61" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">name</span><span class="kw">:</span><span class="at"> metallb-system</span></span>
+<span id="cb4-62"><a href="#cb4-62" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">namespace</span><span class="kw">:</span><span class="at"> metallb-system</span></span>
+<span id="cb4-63"><a href="#cb4-63" aria-hidden="true" tabindex="-1"></a><span class="fu">spec</span><span class="kw">:</span></span>
+<span id="cb4-64"><a href="#cb4-64" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">targetNamespaces</span><span class="kw">:</span></span>
+<span id="cb4-65"><a href="#cb4-65" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> metallb-system</span></span>
+<span id="cb4-66"><a href="#cb4-66" aria-hidden="true" tabindex="-1"></a><span class="pp">---</span></span>
+<span id="cb4-67"><a href="#cb4-67" aria-hidden="true" tabindex="-1"></a><span class="fu">apiVersion</span><span class="kw">:</span><span class="at"> operators.coreos.com/v1alpha1</span></span>
+<span id="cb4-68"><a href="#cb4-68" aria-hidden="true" tabindex="-1"></a><span class="fu">kind</span><span class="kw">:</span><span class="at"> Subscription</span></span>
+<span id="cb4-69"><a href="#cb4-69" aria-hidden="true" tabindex="-1"></a><span class="fu">metadata</span><span class="kw">:</span></span>
+<span id="cb4-70"><a href="#cb4-70" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">name</span><span class="kw">:</span><span class="at"> metallb-operator</span></span>
+<span id="cb4-71"><a href="#cb4-71" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">namespace</span><span class="kw">:</span><span class="at"> metallb-system</span></span>
+<span id="cb4-72"><a href="#cb4-72" aria-hidden="true" tabindex="-1"></a><span class="fu">spec</span><span class="kw">:</span></span>
+<span id="cb4-73"><a href="#cb4-73" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">channel</span><span class="kw">:</span><span class="at"> stable</span></span>
+<span id="cb4-74"><a href="#cb4-74" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">installPlanApproval</span><span class="kw">:</span><span class="at"> Automatic</span></span>
+<span id="cb4-75"><a href="#cb4-75" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">name</span><span class="kw">:</span><span class="at"> metallb-operator</span></span>
+<span id="cb4-76"><a href="#cb4-76" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">source</span><span class="kw">:</span><span class="at"> redhat-operators</span></span>
+<span id="cb4-77"><a href="#cb4-77" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">sourceNamespace</span><span class="kw">:</span><span class="at"> openshift-marketplace</span></span></code></pre></div>
+        <p>Apply to all clusters:</p>
+        <div class="sourceCode" id="cb5"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">su</span> <span class="at">-</span> sno  <span class="at">-c</span> <span class="st">&#39;oc apply -f /tmp/rhcl-operators.yaml&#39;</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="fu">su</span> <span class="at">-</span> sno2 <span class="at">-c</span> <span class="st">&#39;oc apply -f /tmp/rhcl-operators.yaml&#39;</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="fu">su</span> <span class="at">-</span> sno3 <span class="at">-c</span> <span class="st">&#39;oc apply -f /tmp/rhcl-operators.yaml&#39;</span></span></code></pre></div>
+        <p>Lab-specific OLM correction that was required in this
+        environment:</p>
+        <div class="sourceCode" id="cb6"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> user <span class="kw">in</span> sno sno2 sno3<span class="kw">;</span> <span class="cf">do</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">su</span> <span class="at">-</span> <span class="st">&quot;</span><span class="va">${user}</span><span class="st">&quot;</span> <span class="at">-c</span> <span class="st">&#39;oc patch operatorgroup kuadrant-system -n kuadrant-system --type=json -p=&#39;</span><span class="dt">\&#39;</span><span class="st">&#39;[{&quot;op&quot;:&quot;remove&quot;,&quot;path&quot;:&quot;/spec/targetNamespaces&quot;}]&#39;</span><span class="dt">\&#39;</span><span class="st">&#39;&#39;</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">su</span> <span class="at">-</span> <span class="st">&quot;</span><span class="va">${user}</span><span class="st">&quot;</span> <span class="at">-c</span> <span class="st">&#39;oc patch operatorgroup metallb-system -n metallb-system --type=json -p=&#39;</span><span class="dt">\&#39;</span><span class="st">&#39;[{&quot;op&quot;:&quot;remove&quot;,&quot;path&quot;:&quot;/spec/targetNamespaces&quot;}]&#39;</span><span class="dt">\&#39;</span><span class="st">&#39;&#39;</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="cf">done</span></span></code></pre></div>
+        <p>This correction is not a GLB feature. It is an operator
+        install-mode compatibility correction for this lab.</p>
+        <h2 id="rhcl-core-configuration">4. RHCL Core Configuration</h2>
+        <h3 id="gatewayclass-and-kuadrant-cr">4.1 GatewayClass and
+        Kuadrant CR</h3>
+        <div class="sourceCode" id="cb7"><pre
+        class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">apiVersion</span><span class="kw">:</span><span class="at"> gateway.networking.k8s.io/v1</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="fu">kind</span><span class="kw">:</span><span class="at"> GatewayClass</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="fu">metadata</span><span class="kw">:</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">name</span><span class="kw">:</span><span class="at"> openshift-default</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="fu">spec</span><span class="kw">:</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">controllerName</span><span class="kw">:</span><span class="at"> openshift.io/gateway-controller/v1</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a><span class="pp">---</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a><span class="fu">apiVersion</span><span class="kw">:</span><span class="at"> kuadrant.io/v1beta1</span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a><span class="fu">kind</span><span class="kw">:</span><span class="at"> Kuadrant</span></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a><span class="fu">metadata</span><span class="kw">:</span></span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">name</span><span class="kw">:</span><span class="at"> kuadrant</span></span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">namespace</span><span class="kw">:</span><span class="at"> kuadrant-system</span></span></code></pre></div>
+        <p>Apply and wait:</p>
+        <div class="sourceCode" id="cb8"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> user <span class="kw">in</span> sno sno2 sno3<span class="kw">;</span> <span class="cf">do</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">su</span> <span class="at">-</span> <span class="st">&quot;</span><span class="va">${user}</span><span class="st">&quot;</span> <span class="at">-c</span> <span class="st">&#39;oc apply -f /tmp/rhcl-core.yaml&#39;</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">su</span> <span class="at">-</span> <span class="st">&quot;</span><span class="va">${user}</span><span class="st">&quot;</span> <span class="at">-c</span> <span class="st">&#39;oc wait kuadrant/kuadrant -n kuadrant-system --for=condition=Ready=true --timeout=600s&#39;</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a><span class="cf">done</span></span></code></pre></div>
+        <h3 id="rhcl-dns-operator-identity-per-cluster">4.2 RHCL DNS
+        Operator identity per cluster</h3>
+        <p>Each DNS Operator must have a stable <code>GROUP</code>. This
+        group is later used in DNSRecord ownership and active-groups
+        membership.</p>
+        <p>demo-01:</p>
+        <div class="sourceCode" id="cb9"><pre
+        class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">apiVersion</span><span class="kw">:</span><span class="at"> v1</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="fu">kind</span><span class="kw">:</span><span class="at"> ConfigMap</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="fu">metadata</span><span class="kw">:</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">name</span><span class="kw">:</span><span class="at"> dns-operator-controller-env</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">namespace</span><span class="kw">:</span><span class="at"> kuadrant-system</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a><span class="fu">data</span><span class="kw">:</span></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">DELEGATION_ROLE</span><span class="kw">:</span><span class="at"> primary</span></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">GROUP</span><span class="kw">:</span><span class="at"> demo-01</span></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">MAX_REQUEUE_TIME</span><span class="kw">:</span><span class="at"> 30s</span></span></code></pre></div>
+        <p>demo-02 and demo-03 use the same ConfigMap with:</p>
+        <pre class="text"><code>demo-02: GROUP=demo-02
+demo-03: GROUP=demo-03</code></pre>
+        <p>After changing this ConfigMap, restart DNS Operator pods:</p>
+        <div class="sourceCode" id="cb11"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="fu">su</span> <span class="at">-</span> sno  <span class="at">-c</span> <span class="st">&#39;oc delete pod -n kuadrant-system -l app.kubernetes.io/name=dns-operator --ignore-not-found&#39;</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="fu">su</span> <span class="at">-</span> sno2 <span class="at">-c</span> <span class="st">&#39;oc delete pod -n kuadrant-system -l app.kubernetes.io/name=dns-operator --ignore-not-found&#39;</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a><span class="fu">su</span> <span class="at">-</span> sno3 <span class="at">-c</span> <span class="st">&#39;oc delete pod -n kuadrant-system -l app.kubernetes.io/name=dns-operator --ignore-not-found&#39;</span></span></code></pre></div>
+        <h2 id="metallb-and-fixed-vips">5. MetalLB and Fixed VIPs</h2>
+        <p>MetalLB was used to make CoreDNS and Gateway VIPs
+        deterministic.</p>
+        <p>demo-01:</p>
+        <div class="sourceCode" id="cb12"><pre
+        class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="fu">apiVersion</span><span class="kw">:</span><span class="at"> metallb.io/v1beta1</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="fu">kind</span><span class="kw">:</span><span class="at"> MetalLB</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a><span class="fu">metadata</span><span class="kw">:</span></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">name</span><span class="kw">:</span><span class="at"> metallb</span></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">namespace</span><span class="kw">:</span><span class="at"> metallb-system</span></span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a><span class="pp">---</span></span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a><span class="fu">apiVersion</span><span class="kw">:</span><span class="at"> metallb.io/v1beta1</span></span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a><span class="fu">kind</span><span class="kw">:</span><span class="at"> IPAddressPool</span></span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a><span class="fu">metadata</span><span class="kw">:</span></span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">name</span><span class="kw">:</span><span class="at"> demo-01-pool</span></span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">namespace</span><span class="kw">:</span><span class="at"> metallb-system</span></span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a><span class="fu">spec</span><span class="kw">:</span></span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">addresses</span><span class="kw">:</span></span>
+<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> 192.168.99.210-192.168.99.219</span></span>
+<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a><span class="pp">---</span></span>
+<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a><span class="fu">apiVersion</span><span class="kw">:</span><span class="at"> metallb.io/v1beta1</span></span>
+<span id="cb12-17"><a href="#cb12-17" aria-hidden="true" tabindex="-1"></a><span class="fu">kind</span><span class="kw">:</span><span class="at"> L2Advertisement</span></span>
+<span id="cb12-18"><a href="#cb12-18" aria-hidden="true" tabindex="-1"></a><span class="fu">metadata</span><span class="kw">:</span></span>
+<span id="cb12-19"><a href="#cb12-19" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">name</span><span class="kw">:</span><span class="at"> demo-01-l2</span></span>
+<span id="cb12-20"><a href="#cb12-20" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">namespace</span><span class="kw">:</span><span class="at"> metallb-system</span></span>
+<span id="cb12-21"><a href="#cb12-21" aria-hidden="true" tabindex="-1"></a><span class="fu">spec</span><span class="kw">:</span></span>
+<span id="cb12-22"><a href="#cb12-22" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">interfaces</span><span class="kw">:</span></span>
+<span id="cb12-23"><a href="#cb12-23" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> br-ex</span></span>
+<span id="cb12-24"><a href="#cb12-24" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">ipAddressPools</span><span class="kw">:</span></span>
+<span id="cb12-25"><a href="#cb12-25" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> demo-01-pool</span></span></code></pre></div>
+        <p>Per-cluster pool ranges:</p>
+        <pre class="text"><code>demo-01: 192.168.99.210-192.168.99.219
+demo-02: 192.168.99.220-192.168.99.239
+demo-03: 192.168.99.240-192.168.99.249</code></pre>
+        <p>Patch CoreDNS Service fixed VIPs:</p>
+        <div class="sourceCode" id="cb14"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="fu">su</span> <span class="at">-</span> sno  <span class="at">-c</span> <span class="st">&#39;oc patch svc kuadrant-coredns -n kuadrant-coredns -p &#39;</span><span class="dt">\&#39;</span><span class="st">&#39;{&quot;spec&quot;:{&quot;loadBalancerIP&quot;:&quot;192.168.99.210&quot;}}&#39;</span><span class="dt">\&#39;</span><span class="st">&#39;&#39;</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="fu">su</span> <span class="at">-</span> sno2 <span class="at">-c</span> <span class="st">&#39;oc patch svc kuadrant-coredns -n kuadrant-coredns -p &#39;</span><span class="dt">\&#39;</span><span class="st">&#39;{&quot;spec&quot;:{&quot;loadBalancerIP&quot;:&quot;192.168.99.230&quot;}}&#39;</span><span class="dt">\&#39;</span><span class="st">&#39;&#39;</span></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a><span class="fu">su</span> <span class="at">-</span> sno3 <span class="at">-c</span> <span class="st">&#39;oc patch svc kuadrant-coredns -n kuadrant-coredns -p &#39;</span><span class="dt">\&#39;</span><span class="st">&#39;{&quot;spec&quot;:{&quot;loadBalancerIP&quot;:&quot;192.168.99.240&quot;}}&#39;</span><span class="dt">\&#39;</span><span class="st">&#39;&#39;</span></span></code></pre></div>
+        <p>Patch baseline Gateway fixed VIPs:</p>
+        <div class="sourceCode" id="cb15"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="fu">su</span> <span class="at">-</span> sno  <span class="at">-c</span> <span class="st">&#39;oc patch svc ingress-gateway-openshift-default -n api-gateway -p &#39;</span><span class="dt">\&#39;</span><span class="st">&#39;{&quot;spec&quot;:{&quot;loadBalancerIP&quot;:&quot;192.168.99.211&quot;}}&#39;</span><span class="dt">\&#39;</span><span class="st">&#39;&#39;</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="fu">su</span> <span class="at">-</span> sno2 <span class="at">-c</span> <span class="st">&#39;oc patch svc ingress-gateway-openshift-default -n api-gateway -p &#39;</span><span class="dt">\&#39;</span><span class="st">&#39;{&quot;spec&quot;:{&quot;loadBalancerIP&quot;:&quot;192.168.99.221&quot;}}&#39;</span><span class="dt">\&#39;</span><span class="st">&#39;&#39;</span></span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a><span class="fu">su</span> <span class="at">-</span> sno3 <span class="at">-c</span> <span class="st">&#39;oc patch svc ingress-gateway-openshift-default -n api-gateway -p &#39;</span><span class="dt">\&#39;</span><span class="st">&#39;{&quot;spec&quot;:{&quot;loadBalancerIP&quot;:&quot;192.168.99.241&quot;}}&#39;</span><span class="dt">\&#39;</span><span class="st">&#39;&#39;</span></span></code></pre></div>
+        <p>For the two-domain test, the extra Gateway VIPs were
+        allocated automatically from the same pools:</p>
+        <pre class="text"><code>Domain A: .212, .220, .242
+Domain B: .213, .222, .243</code></pre>
+        <h2 id="rhcl-dns-provider-secret">6. RHCL DNS Provider
+        Secret</h2>
+        <p>The <code>coredns-credentials</code> Secret tells RHCL DNS
+        Operator to manage DNS records through the local Kuadrant
+        CoreDNS provider.</p>
+        <div class="sourceCode" id="cb17"><pre
+        class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="fu">apiVersion</span><span class="kw">:</span><span class="at"> v1</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a><span class="fu">kind</span><span class="kw">:</span><span class="at"> Secret</span></span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a><span class="fu">metadata</span><span class="kw">:</span></span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">name</span><span class="kw">:</span><span class="at"> coredns-credentials</span></span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">namespace</span><span class="kw">:</span><span class="at"> api-gateway</span></span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">labels</span><span class="kw">:</span></span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">kuadrant.io/default-provider</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;true&quot;</span></span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a><span class="fu">type</span><span class="kw">:</span><span class="at"> kuadrant.io/coredns</span></span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a><span class="fu">stringData</span><span class="kw">:</span></span>
+<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">ZONES</span><span class="kw">:</span><span class="at"> kuadrant.wzhlab.top</span></span>
+<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">NAMESERVERS</span><span class="kw">:</span><span class="at"> &lt;local-kuadrant-coredns-cluster-ip&gt;</span></span></code></pre></div>
+        <p>Patch the local Service <code>clusterIP</code> into the
+        Secret on each cluster:</p>
+        <div class="sourceCode" id="cb18"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> user <span class="kw">in</span> sno sno2 sno3<span class="kw">;</span> <span class="cf">do</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">su</span> <span class="at">-</span> <span class="st">&quot;</span><span class="va">${user}</span><span class="st">&quot;</span> <span class="at">-c</span> <span class="st">&#39;</span></span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a><span class="st">    cluster_ip=&quot;$(oc get svc kuadrant-coredns -n kuadrant-coredns -o jsonpath=&quot;{.spec.clusterIP}&quot;)&quot;</span></span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a><span class="st">    oc patch secret coredns-credentials -n api-gateway --type merge \</span></span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a><span class="st">      -p &quot;{\&quot;stringData\&quot;:{\&quot;NAMESERVERS\&quot;:\&quot;${cluster_ip}\&quot;}}&quot;</span></span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a><span class="st">  &#39;</span></span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a><span class="cf">done</span></span></code></pre></div>
+        <p>This Secret is not the cross-cluster kubeconfig. It is a
+        provider configuration for CoreDNS.</p>
+        <h2 id="rhcl-cross-cluster-secrets-and-rbac">7. RHCL
+        Cross-Cluster Secrets and RBAC</h2>
+        <p>RHCL DNS Operator uses cross-cluster Secrets to read peer DNS
+        state. This is separate from the external test controller.</p>
+        <p>Representative commands:</p>
+        <div class="sourceCode" id="cb19"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="co"># On demo-01 context, add demo-02 and demo-03 as remote clusters.</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a><span class="ex">kubectl-kuadrant_dns</span> add-cluster-secret <span class="dt">\</span></span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">--context</span> demo-02 <span class="dt">\</span></span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">--namespace</span> kuadrant-system <span class="dt">\</span></span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">--name</span> demo-02 <span class="dt">\</span></span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">--service-account</span> dns-operator-remote-cluster</span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a><span class="ex">kubectl-kuadrant_dns</span> add-cluster-secret <span class="dt">\</span></span>
+<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">--context</span> demo-03 <span class="dt">\</span></span>
+<span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">--namespace</span> kuadrant-system <span class="dt">\</span></span>
+<span id="cb19-11"><a href="#cb19-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">--name</span> demo-03 <span class="dt">\</span></span>
+<span id="cb19-12"><a href="#cb19-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">--service-account</span> dns-operator-remote-cluster</span>
+<span id="cb19-13"><a href="#cb19-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-14"><a href="#cb19-14" aria-hidden="true" tabindex="-1"></a><span class="co"># Grant the service account the DNS operator remote-cluster role.</span></span>
+<span id="cb19-15"><a href="#cb19-15" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> adm policy add-cluster-role-to-user dns-operator-remote-cluster-role <span class="dt">\</span></span>
+<span id="cb19-16"><a href="#cb19-16" aria-hidden="true" tabindex="-1"></a>  <span class="at">-z</span> dns-operator-remote-cluster <span class="dt">\</span></span>
+<span id="cb19-17"><a href="#cb19-17" aria-hidden="true" tabindex="-1"></a>  <span class="at">-n</span> kuadrant-system</span></code></pre></div>
+        <p>Repeat the same idea for each source cluster so the three
+        clusters form the required peer mesh.</p>
+        <p>Security note:</p>
+        <pre class="text"><code>kubectl-kuadrant_dns add-cluster-secret creates a Kubernetes Secret containing a kubeconfig.
+That kubeconfig contains remote API server information, CA data, and a ServiceAccount credential.
+The credential is sensitive and must not be printed in a customer report.</code></pre>
+        <h2 id="active-groups-coredns-configuration">8. Active-Groups
+        CoreDNS Configuration</h2>
+        <p>The active-groups TXT zone is the hard site membership
+        switch.</p>
+        <p>For this two-domain validation, each cluster’s
+        <code>kuadrant-coredns</code> ConfigMap included three
+        active-groups zones:</p>
+        <div class="sourceCode" id="cb21"><pre
+        class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="fu">apiVersion</span><span class="kw">:</span><span class="at"> v1</span></span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a><span class="fu">kind</span><span class="kw">:</span><span class="at"> ConfigMap</span></span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a><span class="fu">metadata</span><span class="kw">:</span></span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">name</span><span class="kw">:</span><span class="at"> kuadrant-coredns</span></span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">namespace</span><span class="kw">:</span><span class="at"> kuadrant-coredns</span></span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a><span class="fu">data</span><span class="kw">:</span></span>
+<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a><span class="fu">  Corefile</span><span class="kw">: </span><span class="ch">|</span></span>
+<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a>    kuadrant-active-groups.glb.kuadrant.wzhlab.top:53 {</span>
+<span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a>        errors</span>
+<span id="cb21-10"><a href="#cb21-10" aria-hidden="true" tabindex="-1"></a>        log</span>
+<span id="cb21-11"><a href="#cb21-11" aria-hidden="true" tabindex="-1"></a>        file /etc/coredns/active-groups.db {</span>
+<span id="cb21-12"><a href="#cb21-12" aria-hidden="true" tabindex="-1"></a>            reload 2s</span>
+<span id="cb21-13"><a href="#cb21-13" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb21-14"><a href="#cb21-14" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb21-15"><a href="#cb21-15" aria-hidden="true" tabindex="-1"></a>    kuadrant-active-groups.glb-a.kuadrant.wzhlab.top:53 {</span>
+<span id="cb21-16"><a href="#cb21-16" aria-hidden="true" tabindex="-1"></a>        errors</span>
+<span id="cb21-17"><a href="#cb21-17" aria-hidden="true" tabindex="-1"></a>        log</span>
+<span id="cb21-18"><a href="#cb21-18" aria-hidden="true" tabindex="-1"></a>        file /etc/coredns/active-groups-a.db {</span>
+<span id="cb21-19"><a href="#cb21-19" aria-hidden="true" tabindex="-1"></a>            reload 2s</span>
+<span id="cb21-20"><a href="#cb21-20" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb21-21"><a href="#cb21-21" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb21-22"><a href="#cb21-22" aria-hidden="true" tabindex="-1"></a>    kuadrant-active-groups.glb-b.kuadrant.wzhlab.top:53 {</span>
+<span id="cb21-23"><a href="#cb21-23" aria-hidden="true" tabindex="-1"></a>        errors</span>
+<span id="cb21-24"><a href="#cb21-24" aria-hidden="true" tabindex="-1"></a>        log</span>
+<span id="cb21-25"><a href="#cb21-25" aria-hidden="true" tabindex="-1"></a>        file /etc/coredns/active-groups-b.db {</span>
+<span id="cb21-26"><a href="#cb21-26" aria-hidden="true" tabindex="-1"></a>            reload 2s</span>
+<span id="cb21-27"><a href="#cb21-27" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb21-28"><a href="#cb21-28" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb21-29"><a href="#cb21-29" aria-hidden="true" tabindex="-1"></a>    kuadrant.wzhlab.top:53 {</span>
+<span id="cb21-30"><a href="#cb21-30" aria-hidden="true" tabindex="-1"></a>        errors</span>
+<span id="cb21-31"><a href="#cb21-31" aria-hidden="true" tabindex="-1"></a>        health {</span>
+<span id="cb21-32"><a href="#cb21-32" aria-hidden="true" tabindex="-1"></a>            lameduck 5s</span>
+<span id="cb21-33"><a href="#cb21-33" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb21-34"><a href="#cb21-34" aria-hidden="true" tabindex="-1"></a>        ready</span>
+<span id="cb21-35"><a href="#cb21-35" aria-hidden="true" tabindex="-1"></a>        log</span>
+<span id="cb21-36"><a href="#cb21-36" aria-hidden="true" tabindex="-1"></a>        metadata</span>
+<span id="cb21-37"><a href="#cb21-37" aria-hidden="true" tabindex="-1"></a>        kuadrant</span>
+<span id="cb21-38"><a href="#cb21-38" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb21-39"><a href="#cb21-39" aria-hidden="true" tabindex="-1"></a><span class="fu">  active-groups.db</span><span class="kw">: </span><span class="ch">|</span></span>
+<span id="cb21-40"><a href="#cb21-40" aria-hidden="true" tabindex="-1"></a>    kuadrant-active-groups.glb.kuadrant.wzhlab.top. 10 IN SOA ns1. hostmaster. 1781693568 7200 3600 1209600 10</span>
+<span id="cb21-41"><a href="#cb21-41" aria-hidden="true" tabindex="-1"></a>    kuadrant-active-groups.glb.kuadrant.wzhlab.top. 10 IN NS ns1.</span>
+<span id="cb21-42"><a href="#cb21-42" aria-hidden="true" tabindex="-1"></a>    kuadrant-active-groups.glb.kuadrant.wzhlab.top. 10 IN TXT &quot;version=1;groups=demo-01&amp;&amp;demo-02&amp;&amp;demo-03&quot;</span>
+<span id="cb21-43"><a href="#cb21-43" aria-hidden="true" tabindex="-1"></a><span class="fu">  active-groups-a.db</span><span class="kw">: </span><span class="ch">|</span></span>
+<span id="cb21-44"><a href="#cb21-44" aria-hidden="true" tabindex="-1"></a>    kuadrant-active-groups.glb-a.kuadrant.wzhlab.top. 10 IN SOA ns1. hostmaster. 1781693568 7200 3600 1209600 10</span>
+<span id="cb21-45"><a href="#cb21-45" aria-hidden="true" tabindex="-1"></a>    kuadrant-active-groups.glb-a.kuadrant.wzhlab.top. 10 IN NS ns1.</span>
+<span id="cb21-46"><a href="#cb21-46" aria-hidden="true" tabindex="-1"></a>    kuadrant-active-groups.glb-a.kuadrant.wzhlab.top. 10 IN TXT &quot;version=1;groups=demo-01&amp;&amp;demo-02&amp;&amp;demo-03&quot;</span>
+<span id="cb21-47"><a href="#cb21-47" aria-hidden="true" tabindex="-1"></a><span class="fu">  active-groups-b.db</span><span class="kw">: </span><span class="ch">|</span></span>
+<span id="cb21-48"><a href="#cb21-48" aria-hidden="true" tabindex="-1"></a>    kuadrant-active-groups.glb-b.kuadrant.wzhlab.top. 10 IN SOA ns1. hostmaster. 1781693568 7200 3600 1209600 10</span>
+<span id="cb21-49"><a href="#cb21-49" aria-hidden="true" tabindex="-1"></a>    kuadrant-active-groups.glb-b.kuadrant.wzhlab.top. 10 IN NS ns1.</span>
+<span id="cb21-50"><a href="#cb21-50" aria-hidden="true" tabindex="-1"></a>    kuadrant-active-groups.glb-b.kuadrant.wzhlab.top. 10 IN TXT &quot;version=1;groups=demo-01&amp;&amp;demo-02&amp;&amp;demo-03&quot;</span></code></pre></div>
+        <p>The Deployment must mount all three files:</p>
+        <div class="sourceCode" id="cb22"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> patch deployment kuadrant-coredns <span class="at">-n</span> kuadrant-coredns <span class="at">--type</span> json <span class="at">-p</span> <span class="st">&#39;[</span></span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a><span class="st">  {</span></span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a><span class="st">    &quot;op&quot;:&quot;replace&quot;,</span></span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a><span class="st">    &quot;path&quot;:&quot;/spec/template/spec/volumes/0/configMap/items&quot;,</span></span>
+<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a><span class="st">    &quot;value&quot;:[</span></span>
+<span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a><span class="st">      {&quot;key&quot;:&quot;Corefile&quot;,&quot;path&quot;:&quot;Corefile&quot;},</span></span>
+<span id="cb22-7"><a href="#cb22-7" aria-hidden="true" tabindex="-1"></a><span class="st">      {&quot;key&quot;:&quot;active-groups.db&quot;,&quot;path&quot;:&quot;active-groups.db&quot;},</span></span>
+<span id="cb22-8"><a href="#cb22-8" aria-hidden="true" tabindex="-1"></a><span class="st">      {&quot;key&quot;:&quot;active-groups-a.db&quot;,&quot;path&quot;:&quot;active-groups-a.db&quot;},</span></span>
+<span id="cb22-9"><a href="#cb22-9" aria-hidden="true" tabindex="-1"></a><span class="st">      {&quot;key&quot;:&quot;active-groups-b.db&quot;,&quot;path&quot;:&quot;active-groups-b.db&quot;}</span></span>
+<span id="cb22-10"><a href="#cb22-10" aria-hidden="true" tabindex="-1"></a><span class="st">    ]</span></span>
+<span id="cb22-11"><a href="#cb22-11" aria-hidden="true" tabindex="-1"></a><span class="st">  }</span></span>
+<span id="cb22-12"><a href="#cb22-12" aria-hidden="true" tabindex="-1"></a><span class="st">]&#39;</span></span></code></pre></div>
+        <p>OpenShift DNS forwarding must know the active-groups
+        zones:</p>
+        <div class="sourceCode" id="cb23"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> patch dns.operator/default <span class="at">--type</span> json <span class="at">-p</span> <span class="st">&#39;[</span></span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a><span class="st">  {</span></span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a><span class="st">    &quot;op&quot;: &quot;replace&quot;,</span></span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a><span class="st">    &quot;path&quot;: &quot;/spec/servers/0/zones&quot;,</span></span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a><span class="st">    &quot;value&quot;: [</span></span>
+<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a><span class="st">      &quot;kuadrant-active-groups.glb.kuadrant.wzhlab.top&quot;,</span></span>
+<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a><span class="st">      &quot;kuadrant-active-groups.glb-a.kuadrant.wzhlab.top&quot;,</span></span>
+<span id="cb23-8"><a href="#cb23-8" aria-hidden="true" tabindex="-1"></a><span class="st">      &quot;kuadrant-active-groups.glb-b.kuadrant.wzhlab.top&quot;</span></span>
+<span id="cb23-9"><a href="#cb23-9" aria-hidden="true" tabindex="-1"></a><span class="st">    ]</span></span>
+<span id="cb23-10"><a href="#cb23-10" aria-hidden="true" tabindex="-1"></a><span class="st">  }</span></span>
+<span id="cb23-11"><a href="#cb23-11" aria-hidden="true" tabindex="-1"></a><span class="st">]&#39;</span></span></code></pre></div>
+        <p>Validation command:</p>
+        <div class="sourceCode" id="cb24"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="ex">dig</span> +tcp +short @192.168.99.210 kuadrant-active-groups.glb-a.kuadrant.wzhlab.top TXT</span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a><span class="ex">dig</span> +tcp +short @192.168.99.230 kuadrant-active-groups.glb-b.kuadrant.wzhlab.top TXT</span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a><span class="ex">dig</span> +tcp +short @192.168.99.240 kuadrant-active-groups.glb-b.kuadrant.wzhlab.top TXT</span></code></pre></div>
+        <p>Expected output:</p>
+        <pre class="text"><code>&quot;version=1;groups=demo-01&amp;&amp;demo-02&amp;&amp;demo-03&quot;</code></pre>
+        <h2 id="demo-application">9. Demo Application</h2>
+        <p>The same app was deployed on all clusters. Only the text
+        content differs by cluster.</p>
+        <div class="sourceCode" id="cb26"><pre
+        class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="fu">apiVersion</span><span class="kw">:</span><span class="at"> v1</span></span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a><span class="fu">kind</span><span class="kw">:</span><span class="at"> Namespace</span></span>
+<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a><span class="fu">metadata</span><span class="kw">:</span></span>
+<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">name</span><span class="kw">:</span><span class="at"> connectlink-demo</span></span>
+<span id="cb26-5"><a href="#cb26-5" aria-hidden="true" tabindex="-1"></a><span class="pp">---</span></span>
+<span id="cb26-6"><a href="#cb26-6" aria-hidden="true" tabindex="-1"></a><span class="fu">apiVersion</span><span class="kw">:</span><span class="at"> v1</span></span>
+<span id="cb26-7"><a href="#cb26-7" aria-hidden="true" tabindex="-1"></a><span class="fu">kind</span><span class="kw">:</span><span class="at"> ConfigMap</span></span>
+<span id="cb26-8"><a href="#cb26-8" aria-hidden="true" tabindex="-1"></a><span class="fu">metadata</span><span class="kw">:</span></span>
+<span id="cb26-9"><a href="#cb26-9" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">name</span><span class="kw">:</span><span class="at"> echo-content</span></span>
+<span id="cb26-10"><a href="#cb26-10" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">namespace</span><span class="kw">:</span><span class="at"> connectlink-demo</span></span>
+<span id="cb26-11"><a href="#cb26-11" aria-hidden="true" tabindex="-1"></a><span class="fu">data</span><span class="kw">:</span></span>
+<span id="cb26-12"><a href="#cb26-12" aria-hidden="true" tabindex="-1"></a><span class="fu">  index.html</span><span class="kw">: </span><span class="ch">|</span></span>
+<span id="cb26-13"><a href="#cb26-13" aria-hidden="true" tabindex="-1"></a>    demo-01 via Connectivity Link GLB</span>
+<span id="cb26-14"><a href="#cb26-14" aria-hidden="true" tabindex="-1"></a><span class="fu">  health</span><span class="kw">: </span><span class="ch">|</span></span>
+<span id="cb26-15"><a href="#cb26-15" aria-hidden="true" tabindex="-1"></a>    ok</span>
+<span id="cb26-16"><a href="#cb26-16" aria-hidden="true" tabindex="-1"></a><span class="pp">---</span></span>
+<span id="cb26-17"><a href="#cb26-17" aria-hidden="true" tabindex="-1"></a><span class="fu">apiVersion</span><span class="kw">:</span><span class="at"> apps/v1</span></span>
+<span id="cb26-18"><a href="#cb26-18" aria-hidden="true" tabindex="-1"></a><span class="fu">kind</span><span class="kw">:</span><span class="at"> Deployment</span></span>
+<span id="cb26-19"><a href="#cb26-19" aria-hidden="true" tabindex="-1"></a><span class="fu">metadata</span><span class="kw">:</span></span>
+<span id="cb26-20"><a href="#cb26-20" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">name</span><span class="kw">:</span><span class="at"> echo</span></span>
+<span id="cb26-21"><a href="#cb26-21" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">namespace</span><span class="kw">:</span><span class="at"> connectlink-demo</span></span>
+<span id="cb26-22"><a href="#cb26-22" aria-hidden="true" tabindex="-1"></a><span class="fu">spec</span><span class="kw">:</span></span>
+<span id="cb26-23"><a href="#cb26-23" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">replicas</span><span class="kw">:</span><span class="at"> </span><span class="dv">1</span></span>
+<span id="cb26-24"><a href="#cb26-24" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">selector</span><span class="kw">:</span></span>
+<span id="cb26-25"><a href="#cb26-25" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">matchLabels</span><span class="kw">:</span></span>
+<span id="cb26-26"><a href="#cb26-26" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">app</span><span class="kw">:</span><span class="at"> echo</span></span>
+<span id="cb26-27"><a href="#cb26-27" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">template</span><span class="kw">:</span></span>
+<span id="cb26-28"><a href="#cb26-28" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">metadata</span><span class="kw">:</span></span>
+<span id="cb26-29"><a href="#cb26-29" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">labels</span><span class="kw">:</span></span>
+<span id="cb26-30"><a href="#cb26-30" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">app</span><span class="kw">:</span><span class="at"> echo</span></span>
+<span id="cb26-31"><a href="#cb26-31" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">spec</span><span class="kw">:</span></span>
+<span id="cb26-32"><a href="#cb26-32" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">containers</span><span class="kw">:</span></span>
+<span id="cb26-33"><a href="#cb26-33" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="kw">-</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> echo</span></span>
+<span id="cb26-34"><a href="#cb26-34" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">image</span><span class="kw">:</span><span class="at"> registry.access.redhat.com/ubi9/python-311:latest</span></span>
+<span id="cb26-35"><a href="#cb26-35" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">command</span><span class="kw">:</span><span class="at"> </span><span class="kw">[</span><span class="st">&quot;/bin/bash&quot;</span><span class="kw">,</span><span class="at"> </span><span class="st">&quot;-c&quot;</span><span class="kw">]</span></span>
+<span id="cb26-36"><a href="#cb26-36" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">args</span><span class="kw">:</span><span class="at"> </span><span class="kw">[</span><span class="st">&quot;cd /opt/app-root/src &amp;&amp; python -m http.server 8080&quot;</span><span class="kw">]</span></span>
+<span id="cb26-37"><a href="#cb26-37" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">ports</span><span class="kw">:</span></span>
+<span id="cb26-38"><a href="#cb26-38" aria-hidden="true" tabindex="-1"></a><span class="at">            </span><span class="kw">-</span><span class="at"> </span><span class="fu">containerPort</span><span class="kw">:</span><span class="at"> </span><span class="dv">8080</span></span>
+<span id="cb26-39"><a href="#cb26-39" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">volumeMounts</span><span class="kw">:</span></span>
+<span id="cb26-40"><a href="#cb26-40" aria-hidden="true" tabindex="-1"></a><span class="at">            </span><span class="kw">-</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> content</span></span>
+<span id="cb26-41"><a href="#cb26-41" aria-hidden="true" tabindex="-1"></a><span class="at">              </span><span class="fu">mountPath</span><span class="kw">:</span><span class="at"> /opt/app-root/src</span></span>
+<span id="cb26-42"><a href="#cb26-42" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">volumes</span><span class="kw">:</span></span>
+<span id="cb26-43"><a href="#cb26-43" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="kw">-</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> content</span></span>
+<span id="cb26-44"><a href="#cb26-44" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">configMap</span><span class="kw">:</span></span>
+<span id="cb26-45"><a href="#cb26-45" aria-hidden="true" tabindex="-1"></a><span class="at">            </span><span class="fu">name</span><span class="kw">:</span><span class="at"> echo-content</span></span>
+<span id="cb26-46"><a href="#cb26-46" aria-hidden="true" tabindex="-1"></a><span class="pp">---</span></span>
+<span id="cb26-47"><a href="#cb26-47" aria-hidden="true" tabindex="-1"></a><span class="fu">apiVersion</span><span class="kw">:</span><span class="at"> v1</span></span>
+<span id="cb26-48"><a href="#cb26-48" aria-hidden="true" tabindex="-1"></a><span class="fu">kind</span><span class="kw">:</span><span class="at"> Service</span></span>
+<span id="cb26-49"><a href="#cb26-49" aria-hidden="true" tabindex="-1"></a><span class="fu">metadata</span><span class="kw">:</span></span>
+<span id="cb26-50"><a href="#cb26-50" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">name</span><span class="kw">:</span><span class="at"> echo</span></span>
+<span id="cb26-51"><a href="#cb26-51" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">namespace</span><span class="kw">:</span><span class="at"> connectlink-demo</span></span>
+<span id="cb26-52"><a href="#cb26-52" aria-hidden="true" tabindex="-1"></a><span class="fu">spec</span><span class="kw">:</span></span>
+<span id="cb26-53"><a href="#cb26-53" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">selector</span><span class="kw">:</span></span>
+<span id="cb26-54"><a href="#cb26-54" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">app</span><span class="kw">:</span><span class="at"> echo</span></span>
+<span id="cb26-55"><a href="#cb26-55" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">ports</span><span class="kw">:</span></span>
+<span id="cb26-56"><a href="#cb26-56" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> http</span></span>
+<span id="cb26-57"><a href="#cb26-57" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">port</span><span class="kw">:</span><span class="at"> </span><span class="dv">8080</span></span>
+<span id="cb26-58"><a href="#cb26-58" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">targetPort</span><span class="kw">:</span><span class="at"> </span><span class="dv">8080</span></span></code></pre></div>
+        <p>Per-cluster content:</p>
+        <pre class="text"><code>demo-01 via Connectivity Link GLB
+demo-02 via Connectivity Link GLB
+demo-03 via Connectivity Link GLB</code></pre>
+        <h2
+        id="two-domain-gateway-httproute-dnspolicy-configuration">10.
+        Two-Domain Gateway / HTTPRoute / DNSPolicy Configuration</h2>
+        <p>Each domain has independent Gateway, HTTPRoute, and DNSPolicy
+        objects.</p>
+        <p>Domain A:</p>
+        <div class="sourceCode" id="cb28"><pre
+        class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="fu">apiVersion</span><span class="kw">:</span><span class="at"> gateway.networking.k8s.io/v1</span></span>
+<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a><span class="fu">kind</span><span class="kw">:</span><span class="at"> Gateway</span></span>
+<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a><span class="fu">metadata</span><span class="kw">:</span></span>
+<span id="cb28-4"><a href="#cb28-4" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">name</span><span class="kw">:</span><span class="at"> ingress-gateway-a</span></span>
+<span id="cb28-5"><a href="#cb28-5" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">namespace</span><span class="kw">:</span><span class="at"> api-gateway</span></span>
+<span id="cb28-6"><a href="#cb28-6" aria-hidden="true" tabindex="-1"></a><span class="fu">spec</span><span class="kw">:</span></span>
+<span id="cb28-7"><a href="#cb28-7" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">gatewayClassName</span><span class="kw">:</span><span class="at"> openshift-default</span></span>
+<span id="cb28-8"><a href="#cb28-8" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">listeners</span><span class="kw">:</span></span>
+<span id="cb28-9"><a href="#cb28-9" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> http</span></span>
+<span id="cb28-10"><a href="#cb28-10" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">hostname</span><span class="kw">:</span><span class="at"> glb-a.kuadrant.wzhlab.top</span></span>
+<span id="cb28-11"><a href="#cb28-11" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">port</span><span class="kw">:</span><span class="at"> </span><span class="dv">80</span></span>
+<span id="cb28-12"><a href="#cb28-12" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">protocol</span><span class="kw">:</span><span class="at"> HTTP</span></span>
+<span id="cb28-13"><a href="#cb28-13" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">allowedRoutes</span><span class="kw">:</span></span>
+<span id="cb28-14"><a href="#cb28-14" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">namespaces</span><span class="kw">:</span></span>
+<span id="cb28-15"><a href="#cb28-15" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">from</span><span class="kw">:</span><span class="at"> All</span></span>
+<span id="cb28-16"><a href="#cb28-16" aria-hidden="true" tabindex="-1"></a><span class="pp">---</span></span>
+<span id="cb28-17"><a href="#cb28-17" aria-hidden="true" tabindex="-1"></a><span class="fu">apiVersion</span><span class="kw">:</span><span class="at"> gateway.networking.k8s.io/v1</span></span>
+<span id="cb28-18"><a href="#cb28-18" aria-hidden="true" tabindex="-1"></a><span class="fu">kind</span><span class="kw">:</span><span class="at"> HTTPRoute</span></span>
+<span id="cb28-19"><a href="#cb28-19" aria-hidden="true" tabindex="-1"></a><span class="fu">metadata</span><span class="kw">:</span></span>
+<span id="cb28-20"><a href="#cb28-20" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">name</span><span class="kw">:</span><span class="at"> echo-a</span></span>
+<span id="cb28-21"><a href="#cb28-21" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">namespace</span><span class="kw">:</span><span class="at"> connectlink-demo</span></span>
+<span id="cb28-22"><a href="#cb28-22" aria-hidden="true" tabindex="-1"></a><span class="fu">spec</span><span class="kw">:</span></span>
+<span id="cb28-23"><a href="#cb28-23" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">parentRefs</span><span class="kw">:</span></span>
+<span id="cb28-24"><a href="#cb28-24" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> ingress-gateway-a</span></span>
+<span id="cb28-25"><a href="#cb28-25" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">namespace</span><span class="kw">:</span><span class="at"> api-gateway</span></span>
+<span id="cb28-26"><a href="#cb28-26" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">hostnames</span><span class="kw">:</span></span>
+<span id="cb28-27"><a href="#cb28-27" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> glb-a.kuadrant.wzhlab.top</span></span>
+<span id="cb28-28"><a href="#cb28-28" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">rules</span><span class="kw">:</span></span>
+<span id="cb28-29"><a href="#cb28-29" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> </span><span class="fu">matches</span><span class="kw">:</span></span>
+<span id="cb28-30"><a href="#cb28-30" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="kw">-</span><span class="at"> </span><span class="fu">path</span><span class="kw">:</span></span>
+<span id="cb28-31"><a href="#cb28-31" aria-hidden="true" tabindex="-1"></a><span class="at">            </span><span class="fu">type</span><span class="kw">:</span><span class="at"> PathPrefix</span></span>
+<span id="cb28-32"><a href="#cb28-32" aria-hidden="true" tabindex="-1"></a><span class="at">            </span><span class="fu">value</span><span class="kw">:</span><span class="at"> /</span></span>
+<span id="cb28-33"><a href="#cb28-33" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">backendRefs</span><span class="kw">:</span></span>
+<span id="cb28-34"><a href="#cb28-34" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="kw">-</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> echo</span></span>
+<span id="cb28-35"><a href="#cb28-35" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">port</span><span class="kw">:</span><span class="at"> </span><span class="dv">8080</span></span>
+<span id="cb28-36"><a href="#cb28-36" aria-hidden="true" tabindex="-1"></a><span class="pp">---</span></span>
+<span id="cb28-37"><a href="#cb28-37" aria-hidden="true" tabindex="-1"></a><span class="fu">apiVersion</span><span class="kw">:</span><span class="at"> kuadrant.io/v1</span></span>
+<span id="cb28-38"><a href="#cb28-38" aria-hidden="true" tabindex="-1"></a><span class="fu">kind</span><span class="kw">:</span><span class="at"> DNSPolicy</span></span>
+<span id="cb28-39"><a href="#cb28-39" aria-hidden="true" tabindex="-1"></a><span class="fu">metadata</span><span class="kw">:</span></span>
+<span id="cb28-40"><a href="#cb28-40" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">name</span><span class="kw">:</span><span class="at"> ingress-gateway-a-dns</span></span>
+<span id="cb28-41"><a href="#cb28-41" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">namespace</span><span class="kw">:</span><span class="at"> api-gateway</span></span>
+<span id="cb28-42"><a href="#cb28-42" aria-hidden="true" tabindex="-1"></a><span class="fu">spec</span><span class="kw">:</span></span>
+<span id="cb28-43"><a href="#cb28-43" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">delegate</span><span class="kw">:</span><span class="at"> </span><span class="ch">true</span></span>
+<span id="cb28-44"><a href="#cb28-44" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">healthCheck</span><span class="kw">:</span></span>
+<span id="cb28-45"><a href="#cb28-45" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">failureThreshold</span><span class="kw">:</span><span class="at"> </span><span class="dv">2</span></span>
+<span id="cb28-46"><a href="#cb28-46" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">interval</span><span class="kw">:</span><span class="at"> 30s</span></span>
+<span id="cb28-47"><a href="#cb28-47" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">path</span><span class="kw">:</span><span class="at"> /health</span></span>
+<span id="cb28-48"><a href="#cb28-48" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">port</span><span class="kw">:</span><span class="at"> </span><span class="dv">80</span></span>
+<span id="cb28-49"><a href="#cb28-49" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">protocol</span><span class="kw">:</span><span class="at"> HTTP</span></span>
+<span id="cb28-50"><a href="#cb28-50" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">loadBalancing</span><span class="kw">:</span></span>
+<span id="cb28-51"><a href="#cb28-51" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">defaultGeo</span><span class="kw">:</span><span class="at"> </span><span class="ch">true</span></span>
+<span id="cb28-52"><a href="#cb28-52" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">geo</span><span class="kw">:</span><span class="at"> GEO-NA</span></span>
+<span id="cb28-53"><a href="#cb28-53" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">weight</span><span class="kw">:</span><span class="at"> </span><span class="dv">60</span></span>
+<span id="cb28-54"><a href="#cb28-54" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">targetRef</span><span class="kw">:</span></span>
+<span id="cb28-55"><a href="#cb28-55" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">group</span><span class="kw">:</span><span class="at"> gateway.networking.k8s.io</span></span>
+<span id="cb28-56"><a href="#cb28-56" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">kind</span><span class="kw">:</span><span class="at"> Gateway</span></span>
+<span id="cb28-57"><a href="#cb28-57" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">name</span><span class="kw">:</span><span class="at"> ingress-gateway-a</span></span></code></pre></div>
+        <p>Domain B uses the same structure with:</p>
+        <pre class="text"><code>Gateway: ingress-gateway-b
+HTTPRoute: echo-b
+DNSPolicy: ingress-gateway-b-dns
+Hostname: glb-b.kuadrant.wzhlab.top</code></pre>
+        <p>Important namespace rule:</p>
+        <pre class="text"><code>Gateway and DNSPolicy are in api-gateway.
+HTTPRoute is in connectlink-demo.
+The backend Service is connectlink-demo/echo.</code></pre>
+        <p>Putting the HTTPRoute in <code>api-gateway</code> without a
+        <code>ReferenceGrant</code> caused an earlier failed attempt.
+        The working pattern is to keep the route in the application
+        namespace.</p>
+        <h2 id="test-method">11. Test Method</h2>
+        <p>DNS sample command:</p>
+        <div class="sourceCode" id="cb31"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> ns <span class="kw">in</span> 192.168.99.210 192.168.99.230 192.168.99.240<span class="kw">;</span> <span class="cf">do</span></span>
+<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a>  <span class="bu">echo</span> <span class="st">&quot;===== nameserver=</span><span class="va">${ns}</span><span class="st"> =====&quot;</span></span>
+<span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> i <span class="kw">in</span> <span class="va">$(</span><span class="fu">seq</span> 1 120<span class="va">)</span><span class="kw">;</span> <span class="cf">do</span></span>
+<span id="cb31-4"><a href="#cb31-4" aria-hidden="true" tabindex="-1"></a>    <span class="ex">dig</span> +tcp +short @<span class="st">&quot;</span><span class="va">${ns}</span><span class="st">&quot;</span> glb-a.kuadrant.wzhlab.top A <span class="kw">|</span> <span class="fu">tail</span> <span class="at">-1</span></span>
+<span id="cb31-5"><a href="#cb31-5" aria-hidden="true" tabindex="-1"></a>  <span class="cf">done</span> <span class="kw">|</span> <span class="fu">sort</span> <span class="kw">|</span> <span class="fu">uniq</span> <span class="at">-c</span></span>
+<span id="cb31-6"><a href="#cb31-6" aria-hidden="true" tabindex="-1"></a><span class="cf">done</span></span></code></pre></div>
+        <p>Bad VIP absent check:</p>
+        <div class="sourceCode" id="cb32"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> ns <span class="kw">in</span> 192.168.99.210 192.168.99.230 192.168.99.240<span class="kw">;</span> <span class="cf">do</span></span>
+<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a>  <span class="bu">echo</span> <span class="st">&quot;===== nameserver=</span><span class="va">${ns}</span><span class="st"> =====&quot;</span></span>
+<span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> i <span class="kw">in</span> <span class="va">$(</span><span class="fu">seq</span> 1 60<span class="va">)</span><span class="kw">;</span> <span class="cf">do</span></span>
+<span id="cb32-4"><a href="#cb32-4" aria-hidden="true" tabindex="-1"></a>    <span class="ex">dig</span> +tcp +short @<span class="st">&quot;</span><span class="va">${ns}</span><span class="st">&quot;</span> glb-a.kuadrant.wzhlab.top A <span class="kw">|</span> <span class="fu">tail</span> <span class="at">-1</span></span>
+<span id="cb32-5"><a href="#cb32-5" aria-hidden="true" tabindex="-1"></a>  <span class="cf">done</span> <span class="kw">|</span> <span class="fu">grep</span> <span class="at">-c</span> <span class="st">&#39;192.168.99.242&#39;</span> <span class="kw">||</span> <span class="fu">true</span></span>
+<span id="cb32-6"><a href="#cb32-6" aria-hidden="true" tabindex="-1"></a><span class="cf">done</span></span></code></pre></div>
+        <p>Pass condition:</p>
+        <pre class="text"><code>For a failed endpoint, every nameserver must return bad VIP count = 0.</code></pre>
+        <p>This is stricter than “one query does not show the bad VIP”
+        because weighted DNS is probabilistic.</p>
+        <h2 id="scenario-1-three-clusters-in-one-region">12. Scenario 1:
+        Three Clusters In One Region</h2>
+        <p>All clusters were configured in <code>GEO-NA</code>.</p>
+        <p>Domain A policy:</p>
+        <table>
+        <thead>
+        <tr class="header">
+        <th>Cluster</th>
+        <th>Group</th>
+        <th>Geo</th>
+        <th style="text-align: right;">VIP</th>
+        <th style="text-align: right;">Weight</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr class="odd">
+        <td>demo-01</td>
+        <td>demo-01</td>
+        <td>GEO-NA</td>
+        <td style="text-align: right;"><code>192.168.99.212</code></td>
+        <td style="text-align: right;">60</td>
+        </tr>
+        <tr class="even">
+        <td>demo-02</td>
+        <td>demo-02</td>
+        <td>GEO-NA</td>
+        <td style="text-align: right;"><code>192.168.99.220</code></td>
+        <td style="text-align: right;">30</td>
+        </tr>
+        <tr class="odd">
+        <td>demo-03</td>
+        <td>demo-03</td>
+        <td>GEO-NA</td>
+        <td style="text-align: right;"><code>192.168.99.242</code></td>
+        <td style="text-align: right;">10</td>
+        </tr>
+        </tbody>
+        </table>
+        <p>Domain B policy:</p>
+        <table>
+        <thead>
+        <tr class="header">
+        <th>Cluster</th>
+        <th>Group</th>
+        <th>Geo</th>
+        <th style="text-align: right;">VIP</th>
+        <th style="text-align: right;">Weight</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr class="odd">
+        <td>demo-01</td>
+        <td>demo-01</td>
+        <td>GEO-NA</td>
+        <td style="text-align: right;"><code>192.168.99.213</code></td>
+        <td style="text-align: right;">20</td>
+        </tr>
+        <tr class="even">
+        <td>demo-02</td>
+        <td>demo-02</td>
+        <td>GEO-NA</td>
+        <td style="text-align: right;"><code>192.168.99.222</code></td>
+        <td style="text-align: right;">30</td>
+        </tr>
+        <tr class="odd">
+        <td>demo-03</td>
+        <td>demo-03</td>
+        <td>GEO-NA</td>
+        <td style="text-align: right;"><code>192.168.99.243</code></td>
+        <td style="text-align: right;">50</td>
+        </tr>
+        </tbody>
+        </table>
+        <p>Configuration commands:</p>
+        <div class="sourceCode" id="cb34"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Domain A: 60 / 30 / 10</span></span>
+<span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a><span class="fu">su</span> <span class="at">-</span> sno  <span class="at">-c</span> <span class="st">&#39;oc patch dnspolicy ingress-gateway-a-dns -n api-gateway --type merge -p &#39;</span><span class="dt">\&#39;</span><span class="st">&#39;{&quot;spec&quot;:{&quot;loadBalancing&quot;:{&quot;geo&quot;:&quot;GEO-NA&quot;,&quot;defaultGeo&quot;:true,&quot;weight&quot;:60}}}&#39;</span><span class="dt">\&#39;</span><span class="st">&#39;&#39;</span></span>
+<span id="cb34-3"><a href="#cb34-3" aria-hidden="true" tabindex="-1"></a><span class="fu">su</span> <span class="at">-</span> sno2 <span class="at">-c</span> <span class="st">&#39;oc patch dnspolicy ingress-gateway-a-dns -n api-gateway --type merge -p &#39;</span><span class="dt">\&#39;</span><span class="st">&#39;{&quot;spec&quot;:{&quot;loadBalancing&quot;:{&quot;geo&quot;:&quot;GEO-NA&quot;,&quot;defaultGeo&quot;:false,&quot;weight&quot;:30}}}&#39;</span><span class="dt">\&#39;</span><span class="st">&#39;&#39;</span></span>
+<span id="cb34-4"><a href="#cb34-4" aria-hidden="true" tabindex="-1"></a><span class="fu">su</span> <span class="at">-</span> sno3 <span class="at">-c</span> <span class="st">&#39;oc patch dnspolicy ingress-gateway-a-dns -n api-gateway --type merge -p &#39;</span><span class="dt">\&#39;</span><span class="st">&#39;{&quot;spec&quot;:{&quot;loadBalancing&quot;:{&quot;geo&quot;:&quot;GEO-NA&quot;,&quot;defaultGeo&quot;:false,&quot;weight&quot;:10}}}&#39;</span><span class="dt">\&#39;</span><span class="st">&#39;&#39;</span></span>
+<span id="cb34-5"><a href="#cb34-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb34-6"><a href="#cb34-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Domain B: 20 / 30 / 50</span></span>
+<span id="cb34-7"><a href="#cb34-7" aria-hidden="true" tabindex="-1"></a><span class="fu">su</span> <span class="at">-</span> sno  <span class="at">-c</span> <span class="st">&#39;oc patch dnspolicy ingress-gateway-b-dns -n api-gateway --type merge -p &#39;</span><span class="dt">\&#39;</span><span class="st">&#39;{&quot;spec&quot;:{&quot;loadBalancing&quot;:{&quot;geo&quot;:&quot;GEO-NA&quot;,&quot;defaultGeo&quot;:true,&quot;weight&quot;:20}}}&#39;</span><span class="dt">\&#39;</span><span class="st">&#39;&#39;</span></span>
+<span id="cb34-8"><a href="#cb34-8" aria-hidden="true" tabindex="-1"></a><span class="fu">su</span> <span class="at">-</span> sno2 <span class="at">-c</span> <span class="st">&#39;oc patch dnspolicy ingress-gateway-b-dns -n api-gateway --type merge -p &#39;</span><span class="dt">\&#39;</span><span class="st">&#39;{&quot;spec&quot;:{&quot;loadBalancing&quot;:{&quot;geo&quot;:&quot;GEO-NA&quot;,&quot;defaultGeo&quot;:false,&quot;weight&quot;:30}}}&#39;</span><span class="dt">\&#39;</span><span class="st">&#39;&#39;</span></span>
+<span id="cb34-9"><a href="#cb34-9" aria-hidden="true" tabindex="-1"></a><span class="fu">su</span> <span class="at">-</span> sno3 <span class="at">-c</span> <span class="st">&#39;oc patch dnspolicy ingress-gateway-b-dns -n api-gateway --type merge -p &#39;</span><span class="dt">\&#39;</span><span class="st">&#39;{&quot;spec&quot;:{&quot;loadBalancing&quot;:{&quot;geo&quot;:&quot;GEO-NA&quot;,&quot;defaultGeo&quot;:false,&quot;weight&quot;:50}}}&#39;</span><span class="dt">\&#39;</span><span class="st">&#39;&#39;</span></span></code></pre></div>
+        <p>Healthy DNS result, 120 queries per nameserver:</p>
+        <table>
+        <thead>
+        <tr class="header">
+        <th>Domain</th>
+        <th style="text-align: right;">Nameserver</th>
+        <th style="text-align: right;">demo-01</th>
+        <th style="text-align: right;">demo-02</th>
+        <th style="text-align: right;">demo-03</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr class="odd">
+        <td>A</td>
+        <td style="text-align: right;"><code>192.168.99.210</code></td>
+        <td style="text-align: right;">76</td>
+        <td style="text-align: right;">35</td>
+        <td style="text-align: right;">9</td>
+        </tr>
+        <tr class="even">
+        <td>A</td>
+        <td style="text-align: right;"><code>192.168.99.230</code></td>
+        <td style="text-align: right;">71</td>
+        <td style="text-align: right;">36</td>
+        <td style="text-align: right;">13</td>
+        </tr>
+        <tr class="odd">
+        <td>A</td>
+        <td style="text-align: right;"><code>192.168.99.240</code></td>
+        <td style="text-align: right;">81</td>
+        <td style="text-align: right;">28</td>
+        <td style="text-align: right;">11</td>
+        </tr>
+        <tr class="even">
+        <td>B</td>
+        <td style="text-align: right;"><code>192.168.99.210</code></td>
+        <td style="text-align: right;">21</td>
+        <td style="text-align: right;">38</td>
+        <td style="text-align: right;">61</td>
+        </tr>
+        <tr class="odd">
+        <td>B</td>
+        <td style="text-align: right;"><code>192.168.99.230</code></td>
+        <td style="text-align: right;">31</td>
+        <td style="text-align: right;">33</td>
+        <td style="text-align: right;">56</td>
+        </tr>
+        <tr class="even">
+        <td>B</td>
+        <td style="text-align: right;"><code>192.168.99.240</code></td>
+        <td style="text-align: right;">18</td>
+        <td style="text-align: right;">39</td>
+        <td style="text-align: right;">63</td>
+        </tr>
+        </tbody>
+        </table>
+        <p>This confirms that same-bucket weighting works and that two
+        domains can have different weight distributions.</p>
+        <h3 id="scenario-1-failure-demo-03-app-down">12.1 Scenario 1
+        Failure: demo-03 App Down</h3>
+        <p>Failure action:</p>
+        <div class="sourceCode" id="cb35"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a><span class="fu">su</span> <span class="at">-</span> sno3 <span class="at">-c</span> <span class="st">&#39;oc scale deployment/echo -n connectlink-demo --replicas=0&#39;</span></span></code></pre></div>
+        <p>Failover configuration:</p>
+        <pre class="text"><code>Domain A active-groups: demo-01&amp;&amp;demo-02
+Domain B active-groups: demo-01&amp;&amp;demo-02
+Domain A demo-03 DNSPolicy weight: 0
+Domain B demo-03 DNSPolicy weight: 0</code></pre>
+        <p>Result:</p>
+        <table>
+        <thead>
+        <tr class="header">
+        <th>Domain</th>
+        <th style="text-align: right;">Bad VIP</th>
+        <th>Check</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr class="odd">
+        <td>A</td>
+        <td style="text-align: right;"><code>192.168.99.242</code></td>
+        <td><code>0/60</code> bad answers on all three nameservers</td>
+        </tr>
+        <tr class="even">
+        <td>B</td>
+        <td style="text-align: right;"><code>192.168.99.243</code></td>
+        <td><code>0/60</code> bad answers on all three nameservers</td>
+        </tr>
+        </tbody>
+        </table>
+        <p>Post-failover DNS samples:</p>
+        <table>
+        <thead>
+        <tr class="header">
+        <th>Domain</th>
+        <th style="text-align: right;">Nameserver</th>
+        <th>Remaining answers</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr class="odd">
+        <td>A</td>
+        <td style="text-align: right;"><code>192.168.99.210</code></td>
+        <td><code>.212</code>: 79, <code>.220</code>: 41</td>
+        </tr>
+        <tr class="even">
+        <td>A</td>
+        <td style="text-align: right;"><code>192.168.99.230</code></td>
+        <td><code>.212</code>: 80, <code>.220</code>: 40</td>
+        </tr>
+        <tr class="odd">
+        <td>A</td>
+        <td style="text-align: right;"><code>192.168.99.240</code></td>
+        <td><code>.212</code>: 76, <code>.220</code>: 44</td>
+        </tr>
+        <tr class="even">
+        <td>B</td>
+        <td style="text-align: right;"><code>192.168.99.210</code></td>
+        <td><code>.222</code>: 77, <code>.213</code>: 43</td>
+        </tr>
+        <tr class="odd">
+        <td>B</td>
+        <td style="text-align: right;"><code>192.168.99.230</code></td>
+        <td><code>.222</code>: 68, <code>.213</code>: 52</td>
+        </tr>
+        <tr class="even">
+        <td>B</td>
+        <td style="text-align: right;"><code>192.168.99.240</code></td>
+        <td><code>.222</code>: 72, <code>.213</code>: 48</td>
+        </tr>
+        </tbody>
+        </table>
+        <p>Restore:</p>
+        <div class="sourceCode" id="cb37"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a><span class="fu">su</span> <span class="at">-</span> sno3 <span class="at">-c</span> <span class="st">&#39;oc scale deployment/echo -n connectlink-demo --replicas=1&#39;</span></span></code></pre></div>
+        <h2
+        id="scenario-2-two-clusters-in-region-a-one-cluster-in-region-b">13.
+        Scenario 2: Two Clusters In Region A, One Cluster In Region
+        B</h2>
+        <p>In this test:</p>
+        <pre class="text"><code>demo-01 -&gt; GEO-NA
+demo-02 -&gt; GEO-NA
+demo-03 -&gt; GEO-EU</code></pre>
+        <p>Domain A:</p>
+        <table>
+        <thead>
+        <tr class="header">
+        <th>Cluster</th>
+        <th>Geo</th>
+        <th style="text-align: right;">VIP</th>
+        <th style="text-align: right;">Weight</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr class="odd">
+        <td>demo-01</td>
+        <td>GEO-NA</td>
+        <td style="text-align: right;"><code>192.168.99.212</code></td>
+        <td style="text-align: right;">70</td>
+        </tr>
+        <tr class="even">
+        <td>demo-02</td>
+        <td>GEO-NA</td>
+        <td style="text-align: right;"><code>192.168.99.220</code></td>
+        <td style="text-align: right;">20</td>
+        </tr>
+        <tr class="odd">
+        <td>demo-03</td>
+        <td>GEO-EU</td>
+        <td style="text-align: right;"><code>192.168.99.242</code></td>
+        <td style="text-align: right;">10</td>
+        </tr>
+        </tbody>
+        </table>
+        <p>Domain B:</p>
+        <table>
+        <thead>
+        <tr class="header">
+        <th>Cluster</th>
+        <th>Geo</th>
+        <th style="text-align: right;">VIP</th>
+        <th style="text-align: right;">Weight</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr class="odd">
+        <td>demo-01</td>
+        <td>GEO-NA</td>
+        <td style="text-align: right;"><code>192.168.99.213</code></td>
+        <td style="text-align: right;">20</td>
+        </tr>
+        <tr class="even">
+        <td>demo-02</td>
+        <td>GEO-NA</td>
+        <td style="text-align: right;"><code>192.168.99.222</code></td>
+        <td style="text-align: right;">50</td>
+        </tr>
+        <tr class="odd">
+        <td>demo-03</td>
+        <td>GEO-EU</td>
+        <td style="text-align: right;"><code>192.168.99.243</code></td>
+        <td style="text-align: right;">30</td>
+        </tr>
+        </tbody>
+        </table>
+        <p>Configuration commands:</p>
+        <div class="sourceCode" id="cb39"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Domain A: region A 70/20, region B 10</span></span>
+<span id="cb39-2"><a href="#cb39-2" aria-hidden="true" tabindex="-1"></a><span class="fu">su</span> <span class="at">-</span> sno  <span class="at">-c</span> <span class="st">&#39;oc patch dnspolicy ingress-gateway-a-dns -n api-gateway --type merge -p &#39;</span><span class="dt">\&#39;</span><span class="st">&#39;{&quot;spec&quot;:{&quot;loadBalancing&quot;:{&quot;geo&quot;:&quot;GEO-NA&quot;,&quot;defaultGeo&quot;:true,&quot;weight&quot;:70}}}&#39;</span><span class="dt">\&#39;</span><span class="st">&#39;&#39;</span></span>
+<span id="cb39-3"><a href="#cb39-3" aria-hidden="true" tabindex="-1"></a><span class="fu">su</span> <span class="at">-</span> sno2 <span class="at">-c</span> <span class="st">&#39;oc patch dnspolicy ingress-gateway-a-dns -n api-gateway --type merge -p &#39;</span><span class="dt">\&#39;</span><span class="st">&#39;{&quot;spec&quot;:{&quot;loadBalancing&quot;:{&quot;geo&quot;:&quot;GEO-NA&quot;,&quot;defaultGeo&quot;:false,&quot;weight&quot;:20}}}&#39;</span><span class="dt">\&#39;</span><span class="st">&#39;&#39;</span></span>
+<span id="cb39-4"><a href="#cb39-4" aria-hidden="true" tabindex="-1"></a><span class="fu">su</span> <span class="at">-</span> sno3 <span class="at">-c</span> <span class="st">&#39;oc patch dnspolicy ingress-gateway-a-dns -n api-gateway --type merge -p &#39;</span><span class="dt">\&#39;</span><span class="st">&#39;{&quot;spec&quot;:{&quot;loadBalancing&quot;:{&quot;geo&quot;:&quot;GEO-EU&quot;,&quot;defaultGeo&quot;:false,&quot;weight&quot;:10}}}&#39;</span><span class="dt">\&#39;</span><span class="st">&#39;&#39;</span></span>
+<span id="cb39-5"><a href="#cb39-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb39-6"><a href="#cb39-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Domain B: region A 20/50, region B 30</span></span>
+<span id="cb39-7"><a href="#cb39-7" aria-hidden="true" tabindex="-1"></a><span class="fu">su</span> <span class="at">-</span> sno  <span class="at">-c</span> <span class="st">&#39;oc patch dnspolicy ingress-gateway-b-dns -n api-gateway --type merge -p &#39;</span><span class="dt">\&#39;</span><span class="st">&#39;{&quot;spec&quot;:{&quot;loadBalancing&quot;:{&quot;geo&quot;:&quot;GEO-NA&quot;,&quot;defaultGeo&quot;:true,&quot;weight&quot;:20}}}&#39;</span><span class="dt">\&#39;</span><span class="st">&#39;&#39;</span></span>
+<span id="cb39-8"><a href="#cb39-8" aria-hidden="true" tabindex="-1"></a><span class="fu">su</span> <span class="at">-</span> sno2 <span class="at">-c</span> <span class="st">&#39;oc patch dnspolicy ingress-gateway-b-dns -n api-gateway --type merge -p &#39;</span><span class="dt">\&#39;</span><span class="st">&#39;{&quot;spec&quot;:{&quot;loadBalancing&quot;:{&quot;geo&quot;:&quot;GEO-NA&quot;,&quot;defaultGeo&quot;:false,&quot;weight&quot;:50}}}&#39;</span><span class="dt">\&#39;</span><span class="st">&#39;&#39;</span></span>
+<span id="cb39-9"><a href="#cb39-9" aria-hidden="true" tabindex="-1"></a><span class="fu">su</span> <span class="at">-</span> sno3 <span class="at">-c</span> <span class="st">&#39;oc patch dnspolicy ingress-gateway-b-dns -n api-gateway --type merge -p &#39;</span><span class="dt">\&#39;</span><span class="st">&#39;{&quot;spec&quot;:{&quot;loadBalancing&quot;:{&quot;geo&quot;:&quot;GEO-EU&quot;,&quot;defaultGeo&quot;:false,&quot;weight&quot;:30}}}&#39;</span><span class="dt">\&#39;</span><span class="st">&#39;&#39;</span></span></code></pre></div>
+        <p>Healthy DNS result, 120 queries per nameserver:</p>
+        <table>
+        <thead>
+        <tr class="header">
+        <th>Domain</th>
+        <th style="text-align: right;">Nameserver</th>
+        <th style="text-align: right;">demo-01</th>
+        <th style="text-align: right;">demo-02</th>
+        <th style="text-align: right;">demo-03</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr class="odd">
+        <td>A</td>
+        <td style="text-align: right;"><code>192.168.99.210</code></td>
+        <td style="text-align: right;">68</td>
+        <td style="text-align: right;">13</td>
+        <td style="text-align: right;">39</td>
+        </tr>
+        <tr class="even">
+        <td>A</td>
+        <td style="text-align: right;"><code>192.168.99.230</code></td>
+        <td style="text-align: right;">66</td>
+        <td style="text-align: right;">17</td>
+        <td style="text-align: right;">37</td>
+        </tr>
+        <tr class="odd">
+        <td>A</td>
+        <td style="text-align: right;"><code>192.168.99.240</code></td>
+        <td style="text-align: right;">70</td>
+        <td style="text-align: right;">16</td>
+        <td style="text-align: right;">34</td>
+        </tr>
+        <tr class="even">
+        <td>B</td>
+        <td style="text-align: right;"><code>192.168.99.210</code></td>
+        <td style="text-align: right;">15</td>
+        <td style="text-align: right;">56</td>
+        <td style="text-align: right;">49</td>
+        </tr>
+        <tr class="odd">
+        <td>B</td>
+        <td style="text-align: right;"><code>192.168.99.230</code></td>
+        <td style="text-align: right;">27</td>
+        <td style="text-align: right;">50</td>
+        <td style="text-align: right;">43</td>
+        </tr>
+        <tr class="even">
+        <td>B</td>
+        <td style="text-align: right;"><code>192.168.99.240</code></td>
+        <td style="text-align: right;">22</td>
+        <td style="text-align: right;">60</td>
+        <td style="text-align: right;">38</td>
+        </tr>
+        </tbody>
+        </table>
+        <p>Interpretation:</p>
+        <pre class="text"><code>RHCL returned answers from both buckets.
+The result is not a single flat global 70/20/10 or 20/50/30 pool.
+Same-bucket weights are reliable; cross-bucket behavior must be explained as geo-layered DNS behavior, not Avi-style global pool weighting.</code></pre>
+        <h3 id="scenario-2-failure-region-a-member-demo-02-down">13.1
+        Scenario 2 Failure: Region A Member demo-02 Down</h3>
+        <p>Failure action:</p>
+        <div class="sourceCode" id="cb41"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a><span class="fu">su</span> <span class="at">-</span> sno2 <span class="at">-c</span> <span class="st">&#39;oc scale deployment/echo -n connectlink-demo --replicas=0&#39;</span></span></code></pre></div>
+        <p>Failover configuration:</p>
+        <pre class="text"><code>Domain A active-groups: demo-01&amp;&amp;demo-03
+Domain B active-groups: demo-01&amp;&amp;demo-03
+Domain A demo-02 DNSPolicy weight: 0
+Domain B demo-02 DNSPolicy weight: 0</code></pre>
+        <p>Result:</p>
+        <table>
+        <thead>
+        <tr class="header">
+        <th>Domain</th>
+        <th style="text-align: right;">Bad VIP</th>
+        <th>Check</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr class="odd">
+        <td>A</td>
+        <td style="text-align: right;"><code>192.168.99.220</code></td>
+        <td><code>0/60</code> bad answers on all three nameservers</td>
+        </tr>
+        <tr class="even">
+        <td>B</td>
+        <td style="text-align: right;"><code>192.168.99.222</code></td>
+        <td><code>0/60</code> bad answers on all three nameservers</td>
+        </tr>
+        </tbody>
+        </table>
+        <p>Post-failover DNS samples:</p>
+        <table>
+        <thead>
+        <tr class="header">
+        <th>Domain</th>
+        <th style="text-align: right;">Nameserver</th>
+        <th>Remaining answers</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr class="odd">
+        <td>A</td>
+        <td style="text-align: right;"><code>192.168.99.210</code></td>
+        <td><code>.212</code>: 79, <code>.242</code>: 41</td>
+        </tr>
+        <tr class="even">
+        <td>A</td>
+        <td style="text-align: right;"><code>192.168.99.230</code></td>
+        <td><code>.212</code>: 80, <code>.242</code>: 40</td>
+        </tr>
+        <tr class="odd">
+        <td>A</td>
+        <td style="text-align: right;"><code>192.168.99.240</code></td>
+        <td><code>.212</code>: 76, <code>.242</code>: 44</td>
+        </tr>
+        <tr class="even">
+        <td>B</td>
+        <td style="text-align: right;"><code>192.168.99.210</code></td>
+        <td><code>.213</code>: 74, <code>.243</code>: 46</td>
+        </tr>
+        <tr class="odd">
+        <td>B</td>
+        <td style="text-align: right;"><code>192.168.99.230</code></td>
+        <td><code>.213</code>: 82, <code>.243</code>: 38</td>
+        </tr>
+        <tr class="even">
+        <td>B</td>
+        <td style="text-align: right;"><code>192.168.99.240</code></td>
+        <td><code>.213</code>: 91, <code>.243</code>: 29</td>
+        </tr>
+        </tbody>
+        </table>
+        <p>Restore:</p>
+        <div class="sourceCode" id="cb43"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a><span class="fu">su</span> <span class="at">-</span> sno2 <span class="at">-c</span> <span class="st">&#39;oc scale deployment/echo -n connectlink-demo --replicas=1&#39;</span></span></code></pre></div>
+        <h3 id="scenario-2-failure-region-b-member-demo-03-down">13.2
+        Scenario 2 Failure: Region B Member demo-03 Down</h3>
+        <p>Failure action:</p>
+        <div class="sourceCode" id="cb44"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb44-1"><a href="#cb44-1" aria-hidden="true" tabindex="-1"></a><span class="fu">su</span> <span class="at">-</span> sno3 <span class="at">-c</span> <span class="st">&#39;oc scale deployment/echo -n connectlink-demo --replicas=0&#39;</span></span></code></pre></div>
+        <p>Failover configuration:</p>
+        <pre class="text"><code>Domain A active-groups: demo-01&amp;&amp;demo-02
+Domain B active-groups: demo-01&amp;&amp;demo-02
+Domain A demo-03 DNSPolicy weight: 0
+Domain B demo-03 DNSPolicy weight: 0</code></pre>
+        <p>Result:</p>
+        <table>
+        <colgroup>
+        <col style="width: 30%" />
+        <col style="width: 40%" />
+        <col style="width: 30%" />
+        </colgroup>
+        <thead>
+        <tr class="header">
+        <th>Domain</th>
+        <th style="text-align: right;">Bad VIP</th>
+        <th>Check</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr class="odd">
+        <td>A</td>
+        <td style="text-align: right;"><code>192.168.99.242</code></td>
+        <td><code>0/60</code> bad answers on all three nameservers on
+        first check</td>
+        </tr>
+        <tr class="even">
+        <td>B</td>
+        <td style="text-align: right;"><code>192.168.99.243</code></td>
+        <td>First check saw <code>9/60</code> on
+        <code>192.168.99.240</code>; second check was <code>0/60</code>
+        on all three nameservers</td>
+        </tr>
+        </tbody>
+        </table>
+        <p>Post-failover DNS samples:</p>
+        <table>
+        <thead>
+        <tr class="header">
+        <th>Domain</th>
+        <th style="text-align: right;">Nameserver</th>
+        <th>Remaining answers</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr class="odd">
+        <td>A</td>
+        <td style="text-align: right;"><code>192.168.99.210</code></td>
+        <td><code>.212</code>: 94, <code>.220</code>: 26</td>
+        </tr>
+        <tr class="even">
+        <td>A</td>
+        <td style="text-align: right;"><code>192.168.99.230</code></td>
+        <td><code>.212</code>: 83, <code>.220</code>: 37</td>
+        </tr>
+        <tr class="odd">
+        <td>A</td>
+        <td style="text-align: right;"><code>192.168.99.240</code></td>
+        <td><code>.212</code>: 94, <code>.220</code>: 26</td>
+        </tr>
+        <tr class="even">
+        <td>B</td>
+        <td style="text-align: right;"><code>192.168.99.210</code></td>
+        <td><code>.222</code>: 83, <code>.213</code>: 37</td>
+        </tr>
+        <tr class="odd">
+        <td>B</td>
+        <td style="text-align: right;"><code>192.168.99.230</code></td>
+        <td><code>.222</code>: 89, <code>.213</code>: 31</td>
+        </tr>
+        <tr class="even">
+        <td>B</td>
+        <td style="text-align: right;"><code>192.168.99.240</code></td>
+        <td><code>.222</code>: 88, <code>.213</code>: 32</td>
+        </tr>
+        </tbody>
+        </table>
+        <p>Restore:</p>
+        <div class="sourceCode" id="cb46"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb46-1"><a href="#cb46-1" aria-hidden="true" tabindex="-1"></a><span class="fu">su</span> <span class="at">-</span> sno3 <span class="at">-c</span> <span class="st">&#39;oc scale deployment/echo -n connectlink-demo --replicas=1&#39;</span></span></code></pre></div>
+        <h2 id="why-dnspolicy.weight0-alone-is-not-enough">14. Why
+        <code>DNSPolicy.weight=0</code> Alone Is Not Enough</h2>
+        <p>One failed attempt intentionally tested weight-only
+        failover.</p>
+        <p>Observed state:</p>
+        <pre class="text"><code>DNSPolicy spec.loadBalancing.weight: 0
+DNSPolicy condition: HealthChecksFailed
+DNSHealthCheckProbe: false
+dig glb-b.kuadrant.wzhlab.top: still returned 192.168.99.243</code></pre>
+        <p>Conclusion:</p>
+        <pre class="text"><code>For production failover, do not treat weight=0 as the only exclusion mechanism.
+Use active-groups, or an equivalent pool membership mechanism, as the hard include/exclude switch.
+Still patch weight=0 for intent, observability, and alignment with policy.
+Always verify the final DNS answer.</code></pre>
+        <h2 id="external-controller-recommendation">15. External
+        Controller Recommendation</h2>
+        <p>The PoC used scripts/test logic to patch per-domain
+        active-groups and DNSPolicy. A production controller should
+        implement the same logic continuously.</p>
+        <p>Recommended controller behavior:</p>
+        <pre class="text"><code>Input:
+  hostname
+  group
+  helperUser or kubeconfig reference
+  baseWeight
+  geo
+  defaultGeo
+  health probe owner
+  active-groups FQDN
+
+Loop:
+  read DNSHealthCheckProbe per hostname/site
+  compute healthy groups per hostname
+  patch that hostname active-groups TXT on all authoritative CoreDNS instances
+  patch DNSPolicy weight to baseWeight when healthy
+  patch DNSPolicy weight to 0 when unhealthy
+  verify final DNS answer until bad VIP is absent</code></pre>
+        <p>Example CRD shape used in the single-domain controller
+        test:</p>
+        <div class="sourceCode" id="cb50"><pre
+        class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb50-1"><a href="#cb50-1" aria-hidden="true" tabindex="-1"></a><span class="fu">apiVersion</span><span class="kw">:</span><span class="at"> rhcl-lab.wzhlab.top/v1alpha1</span></span>
+<span id="cb50-2"><a href="#cb50-2" aria-hidden="true" tabindex="-1"></a><span class="fu">kind</span><span class="kw">:</span><span class="at"> GlobalTrafficPolicy</span></span>
+<span id="cb50-3"><a href="#cb50-3" aria-hidden="true" tabindex="-1"></a><span class="fu">metadata</span><span class="kw">:</span></span>
+<span id="cb50-4"><a href="#cb50-4" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">name</span><span class="kw">:</span><span class="at"> glb-kuadrant</span></span>
+<span id="cb50-5"><a href="#cb50-5" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">namespace</span><span class="kw">:</span><span class="at"> rhcl-glb-controller</span></span>
+<span id="cb50-6"><a href="#cb50-6" aria-hidden="true" tabindex="-1"></a><span class="fu">spec</span><span class="kw">:</span></span>
+<span id="cb50-7"><a href="#cb50-7" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">activeGroupsFQDN</span><span class="kw">:</span><span class="at"> kuadrant-active-groups.glb.kuadrant.wzhlab.top.</span></span>
+<span id="cb50-8"><a href="#cb50-8" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">ttl</span><span class="kw">:</span><span class="at"> </span><span class="dv">10</span></span>
+<span id="cb50-9"><a href="#cb50-9" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">strategies</span><span class="kw">:</span></span>
+<span id="cb50-10"><a href="#cb50-10" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> active-groups</span></span>
+<span id="cb50-11"><a href="#cb50-11" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> dnspolicy-weight</span></span>
+<span id="cb50-12"><a href="#cb50-12" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">sites</span><span class="kw">:</span></span>
+<span id="cb50-13"><a href="#cb50-13" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> </span><span class="fu">group</span><span class="kw">:</span><span class="at"> demo-01</span></span>
+<span id="cb50-14"><a href="#cb50-14" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">helperUser</span><span class="kw">:</span><span class="at"> sno</span></span>
+<span id="cb50-15"><a href="#cb50-15" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">baseWeight</span><span class="kw">:</span><span class="at"> </span><span class="dv">60</span></span>
+<span id="cb50-16"><a href="#cb50-16" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">geo</span><span class="kw">:</span><span class="at"> GEO-NA</span></span>
+<span id="cb50-17"><a href="#cb50-17" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">defaultGeo</span><span class="kw">:</span><span class="at"> </span><span class="ch">true</span></span>
+<span id="cb50-18"><a href="#cb50-18" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">corednsNamespace</span><span class="kw">:</span><span class="at"> kuadrant-coredns</span></span>
+<span id="cb50-19"><a href="#cb50-19" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">corednsConfigMap</span><span class="kw">:</span><span class="at"> kuadrant-coredns</span></span>
+<span id="cb50-20"><a href="#cb50-20" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">dnsPolicyNamespace</span><span class="kw">:</span><span class="at"> api-gateway</span></span>
+<span id="cb50-21"><a href="#cb50-21" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">dnsPolicyName</span><span class="kw">:</span><span class="at"> ingress-gateway-dns</span></span>
+<span id="cb50-22"><a href="#cb50-22" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">probeNamespace</span><span class="kw">:</span><span class="at"> api-gateway</span></span>
+<span id="cb50-23"><a href="#cb50-23" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">probeOwner</span><span class="kw">:</span><span class="at"> ingress-gateway-http</span></span>
+<span id="cb50-24"><a href="#cb50-24" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> </span><span class="fu">group</span><span class="kw">:</span><span class="at"> demo-02</span></span>
+<span id="cb50-25"><a href="#cb50-25" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">helperUser</span><span class="kw">:</span><span class="at"> sno2</span></span>
+<span id="cb50-26"><a href="#cb50-26" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">baseWeight</span><span class="kw">:</span><span class="at"> </span><span class="dv">30</span></span>
+<span id="cb50-27"><a href="#cb50-27" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">geo</span><span class="kw">:</span><span class="at"> GEO-NA</span></span>
+<span id="cb50-28"><a href="#cb50-28" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">defaultGeo</span><span class="kw">:</span><span class="at"> </span><span class="ch">false</span></span>
+<span id="cb50-29"><a href="#cb50-29" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">corednsNamespace</span><span class="kw">:</span><span class="at"> kuadrant-coredns</span></span>
+<span id="cb50-30"><a href="#cb50-30" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">corednsConfigMap</span><span class="kw">:</span><span class="at"> kuadrant-coredns</span></span>
+<span id="cb50-31"><a href="#cb50-31" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">dnsPolicyNamespace</span><span class="kw">:</span><span class="at"> api-gateway</span></span>
+<span id="cb50-32"><a href="#cb50-32" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">dnsPolicyName</span><span class="kw">:</span><span class="at"> ingress-gateway-dns</span></span>
+<span id="cb50-33"><a href="#cb50-33" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">probeNamespace</span><span class="kw">:</span><span class="at"> api-gateway</span></span>
+<span id="cb50-34"><a href="#cb50-34" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">probeOwner</span><span class="kw">:</span><span class="at"> ingress-gateway-http</span></span>
+<span id="cb50-35"><a href="#cb50-35" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> </span><span class="fu">group</span><span class="kw">:</span><span class="at"> demo-03</span></span>
+<span id="cb50-36"><a href="#cb50-36" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">helperUser</span><span class="kw">:</span><span class="at"> sno3</span></span>
+<span id="cb50-37"><a href="#cb50-37" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">baseWeight</span><span class="kw">:</span><span class="at"> </span><span class="dv">10</span></span>
+<span id="cb50-38"><a href="#cb50-38" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">geo</span><span class="kw">:</span><span class="at"> GEO-NA</span></span>
+<span id="cb50-39"><a href="#cb50-39" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">defaultGeo</span><span class="kw">:</span><span class="at"> </span><span class="ch">false</span></span>
+<span id="cb50-40"><a href="#cb50-40" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">corednsNamespace</span><span class="kw">:</span><span class="at"> kuadrant-coredns</span></span>
+<span id="cb50-41"><a href="#cb50-41" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">corednsConfigMap</span><span class="kw">:</span><span class="at"> kuadrant-coredns</span></span>
+<span id="cb50-42"><a href="#cb50-42" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">dnsPolicyNamespace</span><span class="kw">:</span><span class="at"> api-gateway</span></span>
+<span id="cb50-43"><a href="#cb50-43" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">dnsPolicyName</span><span class="kw">:</span><span class="at"> ingress-gateway-dns</span></span>
+<span id="cb50-44"><a href="#cb50-44" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">probeNamespace</span><span class="kw">:</span><span class="at"> api-gateway</span></span>
+<span id="cb50-45"><a href="#cb50-45" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">probeOwner</span><span class="kw">:</span><span class="at"> ingress-gateway-http</span></span></code></pre></div>
+        <p>For two domains, the controller should make the active-groups
+        state hostname-scoped:</p>
+        <pre class="text"><code>glb-a.kuadrant.wzhlab.top -&gt; kuadrant-active-groups.glb-a.kuadrant.wzhlab.top
+glb-b.kuadrant.wzhlab.top -&gt; kuadrant-active-groups.glb-b.kuadrant.wzhlab.top</code></pre>
+        <h2 id="avi-replacement-analysis">16. Avi Replacement
+        Analysis</h2>
+        <p>The customer requirement was:</p>
+        <pre class="text"><code>We are looking for an alternative to Avi ALB that performs multi-geo, multi-cluster load balancing.</code></pre>
+        <h3 id="what-rhcl-can-replace-based-on-this-e2e">16.1 What RHCL
+        can replace based on this E2E</h3>
+        <table>
+        <colgroup>
+        <col style="width: 33%" />
+        <col style="width: 33%" />
+        <col style="width: 33%" />
+        </colgroup>
+        <thead>
+        <tr class="header">
+        <th>Requirement</th>
+        <th>Result</th>
+        <th>Notes</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr class="odd">
+        <td>Publish one app hostname from multiple OpenShift
+        clusters</td>
+        <td>Validated</td>
+        <td>Baseline single-domain and two-domain tests both
+        worked.</td>
+        </tr>
+        <tr class="even">
+        <td>Publish multiple hostnames with independent policy</td>
+        <td>Validated</td>
+        <td><code>glb-a</code> and <code>glb-b</code> used different
+        weights and different Gateway VIPs.</td>
+        </tr>
+        <tr class="odd">
+        <td>Weighted traffic distribution among healthy clusters</td>
+        <td>Validated inside same bucket</td>
+        <td>Scenario 1 proved per-domain same-bucket weights.</td>
+        </tr>
+        <tr class="even">
+        <td>Health-based cluster removal</td>
+        <td>Validated</td>
+        <td>Requires active-groups membership update and convergence
+        wait.</td>
+        </tr>
+        <tr class="odd">
+        <td>Recover failed cluster into pool</td>
+        <td>Validated operationally</td>
+        <td>The tests restored app replicas and active-groups to full
+        membership.</td>
+        </tr>
+        <tr class="even">
+        <td>Use OpenShift-native Gateway API/RHCL objects</td>
+        <td>Validated</td>
+        <td>Gateway, HTTPRoute, DNSPolicy, DNSRecord,
+        DNSHealthCheckProbe all participated.</td>
+        </tr>
+        </tbody>
+        </table>
+        <h3 id="what-rhcl-partially-replaces">16.2 What RHCL partially
+        replaces</h3>
+        <table>
+        <colgroup>
+        <col style="width: 33%" />
+        <col style="width: 33%" />
+        <col style="width: 33%" />
+        </colgroup>
+        <thead>
+        <tr class="header">
+        <th>Requirement</th>
+        <th>Status</th>
+        <th>Gap</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr class="odd">
+        <td>Multi-region DNS survival</td>
+        <td>Partially validated</td>
+        <td>Failed region member can be removed, but empty-bucket
+        behavior and fallback policy must be designed.</td>
+        </tr>
+        <tr class="even">
+        <td>Global weighted pool across regions</td>
+        <td>Not equivalent</td>
+        <td>RHCL geo buckets are not one flat global weight pool.</td>
+        </tr>
+        <tr class="odd">
+        <td>Centralized GSLB policy</td>
+        <td>PoC controller only</td>
+        <td>Needs production controller packaging, HA, RBAC,
+        observability, and reconciliation semantics.</td>
+        </tr>
+        <tr class="even">
+        <td>SLA-grade failover</td>
+        <td>Needs measurement</td>
+        <td>Health check interval plus CoreDNS/RHCL convergence must be
+        part of the failover SLA.</td>
+        </tr>
+        </tbody>
+        </table>
+        <h3 id="what-rhcl-does-not-replace-in-this-poc">16.3 What RHCL
+        does not replace in this PoC</h3>
+        <table>
+        <colgroup>
+        <col style="width: 50%" />
+        <col style="width: 50%" />
+        </colgroup>
+        <thead>
+        <tr class="header">
+        <th>Avi GSLB feature</th>
+        <th>RHCL PoC status</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr class="odd">
+        <td>Closest data center selection based on client location</td>
+        <td>Not validated as native capability.</td>
+        </tr>
+        <tr class="even">
+        <td>Best-performing data center based on
+        latency/performance</td>
+        <td>Not implemented.</td>
+        </tr>
+        <tr class="odd">
+        <td>EDNS Client Subnet based answer selection</td>
+        <td>Not supported in this PoC.</td>
+        </tr>
+        <tr class="even">
+        <td>Avi GSLB leader/site federation</td>
+        <td>Not implemented.</td>
+        </tr>
+        <tr class="odd">
+        <td>Full global service object model with pool/member health,
+        algorithm, persistence, and site federation</td>
+        <td>Requires external controller or upstream product
+        capability.</td>
+        </tr>
+        </tbody>
+        </table>
+        <h3 id="recommended-customer-positioning">16.4 Recommended
+        customer positioning</h3>
+        <p>Use this RHCL design when the customer needs:</p>
+        <pre class="text"><code>OpenShift-native DNS-based multi-cluster publication
+weighted distribution among healthy clusters
+health-based DNS failover
+multiple hostnames with independent routing policy</code></pre>
+        <p>Do not position this PoC as a full Avi GSLB replacement when
+        the customer requires:</p>
+        <pre class="text"><code>closest-site routing
+best-performing-site routing
+native geo/ECS decisioning
+Avi-like GSLB site federation
+central GUI/API for global application service lifecycle</code></pre>
+        <p>The credible migration strategy is:</p>
+        <ol type="1">
+        <li>Start with RHCL for OpenShift-native Gateway + DNSPolicy +
+        health-based failover.</li>
+        <li>Add a production external controller for hostname-scoped
+        active-groups and DNSPolicy reconciliation.</li>
+        <li>If the customer requires location or performance routing,
+        integrate with upstream DNS/GSLB or extend the controller with
+        geo/ECS/latency data sources.</li>
+        <li>Treat Avi migration as capability-by-capability replacement,
+        not as a one-shot product swap.</li>
+        </ol>
+        <h2 id="final-conclusion">17. Final Conclusion</h2>
+        <p>This validation reached the following technical
+        conclusion:</p>
+        <pre class="text"><code>RHCL can support a practical DNS-based GLB pattern for three OpenShift clusters and two independent domains.
+Same-region weighted distribution works.
+Application failure can be removed from DNS answers.
+The robust failover mechanism is per-domain active-groups plus DNSPolicy intent.</code></pre>
+        <p>This validation did not prove full Avi GSLB equivalence:</p>
+        <pre class="text"><code>No native closest-site algorithm was validated.
+No native best-performing-site algorithm was validated.
+No native ECS/client-location answer selection was validated.
+No Avi-style GSLB site federation was implemented.</code></pre>
+        <p>Therefore, RHCL is a strong candidate for OpenShift-native
+        multi-cluster DNS failover and weighted DNS distribution, but a
+        complete Avi replacement requires additional geo/performance
+        routing design and a production-grade controller/control-plane
+        layer.</p>
+      </article>
+    </div>
+      </main>
+
+  <footer>
+    <p>
+      Licensed under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank"
+        rel="noopener">CC-BY-NC-SA 4.0</a>
+      &nbsp;·&nbsp;
+      <a href="https://github.com/wangzheng422/docker_env" target="_blank" rel="noopener">wangzheng422/docker_env</a>
+    </p>
+  </footer>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: false, theme: 'dark' });
+
+    const SITE_BUILD_ID = 'fbe91b569ae8';
+    const SITE_HOME_URL = '../../../../index.html';
+
+    const getBuildIdFromHtml = (html) => {
+      const match = String(html).match(/<meta[^>]+name=["']site-build-id["'][^>]+content=["']([^"']+)["']/i)
+        || String(html).match(/<meta[^>]+content=["']([^"']+)["'][^>]+name=["']site-build-id["']/i);
+      return match ? match[1] : '';
+    };
+
+    const checkForSiteUpdate = async () => {
+      if (!SITE_BUILD_ID || window.location.protocol === 'file:') return;
+      try {
+        const probeUrl = new URL(SITE_HOME_URL || './index.html', window.location.href);
+        probeUrl.searchParams.set('site_cache_probe', Date.now().toString());
+        const response = await fetch(probeUrl.toString(), { cache: 'no-store' });
+        if (!response.ok) return;
+        const latestBuildId = getBuildIdFromHtml(await response.text());
+        if (!latestBuildId || latestBuildId === SITE_BUILD_ID) return;
+        if (sessionStorage.getItem('site-build-refresh') === latestBuildId) return;
+        sessionStorage.setItem('site-build-refresh', latestBuildId);
+        const freshUrl = new URL(window.location.href);
+        freshUrl.searchParams.set('v', latestBuildId);
+        window.location.replace(freshUrl.toString());
+      } catch (error) {
+        // Network errors should not block reading the current page.
+      }
+    };
+
+    const versionedLocalUrl = (rawUrl) => {
+      if (!rawUrl || /^(https?:)?\/\//i.test(rawUrl) || /^(data|blob|mailto):/i.test(rawUrl)) return rawUrl;
+      const url = new URL(rawUrl, window.location.href);
+      if (url.searchParams.has('v')) return rawUrl;
+      url.searchParams.set('v', SITE_BUILD_ID);
+      return url.toString();
+    };
+
+    const cacheBustPageAssets = () => {
+      document.querySelectorAll('img[src], video[src], audio[src], source[src]').forEach((node) => {
+        const src = node.getAttribute('src');
+        const versioned = versionedLocalUrl(src);
+        if (versioned !== src) node.setAttribute('src', versioned);
+      });
+    };
+
+    const updateReadingProgress = () => {
+      const progress = document.querySelector('.reading-progress');
+      if (!progress) return;
+      const scrollable = document.documentElement.scrollHeight - window.innerHeight;
+      const ratio = scrollable > 0 ? window.scrollY / scrollable : 0;
+      progress.style.transform = 'scaleX(' + Math.min(1, Math.max(0, ratio)) + ')';
+    };
+
+    const topicFor = (text, href) => {
+      const haystack = (text + ' ' + href).toLowerCase();
+      if (/developers\.redhat\.com|redhatquickcourses|github\.com\/redhatquickcourses/.test(haystack)) return 'Red Hat';
+      if (/ai|llm|gpu|vllm|llama|model|rhaiis/.test(haystack)) return 'AI';
+      if (/network|ovn|bgp|dns|egress|ingress|metallb|nic|route/.test(haystack)) return 'Network';
+      if (/cert|tls|sso|keycloak|rhbk|security|compliance/.test(haystack)) return 'Security';
+      if (/perf|profile|throttling|heap|debug/.test(haystack)) return 'Performance';
+      if (/install|ipi|upi|sno|disconnected|bootstrap/.test(haystack)) return 'Install';
+      if (/rhel|coreos|rhcos|kernel|rpm|ostree/.test(haystack)) return 'RHEL';
+      if (/backup|storage|nfs|odf|ocs|ceph|dr/.test(haystack)) return 'Storage';
+      if (/pipeline|gitops|ansible|aap|rhdh|devops/.test(haystack)) return 'DevOps';
+      return 'OpenShift';
+    };
+
+    const yearFor = (text, href) => {
+      const match = (text + ' ' + href).match(/20\d{2}/);
+      return match ? match[0] : 'Notes';
+    };
+
+    const importantExternal = (href) =>
+      /developers\.redhat\.com|redhatquickcourses\.github\.io/i.test(href);
+
+    const titleForLink = (link) => {
+      const href = link.getAttribute('href') || '';
+      const directText = link.textContent.trim().replace(/\s+/g, ' ');
+      if (!/^https?:\/\//.test(directText)) return directText;
+      const parentItem = link.closest('ul')?.parentElement;
+      if (parentItem) {
+        const clone = parentItem.cloneNode(true);
+        clone.querySelectorAll('ul').forEach((nested) => nested.remove());
+        const parentText = clone.textContent.trim().replace(/\s+/g, ' ');
+        if (parentText) {
+          return parentText;
+        }
+      }
+      return directText;
+    };
+
+    const escapeHtml = (value) => String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+
+    const enhanceHome = () => {
+      if (!document.body.classList.contains('page-index')) return;
+      const source = document.querySelector('.home-source');
+      const grid = document.getElementById('note-grid');
+      const stats = document.getElementById('console-stats');
+      const externalPanel = document.getElementById('external-panel');
+      const topicStrip = document.getElementById('topic-strip');
+      const search = document.getElementById('console-search');
+      if (!source || !grid || !stats || !externalPanel || !topicStrip || !search) return;
+
+      const seen = new Set();
+      const links = Array.from(source.querySelectorAll('a[href]'))
+        .map((link) => {
+          const href = link.getAttribute('href') || '';
+          const text = titleForLink(link);
+          return { text, href, topic: topicFor(text, href), year: yearFor(text, href) };
+        });
+      const notes = links
+        .filter((note) => note.text && !note.href.startsWith('http') && !seen.has(note.href) && seen.add(note.href));
+      const externalLinks = links
+        .filter((note) => note.text && importantExternal(note.href));
+
+      const topics = ['All', ...Array.from(new Set(notes.map((note) => note.topic))).sort()];
+      let activeTopic = 'All';
+
+      const renderStats = () => {
+        const years = notes.map((note) => note.year).filter((year) => year.length === 4 && /^\d{4}/.test(year));
+        const latest = years.length ? Math.max(...years.map(Number)) : 'N/A';
+        const oldest = years.length ? Math.min(...years.map(Number)) : 'N/A';
+        stats.innerHTML = [
+          ['Notes', notes.length],
+          ['Resources', externalLinks.length],
+          ['Topics', topics.length - 1],
+          ['Latest', latest],
+        ].map(([label, value]) => '<div class="stat-tile"><span>' + label + '</span><strong>' + value + '</strong></div>').join('');
+        const signal = document.getElementById('signal-count');
+        if (signal) signal.textContent = notes.length + ' links indexed';
+      };
+
+      const renderExternal = () => {
+        externalPanel.innerHTML =
+          '<div class="section-heading"><span>Published / Learning</span><strong>Red Hat resources</strong></div>' +
+          '<div class="external-grid">' +
+          externalLinks.map((note) =>
+            '<a class="resource-card" href="' + escapeHtml(note.href) + '" target="_blank" rel="noopener">' +
+            '<span class="note-meta"><span>' + escapeHtml(note.year) + '</span><span>' + escapeHtml(note.topic) + '</span></span>' +
+            '<strong>' + escapeHtml(note.text) + '</strong>' +
+            '<small>' + escapeHtml(note.href) + '</small>' +
+            '</a>'
+          ).join('') +
+          '</div>';
+      };
+
+      const renderTopics = () => {
+        topicStrip.innerHTML = topics.map((topic) => '<button class="topic-chip' + (topic === activeTopic ? ' active' : '') + '" type="button" data-topic="' + escapeHtml(topic) + '">' + escapeHtml(topic) + '</button>').join('');
+        topicStrip.querySelectorAll('button').forEach((button) => {
+          button.addEventListener('click', () => {
+            activeTopic = button.dataset.topic || 'All';
+            renderTopics();
+            renderCards();
+          });
+        });
+      };
+
+      const renderCards = () => {
+        const query = search.value.trim().toLowerCase();
+        const filtered = notes.filter((note) => {
+          const topicMatch = activeTopic === 'All' || note.topic === activeTopic;
+          const queryMatch = !query || (note.text + ' ' + note.href + ' ' + note.topic + ' ' + note.year).toLowerCase().includes(query);
+          return topicMatch && queryMatch;
+        });
+        grid.innerHTML = filtered.map((note) =>
+          '<a class="note-card" href="' + escapeHtml(note.href) + '">' +
+          '<span class="note-meta"><span>' + escapeHtml(note.year) + '</span><span>' + escapeHtml(note.topic) + '</span></span>' +
+          '<strong>' + escapeHtml(note.text) + '</strong>' +
+          '<small>' + escapeHtml(note.href) + '</small>' +
+          '</a>'
+        ).join('') || '<p class="empty-state">No matching notes.</p>';
+      };
+
+      const drawMap = () => {
+        const canvas = document.getElementById('knowledge-canvas');
+        if (!(canvas instanceof HTMLCanvasElement)) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        const width = canvas.width;
+        const height = canvas.height;
+        const nodes = notes.slice(0, 44).map((note, index) => {
+          const angle = (index / 44) * Math.PI * 2;
+          const ring = 90 + (index % 5) * 22;
+          return {
+            x: width / 2 + Math.cos(angle) * ring,
+            y: height / 2 + Math.sin(angle) * ring * 0.72,
+            topic: note.topic,
+          };
+        });
+        ctx.clearRect(0, 0, width, height);
+        ctx.strokeStyle = 'rgba(88, 166, 255, 0.14)';
+        ctx.lineWidth = 1;
+        nodes.forEach((node, index) => {
+          const next = nodes[(index + 7) % nodes.length];
+          ctx.beginPath();
+          ctx.moveTo(node.x, node.y);
+          ctx.lineTo(next.x, next.y);
+          ctx.stroke();
+        });
+        const palette = {
+          AI: '#a371f7',
+          Network: '#39d0d8',
+          Security: '#ff7b72',
+          Performance: '#f2cc60',
+          Install: '#7ee787',
+          RHEL: '#ff7b72',
+          Storage: '#d2a8ff',
+          DevOps: '#ffa657',
+          OpenShift: '#58a6ff',
+        };
+        nodes.forEach((node) => {
+          ctx.fillStyle = palette[node.topic] || '#58a6ff';
+          ctx.beginPath();
+          ctx.arc(node.x, node.y, 3.4, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      };
+
+      search.addEventListener('input', renderCards);
+      renderStats();
+      renderExternal();
+      renderTopics();
+      renderCards();
+      drawMap();
+      document.body.classList.add('home-enhanced');
+    };
+
+    const enhanceCodeBlocks = () => {
+      document.querySelectorAll('pre').forEach((pre) => {
+        if (pre.classList.contains('mermaid') || pre.querySelector('.copy-code')) return;
+        const button = document.createElement('button');
+        button.className = 'copy-code';
+        button.type = 'button';
+        button.textContent = 'Copy';
+        button.addEventListener('click', async () => {
+          await navigator.clipboard.writeText(pre.textContent || '');
+          button.textContent = 'Copied';
+          setTimeout(() => { button.textContent = 'Copy'; }, 1200);
+        });
+        pre.appendChild(button);
+      });
+    };
+
+    window.addEventListener('scroll', updateReadingProgress, { passive: true });
+    window.addEventListener('pageshow', (event) => {
+      if (event.persisted) checkForSiteUpdate();
+    });
+    document.addEventListener('DOMContentLoaded', async () => {
+      checkForSiteUpdate();
+      cacheBustPageAssets();
+      updateReadingProgress();
+      enhanceHome();
+      enhanceCodeBlocks();
+      // pandoc 输出 mermaid 为 <pre class="mermaid"><code>...</code></pre>
+      // 需要转成 <div class="mermaid">...</div> 供 mermaid.js 渲染
+      document.querySelectorAll('pre.mermaid').forEach(pre => {
+        const div = document.createElement('div');
+        div.classList.add('mermaid');
+        div.textContent = pre.textContent;
+        pre.replaceWith(div);
+      });
+      // 也处理 <pre><code class="language-mermaid"> 形式（备用）
+      document.querySelectorAll('pre code.language-mermaid').forEach(code => {
+        const div = document.createElement('div');
+        div.classList.add('mermaid');
+        div.textContent = code.textContent;
+        code.closest('pre').replaceWith(div);
+      });
+      await mermaid.run();
+    });
+  </script>
+</body>
+
+</html>

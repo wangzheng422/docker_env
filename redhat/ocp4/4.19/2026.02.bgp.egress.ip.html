@@ -1,0 +1,1211 @@
+<!DOCTYPE html>
+<html lang="zh" dir="ltr">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="generator" content="pandoc" />
+  <meta name="site-build-id" content="fbe91b569ae8" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <title>Deep Dive: OVN Egress IP with BGP in OpenShift 4.19 | wandering.star notes</title>
+  <meta name="description"
+    content="Wandering field notes on OpenShift, RHEL, AI infrastructure, and platform operations." />
+  <!-- Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-E3FRMDB7L2"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-E3FRMDB7L2');
+  </script>
+  <style>
+  html {
+    color: #1a1a1a;
+    background-color: #fdfdfd;
+  }
+  body {
+    margin: 0 auto;
+    max-width: 36em;
+    padding-left: 50px;
+    padding-right: 50px;
+    padding-top: 50px;
+    padding-bottom: 50px;
+    hyphens: auto;
+    overflow-wrap: break-word;
+    text-rendering: optimizeLegibility;
+    font-kerning: normal;
+  }
+  @media (max-width: 600px) {
+    body {
+      font-size: 0.9em;
+      padding: 12px;
+    }
+    h1 {
+      font-size: 1.8em;
+    }
+  }
+  @media print {
+    html {
+      background-color: white;
+    }
+    body {
+      background-color: transparent;
+      color: black;
+      font-size: 12pt;
+    }
+    p, h2, h3 {
+      orphans: 3;
+      widows: 3;
+    }
+    h2, h3, h4 {
+      page-break-after: avoid;
+    }
+  }
+  p {
+    margin: 1em 0;
+  }
+  a {
+    color: #1a1a1a;
+  }
+  a:visited {
+    color: #1a1a1a;
+  }
+  img {
+    max-width: 100%;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.4em;
+  }
+  h5, h6 {
+    font-size: 1em;
+    font-style: italic;
+  }
+  h6 {
+    font-weight: normal;
+  }
+  ol, ul {
+    padding-left: 1.7em;
+    margin-top: 1em;
+  }
+  li > ol, li > ul {
+    margin-top: 0;
+  }
+  blockquote {
+    margin: 1em 0 1em 1.7em;
+    padding-left: 1em;
+    border-left: 2px solid #e6e6e6;
+    color: #606060;
+  }
+  code {
+    font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+    font-size: 85%;
+    margin: 0;
+    hyphens: manual;
+  }
+  pre {
+    margin: 1em 0;
+    overflow: auto;
+  }
+  pre code {
+    padding: 0;
+    overflow: visible;
+    overflow-wrap: normal;
+  }
+  .sourceCode {
+   background-color: transparent;
+   overflow: visible;
+  }
+  hr {
+    background-color: #1a1a1a;
+    border: none;
+    height: 1px;
+    margin: 1em 0;
+  }
+  table {
+    margin: 1em 0;
+    border-collapse: collapse;
+    width: 100%;
+    overflow-x: auto;
+    display: block;
+    font-variant-numeric: lining-nums tabular-nums;
+  }
+  table caption {
+    margin-bottom: 0.75em;
+  }
+  tbody {
+    margin-top: 0.5em;
+    border-top: 1px solid #1a1a1a;
+    border-bottom: 1px solid #1a1a1a;
+  }
+  th {
+    border-top: 1px solid #1a1a1a;
+    padding: 0.25em 0.5em 0.25em 0.5em;
+  }
+  td {
+    padding: 0.125em 0.5em 0.25em 0.5em;
+  }
+  header {
+    margin-bottom: 4em;
+    text-align: center;
+  }
+  #TOC li {
+    list-style: none;
+  }
+  #TOC ul {
+    padding-left: 1.3em;
+  }
+  #TOC > ul {
+    padding-left: 0;
+  }
+  #TOC a:not(:hover) {
+    text-decoration: none;
+  }
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  div.columns{display: flex; gap: min(4vw, 1.5em);}
+  div.column{flex: auto; overflow-x: auto;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  /* The extra [class] is a hack that increases specificity enough to
+     override a similar rule in reveal.js */
+  ul.task-list[class]{list-style: none;}
+  ul.task-list li input[type="checkbox"] {
+    font-size: inherit;
+    width: 0.8em;
+    margin: 0 0.8em 0.2em -1.6em;
+    vertical-align: middle;
+  }
+  .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  /* CSS for syntax highlighting */
+  pre > code.sourceCode { white-space: pre; position: relative; }
+  pre > code.sourceCode > span { line-height: 1.25; }
+  pre > code.sourceCode > span:empty { height: 1.2em; }
+  .sourceCode { overflow: visible; }
+  code.sourceCode > span { color: inherit; text-decoration: inherit; }
+  div.sourceCode { margin: 1em 0; }
+  pre.sourceCode { margin: 0; }
+  @media screen {
+  div.sourceCode { overflow: auto; }
+  }
+  @media print {
+  pre > code.sourceCode { white-space: pre-wrap; }
+  pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+  }
+  pre.numberSource code
+    { counter-reset: source-line 0; }
+  pre.numberSource code > span
+    { position: relative; left: -4em; counter-increment: source-line; }
+  pre.numberSource code > span > a:first-child::before
+    { content: counter(source-line);
+      position: relative; left: -1em; text-align: right; vertical-align: baseline;
+      border: none; display: inline-block;
+      -webkit-touch-callout: none; -webkit-user-select: none;
+      -khtml-user-select: none; -moz-user-select: none;
+      -ms-user-select: none; user-select: none;
+      padding: 0 4px; width: 4em;
+    }
+  pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+  div.sourceCode
+    { color: #cccccc; background-color: #303030; }
+  @media screen {
+  pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+  }
+  code span.al { color: #ffcfaf; } /* Alert */
+  code span.an { color: #7f9f7f; font-weight: bold; } /* Annotation */
+  code span.at { } /* Attribute */
+  code span.bn { color: #dca3a3; } /* BaseN */
+  code span.bu { } /* BuiltIn */
+  code span.cf { color: #f0dfaf; } /* ControlFlow */
+  code span.ch { color: #dca3a3; } /* Char */
+  code span.cn { color: #dca3a3; font-weight: bold; } /* Constant */
+  code span.co { color: #7f9f7f; } /* Comment */
+  code span.cv { color: #7f9f7f; font-weight: bold; } /* CommentVar */
+  code span.do { color: #7f9f7f; } /* Documentation */
+  code span.dt { color: #dfdfbf; } /* DataType */
+  code span.dv { color: #dcdccc; } /* DecVal */
+  code span.er { color: #c3bf9f; } /* Error */
+  code span.ex { } /* Extension */
+  code span.fl { color: #c0bed1; } /* Float */
+  code span.fu { color: #efef8f; } /* Function */
+  code span.im { } /* Import */
+  code span.in { color: #7f9f7f; font-weight: bold; } /* Information */
+  code span.kw { color: #f0dfaf; } /* Keyword */
+  code span.op { color: #f0efd0; } /* Operator */
+  code span.ot { color: #efef8f; } /* Other */
+  code span.pp { color: #ffcfaf; font-weight: bold; } /* Preprocessor */
+  code span.sc { color: #dca3a3; } /* SpecialChar */
+  code span.ss { color: #cc9393; } /* SpecialString */
+  code span.st { color: #cc9393; } /* String */
+  code span.va { } /* Variable */
+  code span.vs { color: #cc9393; } /* VerbatimString */
+  code span.wa { color: #7f9f7f; font-weight: bold; } /* Warning */
+  </style>
+  <link rel="stylesheet" href="../../../style.css?v=fbe91b569ae8" />
+  </head>
+
+<body class="page-article">
+  <div class="reading-progress" aria-hidden="true"></div>
+  <div class="console-backdrop" aria-hidden="true"></div>
+  <nav class="site-nav">
+    <div class="nav-inner">
+      <a class="nav-brand" href="../../../index.html">wandering.star<span>notes</span></a>
+      <div class="nav-links">
+        <a href="https://github.com/wangzheng422/docker_env" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://www.youtube.com/@wangzheng422" target="_blank" rel="noopener">YouTube</a>
+      </div>
+    </div>
+  </nav>
+
+  <main>
+            <a class="back-link" href="../../../index.html">← Back to Index</a>
+        <div class="article-layout">
+            <aside class="toc-panel">
+        <div class="toc-title">ON THIS PAGE</div>
+        <ul>
+        <li><a
+        href="#deep-dive-ovn-egress-ip-with-bgp-in-openshift-4.19"
+        id="toc-deep-dive-ovn-egress-ip-with-bgp-in-openshift-4.19">Deep
+        Dive: OVN Egress IP with BGP in OpenShift 4.19</a>
+        <ul>
+        <li><a href="#abstract" id="toc-abstract">1. Abstract</a></li>
+        <li><a href="#lab-environment-architecture"
+        id="toc-lab-environment-architecture">2. Lab Environment
+        Architecture</a>
+        <ul>
+        <li><a href="#topology-overview" id="toc-topology-overview">2.1
+        Topology Overview</a></li>
+        <li><a href="#component-details" id="toc-component-details">2.2
+        Component Details</a></li>
+        </ul></li>
+        <li><a href="#infrastructure-configuration"
+        id="toc-infrastructure-configuration">3. Infrastructure
+        Configuration</a>
+        <ul>
+        <li><a href="#router-frr-node-setup"
+        id="toc-router-frr-node-setup">3.1 Router (FRR) Node
+        Setup</a></li>
+        <li><a href="#external-server-setup"
+        id="toc-external-server-setup">3.2 External Server
+        Setup</a></li>
+        </ul></li>
+        <li><a href="#openshift-configuration-flow"
+        id="toc-openshift-configuration-flow">4. OpenShift Configuration
+        Flow</a>
+        <ul>
+        <li><a href="#deploying-the-test-application"
+        id="toc-deploying-the-test-application">4.1 Deploying the Test
+        Application</a></li>
+        <li><a href="#enabling-bgp-and-node-configuration"
+        id="toc-enabling-bgp-and-node-configuration">4.2 Enabling BGP
+        and Node Configuration</a></li>
+        </ul></li>
+        <li><a href="#egress-ip-and-route-advertisement-implementation"
+        id="toc-egress-ip-and-route-advertisement-implementation">5.
+        Egress IP and Route Advertisement Implementation</a>
+        <ul>
+        <li><a href="#preparing-nodes-for-egress-assignment"
+        id="toc-preparing-nodes-for-egress-assignment">5.1 Preparing
+        Nodes for Egress Assignment</a></li>
+        <li><a href="#configuring-ovn-route-advertisements"
+        id="toc-configuring-ovn-route-advertisements">5.2 Configuring
+        OVN Route Advertisements</a></li>
+        <li><a href="#deploying-the-egress-ip-crd"
+        id="toc-deploying-the-egress-ip-crd">5.3 Deploying the Egress IP
+        CRD</a></li>
+        </ul></li>
+        <li><a href="#operational-verification"
+        id="toc-operational-verification">6. Operational
+        Verification</a>
+        <ul>
+        <li><a href="#bgp-route-confirmation"
+        id="toc-bgp-route-confirmation">6.1 BGP Route
+        Confirmation</a></li>
+        <li><a href="#connectivity-test" id="toc-connectivity-test">6.2
+        Connectivity Test</a></li>
+        <li><a
+        href="#negative-experiment-traffic-interruption-due-to-upstream-routing-mismatch"
+        id="toc-negative-experiment-traffic-interruption-due-to-upstream-routing-mismatch">6.3
+        Negative Experiment: Traffic Interruption due to Upstream
+        Routing Mismatch</a></li>
+        <li><a href="#key-troubleshooting-logs-control-plane"
+        id="toc-key-troubleshooting-logs-control-plane">6.4 Key
+        Troubleshooting Logs (Control Plane)</a></li>
+        <li><a
+        href="#infrastructure-and-global-configuration-verification"
+        id="toc-infrastructure-and-global-configuration-verification">6.5
+        Infrastructure and Global Configuration Verification</a></li>
+        <li><a
+        href="#egress-ip-arp-behavior-and-switch-mac-address-learning"
+        id="toc-egress-ip-arp-behavior-and-switch-mac-address-learning">6.6
+        Egress IP ARP Behavior and Switch MAC Address Learning</a></li>
+        </ul></li>
+        <li><a href="#under-the-hood-the-mechanics-of-redirection"
+        id="toc-under-the-hood-the-mechanics-of-redirection">7. Under
+        the Hood: The Mechanics of Redirection</a>
+        <ul>
+        <li><a href="#ovn-address-sets" id="toc-ovn-address-sets">7.1
+        OVN Address Sets</a></li>
+        <li><a href="#ovs-openflow-and-interceptor-markers"
+        id="toc-ovs-openflow-and-interceptor-markers">7.2 OVS OpenFlow
+        and Interceptor Markers</a></li>
+        <li><a href="#kernel-policy-based-routing-pbr"
+        id="toc-kernel-policy-based-routing-pbr">7.3 Kernel Policy-Based
+        Routing (PBR)</a></li>
+        <li><a href="#hexadecimal-magic-redirection-via-transit-switch"
+        id="toc-hexadecimal-magic-redirection-via-transit-switch">7.4
+        Hexadecimal Magic: Redirection via Transit Switch</a></li>
+        <li><a href="#final-snat-on-the-hosted-node"
+        id="toc-final-snat-on-the-hosted-node">7.5 Final SNAT on the
+        Hosted Node</a></li>
+        </ul></li>
+        <li><a href="#conclusion" id="toc-conclusion">8.
+        Conclusion</a></li>
+        </ul></li>
+        </ul>
+      </aside>
+            <article class="markdown-body article-shell">
+        <h1 id="deep-dive-ovn-egress-ip-with-bgp-in-openshift-4.19">Deep
+        Dive: OVN Egress IP with BGP in OpenShift 4.19</h1>
+        <p>This document provides a comprehensive technical guide on
+        implementing and troubleshooting the <strong>Egress IP</strong>
+        solution in an <strong>OpenShift 4.19</strong> environment using
+        <strong>OVN-Kubernetes</strong> and <strong>BGP (FRR)</strong>.
+        It explores the intricate “Tromboning” effect, where traffic is
+        redirected across nodes for SNAT, and dissects the underlying
+        OVS and Linux kernel mechanisms.</p>
+        <hr />
+        <h2 id="abstract">1. Abstract</h2>
+        <p>In modern cloud-native architectures, controlling the exit
+        point of cluster traffic is crucial for security and compliance.
+        This guide demonstrates how to enable BGP with OVN-K to
+        advertise Egress IPs to an upstream router. We will trace a data
+        packet from a Pod to an external server, revealing how OVN
+        “high-jacks” the route, encapsulates it via Geneve tunnels, and
+        performs SNAT on a specific hosted node.</p>
+        <hr />
+        <h2 id="lab-environment-architecture">2. Lab Environment
+        Architecture</h2>
+        <p>To validate the technical feasibility, we utilize a
+        virtualized environment built on a Baremetal CentOS 9 host with
+        KVM/Libvirt.</p>
+        <h3 id="topology-overview">2.1 Topology Overview</h3>
+        <ul>
+        <li><strong>Host System</strong>: CentOS 9 (IP:
+        <code>192.168.99.1</code>)</li>
+        <li><strong>Bridge</strong>: <code>br-ocp</code>
+        (<code>192.168.99.0/24</code>)</li>
+        </ul>
+        <h3 id="component-details">2.2 Component Details</h3>
+        <ol type="1">
+        <li><strong>OpenShift 4.19 Cluster</strong>:
+        <ul>
+        <li><strong>Nodes</strong>: 3 Compact nodes (Master/Worker)</li>
+        <li><strong>IP Range</strong>: <code>192.168.99.23</code> to
+        <code>192.168.99.25</code></li>
+        <li><strong>Egress IP Pool</strong>:
+        <code>192.168.66.100/24</code></li>
+        <li><strong>Add-ons</strong>: MetalLB/FRR-K8s for BGP
+        capabilities.</li>
+        </ul></li>
+        <li><strong>Upstream Router (FRR)</strong>:
+        <ul>
+        <li><strong>OS</strong>: CentOS 9 with FRR</li>
+        <li><strong>Interface <code>eth0</code> (Internal)</strong>:
+        <code>192.168.99.12</code> (Connects to OCP cluster)</li>
+        <li><strong>Interface <code>eth1</code> (External)</strong>:
+        <code>192.168.55.12</code> (Connects to Target Server)</li>
+        </ul></li>
+        <li><strong>External Server</strong>:
+        <ul>
+        <li><strong>OS</strong>: CentOS 9</li>
+        <li><strong>Interface <code>eth0</code></strong>:
+        <code>192.168.55.13</code></li>
+        <li><strong>Gateway</strong>: <code>192.168.55.12</code> (The
+        KVM Router)</li>
+        </ul></li>
+        </ol>
+        <p><img src="./files/egress.ip.drawio.png" /></p>
+        <hr />
+        <h2 id="infrastructure-configuration">3. Infrastructure
+        Configuration</h2>
+        <h3 id="router-frr-node-setup">3.1 Router (FRR) Node Setup</h3>
+        <p>The router acts as the BGP peer for the OpenShift cluster. We
+        must enable IPv4 forwarding and configure BGP to listen to OCP
+        worker nodes.</p>
+        <div class="sourceCode" id="cb1"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 1. Install FRR and base routing components</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> dnf install <span class="at">-y</span> frr</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Explicitly enable the bgpd process in the daemons file</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> sed <span class="at">-i</span> <span class="st">&#39;s/^bgpd=no/bgpd=yes/&#39;</span> /etc/frr/daemons</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> systemctl enable <span class="at">--now</span> frr</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="co"># 2. Enable kernel IPv4 forwarding</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="st">&quot;net.ipv4.ip_forward = 1&quot;</span> <span class="kw">|</span> <span class="fu">sudo</span> tee <span class="at">-a</span> /etc/sysctl.d/99-ipforward.conf</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> sysctl <span class="at">-p</span> /etc/sysctl.d/99-ipforward.conf</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="co"># 3. Configure FRR BGP Instance</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> <span class="op">&lt;&lt;EOF</span> <span class="kw">|</span> <span class="fu">sudo</span> tee /etc/frr/frr.conf</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="st">frr defaults traditional</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="st">log syslog informational</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="st">no ipv6 forwarding</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="st">!</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a><span class="st">router bgp 64512</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a><span class="st"> bgp router-id 192.168.99.12</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a><span class="st"> </span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a><span class="st"> ! Define iBGP neighbors for each OCP cluster node</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a><span class="st"> neighbor 192.168.99.23 remote-as 64512</span></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a><span class="st"> neighbor 192.168.99.24 remote-as 64512</span></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a><span class="st"> neighbor 192.168.99.25 remote-as 64512</span></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a><span class="st"> ! Enable ECMP and advertise local networks</span></span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a><span class="st"> address-family ipv4 unicast</span></span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a><span class="st">  network 192.168.55.0/24</span></span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a><span class="st">  maximum-paths ibgp 4</span></span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a><span class="st"> exit-address-family</span></span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a><span class="st">!</span></span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a><span class="st">line vty</span></span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a><span class="st">!</span></span>
+<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a><span class="op">EOF</span></span>
+<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a><span class="co"># 4. Restart FRR to apply changes</span></span>
+<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> systemctl restart frr</span></code></pre></div>
+        <h3 id="external-server-setup">3.2 External Server Setup</h3>
+        <p>The server acts as the traffic destination. We use Python to
+        spin up simple HTTP listeners to verify connectivity from
+        unrestricted ports.</p>
+        <div class="sourceCode" id="cb2"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Set default gateway to the Router</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="co"># sudo ip route add default via 192.168.55.12</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> ip route add 192.168.66.100 via 192.168.55.12</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Verify routing table</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="ex">ip</span> r</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="co"># default via 192.168.99.1 dev enp1s0 proto static metric 100</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="co"># 192.168.55.0/24 dev enp1s0 proto kernel scope link src 192.168.55.13 metric 100</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="co"># 192.168.66.100 via 192.168.55.12 dev enp1s0</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="co"># 192.168.99.0/24 dev enp1s0 proto kernel scope link src 192.168.99.13 metric 100</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Start HTTP listeners on different ports to prove Egress IP transparency</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="fu">nohup</span> python3 <span class="at">-m</span> http.server 80 <span class="kw">&amp;</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="fu">nohup</span> python3 <span class="at">-m</span> http.server 8080 <span class="kw">&amp;</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a><span class="co"># Use tcpdump to observe incoming traffic from the Egress IP (192.168.66.100)</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> tcpdump <span class="at">-i</span> any <span class="st">&#39;tcp port 80 or tcp port 8080&#39;</span> <span class="at">-n</span></span></code></pre></div>
+        <hr />
+        <h2 id="openshift-configuration-flow">4. OpenShift Configuration
+        Flow</h2>
+        <h3 id="deploying-the-test-application">4.1 Deploying the Test
+        Application</h3>
+        <p>We deploy a test toolkit on specific nodes to verify traffic
+        flows.</p>
+        <div class="sourceCode" id="cb3"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> new-project demo-egress</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> <span class="op">&lt;&lt;EOF</span> <span class="kw">|</span> <span class="ex">oc</span> apply <span class="at">-f</span> <span class="at">-</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="st">apiVersion: apps/v1</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="st">kind: Deployment</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="st">metadata:</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="st">  name: edge-request-deployment</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="st">  namespace: demo-egress</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="st">spec:</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="st">  replicas: 2</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a><span class="st">  selector:</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a><span class="st">    matchLabels:</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a><span class="st">      app: requester</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a><span class="st">  template:</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a><span class="st">    metadata:</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a><span class="st">      labels:</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a><span class="st">        app: requester</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a><span class="st">    spec:</span></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a><span class="st">      affinity:</span></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a><span class="st">        nodeAffinity:</span></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a><span class="st">          requiredDuringSchedulingIgnoredDuringExecution:</span></span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a><span class="st">            nodeSelectorTerms:</span></span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a><span class="st">            - matchExpressions:</span></span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a><span class="st">              - key: kubernetes.io/hostname</span></span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a><span class="st">                operator: In</span></span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a><span class="st">                values:</span></span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a><span class="st">                - master-02-demo</span></span>
+<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a><span class="st">                - master-03-demo</span></span>
+<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a><span class="st">      containers:</span></span>
+<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a><span class="st">      - name: toolkit</span></span>
+<span id="cb3-31"><a href="#cb3-31" aria-hidden="true" tabindex="-1"></a><span class="st">        image: quay.io/wangzheng422/qimgs:centos9-test-2025.12.18.v01</span></span>
+<span id="cb3-32"><a href="#cb3-32" aria-hidden="true" tabindex="-1"></a><span class="st">        command: [&quot;sleep&quot;, &quot;infinity&quot;]</span></span>
+<span id="cb3-33"><a href="#cb3-33" aria-hidden="true" tabindex="-1"></a><span class="op">EOF</span></span></code></pre></div>
+        <h3 id="enabling-bgp-and-node-configuration">4.2 Enabling BGP
+        and Node Configuration</h3>
+        <p>Assign auxiliary IPs to the nodes’ <code>br-ex</code>
+        interfaces to support the Egress IP subnet.</p>
+        <div class="sourceCode" id="cb4"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Safely append auxiliary IPs to Node interface configurations</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> debug node/master-01-demo <span class="at">--</span> chroot /host /bin/bash <span class="at">-c</span> <span class="st">&quot;nmcli connection modify enp1s0 +ipv4.addresses 192.168.66.23/24 &amp;&amp; reboot&quot;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> debug node/master-02-demo <span class="at">--</span> chroot /host /bin/bash <span class="at">-c</span> <span class="st">&quot;nmcli connection modify enp1s0 +ipv4.addresses 192.168.66.24/24 &amp;&amp; reboot&quot;</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> debug node/master-03-demo <span class="at">--</span> chroot /host /bin/bash <span class="at">-c</span> <span class="st">&quot;nmcli connection modify enp1s0 +ipv4.addresses 192.168.66.25/24 &amp;&amp; reboot&quot;</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="co"># 2. Label all nodes with egress-assignable (OVN-K uses this label to select nodes eligible to host EgressIPs)</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> label node <span class="at">--all</span> k8s.ovn.org/egress-assignable=<span class="st">&quot;&quot;</span> <span class="at">--overwrite</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="co"># node/master-01-demo labeled</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a><span class="co"># node/master-02-demo labeled</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="co"># node/master-03-demo labeled</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Enable FRR and Route Advertisements in the Network Operator</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> patch Network.operator.openshift.io cluster <span class="at">--type</span><span class="op">=</span>merge <span class="at">-p</span> <span class="dt">\</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a><span class="st">&#39;{</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a><span class="st">  &quot;spec&quot;: {</span></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a><span class="st">    &quot;additionalRoutingCapabilities&quot;: {</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a><span class="st">      &quot;providers&quot;: [&quot;FRR&quot;]</span></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a><span class="st">    },</span></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a><span class="st">    &quot;defaultNetwork&quot;: {</span></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a><span class="st">      &quot;ovnKubernetesConfig&quot;: {</span></span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a><span class="st">        &quot;routeAdvertisements&quot;: &quot;Enabled&quot;</span></span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a><span class="st">      }</span></span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a><span class="st">    }</span></span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a><span class="st">  }</span></span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a><span class="st">}&#39;</span></span></code></pre></div>
+        <hr />
+        <h2 id="egress-ip-and-route-advertisement-implementation">5.
+        Egress IP and Route Advertisement Implementation</h2>
+        <h3 id="preparing-nodes-for-egress-assignment">5.1 Preparing
+        Nodes for Egress Assignment</h3>
+        <p>Label nodes to allow OVN-K to host Egress IPs.</p>
+        <div class="sourceCode" id="cb5"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Label all nodes as egress-assignable</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> label node <span class="at">--all</span> k8s.ovn.org/egress-assignable=<span class="st">&quot;&quot;</span> <span class="at">--overwrite</span></span></code></pre></div>
+        <h3 id="configuring-ovn-route-advertisements">5.2 Configuring
+        OVN Route Advertisements</h3>
+        <p>Instruct OVN to translate Egress IP routes into BGP prefixes
+        for FRR.</p>
+        <div class="sourceCode" id="cb6"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> <span class="op">&lt;&lt;EOF</span> <span class="kw">|</span> <span class="ex">oc</span> apply <span class="at">-f</span> <span class="at">-</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="st">apiVersion: k8s.ovn.org/v1</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="st">kind: RouteAdvertisements</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="st">metadata:</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="st">  name: default</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="st">spec:</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a><span class="st">  advertisements:</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a><span class="st">  - EgressIP</span></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a><span class="st">  nodeSelector: {}</span></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a><span class="st">  frrConfigurationSelector:</span></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a><span class="st">    matchLabels:</span></span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a><span class="st">      use-for-advertisements: &quot;true&quot;</span></span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a><span class="st">  networkSelectors:</span></span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a><span class="st">  - networkSelectionType: DefaultNetwork</span></span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a><span class="op">EOF</span></span></code></pre></div>
+        <h3 id="deploying-the-egress-ip-crd">5.3 Deploying the Egress IP
+        CRD</h3>
+        <p>Assign the static IP <code>192.168.66.100</code> to the
+        <code>demo-egress</code> namespace.</p>
+        <div class="sourceCode" id="cb7"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> <span class="op">&lt;&lt;EOF</span> <span class="kw">|</span> <span class="ex">oc</span> apply <span class="at">-f</span> <span class="at">-</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="st">apiVersion: k8s.ovn.org/v1</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="st">kind: EgressIP</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a><span class="st">metadata:</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="st">  name: project-egressip</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a><span class="st">spec:</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a><span class="st">  egressIPs:</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a><span class="st">  - 192.168.66.100</span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a><span class="st">  namespaceSelector:</span></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a><span class="st">    matchLabels:</span></span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a><span class="st">      kubernetes.io/metadata.name: demo-egress</span></span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a><span class="op">EOF</span></span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a><span class="co"># Verify assignment</span></span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a><span class="fu">sleep</span> 5</span>
+<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> get egressips project-egressip <span class="at">-o</span> yaml</span>
+<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a><span class="co"># apiVersion: k8s.ovn.org/v1</span></span>
+<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a><span class="co"># kind: EgressIP</span></span>
+<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a><span class="co"># metadata:</span></span>
+<span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a><span class="co">#   annotations:</span></span>
+<span id="cb7-21"><a href="#cb7-21" aria-hidden="true" tabindex="-1"></a><span class="co">#     k8s.ovn.org/egressip-mark: &quot;50000&quot;</span></span>
+<span id="cb7-22"><a href="#cb7-22" aria-hidden="true" tabindex="-1"></a><span class="co">#   creationTimestamp: &quot;2026-03-01T12:27:06Z&quot;</span></span>
+<span id="cb7-23"><a href="#cb7-23" aria-hidden="true" tabindex="-1"></a><span class="co">#   generation: 2</span></span>
+<span id="cb7-24"><a href="#cb7-24" aria-hidden="true" tabindex="-1"></a><span class="co">#   name: project-egressip</span></span>
+<span id="cb7-25"><a href="#cb7-25" aria-hidden="true" tabindex="-1"></a><span class="co">#   resourceVersion: &quot;154742&quot;</span></span>
+<span id="cb7-26"><a href="#cb7-26" aria-hidden="true" tabindex="-1"></a><span class="co">#   uid: af6eec56-82cc-4efb-b2ae-ef120337f501</span></span>
+<span id="cb7-27"><a href="#cb7-27" aria-hidden="true" tabindex="-1"></a><span class="co"># spec:</span></span>
+<span id="cb7-28"><a href="#cb7-28" aria-hidden="true" tabindex="-1"></a><span class="co">#   egressIPs:</span></span>
+<span id="cb7-29"><a href="#cb7-29" aria-hidden="true" tabindex="-1"></a><span class="co">#   - 192.168.66.100</span></span>
+<span id="cb7-30"><a href="#cb7-30" aria-hidden="true" tabindex="-1"></a><span class="co">#   namespaceSelector:</span></span>
+<span id="cb7-31"><a href="#cb7-31" aria-hidden="true" tabindex="-1"></a><span class="co">#     matchLabels:</span></span>
+<span id="cb7-32"><a href="#cb7-32" aria-hidden="true" tabindex="-1"></a><span class="co">#       kubernetes.io/metadata.name: demo-egress</span></span>
+<span id="cb7-33"><a href="#cb7-33" aria-hidden="true" tabindex="-1"></a><span class="co"># status:</span></span>
+<span id="cb7-34"><a href="#cb7-34" aria-hidden="true" tabindex="-1"></a><span class="co">#   items:</span></span>
+<span id="cb7-35"><a href="#cb7-35" aria-hidden="true" tabindex="-1"></a><span class="co">#   - egressIP: 192.168.66.100</span></span>
+<span id="cb7-36"><a href="#cb7-36" aria-hidden="true" tabindex="-1"></a><span class="co">#     node: master-02-demo</span></span></code></pre></div>
+        <hr />
+        <h2 id="operational-verification">6. Operational
+        Verification</h2>
+        <h3 id="bgp-route-confirmation">6.1 BGP Route Confirmation</h3>
+        <p>Login to the upstream Router VM and verify the dynamically
+        advertised route.</p>
+        <div class="sourceCode" id="cb8"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="ex">vtysh</span> <span class="at">-c</span> <span class="st">&quot;show ip route bgp&quot;</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="co"># B&gt;* 192.168.66.100/32 [200/0] via 192.168.99.24, enp1s0, weight 1, 00:00:20</span></span></code></pre></div>
+        <h3 id="connectivity-test">6.2 Connectivity Test</h3>
+        <p>Execute <code>curl</code> from Pods on different nodes to
+        verify the SNAT target on the external server.</p>
+        <div class="sourceCode" id="cb9"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="va">NODE2_POD</span><span class="op">=</span><span class="va">$(</span><span class="ex">oc</span> get po <span class="at">-n</span> demo-egress <span class="at">-o</span> wide <span class="kw">|</span> <span class="fu">grep</span> <span class="st">&quot;master-02-demo&quot;</span> <span class="kw">|</span> <span class="fu">awk</span> <span class="st">&#39;{print $1}&#39;</span><span class="va">)</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="va">NODE3_POD</span><span class="op">=</span><span class="va">$(</span><span class="ex">oc</span> get po <span class="at">-n</span> demo-egress <span class="at">-o</span> wide <span class="kw">|</span> <span class="fu">grep</span> <span class="st">&quot;master-03-demo&quot;</span> <span class="kw">|</span> <span class="fu">awk</span> <span class="st">&#39;{print $1}&#39;</span><span class="va">)</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Test from node hosting the Egress IP</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> exec <span class="at">-it</span> <span class="va">$NODE2_POD</span> <span class="at">-n</span> demo-egress <span class="at">--</span> curl <span class="at">-I</span> http://192.168.55.13 <span class="at">--connect-timeout</span> 2</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Test from a different node (verifies &quot;Tromboning&quot;)</span></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> exec <span class="at">-it</span> <span class="va">$NODE3_POD</span> <span class="at">-n</span> demo-egress <span class="at">--</span> curl <span class="at">-I</span> http://192.168.55.13 <span class="at">--connect-timeout</span> 2</span></code></pre></div>
+        <h3
+        id="negative-experiment-traffic-interruption-due-to-upstream-routing-mismatch">6.3
+        Negative Experiment: Traffic Interruption due to Upstream
+        Routing Mismatch</h3>
+        <p>If the upstream router directs Egress IP traffic to a
+        non-hosted node (due to ECMP load balancing or static route
+        misconfiguration), the traffic will be dropped even if that node
+        has BGP advertisements, because it cannot match the local SNAT
+        rules.</p>
+        <div class="sourceCode" id="cb10"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Experiment: Manually add an incorrect static route on the Router, pointing to non-hosted node master-01 (192.168.99.23)</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="ex">vtysh</span> <span class="at">-c</span> <span class="st">&#39;conf t&#39;</span> <span class="at">-c</span> <span class="st">&#39;ip route 192.168.66.100/32 192.168.99.23&#39;</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Verify the routing table: the static route (distance 1) is now preferred over the BGP route (distance 200)</span></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a><span class="ex">vtysh</span> <span class="at">-c</span> <span class="st">&#39;show ip route 192.168.66.100/32&#39;</span></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Routing entry for 192.168.66.100/32</span></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a><span class="co">#   Known via &quot;static&quot;, distance 1, metric 0, best</span></span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a><span class="co">#   Last update 00:00:05 ago</span></span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a><span class="co">#   * 192.168.99.23, via enp1s0, weight 1</span></span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Routing entry for 192.168.66.100/32</span></span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a><span class="co">#   Known via &quot;bgp&quot;, distance 200, metric 0</span></span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a><span class="co">#   Last update 00:01:27 ago</span></span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a><span class="co">#     192.168.99.24, via enp1s0, weight 1</span></span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a><span class="co"># Initiate a request again; the connection will time out as the return path cannot be established (Timeout)</span></span>
+<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> exec <span class="at">-it</span> <span class="va">$NODE2_POD</span> <span class="at">-n</span> demo-egress <span class="at">--</span> curl <span class="at">-I</span> <span class="at">-vvv</span> http://192.168.55.13:8080 <span class="at">--connect-timeout</span> 2</span>
+<span id="cb10-18"><a href="#cb10-18" aria-hidden="true" tabindex="-1"></a><span class="co"># *   Trying 192.168.55.13:8080...</span></span>
+<span id="cb10-19"><a href="#cb10-19" aria-hidden="true" tabindex="-1"></a><span class="co"># * Connection timed out after 2001 milliseconds</span></span>
+<span id="cb10-20"><a href="#cb10-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-21"><a href="#cb10-21" aria-hidden="true" tabindex="-1"></a><span class="co"># Clean up the incorrect route to restore the environment</span></span>
+<span id="cb10-22"><a href="#cb10-22" aria-hidden="true" tabindex="-1"></a><span class="ex">vtysh</span> <span class="at">-c</span> <span class="st">&#39;conf t&#39;</span> <span class="at">-c</span> <span class="st">&#39;no ip route 192.168.66.100/32 192.168.99.23&#39;</span></span></code></pre></div>
+        <h3 id="key-troubleshooting-logs-control-plane">6.4 Key
+        Troubleshooting Logs (Control Plane)</h3>
+        <div class="sourceCode" id="cb11"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Retrieve OVN control plane election logs for Egress IP assignment</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> logs <span class="at">-n</span> openshift-ovn-kubernetes <span class="at">-l</span> app=ovnkube-control-plane <span class="at">-c</span> ovnkube-cluster-manager <span class="at">--tail</span><span class="op">=</span>100 <span class="kw">|</span> <span class="fu">grep</span> <span class="at">-iE</span> <span class="st">&quot;egressip|project-egressip|192.168.66.100&quot;</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a><span class="co"># I0301 12:09:37.165528       1 controller.go:133] Adding controller clustermanager routeadvertisements egressip controller event handlers</span></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a><span class="co"># I0301 12:09:37.165563       1 shared_informer.go:350] &quot;Waiting for caches to sync&quot; controller=&quot;clustermanager routeadvertisements egressip controller&quot;</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a><span class="co"># I0301 12:09:41.082425       1 egressip_healthcheck.go:203] Closing connection with master-03-demo (10.133.0.2:9107)</span></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a><span class="co"># I0301 12:17:12.260471       1 egressip_event_handler.go:130] Node: master-01-demo has been labeled, adding it for egress assignment</span></span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a><span class="co"># I0301 12:27:06.891685       1 egressip_controller.go:1330] Successful assignment of egress IP: 192.168.66.100 to network 192.168.66.0/24 on node: &amp;{egressIPConfig:0xc007934f00 mgmtIPs:[[10 132 0 2]] allocations:map[192.168.66.100:project-egressip] healthClient:0xc0068ea5d0 isReady:true isReachable:true isEgressAssignable:true name:master-02-demo}</span></span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a><span class="co"># I0301 12:27:06.891928       1 egressip_controller.go:1733] Patching status on EgressIP project-egressip: [{add /metadata/annotations map[k8s.ovn.org/egressip-mark:50000]} {replace /status {[{master-02-demo 192.168.66.100}]}}]</span></span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a><span class="co"># I0301 12:09:28.120797       1 config.go:2358] Parsed config: {Default:{MTU:1400 RoutableMTU:0 ConntrackZone:64000 HostMasqConntrackZone:0 OVNMasqConntrackZone:0 HostNodePortConntrackZone:0 ReassemblyConntrackZone:0 EncapType:geneve EncapIP: EffectiveEncapIP: EncapPort:6081 InactivityProbe:100000 OpenFlowProbe:0 OfctrlWaitBeforeClear:0 MonitorAll:true OVSDBTxnTimeout:1m40s LFlowCacheEnable:true LFlowCacheLimit:0 LFlowCacheLimitKb:1048576 RawClusterSubnets:10.132.0.0/14/23 ClusterSubnets:[] EnableUDPAggregation:true Zone:global RawUDNAllowedDefaultServices:default/kubernetes,openshift-dns/dns-default UDNAllowedDefaultServices:[]} Logging:{File: CNIFile: LibovsdbFile:/var/log/ovnkube/libovsdb.log Level:4 LogFileMaxSize:100 LogFileMaxBackups:5 LogFileMaxAge:0 ACLLoggingRateLimit:20} Monitoring:{RawNetFlowTargets: RawSFlowTargets: RawIPFIXTargets: NetFlowTargets:[] SFlowTargets:[] IPFIXTargets:[]} IPFIX:{Sampling:400 CacheActiveTimeout:60 CacheMaxFlows:0} CNI:{ConfDir:/etc/cni/net.d Plugin:ovn-k8s-cni-overlay} OVNKubernetesFeature:{EnableAdminNetworkPolicy:true EnableEgressIP:true EgressIPReachabiltyTotalTimeout:1 EnableEgressFirewall:true EnableEgressQoS:true EnableEgressService:true EgressIPNodeHealthCheckPort:9107 EnableMultiNetwork:true EnableNetworkSegmentation:true EnablePreconfiguredUDNAddresses:false EnableRouteAdvertisements:false EnableMultiNetworkPolicy:false EnableStatelessNetPol:false EnableInterconnect:false EnableMultiExternalGateway:true EnablePersistentIPs:false EnableDNSNameResolver:false EnableServiceTemplateSupport:false EnableObservability:false EnableNetworkQoS:false AdvertisedUDNIsolationMode:strict} Kubernetes:{BootstrapKubeconfig: CertDir: CertDuration:10m0s Kubeconfig: CACert: CAData:[] APIServer:https://api-int.demo-01-rhsys.wzhlab.top:6443 Token: TokenFile: CompatServiceCIDR: RawServiceCIDRs:172.22.0.0/16 ServiceCIDRs:[] OVNConfigNamespace:openshift-ovn-kubernetes OVNEmptyLbEvents:false PodIP: RawNoHostSubnetNodes: NoHostSubnetNodes:&lt;nil&gt; HostNetworkNamespace:openshift-host-network DisableRequestedChassis:false PlatformType:BareMetal HealthzBindAddress:0.0.0.0:10256 CompatMetricsBindAddress: CompatOVNMetricsBindAddress: CompatMetricsEnablePprof:false DNSServiceNamespace:openshift-dns DNSServiceName:dns-default} Metrics:{BindAddress: OVNMetricsBindAddress: ExportOVSMetrics:false EnablePprof:false NodeServerPrivKey: NodeServerCert: EnableConfigDuration:false EnableScaleMetrics:false} OvnNorth:{Address: PrivKey: Cert: CACert: CertCommonName: Scheme: ElectionTimer:0 northbound:false exec:&lt;nil&gt;} OvnSouth:{Address: PrivKey: Cert: CACert: CertCommonName: Scheme: ElectionTimer:0 northbound:false exec:&lt;nil&gt;} Gateway:{Mode:shared Interface: GatewayAcceleratedInterface: EgressGWInterface: NextHop: VLANID:0 NodeportEnable:true DisableSNATMultipleGWs:false V4JoinSubnet:100.64.0.0/16 V6JoinSubnet:fd98::/64 V4MasqueradeSubnet:169.254.169.0/29 V6MasqueradeSubnet:fd69::/125 MasqueradeIPs:{V4OVNMasqueradeIP:169.254.169.1 V6OVNMasqueradeIP:fd69::1 V4HostMasqueradeIP:169.254.169.2 V6HostMasqueradeIP:fd69::2 V4HostETPLocalMasqueradeIP:169.254.169.3 V6HostETPLocalMasqueradeIP:fd69::3 V4DummyNextHopMasqueradeIP:169.254.169.4 V6DummyNextHopMasqueradeIP:fd69::4 V4OVNServiceHairpinMasqueradeIP:169.254.169.5 V6OVNServiceHairpinMasqueradeIP:fd69::5} DisablePacketMTUCheck:false RouterSubnet: SingleNode:false DisableForwarding:false AllowNoUplink:false EphemeralPortRange:} MasterHA:{ElectionLeaseDuration:137 ElectionRenewDeadline:107 ElectionRetryPeriod:26} ClusterMgrHA:{ElectionLeaseDuration:137 ElectionRenewDeadline:107 ElectionRetryPeriod:26} HybridOverlay:{Enabled:false RawClusterSubnets: ClusterSubnets:[] VXLANPort:4789} OvnKubeNode:{Mode:full DPResourceDeviceIdsMap:map[] MgmtPortNetdev: MgmtPortDPResourceName:} ClusterManager:{V4TransitSwitchSubnet:100.88.0.0/16 V6TransitSwitchSubnet:fd97::/64}}</span></span></code></pre></div>
+        <h3
+        id="infrastructure-and-global-configuration-verification">6.5
+        Infrastructure and Global Configuration Verification</h3>
+        <div class="sourceCode" id="cb12"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Check Node status and labels</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> get nodes <span class="at">-o</span> custom-columns=NAME:.metadata.name,NODEIPS:.status.addresses</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a><span class="co"># NAME             NODEIPS</span></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a><span class="co"># master-01-demo   [map[address:192.168.99.23 type:InternalIP] map[address:master-01-demo type:Hostname]]</span></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a><span class="co"># master-02-demo   [map[address:192.168.99.24 type:InternalIP] map[address:master-02-demo type:Hostname]]</span></span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a><span class="co"># master-03-demo   [map[address:192.168.99.25 type:InternalIP] map[address:master-03-demo type:Hostname]]</span></span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Verify OVN-Kubernetes global configuration</span></span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> get network.config.openshift.io cluster <span class="at">-o</span> yaml</span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a><span class="co"># apiVersion: config.openshift.io/v1</span></span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a><span class="co"># kind: Network</span></span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a><span class="co"># spec:</span></span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a><span class="co">#   clusterNetwork:</span></span>
+<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a><span class="co">#   - cidr: 10.132.0.0/14</span></span>
+<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a><span class="co">#     hostPrefix: 23</span></span>
+<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a><span class="co">#   networkType: OVNKubernetes</span></span>
+<span id="cb12-17"><a href="#cb12-17" aria-hidden="true" tabindex="-1"></a><span class="co">#   serviceNetwork:</span></span>
+<span id="cb12-18"><a href="#cb12-18" aria-hidden="true" tabindex="-1"></a><span class="co">#   - 172.22.0.0/16</span></span>
+<span id="cb12-19"><a href="#cb12-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-20"><a href="#cb12-20" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> get network.operator.openshift.io cluster <span class="at">-o</span> yaml</span>
+<span id="cb12-21"><a href="#cb12-21" aria-hidden="true" tabindex="-1"></a><span class="co"># apiVersion: operator.openshift.io/v1</span></span>
+<span id="cb12-22"><a href="#cb12-22" aria-hidden="true" tabindex="-1"></a><span class="co"># kind: Network</span></span>
+<span id="cb12-23"><a href="#cb12-23" aria-hidden="true" tabindex="-1"></a><span class="co"># spec:</span></span>
+<span id="cb12-24"><a href="#cb12-24" aria-hidden="true" tabindex="-1"></a><span class="co">#   additionalRoutingCapabilities:</span></span>
+<span id="cb12-25"><a href="#cb12-25" aria-hidden="true" tabindex="-1"></a><span class="co">#     providers:</span></span>
+<span id="cb12-26"><a href="#cb12-26" aria-hidden="true" tabindex="-1"></a><span class="co">#     - FRR</span></span>
+<span id="cb12-27"><a href="#cb12-27" aria-hidden="true" tabindex="-1"></a><span class="co">#   defaultNetwork:</span></span>
+<span id="cb12-28"><a href="#cb12-28" aria-hidden="true" tabindex="-1"></a><span class="co">#     ovnKubernetesConfig:</span></span>
+<span id="cb12-29"><a href="#cb12-29" aria-hidden="true" tabindex="-1"></a><span class="co">#       routeAdvertisements: Enabled</span></span>
+<span id="cb12-30"><a href="#cb12-30" aria-hidden="true" tabindex="-1"></a><span class="co">#     type: OVNKubernetes</span></span></code></pre></div>
+        <h3
+        id="egress-ip-arp-behavior-and-switch-mac-address-learning">6.6
+        Egress IP ARP Behavior and Switch MAC Address Learning</h3>
+        <p>In the BGP Egress IP scenario, the upstream FRR router
+        <strong>does not</strong> send ARP requests for
+        <code>192.168.66.100</code> — it performs L3 forwarding via the
+        BGP routing table
+        (<code>192.168.66.100/32 via 192.168.99.24</code>) and only
+        needs to ARP-resolve the next-hop
+        <code>192.168.99.24</code>.</p>
+        <p>However, since all OCP nodes have
+        <code>192.168.66.x/24</code> auxiliary addresses configured on
+        <code>br-ex</code>, the Linux kernel considers
+        <code>192.168.66.100</code> to be on the same L2 segment. This
+        causes inter-node ARP requests and replies for the Egress IP.
+        These ARP exchanges are learned by the physical switch
+        (<code>br-ocp</code>), which populates its MAC address table
+        with the mapping for <code>192.168.66.100</code>.</p>
+        <h4 id="key-verification">Key Verification</h4>
+        <p><strong>1. The upstream router only sees broadcast ARP
+        Requests, no Replies</strong></p>
+        <div class="sourceCode" id="cb13"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Packet capture on the FRR router — only ARP Requests (broadcast), no Replies</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="ex">[root@routing-frr</span> ~]# tcpdump <span class="at">-i</span> any <span class="at">-nnn</span> host 192.168.66.100</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a><span class="co"># 19:42:10.039428 enp1s0 B   ARP, Request who-has 192.168.66.100 tell 192.168.99.24, length 28</span></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a><span class="co"># 19:43:02.354098 enp7s0 B   ARP, Request who-has 192.168.66.100 tell 192.168.99.25, length 28</span></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a><span class="co"># 19:43:04.502257 enp1s0 B   ARP, Request who-has 192.168.66.100 tell 192.168.99.23, length 28</span></span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a><span class="co"># (Only broadcast Requests, no Replies seen)</span></span></code></pre></div>
+        <p><strong>2. The Egress IP hosted node correctly responds to
+        ARP, and the reply exits via the physical NIC</strong></p>
+        <div class="sourceCode" id="cb14"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Capture on all interfaces of master-02 (Egress IP hosted node)</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> debug node/master-02-demo <span class="at">--</span> bash <span class="at">-c</span> <span class="st">&quot;tcpdump -i any -v -nnn &#39;arp and host 192.168.66.100&#39; -c 10&quot;</span></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a><span class="co"># 13:28:20.602372 enp2s0 B   ARP, Request who-has 192.168.66.100 tell 192.168.66.23, length 28</span></span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a><span class="co"># 13:28:20.602934 br-ex  B   ARP, Request who-has 192.168.66.100 tell 192.168.66.23, length 28</span></span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a><span class="co"># 13:28:20.602955 br-ex  Out ARP, Reply 192.168.66.100 is-at 00:50:56:8e:2a:32, length 28</span></span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a><span class="co"># 13:28:20.603185 enp1s0 Out ARP, Reply 192.168.66.100 is-at 00:50:56:8e:2a:32, length 28</span></span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a><span class="co"># ↑ Reply generated on br-ex, sent out via enp1s0 physical NIC to the physical network</span></span></code></pre></div>
+        <p><strong>3. The requesting node successfully receives the ARP
+        reply</strong></p>
+        <div class="sourceCode" id="cb15"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Manual arping from master-01 — successfully receives master-02&#39;s MAC address</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> debug node/master-01-demo <span class="at">--</span> chroot /host bash <span class="at">-c</span> <span class="st">&quot;arping -c 3 -I br-ex 192.168.66.100&quot;</span></span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a><span class="co"># ARPING 192.168.66.100 from 192.168.66.23 br-ex</span></span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Unicast reply from 192.168.66.100 [00:50:56:8E:2A:32]  2.148ms</span></span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Unicast reply from 192.168.66.100 [00:50:56:8E:2A:32]  3.988ms</span></span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Received 3 response(s)</span></span></code></pre></div>
+        <h4 id="root-cause-analysis">Root Cause Analysis</h4>
+        <table>
+        <colgroup>
+        <col style="width: 18%" />
+        <col style="width: 44%" />
+        <col style="width: 37%" />
+        </colgroup>
+        <thead>
+        <tr class="header">
+        <th>Frame Type</th>
+        <th>Switch Forwarding Behavior</th>
+        <th>FRR Router Visibility</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr class="odd">
+        <td>ARP Request (broadcast)</td>
+        <td>Flooded to all ports</td>
+        <td>✅ Visible</td>
+        </tr>
+        <tr class="even">
+        <td>ARP Reply (unicast)</td>
+        <td>Forwarded only to destination MAC port</td>
+        <td>❌ Not visible</td>
+        </tr>
+        </tbody>
+        </table>
+        <h4 id="data-center-implications">Data Center Implications</h4>
+        <p>The physical switch (<code>br-ocp</code>) learns the MAC
+        <code>00:50:56:8e:2a:32</code> (master-02) and its port mapping
+        from the ARP Reply source MAC. This means the Egress IP actually
+        has <strong>dual reachability paths</strong>:</p>
+        <ul>
+        <li><strong>L3 BGP Route</strong> (used by cross-subnet
+        devices): External device → FRR checks BGP table → forwards to
+        <code>192.168.99.24</code></li>
+        <li><strong>L2 ARP Direct</strong> (used by same-L2 devices):
+        Same-subnet node → ARP resolution → direct L2 forwarding to
+        master-02</li>
+        </ul>
+        <p>The core value of BGP lies in <strong>cross-L3 boundary
+        reachability and failover</strong>, not in same-L2 domain
+        addressing.</p>
+        <hr />
+        <h2 id="under-the-hood-the-mechanics-of-redirection">7. Under
+        the Hood: The Mechanics of Redirection</h2>
+        <p>When an Egress IP is assigned to <code>master-02</code>, OVN
+        performs several low-level operations to ensure all traffic from
+        the specified namespace exits via that node.</p>
+        <h3 id="ovn-address-sets">7.1 OVN Address Sets</h3>
+        <p>OVN doesn’t understand “Namespaces” at the flow level. It
+        creates a dynamic <strong>Address Set</strong> containing all
+        Pod IPs in that namespace.</p>
+        <div class="sourceCode" id="cb16"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="va">OVN_NODE_01_POD</span><span class="op">=</span><span class="va">$(</span><span class="ex">oc</span> get po <span class="at">-n</span> openshift-ovn-kubernetes <span class="at">-l</span> app=ovnkube-node <span class="at">-o</span> wide <span class="kw">|</span> <span class="fu">grep</span> <span class="st">&quot;master-01-demo&quot;</span> <span class="kw">|</span> <span class="fu">awk</span> <span class="st">&#39;{print $1}&#39;</span><span class="va">)</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> exec <span class="at">-n</span> openshift-ovn-kubernetes <span class="va">$OVN_NODE_01_POD</span> <span class="at">-c</span> ovn-controller <span class="at">--</span> ovn-nbctl list address_set <span class="kw">|</span> <span class="fu">grep</span> <span class="at">-A</span> 2 <span class="at">-B</span> 2 <span class="at">-i</span> demo-egress</span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a><span class="co"># _uuid               : d13fa80a-5e84-4eeb-bef7-d6d3cc51feb9</span></span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a><span class="co"># addresses           : [&quot;10.132.0.13&quot;, &quot;10.133.0.9&quot;]</span></span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a><span class="co"># external_ids        : {ip-family=v4, &quot;k8s.ovn.org/id&quot;=&quot;default-network-controller:Namespace:demo-egress:v4&quot;, &quot;k8s.ovn.org/name&quot;=demo-egress, &quot;k8s.ovn.org/owner-controller&quot;=default-network-controller, &quot;k8s.ovn.org/owner-type&quot;=Namespace}</span></span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a><span class="co"># name                : a11563627067456827758</span></span></code></pre></div>
+        <h3 id="ovs-openflow-and-interceptor-markers">7.2 OVS OpenFlow
+        and Interceptor Markers</h3>
+        <p>On the originating node (<code>master-03</code>), OVS
+        intercepts traffic from the Pod and applies a metadata mark.</p>
+        <div class="sourceCode" id="cb17"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Capture OVS OpenFlow for the Pod IP</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> exec <span class="at">-n</span> openshift-ovn-kubernetes <span class="va">$OVN_NODE_03_POD</span> <span class="at">-c</span> ovn-controller <span class="at">--</span> ovs-ofctl dump-flows br-int <span class="kw">|</span> <span class="fu">grep</span> <span class="st">&quot;10.133.0.9&quot;</span></span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Full OVS flow dump for the Egress Pod (covering Table 19, 25, 30, 48, 73, 75, 79)</span></span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a><span class="co">#  cookie=0x23609491, duration=5303.504s, table=19, n_packets=0, n_bytes=0, idle_age=5303, priority=103,ct_state=+rpl+trk,ip,metadata=0x2,nw_src=10.133.0.9 actions=load:0x2a-&gt;NXM_NX_PKT_MARK[],resubmit(,20)</span></span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a><span class="co">#  cookie=0xc4170ac5, duration=5303.504s, table=25, n_packets=0, n_bytes=0, idle_age=5303, priority=102,ip,metadata=0x5,nw_src=10.133.0.9,nw_dst=192.168.66.23 actions=load:0x3f0-&gt;NXM_NX_PKT_MARK[],load:0-&gt;OXM_OF_PKT_REG4[32..47],resubmit(,26)</span></span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a><span class="co">#  cookie=0x7d8c250c, duration=5303.518s, table=25, n_packets=16, n_bytes=1314, idle_age=4195, priority=100,ip,metadata=0x5,nw_src=10.133.0.9 actions=load:0x64580003-&gt;NXM_NX_XXREG0[96..127],load:0x64580002-&gt;NXM_NX_XXREG1[64..95],mod_dl_src:0a:58:64:58:00:02,load:0x1-&gt;NXM_NX_REG15[],load:0x1-&gt;NXM_NX_REG10[0],load:0-&gt;OXM_OF_PKT_REG4[32..47],load:0x1-&gt;OXM_OF_PKT_REG4[9],resubmit(,26)</span></span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a><span class="co">#  cookie=0xb6f4a374, duration=5671.914s, table=30, n_packets=0, n_bytes=0, idle_age=5671, priority=100,arp,reg14=0xb8,metadata=0x2,dl_dst=ff:ff:ff:ff:ff:ff,arp_tpa=10.133.0.9,arp_op=1 actions=resubmit(,31)</span></span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a><span class="co">#  cookie=0x1a0c6296, duration=5671.917s, table=73, n_packets=16, n_bytes=1314, idle_age=4195, priority=90,ip,reg14=0xb8,metadata=0x2,dl_src=0a:58:0a:85:00:09,nw_src=10.133.0.9 actions=load:0-&gt;NXM_NX_REG10[12]</span></span>
+<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a><span class="co">#  cookie=0x1a0c6296, duration=5671.917s, table=75, n_packets=16, n_bytes=1545, idle_age=4195, priority=95,ip,reg15=0xb8,metadata=0x2,dl_dst=0a:58:0a:85:00:09,nw_dst=10.133.0.9 actions=load:0-&gt;NXM_NX_REG10[12]</span></span>
+<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a><span class="co">#  cookie=0xb97d223d, duration=6312.193s, table=79, n_packets=32, n_bytes=2628, idle_age=4195, priority=100,ip,reg14=0x3,metadata=0x5,dl_src=0a:58:0a:85:00:09,nw_src=10.133.0.9 actions=drop</span></span></code></pre></div>
+        <h3 id="kernel-policy-based-routing-pbr">7.3 Kernel Policy-Based
+        Routing (PBR)</h3>
+        <p>The OVS mark translates to a Linux <code>fwmark</code>. The
+        host’s policy routing forces these packets to a specific routing
+        table.</p>
+        <div class="sourceCode" id="cb18"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> debug node/master-03-demo <span class="at">--</span> chroot /host /bin/bash <span class="at">-c</span> <span class="st">&quot;ip rule show&quot;</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a><span class="co"># 30:     from all fwmark 0x1745ec lookup 7</span></span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> debug node/master-03-demo <span class="at">--</span> chroot /host /bin/bash <span class="at">-c</span> <span class="st">&quot;ip route list table 7&quot;</span></span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a><span class="co"># 172.22.0.0/16 via 10.133.0.1 dev ovn-k8s-mp0</span></span></code></pre></div>
+        <h3 id="hexadecimal-magic-redirection-via-transit-switch">7.4
+        Hexadecimal Magic: Redirection via Transit Switch</h3>
+        <p>The most advanced part of OVN-K’s architecture is the direct
+        rewrite of destination registers in OVS Table 25.</p>
+        <div class="sourceCode" id="cb19"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Example OVS actions for redirection:</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a><span class="co"># load:0x64580003-&gt;NXM_NX_XXREG0[96..127],</span></span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a><span class="co"># load:0x64580002-&gt;NXM_NX_XXREG1[64..95],</span></span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a><span class="co"># mod_dl_src:0a:58:64:58:00:02</span></span></code></pre></div>
+        <p><strong>Deconstruction</strong>:</p>
+        <ol type="1">
+        <li><strong><code>0x64580003</code></strong>: This is the hex
+        representation of an IP address.
+        <ul>
+        <li><code>0x64</code> = 100</li>
+        <li><code>0x58</code> = 88</li>
+        <li><code>0x00</code> = 0</li>
+        <li><code>0x03</code> = 3</li>
+        <li><strong>Result</strong>: <code>100.88.0.3</code> (The
+        Transit Switch IP for <code>master-02</code>).</li>
+        </ul></li>
+        <li><strong><code>0a:58:64:58:00:02</code></strong>: The virtual
+        MAC address of <code>master-03</code> on the Transit
+        Switch.</li>
+        </ol>
+        <p>This tells OVS: “Don’t look at the logical router anymore.
+        Encapsulate this packet and send it directly to the tunnel
+        endpoint for <code>master-02</code> (100.88.0.3).”</p>
+        <h3 id="final-snat-on-the-hosted-node">7.5 Final SNAT on the
+        Hosted Node</h3>
+        <p>Once the packet traverses the Geneve tunnel and arrives at
+        <code>master-02</code>, it hits the <code>iptables</code> NAT
+        table just before leaving the physical interface.</p>
+        <div class="sourceCode" id="cb20"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> debug node/master-02-demo <span class="at">--</span> chroot /host /bin/bash <span class="at">-c</span> <span class="st">&quot;iptables -t nat -S | grep 192.168.66.100&quot;</span></span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a><span class="co"># -A OVN-KUBE-EGRESS-IP-MULTI-NIC -s 10.133.0.9/32 -o br-ex -j SNAT --to-source 192.168.66.100</span></span></code></pre></div>
+        <hr />
+        <h2 id="conclusion">8. Conclusion</h2>
+        <p>The OVN Egress IP solution in OpenShift 4.19 is a
+        sophisticated interplay between Kubernetes CRDs, OVN logical
+        abstractions, OVS OpenFlow rules, and Linux kernel policy
+        routing. By directly manipulating registers at the lowest level
+        (OVS Table 25), OVN-K achieves high-performance traffic
+        redirection and “Tromboning” without the overhead of traditional
+        hop-by-hop routing lookups. Understanding these hexadecimal
+        mappings is key to advanced network troubleshooting in OCP
+        4.x.</p>
+      </article>
+    </div>
+      </main>
+
+  <footer>
+    <p>
+      Licensed under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank"
+        rel="noopener">CC-BY-NC-SA 4.0</a>
+      &nbsp;·&nbsp;
+      <a href="https://github.com/wangzheng422/docker_env" target="_blank" rel="noopener">wangzheng422/docker_env</a>
+    </p>
+  </footer>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: false, theme: 'dark' });
+
+    const SITE_BUILD_ID = 'fbe91b569ae8';
+    const SITE_HOME_URL = '../../../index.html';
+
+    const getBuildIdFromHtml = (html) => {
+      const match = String(html).match(/<meta[^>]+name=["']site-build-id["'][^>]+content=["']([^"']+)["']/i)
+        || String(html).match(/<meta[^>]+content=["']([^"']+)["'][^>]+name=["']site-build-id["']/i);
+      return match ? match[1] : '';
+    };
+
+    const checkForSiteUpdate = async () => {
+      if (!SITE_BUILD_ID || window.location.protocol === 'file:') return;
+      try {
+        const probeUrl = new URL(SITE_HOME_URL || './index.html', window.location.href);
+        probeUrl.searchParams.set('site_cache_probe', Date.now().toString());
+        const response = await fetch(probeUrl.toString(), { cache: 'no-store' });
+        if (!response.ok) return;
+        const latestBuildId = getBuildIdFromHtml(await response.text());
+        if (!latestBuildId || latestBuildId === SITE_BUILD_ID) return;
+        if (sessionStorage.getItem('site-build-refresh') === latestBuildId) return;
+        sessionStorage.setItem('site-build-refresh', latestBuildId);
+        const freshUrl = new URL(window.location.href);
+        freshUrl.searchParams.set('v', latestBuildId);
+        window.location.replace(freshUrl.toString());
+      } catch (error) {
+        // Network errors should not block reading the current page.
+      }
+    };
+
+    const versionedLocalUrl = (rawUrl) => {
+      if (!rawUrl || /^(https?:)?\/\//i.test(rawUrl) || /^(data|blob|mailto):/i.test(rawUrl)) return rawUrl;
+      const url = new URL(rawUrl, window.location.href);
+      if (url.searchParams.has('v')) return rawUrl;
+      url.searchParams.set('v', SITE_BUILD_ID);
+      return url.toString();
+    };
+
+    const cacheBustPageAssets = () => {
+      document.querySelectorAll('img[src], video[src], audio[src], source[src]').forEach((node) => {
+        const src = node.getAttribute('src');
+        const versioned = versionedLocalUrl(src);
+        if (versioned !== src) node.setAttribute('src', versioned);
+      });
+    };
+
+    const updateReadingProgress = () => {
+      const progress = document.querySelector('.reading-progress');
+      if (!progress) return;
+      const scrollable = document.documentElement.scrollHeight - window.innerHeight;
+      const ratio = scrollable > 0 ? window.scrollY / scrollable : 0;
+      progress.style.transform = 'scaleX(' + Math.min(1, Math.max(0, ratio)) + ')';
+    };
+
+    const topicFor = (text, href) => {
+      const haystack = (text + ' ' + href).toLowerCase();
+      if (/developers\.redhat\.com|redhatquickcourses|github\.com\/redhatquickcourses/.test(haystack)) return 'Red Hat';
+      if (/ai|llm|gpu|vllm|llama|model|rhaiis/.test(haystack)) return 'AI';
+      if (/network|ovn|bgp|dns|egress|ingress|metallb|nic|route/.test(haystack)) return 'Network';
+      if (/cert|tls|sso|keycloak|rhbk|security|compliance/.test(haystack)) return 'Security';
+      if (/perf|profile|throttling|heap|debug/.test(haystack)) return 'Performance';
+      if (/install|ipi|upi|sno|disconnected|bootstrap/.test(haystack)) return 'Install';
+      if (/rhel|coreos|rhcos|kernel|rpm|ostree/.test(haystack)) return 'RHEL';
+      if (/backup|storage|nfs|odf|ocs|ceph|dr/.test(haystack)) return 'Storage';
+      if (/pipeline|gitops|ansible|aap|rhdh|devops/.test(haystack)) return 'DevOps';
+      return 'OpenShift';
+    };
+
+    const yearFor = (text, href) => {
+      const match = (text + ' ' + href).match(/20\d{2}/);
+      return match ? match[0] : 'Notes';
+    };
+
+    const importantExternal = (href) =>
+      /developers\.redhat\.com|redhatquickcourses\.github\.io/i.test(href);
+
+    const titleForLink = (link) => {
+      const href = link.getAttribute('href') || '';
+      const directText = link.textContent.trim().replace(/\s+/g, ' ');
+      if (!/^https?:\/\//.test(directText)) return directText;
+      const parentItem = link.closest('ul')?.parentElement;
+      if (parentItem) {
+        const clone = parentItem.cloneNode(true);
+        clone.querySelectorAll('ul').forEach((nested) => nested.remove());
+        const parentText = clone.textContent.trim().replace(/\s+/g, ' ');
+        if (parentText) {
+          return parentText;
+        }
+      }
+      return directText;
+    };
+
+    const escapeHtml = (value) => String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+
+    const enhanceHome = () => {
+      if (!document.body.classList.contains('page-index')) return;
+      const source = document.querySelector('.home-source');
+      const grid = document.getElementById('note-grid');
+      const stats = document.getElementById('console-stats');
+      const externalPanel = document.getElementById('external-panel');
+      const topicStrip = document.getElementById('topic-strip');
+      const search = document.getElementById('console-search');
+      if (!source || !grid || !stats || !externalPanel || !topicStrip || !search) return;
+
+      const seen = new Set();
+      const links = Array.from(source.querySelectorAll('a[href]'))
+        .map((link) => {
+          const href = link.getAttribute('href') || '';
+          const text = titleForLink(link);
+          return { text, href, topic: topicFor(text, href), year: yearFor(text, href) };
+        });
+      const notes = links
+        .filter((note) => note.text && !note.href.startsWith('http') && !seen.has(note.href) && seen.add(note.href));
+      const externalLinks = links
+        .filter((note) => note.text && importantExternal(note.href));
+
+      const topics = ['All', ...Array.from(new Set(notes.map((note) => note.topic))).sort()];
+      let activeTopic = 'All';
+
+      const renderStats = () => {
+        const years = notes.map((note) => note.year).filter((year) => year.length === 4 && /^\d{4}/.test(year));
+        const latest = years.length ? Math.max(...years.map(Number)) : 'N/A';
+        const oldest = years.length ? Math.min(...years.map(Number)) : 'N/A';
+        stats.innerHTML = [
+          ['Notes', notes.length],
+          ['Resources', externalLinks.length],
+          ['Topics', topics.length - 1],
+          ['Latest', latest],
+        ].map(([label, value]) => '<div class="stat-tile"><span>' + label + '</span><strong>' + value + '</strong></div>').join('');
+        const signal = document.getElementById('signal-count');
+        if (signal) signal.textContent = notes.length + ' links indexed';
+      };
+
+      const renderExternal = () => {
+        externalPanel.innerHTML =
+          '<div class="section-heading"><span>Published / Learning</span><strong>Red Hat resources</strong></div>' +
+          '<div class="external-grid">' +
+          externalLinks.map((note) =>
+            '<a class="resource-card" href="' + escapeHtml(note.href) + '" target="_blank" rel="noopener">' +
+            '<span class="note-meta"><span>' + escapeHtml(note.year) + '</span><span>' + escapeHtml(note.topic) + '</span></span>' +
+            '<strong>' + escapeHtml(note.text) + '</strong>' +
+            '<small>' + escapeHtml(note.href) + '</small>' +
+            '</a>'
+          ).join('') +
+          '</div>';
+      };
+
+      const renderTopics = () => {
+        topicStrip.innerHTML = topics.map((topic) => '<button class="topic-chip' + (topic === activeTopic ? ' active' : '') + '" type="button" data-topic="' + escapeHtml(topic) + '">' + escapeHtml(topic) + '</button>').join('');
+        topicStrip.querySelectorAll('button').forEach((button) => {
+          button.addEventListener('click', () => {
+            activeTopic = button.dataset.topic || 'All';
+            renderTopics();
+            renderCards();
+          });
+        });
+      };
+
+      const renderCards = () => {
+        const query = search.value.trim().toLowerCase();
+        const filtered = notes.filter((note) => {
+          const topicMatch = activeTopic === 'All' || note.topic === activeTopic;
+          const queryMatch = !query || (note.text + ' ' + note.href + ' ' + note.topic + ' ' + note.year).toLowerCase().includes(query);
+          return topicMatch && queryMatch;
+        });
+        grid.innerHTML = filtered.map((note) =>
+          '<a class="note-card" href="' + escapeHtml(note.href) + '">' +
+          '<span class="note-meta"><span>' + escapeHtml(note.year) + '</span><span>' + escapeHtml(note.topic) + '</span></span>' +
+          '<strong>' + escapeHtml(note.text) + '</strong>' +
+          '<small>' + escapeHtml(note.href) + '</small>' +
+          '</a>'
+        ).join('') || '<p class="empty-state">No matching notes.</p>';
+      };
+
+      const drawMap = () => {
+        const canvas = document.getElementById('knowledge-canvas');
+        if (!(canvas instanceof HTMLCanvasElement)) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        const width = canvas.width;
+        const height = canvas.height;
+        const nodes = notes.slice(0, 44).map((note, index) => {
+          const angle = (index / 44) * Math.PI * 2;
+          const ring = 90 + (index % 5) * 22;
+          return {
+            x: width / 2 + Math.cos(angle) * ring,
+            y: height / 2 + Math.sin(angle) * ring * 0.72,
+            topic: note.topic,
+          };
+        });
+        ctx.clearRect(0, 0, width, height);
+        ctx.strokeStyle = 'rgba(88, 166, 255, 0.14)';
+        ctx.lineWidth = 1;
+        nodes.forEach((node, index) => {
+          const next = nodes[(index + 7) % nodes.length];
+          ctx.beginPath();
+          ctx.moveTo(node.x, node.y);
+          ctx.lineTo(next.x, next.y);
+          ctx.stroke();
+        });
+        const palette = {
+          AI: '#a371f7',
+          Network: '#39d0d8',
+          Security: '#ff7b72',
+          Performance: '#f2cc60',
+          Install: '#7ee787',
+          RHEL: '#ff7b72',
+          Storage: '#d2a8ff',
+          DevOps: '#ffa657',
+          OpenShift: '#58a6ff',
+        };
+        nodes.forEach((node) => {
+          ctx.fillStyle = palette[node.topic] || '#58a6ff';
+          ctx.beginPath();
+          ctx.arc(node.x, node.y, 3.4, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      };
+
+      search.addEventListener('input', renderCards);
+      renderStats();
+      renderExternal();
+      renderTopics();
+      renderCards();
+      drawMap();
+      document.body.classList.add('home-enhanced');
+    };
+
+    const enhanceCodeBlocks = () => {
+      document.querySelectorAll('pre').forEach((pre) => {
+        if (pre.classList.contains('mermaid') || pre.querySelector('.copy-code')) return;
+        const button = document.createElement('button');
+        button.className = 'copy-code';
+        button.type = 'button';
+        button.textContent = 'Copy';
+        button.addEventListener('click', async () => {
+          await navigator.clipboard.writeText(pre.textContent || '');
+          button.textContent = 'Copied';
+          setTimeout(() => { button.textContent = 'Copy'; }, 1200);
+        });
+        pre.appendChild(button);
+      });
+    };
+
+    window.addEventListener('scroll', updateReadingProgress, { passive: true });
+    window.addEventListener('pageshow', (event) => {
+      if (event.persisted) checkForSiteUpdate();
+    });
+    document.addEventListener('DOMContentLoaded', async () => {
+      checkForSiteUpdate();
+      cacheBustPageAssets();
+      updateReadingProgress();
+      enhanceHome();
+      enhanceCodeBlocks();
+      // pandoc 输出 mermaid 为 <pre class="mermaid"><code>...</code></pre>
+      // 需要转成 <div class="mermaid">...</div> 供 mermaid.js 渲染
+      document.querySelectorAll('pre.mermaid').forEach(pre => {
+        const div = document.createElement('div');
+        div.classList.add('mermaid');
+        div.textContent = pre.textContent;
+        pre.replaceWith(div);
+      });
+      // 也处理 <pre><code class="language-mermaid"> 形式（备用）
+      document.querySelectorAll('pre code.language-mermaid').forEach(code => {
+        const div = document.createElement('div');
+        div.classList.add('mermaid');
+        div.textContent = code.textContent;
+        code.closest('pre').replaceWith(div);
+      });
+      await mermaid.run();
+    });
+  </script>
+</body>
+
+</html>

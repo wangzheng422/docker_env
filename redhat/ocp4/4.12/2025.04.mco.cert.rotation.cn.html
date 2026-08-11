@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="zh" dir="ltr">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="generator" content="pandoc" />
+  <meta name="site-build-id" content="fbe91b569ae8" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <title>OpenShift 4.12 Kube-apiserver 相关证书更新流程分析 | wandering.star notes</title>
+  <meta name="description"
+    content="Wandering field notes on OpenShift, RHEL, AI infrastructure, and platform operations." />
+  <!-- Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-E3FRMDB7L2"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-E3FRMDB7L2');
+  </script>
+  <style>
+  html {
+    color: #1a1a1a;
+    background-color: #fdfdfd;
+  }
+  body {
+    margin: 0 auto;
+    max-width: 36em;
+    padding-left: 50px;
+    padding-right: 50px;
+    padding-top: 50px;
+    padding-bottom: 50px;
+    hyphens: auto;
+    overflow-wrap: break-word;
+    text-rendering: optimizeLegibility;
+    font-kerning: normal;
+  }
+  @media (max-width: 600px) {
+    body {
+      font-size: 0.9em;
+      padding: 12px;
+    }
+    h1 {
+      font-size: 1.8em;
+    }
+  }
+  @media print {
+    html {
+      background-color: white;
+    }
+    body {
+      background-color: transparent;
+      color: black;
+      font-size: 12pt;
+    }
+    p, h2, h3 {
+      orphans: 3;
+      widows: 3;
+    }
+    h2, h3, h4 {
+      page-break-after: avoid;
+    }
+  }
+  p {
+    margin: 1em 0;
+  }
+  a {
+    color: #1a1a1a;
+  }
+  a:visited {
+    color: #1a1a1a;
+  }
+  img {
+    max-width: 100%;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.4em;
+  }
+  h5, h6 {
+    font-size: 1em;
+    font-style: italic;
+  }
+  h6 {
+    font-weight: normal;
+  }
+  ol, ul {
+    padding-left: 1.7em;
+    margin-top: 1em;
+  }
+  li > ol, li > ul {
+    margin-top: 0;
+  }
+  blockquote {
+    margin: 1em 0 1em 1.7em;
+    padding-left: 1em;
+    border-left: 2px solid #e6e6e6;
+    color: #606060;
+  }
+  code {
+    font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+    font-size: 85%;
+    margin: 0;
+    hyphens: manual;
+  }
+  pre {
+    margin: 1em 0;
+    overflow: auto;
+  }
+  pre code {
+    padding: 0;
+    overflow: visible;
+    overflow-wrap: normal;
+  }
+  .sourceCode {
+   background-color: transparent;
+   overflow: visible;
+  }
+  hr {
+    background-color: #1a1a1a;
+    border: none;
+    height: 1px;
+    margin: 1em 0;
+  }
+  table {
+    margin: 1em 0;
+    border-collapse: collapse;
+    width: 100%;
+    overflow-x: auto;
+    display: block;
+    font-variant-numeric: lining-nums tabular-nums;
+  }
+  table caption {
+    margin-bottom: 0.75em;
+  }
+  tbody {
+    margin-top: 0.5em;
+    border-top: 1px solid #1a1a1a;
+    border-bottom: 1px solid #1a1a1a;
+  }
+  th {
+    border-top: 1px solid #1a1a1a;
+    padding: 0.25em 0.5em 0.25em 0.5em;
+  }
+  td {
+    padding: 0.125em 0.5em 0.25em 0.5em;
+  }
+  header {
+    margin-bottom: 4em;
+    text-align: center;
+  }
+  #TOC li {
+    list-style: none;
+  }
+  #TOC ul {
+    padding-left: 1.3em;
+  }
+  #TOC > ul {
+    padding-left: 0;
+  }
+  #TOC a:not(:hover) {
+    text-decoration: none;
+  }
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  div.columns{display: flex; gap: min(4vw, 1.5em);}
+  div.column{flex: auto; overflow-x: auto;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  /* The extra [class] is a hack that increases specificity enough to
+     override a similar rule in reveal.js */
+  ul.task-list[class]{list-style: none;}
+  ul.task-list li input[type="checkbox"] {
+    font-size: inherit;
+    width: 0.8em;
+    margin: 0 0.8em 0.2em -1.6em;
+    vertical-align: middle;
+  }
+  .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+  <link rel="stylesheet" href="../../../style.css?v=fbe91b569ae8" />
+  </head>
+
+<body class="page-article">
+  <div class="reading-progress" aria-hidden="true"></div>
+  <div class="console-backdrop" aria-hidden="true"></div>
+  <nav class="site-nav">
+    <div class="nav-inner">
+      <a class="nav-brand" href="../../../index.html">wandering.star<span>notes</span></a>
+      <div class="nav-links">
+        <a href="https://github.com/wangzheng422/docker_env" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://www.youtube.com/@wangzheng422" target="_blank" rel="noopener">YouTube</a>
+      </div>
+    </div>
+  </nav>
+
+  <main>
+            <a class="back-link" href="../../../index.html">← Back to Index</a>
+        <div class="article-layout">
+            <aside class="toc-panel">
+        <div class="toc-title">ON THIS PAGE</div>
+        <ul>
+        <li><a
+        href="#openshift-4.12-kube-apiserver-相关证书更新流程分析"
+        id="toc-openshift-4.12-kube-apiserver-相关证书更新流程分析">OpenShift
+        4.12 Kube-apiserver 相关证书更新流程分析</a>
+        <ul>
+        <li><a href="#证书存储位置" id="toc-证书存储位置">1.
+        证书存储位置</a></li>
+        <li><a href="#证书更新与-mco-触发流程"
+        id="toc-证书更新与-mco-触发流程">2. 证书更新与 MCO
+        触发流程</a></li>
+        <li><a href="#mcd-应用配置与节点行为"
+        id="toc-mcd-应用配置与节点行为">3. MCD
+        应用配置与节点行为</a></li>
+        <li><a href="#组件响应" id="toc-组件响应">4. 组件响应</a></li>
+        <li><a href="#时序图-mermaid" id="toc-时序图-mermaid">5. 时序图
+        (Mermaid)</a></li>
+        <li><a href="#结论" id="toc-结论">6. 结论</a></li>
+        </ul></li>
+        </ul>
+      </aside>
+            <article class="markdown-body article-shell">
+        <h1
+        id="openshift-4.12-kube-apiserver-相关证书更新流程分析">OpenShift
+        4.12 Kube-apiserver 相关证书更新流程分析</h1>
+        <p>本文档分析了 OpenShift 4.12 集群中与 <a
+        href="https://github.com/openshift/cluster-kube-apiserver-operator/tree/release-4.12">Kube-apiserver</a>
+        相关的证书更新时所触发的流程，重点关注 <a
+        href="https://github.com/openshift/machine-config-operator/tree/release-4.12">Machine
+        Config Operator (MCO)</a>
+        的角色、涉及的组件、证书存储位置以及更新对 Kubelet 和
+        Kube-apiserver 静态 Pod 的影响。</p>
+        <h2 id="证书存储位置">1. 证书存储位置</h2>
+        <p>集群中与 Kube-apiserver 通信相关的证书（如服务器证书、客户端
+        CA、节点信任 CA Bundle）通常存储在以下位置：</p>
+        <ul>
+        <li><strong>Secrets/ConfigMaps:</strong> 主要分布在
+        <code>openshift-config</code>,
+        <code>openshift-config-managed</code>,
+        <code>openshift-kube-apiserver-operator</code>
+        等命名空间中。例如：
+        <ul>
+        <li><code>kube-apiserver-serving-ca</code> (ConfigMap, 通常在
+        <code>openshift-config</code> 或
+        <code>openshift-config-managed</code>)</li>
+        <li><code>kube-apiserver-to-kubelet-client-ca</code> (ConfigMap,
+        通常在 <code>openshift-kube-apiserver-operator</code>)</li>
+        <li><code>user-ca-bundle</code> (ConfigMap,
+        <code>openshift-config</code>, 用于用户自定义 CA)</li>
+        <li>各种 TLS Secret (用于组件间通信，如 MCS 的
+        <code>machine-config-server-tls</code>)</li>
+        </ul></li>
+        <li><strong>节点文件系统:</strong> 由 MCO 或其他组件（如
+        Kubelet）写入节点。关键路径包括：
+        <ul>
+        <li><code>/etc/kubernetes/kubeconfig</code>: Kubelet
+        使用的主要配置文件，包含集群 CA 数据。</li>
+        <li><code>/etc/kubernetes/kubelet-ca.crt</code>: Kubelet
+        用于验证 Apiserver 的 CA 证书（或 Bundle）。</li>
+        <li><code>/etc/kubernetes/ca.crt</code>: 集群 CA
+        证书，可能被节点上的各种组件使用。</li>
+        <li><code>/etc/pki/ca-trust/source/anchors/</code>: 系统信任的
+        CA 证书锚点目录。MCO 可能将集群 CA 或用户 CA 写入此处（例如
+        <code>openshift-config-user-ca-bundle.crt</code>）。</li>
+        <li><code>/etc/kubernetes/static-pod-resources/</code>: Kubelet
+        用于挂载给静态 Pod 的资源，可能包含证书相关的 ConfigMap/Secret
+        数据。</li>
+        </ul></li>
+        </ul>
+        <h2 id="证书更新与-mco-触发流程">2. 证书更新与 MCO 触发流程</h2>
+        <p>MCO 本身通常不直接监控大多数证书类 Secret/ConfigMap
+        的变化（<code>pull-secret</code>
+        是个例外）。证书更新通常由专门的组件（如
+        <code>cert-manager</code>、OpenShift 内置的 CA 管理逻辑或其他
+        Operator）处理。</p>
+        <p>当证书资源（Secret/ConfigMap）发生变化时，MCO
+        的介入通常是间接的：</p>
+        <ol type="1">
+        <li><strong>上游变更:</strong> 管理证书的组件更新了对应的 Secret
+        或 ConfigMap。</li>
+        <li><strong>依赖触发:</strong> 其他组件（如 CVO、管理该证书的
+        Operator）检测到证书资源的变更，并可能因此更新了 MCO
+        所依赖的资源，例如：
+        <ul>
+        <li>更新了 <code>ControllerConfig</code>。</li>
+        <li>更新了 MCO 模板中引用的某个 ConfigMap 或 Secret。</li>
+        </ul></li>
+        <li><strong>MCC 生成新配置:</strong> Machine Config Controller
+        (MCC) 检测到其依赖资源的变更，重新渲染模板，生成一个新的
+        <code>MachineConfig</code> 对象（例如从
+        <code>rendered-master-846b...</code> 变为
+        <code>rendered-master-e526...</code>）。</li>
+        </ol>
+        <p><strong>日志证据 (<code>mco.log</code> -
+        已脱敏):</strong></p>
+        <pre class="log"><code>I0410 14:23:23.081875    4014 update.go:542] Checking Reconcilable for config rendered-master-[...] to rendered-master-[...]
+I0410 14:23:23.135821    4014 update.go:2118] Starting update from rendered-master-[...] to rendered-master-[...]: &amp;{osUpdate:false kargs:false fips:false passwd:false files:true units:false kernelType:false extensions:false}</code></pre>
+        <p>这表明 MCC 确实生成了一个新的
+        <code>MachineConfig</code>，并且差异仅在于文件
+        (<code>files:true</code>)。</p>
+        <h2 id="mcd-应用配置与节点行为">3. MCD 应用配置与节点行为</h2>
+        <p>Machine Config Daemon (MCD) 在每个节点上运行，负责应用
+        <code>MachineConfig</code>。</p>
+        <ol type="1">
+        <li><strong>接收新配置:</strong> MCD 检测到其所属 Pool 的
+        <code>MachineConfig</code> 更新（变为
+        <code>rendered-master-e526...</code>）。</li>
+        <li><strong>计算差异与行动:</strong> MCD
+        计算新旧配置的差异。根据 <code>pkg/daemon/update.go</code> 中的
+        <code>calculatePostConfigChangeAction</code> 逻辑：
+        <ul>
+        <li>OS、Kargs、FIPS、KernelType、Extensions、Systemd Units
+        或大多数文件变更通常需要 <strong>重启 (Reboot)</strong>。</li>
+        <li>特定的 Crio GPG 或 Registry 配置文件变更，仅需 <strong>重载
+        Crio (Reload Crio)</strong>。</li>
+        <li><code>/etc/kubernetes/kubelet-ca.crt</code> 或
+        <code>/var/lib/kubelet/config.json</code> 的变更，则
+        <strong>无需操作 (None)</strong>。SSH 密钥变更也属于此类。</li>
+        </ul></li>
+        <li><strong>应用变更:</strong>
+        <ul>
+        <li><strong>文件写入:</strong> MCD
+        将新配置中的文件写入节点文件系统。
+        <code>go     // pkg/daemon/update.go - writeFiles function snippet     func (dn *Daemon) writeFiles(files []ign3types.File) error {         for _, file := range files {             glog.Infof("Writing file %q", file.Path)             // ... decode contents ...             mode := defaultFilePermissions             if file.Mode != nil {                 mode = os.FileMode(*file.Mode)             }             uid, gid, err := getFileOwnership(file)             // ... error handling ...             if err := createOrigFile(file.Path, file.Path); err != nil { // Backup original if exists                 return err             }             if err := writeFileAtomically(file.Path, decodedContents, defaultDirectoryPermissions, mode, uid, gid); err != nil {                 return err             }         }         return nil     }</code>
+        <strong>日志证据 (<code>mco.log</code> - 已脱敏):</strong>
+        <code>log     I0410 14:23:23.144161    4014 update.go:1650] Writing file "/etc/pki/ca-trust/source/anchors/openshift-config-user-ca-bundle.crt"     I0410 14:23:23.175331    4014 update.go:1650] Writing file "/etc/kubernetes/kubelet-ca.crt"     I0410 14:23:23.185192    4014 update.go:1650] Writing file "/etc/kubernetes/ca.crt"</code></li>
+        <li><strong>Systemd Units/Drop-ins:</strong> MCD
+        写入、启用、禁用或重置 Systemd Units 和 Drop-ins。
+        <code>go     // pkg/daemon/update.go - writeUnits function snippet (simplified)     func (dn *Daemon) writeUnits(units []ign3types.Unit) error {         // ... write dropins ...         for _, u := range units {             // ... handle mask ...             if u.Contents != nil &amp;&amp; *u.Contents != "" {                 // ... write unit file ...             }             if u.Enabled != nil {                 if *u.Enabled {                     enabledUnits = append(enabledUnits, u.Name)                 } else {                     disabledUnits = append(disabledUnits, u.Name)                 }             } else {                 // ... preset unit ...             }         }         // ... enableUnits(enabledUnits) ...         // ... disableUnits(disabledUnits) ...         return nil     }</code>
+        <strong>日志证据 (<code>mco.log</code> - 已脱敏):</strong>
+        <code>log     I0410 14:23:23.212378    4014 update.go:1582] Writing systemd unit "NetworkManager-clean-initrd-state.service"     I0410 14:23:24.367298    4014 update.go:1537] Writing systemd unit dropin "10-mco-default-madv.conf"     I0410 14:23:27.646794    4014 update.go:1492] Enabled systemd units: [...]     I0410 14:23:28.584428    4014 update.go:1503] Disabled systemd units [...]</code></li>
+        </ul></li>
+        <li><strong>决定后续动作:</strong>
+        根据计算出的行动类型执行。在此次观察到的场景中，尽管有多个文件（包括
+        CA 和 systemd 相关文件）被修改，MCD 最终决定跳过重启。
+        <strong>日志证据 (<code>mco.log</code> &amp;
+        <code>coreos.log</code> - 已脱敏):</strong>
+        <code>log     # mco.log     I0410 14:23:28.717447    4014 update.go:2118] Node has Desired Config rendered-master-[...], skipping reboot     # coreos.log     Feb 26 07:21:45 [host-name] root[15737]: machine-conﬁg-daemon[2680]: Node has Desired Conﬁg rendered-worker-[...], skipping    reboot</code>
+        <em>注意：</em> 这与 <code>pkg/daemon/update.go</code> 中
+        <code>calculatePostConfigChangeActionFromFileDiffs</code>
+        的逻辑似乎存在差异，该逻辑通常会将
+        <code>/etc/kubernetes/ca.crt</code> 或 <code>/etc/pki/...</code>
+        的更改归类为需要重启。但日志明确显示跳过了重启，可能是因为
+        <code>/etc/kubernetes/kubelet-ca.crt</code> 的更改（属于 “None”
+        类）覆盖了其他文件更改的重启需求，或者 MCD
+        的差异计算逻辑有更复杂的判断。本分析基于观察到的日志行为。</li>
+        </ol>
+        <h2 id="组件响应">4. 组件响应</h2>
+        <ul>
+        <li><p><strong>Systemd:</strong> 当 MCD 写入或修改
+        <code>/etc/systemd/system/</code> 目录下的文件（Units 或
+        Drop-ins）或运行 <code>systemctl enable/disable</code>
+        时，Systemd 会自动检测到变化并重新加载其配置。 <strong>日志证据
+        (<code>node.log</code> &amp; <code>coreos.log</code> -
+        已脱敏):</strong>
+        <code>log     # node.log     Apr 10 14:23:23 ip-[...] systemd[1]: Reloading.     Apr 10 14:23:24 ip-[...] systemd[1]: Reloading.     # coreos.log     Feb 26 07:21:44 [host-name] systemd[1]: Reloading.     Feb 26 07:21:45 [host-name] systemd[1]: Reloading.</code>
+        这个 <code>Reloading</code> 行为是由 MCD 对 systemd
+        配置文件或单元状态的操作触发的，是 systemd 的标准行为。</p></li>
+        <li><p><strong>Kubelet:</strong> Kubelet
+        监控其使用的证书文件。当 MCD 更新
+        <code>/etc/kubernetes/kubelet-ca.crt</code> 时，Kubelet
+        会检测到变化并动态重新加载该 CA 证书，无需重启 Kubelet 进程。
+        <strong>日志证据 (<code>node.log</code> &amp;
+        <code>coreos.log</code> - 已脱敏):</strong>
+        <code>log     # node.log     Apr 10 14:23:23 ip-[...] kubenswrapper[2241]: I0410 14:23:23.175393 dynamic_cafile_content.go:211] "Failed to remove file watch, it may have been deleted" file="/etc/kubernetes/kubelet-ca.crt"     Apr 10 14:23:23 ip-[...] kubenswrapper[2241]: I0410 14:23:23.175824 dynamic_cafile_content.go:119] "Loaded a new CA Bundle and Verifier" name="client-ca-bundle::/etc/kubernetes/kubelet-ca.crt"     # coreos.log     Feb 26 07:21:44 [host-name] ku benswrapper[5616]: I0226 07:21:44.314400 3487 dynamic_caﬁle_content.go:211] "Failed to remove ﬁle watch, it may have been deleted" ﬁle ="/etc/ku bernetes/kubelet-ca.crt"     Feb 26 07:21:44 [host-name] ku benswrapper[5616]: I0226 07:21:44.324451 3487 dynamic_caﬁle_content.go:119] "Loaded a new CA Bundle and Veriﬁer" name="client-ca-bundle::/etc/ku bernetes/kubelet-ca.crt"</code>
+        Kubelet <strong>没有</strong>因为这次 MCO 更新而重启。</p></li>
+        <li><p><strong>Kube-apiserver (静态 Pod):</strong> Kubelet
+        负责管理静态 Pod。如果 Kube-apiserver Pod 定义中挂载的 Secret 或
+        ConfigMap（包含其服务证书、客户端 CA 等）的内容发生变化，Kubelet
+        会检测到并<strong>重启</strong>该静态 Pod。MCD 本身不直接重启
+        Kube-apiserver。在提供的日志片段中，<strong>没有观察到</strong>
+        Kube-apiserver 静态 Pod 在 MCD
+        更新期间或之后立即重启的明确证据。重启是否发生取决于
+        Kube-apiserver Pod 具体挂载了哪些证书资源，以及这些资源的源
+        Secret/ConfigMap 是否真的发生了变化并被 Kubelet 检测到。而
+        openshift 4.12 的 kube-apiserver 使用 pv
+        的方式挂载本地目录，读取证书，所有 kubelet 检测不到 pv
+        内部证书的变化，于是 kubelet 并没有重启 kube-apiserver pod，而是
+        kube-apiserver pod
+        内部应用感知到了证书编号，重新读取了证书，而不是重启进程。</p></li>
+        </ul>
+        <h2 id="时序图-mermaid">5. 时序图 (Mermaid)</h2>
+        <pre class="mermaid"><code>sequenceDiagram
+    participant CertMgmt as Certificate Management&lt;br&gt;(e.g., OCP Operator, Manual)
+    participant K8sAPI as K8s API
+    %% participant OtherComp as Other Components&lt;br&gt;(e.g., CVO)
+    participant MCC as Machine Config Controller
+    participant MCD as Machine Config Daemon&lt;br&gt;(on Node)
+    participant NodeFS as Node Filesystem
+    participant Systemd as Systemd&lt;br&gt;(on Node)
+    participant Kubelet as Kubelet&lt;br&gt;(on Node)
+    participant KubeAPIServer as Kube-apiserver Static Pod&lt;br&gt;(on Node)
+
+    CertMgmt-&gt;&gt;+K8sAPI: Update Cert Secret/ConfigMap
+    K8sAPI--&gt;&gt;-CertMgmt: Ack
+    %% Note over K8sAPI, OtherComp: Other components might react
+    CertMgmt-&gt;&gt;+MCC: Trigger Re-render (e.g., update ControllerConfig)
+    MCC-&gt;&gt;MCC: Render new MachineConfig (e.g., master-e526...)
+    MCC-&gt;&gt;+K8sAPI: Apply new MachineConfig
+    K8sAPI--&gt;&gt;-MCC: Ack
+    K8sAPI--&gt;&gt;+MCD: Notify MachineConfig Update
+    MCD-&gt;&gt;MCD: Calculate Diff (files:true)
+    MCD-&gt;&gt;MCD: Determine Action: Skip Reboot
+    MCD-&gt;&gt;NodeFS: Write updated files &lt;br&gt;(incl. /etc/kubernetes/kubelet-ca.crt, &lt;br&gt;/etc/kubernetes/static-pod-resources/..., &lt;br&gt;/etc/kubernetes/ca.crt)
+    MCD-&gt;&gt;Systemd: Write/Enable/Disable Units/Drop-ins
+    Systemd-&gt;&gt;Systemd: Reload Configuration (multiple times)
+    NodeFS--&gt;&gt;Kubelet: INotify event for /etc/kubernetes/kubelet-ca.crt
+    Kubelet-&gt;&gt;Kubelet: Dynamically reload kubelet-ca.crt
+    MCD-&gt;&gt;+K8sAPI: Update Node Annotation (State: Done)
+    K8sAPI--&gt;&gt;-MCD: Ack
+    MCD-&gt;&gt;MCD: Uncordon Node
+    KubeAPIServer-&gt;&gt;KubeAPIServer: Dynamically reload certs in pv
+</code></pre>
+        <h2 id="结论">6. 结论</h2>
+        <ul>
+        <li>当 Kube-apiserver 相关证书更新时，MCO
+        通常通过间接方式被触发，生成新的
+        <code>MachineConfig</code>。</li>
+        <li>MCD 应用 <code>MachineConfig</code>
+        时，会写入更新后的文件（包括证书文件）和 systemd 配置。</li>
+        <li>根据 MCD 的判断逻辑（在此次观察到的场景中），即使更新了多个
+        CA 文件和 systemd 配置，如果关键文件（如
+        <code>kubelet-ca.crt</code>）的变更是已知不需要重启的类型，MCD
+        <strong>可能不会触发节点重启</strong>。</li>
+        <li>Systemd 会因为 MCD 对其配置文件的修改而<strong>自动重载
+        (Reload)</strong>。</li>
+        <li>Kubelet 会动态检测并<strong>重新加载</strong>其使用的 CA
+        证书
+        (<code>/etc/kubernetes/kubelet-ca.crt</code>)，<strong>不会重启</strong>。</li>
+        <li>Kube-apiserver 静态 Pod
+        是否重启取决于其挂载的证书资源是否在源端（Secret/ConfigMap）发生变化并被
+        Kubelet 检测到。在此次分析的日志中，<strong>未观察到</strong>
+        Kube-apiserver 的立即重启。重启由 <strong>Kubelet</strong>
+        触发，而非 MCD。</li>
+        </ul>
+      </article>
+    </div>
+      </main>
+
+  <footer>
+    <p>
+      Licensed under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank"
+        rel="noopener">CC-BY-NC-SA 4.0</a>
+      &nbsp;·&nbsp;
+      <a href="https://github.com/wangzheng422/docker_env" target="_blank" rel="noopener">wangzheng422/docker_env</a>
+    </p>
+  </footer>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: false, theme: 'dark' });
+
+    const SITE_BUILD_ID = 'fbe91b569ae8';
+    const SITE_HOME_URL = '../../../index.html';
+
+    const getBuildIdFromHtml = (html) => {
+      const match = String(html).match(/<meta[^>]+name=["']site-build-id["'][^>]+content=["']([^"']+)["']/i)
+        || String(html).match(/<meta[^>]+content=["']([^"']+)["'][^>]+name=["']site-build-id["']/i);
+      return match ? match[1] : '';
+    };
+
+    const checkForSiteUpdate = async () => {
+      if (!SITE_BUILD_ID || window.location.protocol === 'file:') return;
+      try {
+        const probeUrl = new URL(SITE_HOME_URL || './index.html', window.location.href);
+        probeUrl.searchParams.set('site_cache_probe', Date.now().toString());
+        const response = await fetch(probeUrl.toString(), { cache: 'no-store' });
+        if (!response.ok) return;
+        const latestBuildId = getBuildIdFromHtml(await response.text());
+        if (!latestBuildId || latestBuildId === SITE_BUILD_ID) return;
+        if (sessionStorage.getItem('site-build-refresh') === latestBuildId) return;
+        sessionStorage.setItem('site-build-refresh', latestBuildId);
+        const freshUrl = new URL(window.location.href);
+        freshUrl.searchParams.set('v', latestBuildId);
+        window.location.replace(freshUrl.toString());
+      } catch (error) {
+        // Network errors should not block reading the current page.
+      }
+    };
+
+    const versionedLocalUrl = (rawUrl) => {
+      if (!rawUrl || /^(https?:)?\/\//i.test(rawUrl) || /^(data|blob|mailto):/i.test(rawUrl)) return rawUrl;
+      const url = new URL(rawUrl, window.location.href);
+      if (url.searchParams.has('v')) return rawUrl;
+      url.searchParams.set('v', SITE_BUILD_ID);
+      return url.toString();
+    };
+
+    const cacheBustPageAssets = () => {
+      document.querySelectorAll('img[src], video[src], audio[src], source[src]').forEach((node) => {
+        const src = node.getAttribute('src');
+        const versioned = versionedLocalUrl(src);
+        if (versioned !== src) node.setAttribute('src', versioned);
+      });
+    };
+
+    const updateReadingProgress = () => {
+      const progress = document.querySelector('.reading-progress');
+      if (!progress) return;
+      const scrollable = document.documentElement.scrollHeight - window.innerHeight;
+      const ratio = scrollable > 0 ? window.scrollY / scrollable : 0;
+      progress.style.transform = 'scaleX(' + Math.min(1, Math.max(0, ratio)) + ')';
+    };
+
+    const topicFor = (text, href) => {
+      const haystack = (text + ' ' + href).toLowerCase();
+      if (/developers\.redhat\.com|redhatquickcourses|github\.com\/redhatquickcourses/.test(haystack)) return 'Red Hat';
+      if (/ai|llm|gpu|vllm|llama|model|rhaiis/.test(haystack)) return 'AI';
+      if (/network|ovn|bgp|dns|egress|ingress|metallb|nic|route/.test(haystack)) return 'Network';
+      if (/cert|tls|sso|keycloak|rhbk|security|compliance/.test(haystack)) return 'Security';
+      if (/perf|profile|throttling|heap|debug/.test(haystack)) return 'Performance';
+      if (/install|ipi|upi|sno|disconnected|bootstrap/.test(haystack)) return 'Install';
+      if (/rhel|coreos|rhcos|kernel|rpm|ostree/.test(haystack)) return 'RHEL';
+      if (/backup|storage|nfs|odf|ocs|ceph|dr/.test(haystack)) return 'Storage';
+      if (/pipeline|gitops|ansible|aap|rhdh|devops/.test(haystack)) return 'DevOps';
+      return 'OpenShift';
+    };
+
+    const yearFor = (text, href) => {
+      const match = (text + ' ' + href).match(/20\d{2}/);
+      return match ? match[0] : 'Notes';
+    };
+
+    const importantExternal = (href) =>
+      /developers\.redhat\.com|redhatquickcourses\.github\.io/i.test(href);
+
+    const titleForLink = (link) => {
+      const href = link.getAttribute('href') || '';
+      const directText = link.textContent.trim().replace(/\s+/g, ' ');
+      if (!/^https?:\/\//.test(directText)) return directText;
+      const parentItem = link.closest('ul')?.parentElement;
+      if (parentItem) {
+        const clone = parentItem.cloneNode(true);
+        clone.querySelectorAll('ul').forEach((nested) => nested.remove());
+        const parentText = clone.textContent.trim().replace(/\s+/g, ' ');
+        if (parentText) {
+          return parentText;
+        }
+      }
+      return directText;
+    };
+
+    const escapeHtml = (value) => String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+
+    const enhanceHome = () => {
+      if (!document.body.classList.contains('page-index')) return;
+      const source = document.querySelector('.home-source');
+      const grid = document.getElementById('note-grid');
+      const stats = document.getElementById('console-stats');
+      const externalPanel = document.getElementById('external-panel');
+      const topicStrip = document.getElementById('topic-strip');
+      const search = document.getElementById('console-search');
+      if (!source || !grid || !stats || !externalPanel || !topicStrip || !search) return;
+
+      const seen = new Set();
+      const links = Array.from(source.querySelectorAll('a[href]'))
+        .map((link) => {
+          const href = link.getAttribute('href') || '';
+          const text = titleForLink(link);
+          return { text, href, topic: topicFor(text, href), year: yearFor(text, href) };
+        });
+      const notes = links
+        .filter((note) => note.text && !note.href.startsWith('http') && !seen.has(note.href) && seen.add(note.href));
+      const externalLinks = links
+        .filter((note) => note.text && importantExternal(note.href));
+
+      const topics = ['All', ...Array.from(new Set(notes.map((note) => note.topic))).sort()];
+      let activeTopic = 'All';
+
+      const renderStats = () => {
+        const years = notes.map((note) => note.year).filter((year) => year.length === 4 && /^\d{4}/.test(year));
+        const latest = years.length ? Math.max(...years.map(Number)) : 'N/A';
+        const oldest = years.length ? Math.min(...years.map(Number)) : 'N/A';
+        stats.innerHTML = [
+          ['Notes', notes.length],
+          ['Resources', externalLinks.length],
+          ['Topics', topics.length - 1],
+          ['Latest', latest],
+        ].map(([label, value]) => '<div class="stat-tile"><span>' + label + '</span><strong>' + value + '</strong></div>').join('');
+        const signal = document.getElementById('signal-count');
+        if (signal) signal.textContent = notes.length + ' links indexed';
+      };
+
+      const renderExternal = () => {
+        externalPanel.innerHTML =
+          '<div class="section-heading"><span>Published / Learning</span><strong>Red Hat resources</strong></div>' +
+          '<div class="external-grid">' +
+          externalLinks.map((note) =>
+            '<a class="resource-card" href="' + escapeHtml(note.href) + '" target="_blank" rel="noopener">' +
+            '<span class="note-meta"><span>' + escapeHtml(note.year) + '</span><span>' + escapeHtml(note.topic) + '</span></span>' +
+            '<strong>' + escapeHtml(note.text) + '</strong>' +
+            '<small>' + escapeHtml(note.href) + '</small>' +
+            '</a>'
+          ).join('') +
+          '</div>';
+      };
+
+      const renderTopics = () => {
+        topicStrip.innerHTML = topics.map((topic) => '<button class="topic-chip' + (topic === activeTopic ? ' active' : '') + '" type="button" data-topic="' + escapeHtml(topic) + '">' + escapeHtml(topic) + '</button>').join('');
+        topicStrip.querySelectorAll('button').forEach((button) => {
+          button.addEventListener('click', () => {
+            activeTopic = button.dataset.topic || 'All';
+            renderTopics();
+            renderCards();
+          });
+        });
+      };
+
+      const renderCards = () => {
+        const query = search.value.trim().toLowerCase();
+        const filtered = notes.filter((note) => {
+          const topicMatch = activeTopic === 'All' || note.topic === activeTopic;
+          const queryMatch = !query || (note.text + ' ' + note.href + ' ' + note.topic + ' ' + note.year).toLowerCase().includes(query);
+          return topicMatch && queryMatch;
+        });
+        grid.innerHTML = filtered.map((note) =>
+          '<a class="note-card" href="' + escapeHtml(note.href) + '">' +
+          '<span class="note-meta"><span>' + escapeHtml(note.year) + '</span><span>' + escapeHtml(note.topic) + '</span></span>' +
+          '<strong>' + escapeHtml(note.text) + '</strong>' +
+          '<small>' + escapeHtml(note.href) + '</small>' +
+          '</a>'
+        ).join('') || '<p class="empty-state">No matching notes.</p>';
+      };
+
+      const drawMap = () => {
+        const canvas = document.getElementById('knowledge-canvas');
+        if (!(canvas instanceof HTMLCanvasElement)) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        const width = canvas.width;
+        const height = canvas.height;
+        const nodes = notes.slice(0, 44).map((note, index) => {
+          const angle = (index / 44) * Math.PI * 2;
+          const ring = 90 + (index % 5) * 22;
+          return {
+            x: width / 2 + Math.cos(angle) * ring,
+            y: height / 2 + Math.sin(angle) * ring * 0.72,
+            topic: note.topic,
+          };
+        });
+        ctx.clearRect(0, 0, width, height);
+        ctx.strokeStyle = 'rgba(88, 166, 255, 0.14)';
+        ctx.lineWidth = 1;
+        nodes.forEach((node, index) => {
+          const next = nodes[(index + 7) % nodes.length];
+          ctx.beginPath();
+          ctx.moveTo(node.x, node.y);
+          ctx.lineTo(next.x, next.y);
+          ctx.stroke();
+        });
+        const palette = {
+          AI: '#a371f7',
+          Network: '#39d0d8',
+          Security: '#ff7b72',
+          Performance: '#f2cc60',
+          Install: '#7ee787',
+          RHEL: '#ff7b72',
+          Storage: '#d2a8ff',
+          DevOps: '#ffa657',
+          OpenShift: '#58a6ff',
+        };
+        nodes.forEach((node) => {
+          ctx.fillStyle = palette[node.topic] || '#58a6ff';
+          ctx.beginPath();
+          ctx.arc(node.x, node.y, 3.4, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      };
+
+      search.addEventListener('input', renderCards);
+      renderStats();
+      renderExternal();
+      renderTopics();
+      renderCards();
+      drawMap();
+      document.body.classList.add('home-enhanced');
+    };
+
+    const enhanceCodeBlocks = () => {
+      document.querySelectorAll('pre').forEach((pre) => {
+        if (pre.classList.contains('mermaid') || pre.querySelector('.copy-code')) return;
+        const button = document.createElement('button');
+        button.className = 'copy-code';
+        button.type = 'button';
+        button.textContent = 'Copy';
+        button.addEventListener('click', async () => {
+          await navigator.clipboard.writeText(pre.textContent || '');
+          button.textContent = 'Copied';
+          setTimeout(() => { button.textContent = 'Copy'; }, 1200);
+        });
+        pre.appendChild(button);
+      });
+    };
+
+    window.addEventListener('scroll', updateReadingProgress, { passive: true });
+    window.addEventListener('pageshow', (event) => {
+      if (event.persisted) checkForSiteUpdate();
+    });
+    document.addEventListener('DOMContentLoaded', async () => {
+      checkForSiteUpdate();
+      cacheBustPageAssets();
+      updateReadingProgress();
+      enhanceHome();
+      enhanceCodeBlocks();
+      // pandoc 输出 mermaid 为 <pre class="mermaid"><code>...</code></pre>
+      // 需要转成 <div class="mermaid">...</div> 供 mermaid.js 渲染
+      document.querySelectorAll('pre.mermaid').forEach(pre => {
+        const div = document.createElement('div');
+        div.classList.add('mermaid');
+        div.textContent = pre.textContent;
+        pre.replaceWith(div);
+      });
+      // 也处理 <pre><code class="language-mermaid"> 形式（备用）
+      document.querySelectorAll('pre code.language-mermaid').forEach(code => {
+        const div = document.createElement('div');
+        div.classList.add('mermaid');
+        div.textContent = code.textContent;
+        code.closest('pre').replaceWith(div);
+      });
+      await mermaid.run();
+    });
+  </script>
+</body>
+
+</html>

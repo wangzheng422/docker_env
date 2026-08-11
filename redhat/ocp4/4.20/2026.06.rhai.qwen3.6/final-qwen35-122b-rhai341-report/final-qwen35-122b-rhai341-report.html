@@ -1,0 +1,1105 @@
+<!DOCTYPE html>
+<html lang="zh" dir="ltr">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="generator" content="pandoc" />
+  <meta name="site-build-id" content="fbe91b569ae8" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <title>Red Hat RHAI vLLM 3.4.1 - Qwen 3.5 122B 1M Context Stress Report | wandering.star notes</title>
+  <meta name="description"
+    content="Wandering field notes on OpenShift, RHEL, AI infrastructure, and platform operations." />
+  <!-- Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-E3FRMDB7L2"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-E3FRMDB7L2');
+  </script>
+  <style>
+  html {
+    color: #1a1a1a;
+    background-color: #fdfdfd;
+  }
+  body {
+    margin: 0 auto;
+    max-width: 36em;
+    padding-left: 50px;
+    padding-right: 50px;
+    padding-top: 50px;
+    padding-bottom: 50px;
+    hyphens: auto;
+    overflow-wrap: break-word;
+    text-rendering: optimizeLegibility;
+    font-kerning: normal;
+  }
+  @media (max-width: 600px) {
+    body {
+      font-size: 0.9em;
+      padding: 12px;
+    }
+    h1 {
+      font-size: 1.8em;
+    }
+  }
+  @media print {
+    html {
+      background-color: white;
+    }
+    body {
+      background-color: transparent;
+      color: black;
+      font-size: 12pt;
+    }
+    p, h2, h3 {
+      orphans: 3;
+      widows: 3;
+    }
+    h2, h3, h4 {
+      page-break-after: avoid;
+    }
+  }
+  p {
+    margin: 1em 0;
+  }
+  a {
+    color: #1a1a1a;
+  }
+  a:visited {
+    color: #1a1a1a;
+  }
+  img {
+    max-width: 100%;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.4em;
+  }
+  h5, h6 {
+    font-size: 1em;
+    font-style: italic;
+  }
+  h6 {
+    font-weight: normal;
+  }
+  ol, ul {
+    padding-left: 1.7em;
+    margin-top: 1em;
+  }
+  li > ol, li > ul {
+    margin-top: 0;
+  }
+  blockquote {
+    margin: 1em 0 1em 1.7em;
+    padding-left: 1em;
+    border-left: 2px solid #e6e6e6;
+    color: #606060;
+  }
+  code {
+    font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+    font-size: 85%;
+    margin: 0;
+    hyphens: manual;
+  }
+  pre {
+    margin: 1em 0;
+    overflow: auto;
+  }
+  pre code {
+    padding: 0;
+    overflow: visible;
+    overflow-wrap: normal;
+  }
+  .sourceCode {
+   background-color: transparent;
+   overflow: visible;
+  }
+  hr {
+    background-color: #1a1a1a;
+    border: none;
+    height: 1px;
+    margin: 1em 0;
+  }
+  table {
+    margin: 1em 0;
+    border-collapse: collapse;
+    width: 100%;
+    overflow-x: auto;
+    display: block;
+    font-variant-numeric: lining-nums tabular-nums;
+  }
+  table caption {
+    margin-bottom: 0.75em;
+  }
+  tbody {
+    margin-top: 0.5em;
+    border-top: 1px solid #1a1a1a;
+    border-bottom: 1px solid #1a1a1a;
+  }
+  th {
+    border-top: 1px solid #1a1a1a;
+    padding: 0.25em 0.5em 0.25em 0.5em;
+  }
+  td {
+    padding: 0.125em 0.5em 0.25em 0.5em;
+  }
+  header {
+    margin-bottom: 4em;
+    text-align: center;
+  }
+  #TOC li {
+    list-style: none;
+  }
+  #TOC ul {
+    padding-left: 1.3em;
+  }
+  #TOC > ul {
+    padding-left: 0;
+  }
+  #TOC a:not(:hover) {
+    text-decoration: none;
+  }
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  div.columns{display: flex; gap: min(4vw, 1.5em);}
+  div.column{flex: auto; overflow-x: auto;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  /* The extra [class] is a hack that increases specificity enough to
+     override a similar rule in reveal.js */
+  ul.task-list[class]{list-style: none;}
+  ul.task-list li input[type="checkbox"] {
+    font-size: inherit;
+    width: 0.8em;
+    margin: 0 0.8em 0.2em -1.6em;
+    vertical-align: middle;
+  }
+  .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  /* CSS for syntax highlighting */
+  pre > code.sourceCode { white-space: pre; position: relative; }
+  pre > code.sourceCode > span { line-height: 1.25; }
+  pre > code.sourceCode > span:empty { height: 1.2em; }
+  .sourceCode { overflow: visible; }
+  code.sourceCode > span { color: inherit; text-decoration: inherit; }
+  div.sourceCode { margin: 1em 0; }
+  pre.sourceCode { margin: 0; }
+  @media screen {
+  div.sourceCode { overflow: auto; }
+  }
+  @media print {
+  pre > code.sourceCode { white-space: pre-wrap; }
+  pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+  }
+  pre.numberSource code
+    { counter-reset: source-line 0; }
+  pre.numberSource code > span
+    { position: relative; left: -4em; counter-increment: source-line; }
+  pre.numberSource code > span > a:first-child::before
+    { content: counter(source-line);
+      position: relative; left: -1em; text-align: right; vertical-align: baseline;
+      border: none; display: inline-block;
+      -webkit-touch-callout: none; -webkit-user-select: none;
+      -khtml-user-select: none; -moz-user-select: none;
+      -ms-user-select: none; user-select: none;
+      padding: 0 4px; width: 4em;
+    }
+  pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+  div.sourceCode
+    { color: #cccccc; background-color: #303030; }
+  @media screen {
+  pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+  }
+  code span.al { color: #ffcfaf; } /* Alert */
+  code span.an { color: #7f9f7f; font-weight: bold; } /* Annotation */
+  code span.at { } /* Attribute */
+  code span.bn { color: #dca3a3; } /* BaseN */
+  code span.bu { } /* BuiltIn */
+  code span.cf { color: #f0dfaf; } /* ControlFlow */
+  code span.ch { color: #dca3a3; } /* Char */
+  code span.cn { color: #dca3a3; font-weight: bold; } /* Constant */
+  code span.co { color: #7f9f7f; } /* Comment */
+  code span.cv { color: #7f9f7f; font-weight: bold; } /* CommentVar */
+  code span.do { color: #7f9f7f; } /* Documentation */
+  code span.dt { color: #dfdfbf; } /* DataType */
+  code span.dv { color: #dcdccc; } /* DecVal */
+  code span.er { color: #c3bf9f; } /* Error */
+  code span.ex { } /* Extension */
+  code span.fl { color: #c0bed1; } /* Float */
+  code span.fu { color: #efef8f; } /* Function */
+  code span.im { } /* Import */
+  code span.in { color: #7f9f7f; font-weight: bold; } /* Information */
+  code span.kw { color: #f0dfaf; } /* Keyword */
+  code span.op { color: #f0efd0; } /* Operator */
+  code span.ot { color: #efef8f; } /* Other */
+  code span.pp { color: #ffcfaf; font-weight: bold; } /* Preprocessor */
+  code span.sc { color: #dca3a3; } /* SpecialChar */
+  code span.ss { color: #cc9393; } /* SpecialString */
+  code span.st { color: #cc9393; } /* String */
+  code span.va { } /* Variable */
+  code span.vs { color: #cc9393; } /* VerbatimString */
+  code span.wa { color: #7f9f7f; font-weight: bold; } /* Warning */
+  </style>
+  <link rel="stylesheet" href="../../../../../style.css?v=fbe91b569ae8" />
+  </head>
+
+<body class="page-article">
+  <div class="reading-progress" aria-hidden="true"></div>
+  <div class="console-backdrop" aria-hidden="true"></div>
+  <nav class="site-nav">
+    <div class="nav-inner">
+      <a class="nav-brand" href="../../../../../index.html">wandering.star<span>notes</span></a>
+      <div class="nav-links">
+        <a href="https://github.com/wangzheng422/docker_env" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://www.youtube.com/@wangzheng422" target="_blank" rel="noopener">YouTube</a>
+      </div>
+    </div>
+  </nav>
+
+  <main>
+            <a class="back-link" href="../../../../../index.html">← Back to Index</a>
+        <div class="article-layout">
+            <aside class="toc-panel">
+        <div class="toc-title">ON THIS PAGE</div>
+        <ul>
+        <li><a
+        href="#red-hat-rhai-vllm-3.4.1---qwen-3.5-122b-1m-context-stress-report"
+        id="toc-red-hat-rhai-vllm-3.4.1---qwen-3.5-122b-1m-context-stress-report">Red
+        Hat RHAI vLLM 3.4.1 - Qwen 3.5 122B 1M Context Stress Report</a>
+        <ul>
+        <li><a href="#executive-conclusion"
+        id="toc-executive-conclusion">Executive conclusion</a></li>
+        <li><a href="#recommended-profile"
+        id="toc-recommended-profile">Recommended profile</a></li>
+        <li><a href="#performance-summary"
+        id="toc-performance-summary">Performance summary</a></li>
+        <li><a href="#gpu-utilization-interpretation"
+        id="toc-gpu-utilization-interpretation">GPU utilization
+        interpretation</a></li>
+        <li><a href="#startup-parameter-findings"
+        id="toc-startup-parameter-findings">Startup-parameter
+        findings</a></li>
+        <li><a href="#destructive-evidence"
+        id="toc-destructive-evidence">Destructive evidence</a></li>
+        <li><a href="#host-evidence" id="toc-host-evidence">Host
+        evidence</a></li>
+        <li><a href="#risks-and-next-steps"
+        id="toc-risks-and-next-steps">Risks and next steps</a></li>
+        <li><a href="#source-artifacts" id="toc-source-artifacts">Source
+        artifacts</a></li>
+        </ul></li>
+        </ul>
+      </aside>
+            <article class="markdown-body article-shell">
+        <h1
+        id="red-hat-rhai-vllm-3.4.1---qwen-3.5-122b-1m-context-stress-report">Red
+        Hat RHAI vLLM 3.4.1 - Qwen 3.5 122B 1M Context Stress
+        Report</h1>
+        <table>
+        <colgroup>
+        <col style="width: 50%" />
+        <col style="width: 50%" />
+        </colgroup>
+        <thead>
+        <tr class="header">
+        <th>Field</th>
+        <th>Value</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr class="odd">
+        <td>Test date</td>
+        <td>2026-06-10</td>
+        </tr>
+        <tr class="even">
+        <td>Target host</td>
+        <td><code>computeinstance-e00d5cpyn31hqd5x9m</code> over SSH
+        proxy <code>127.0.0.1:5085</code></td>
+        </tr>
+        <tr class="odd">
+        <td>OS/runtime</td>
+        <td>Ubuntu 24.04.4 LTS, Docker 29.5.3, NVIDIA Container Toolkit
+        1.19.1</td>
+        </tr>
+        <tr class="even">
+        <td>GPU</td>
+        <td>4 x NVIDIA L40S, 46,068 MiB each, driver 580.159.04, CUDA
+        13.0</td>
+        </tr>
+        <tr class="odd">
+        <td>Model</td>
+        <td><code>RedHatAI/Qwen3.5-122B-A10B-FP8-dynamic</code></td>
+        </tr>
+        <tr class="even">
+        <td>Serving image</td>
+        <td><code>registry.redhat.io/rhaii/vllm-cuda-rhel9:3.4.1</code>,
+        vLLM <code>0.18.0+rhaiv.11</code></td>
+        </tr>
+        <tr class="odd">
+        <td>Report package</td>
+        <td><code>solution/files/solution-2026-06-10-19-35/final-qwen35-122b-rhai341-report/</code></td>
+        </tr>
+        </tbody>
+        </table>
+        <h2 id="executive-conclusion">Executive conclusion</h2>
+        <p>The observed single-GPU utilization drop is not the
+        standalone root cause. It is a symptom that appears in some
+        phases, especially short-prompt concurrency and startup/loading
+        samples. During true long-prompt prefill, the 512K and 980K
+        tests drove all four L40S GPUs close to full utilization.</p>
+        <p>The root-cause chain is:</p>
+        <ol type="1">
+        <li>The 1M serving profile is far beyond the model
+        config/tokenizer native 262,144-token position limit and
+        requires <code>VLLM_ALLOW_LONG_MAX_MODEL_LEN=1</code>.</li>
+        <li>On 4 x L40S, Qwen 3.5 122B FP8 leaves very limited memory
+        after model weights and KV cache reservation.</li>
+        <li>The safe 1M profile requires <code>max_num_seqs=1</code>,
+        which serializes requests and makes short-prompt concurrency
+        look like no-response/slow-response.</li>
+        <li>Very long prompts are dominated by prefill: the custom 980K
+        input reached about 547 seconds TTFT before the first token,
+        while the API process was still alive and GPUs were busy.</li>
+        <li>Raising <code>gpu_memory_utilization</code> to
+        <code>0.98</code> increases KV capacity but removes runtime
+        headroom; a 512K request then failed with CUDA OOM and
+        <code>/health</code> returned 503.</li>
+        </ol>
+        <h2 id="recommended-profile">Recommended profile</h2>
+        <p>Use this as the validated 1M-context operating profile for
+        this host:</p>
+        <div class="sourceCode" id="cb1"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">vllm</span> serve RedHatAI/Qwen3.5-122B-A10B-FP8-dynamic <span class="dt">\</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">--served-model-name</span> qwen35-122b-fp8 <span class="dt">\</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">--tensor-parallel-size</span> 4 <span class="dt">\</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">--max-model-len</span> 1010000 <span class="dt">\</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">--gpu-memory-utilization</span> 0.95 <span class="dt">\</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">--max-num-seqs</span> 1 <span class="dt">\</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">--max-num-batched-tokens</span> 32768 <span class="dt">\</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">--kv-cache-dtype</span> fp8 <span class="dt">\</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">--enable-chunked-prefill</span> <span class="dt">\</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">--enforce-eager</span> <span class="dt">\</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">--disable-custom-all-reduce</span> <span class="dt">\</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">--language-model-only</span> <span class="dt">\</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>  <span class="at">--reasoning-parser</span> qwen3</span></code></pre></div>
+        <p>This profile started successfully, returned
+        <code>/v1/models</code> with <code>max_model_len=1010000</code>,
+        and completed 128K, 512K, and 980K summary requests. It is slow
+        for near-1M inputs, but it does not crash in the validated
+        tests.</p>
+        <p>Avoid treating <code>gpu_memory_utilization=0.98</code> as
+        the best profile. It starts and reports more KV cache, but it
+        crashed on a 512K request due to a runtime 256 MiB allocation
+        failure inside the Triton/FLA Qwen3.5 path.</p>
+        <h2 id="performance-summary">Performance summary</h2>
+        <table style="width:100%;">
+        <colgroup>
+        <col style="width: 10%" />
+        <col style="width: 10%" />
+        <col style="width: 10%" />
+        <col style="width: 10%" />
+        <col style="width: 10%" />
+        <col style="width: 10%" />
+        <col style="width: 10%" />
+        <col style="width: 10%" />
+        <col style="width: 10%" />
+        <col style="width: 10%" />
+        </colgroup>
+        <thead>
+        <tr class="header">
+        <th>Case</th>
+        <th>Prompt tokens</th>
+        <th>Concurrency</th>
+        <th>Requests</th>
+        <th>Max output tokens</th>
+        <th>Median latency s</th>
+        <th>Median TTFT s</th>
+        <th>Median TPOT ms</th>
+        <th>Completed</th>
+        <th>Status</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr class="odd">
+        <td>2K c4/r8</td>
+        <td>2,000</td>
+        <td>4</td>
+        <td>8</td>
+        <td>128</td>
+        <td>40.07</td>
+        <td>30.27</td>
+        <td>75.9</td>
+        <td>8/8</td>
+        <td>OK</td>
+        </tr>
+        <tr class="even">
+        <td>128K c1</td>
+        <td>128,000</td>
+        <td>1</td>
+        <td>1</td>
+        <td>64</td>
+        <td>24.60</td>
+        <td>19.80</td>
+        <td>73.9</td>
+        <td>1/1</td>
+        <td>OK</td>
+        </tr>
+        <tr class="odd">
+        <td>512K c1</td>
+        <td>512,000</td>
+        <td>1</td>
+        <td>1</td>
+        <td>64</td>
+        <td>174.82</td>
+        <td>170.12</td>
+        <td>73.5</td>
+        <td>1/1</td>
+        <td>OK</td>
+        </tr>
+        <tr class="even">
+        <td>980K c1</td>
+        <td>980,000</td>
+        <td>1</td>
+        <td>1</td>
+        <td>32</td>
+        <td>549.13</td>
+        <td>547.06</td>
+        <td>69.1</td>
+        <td>1/1</td>
+        <td>OK</td>
+        </tr>
+        <tr class="odd">
+        <td>512K c1 gmu=0.98</td>
+        <td>512,000</td>
+        <td>1</td>
+        <td>1</td>
+        <td>64</td>
+        <td>1.64</td>
+        <td>1.64</td>
+        <td>0.4</td>
+        <td>1/1</td>
+        <td>OOM/503</td>
+        </tr>
+        </tbody>
+        </table>
+        <p><a href="images/latency-ttft-vs-prompt-tokens.svg"><img
+        src="images/latency-ttft-vs-prompt-tokens.svg"
+        alt="Latency and TTFT vs prompt tokens" /></a></p>
+        <p><a href="images/short-prompt-concurrency-latency.svg"><img
+        src="images/short-prompt-concurrency-latency.svg"
+        alt="Short prompt concurrency latency" /></a></p>
+        <p>The GuideLLM long-reasoning/agent-like validation used the
+        same OpenAI-compatible <code>/v1/chat/completions</code>
+        endpoint and a 980K-token operational-summary prompt. It
+        completed one request in 560.6 seconds, which matches the custom
+        client result closely enough to show that the multi-minute
+        response time is reproducible outside the custom harness.</p>
+        <table>
+        <colgroup>
+        <col style="width: 9%" />
+        <col style="width: 9%" />
+        <col style="width: 9%" />
+        <col style="width: 9%" />
+        <col style="width: 9%" />
+        <col style="width: 9%" />
+        <col style="width: 9%" />
+        <col style="width: 9%" />
+        <col style="width: 9%" />
+        <col style="width: 9%" />
+        <col style="width: 9%" />
+        </colgroup>
+        <thead>
+        <tr class="header">
+        <th>Case</th>
+        <th>Prompt tokens</th>
+        <th>Concurrency</th>
+        <th>Requests</th>
+        <th>Max output tokens</th>
+        <th>Latency s</th>
+        <th>Output tokens</th>
+        <th>TPOT ms</th>
+        <th>Total tokens/s</th>
+        <th>Completed</th>
+        <th>Status</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr class="odd">
+        <td>GuideLLM 980K c1 max32</td>
+        <td>980,010</td>
+        <td>1</td>
+        <td>1</td>
+        <td>32</td>
+        <td>560.61</td>
+        <td>32</td>
+        <td>17518.9</td>
+        <td>1748.2</td>
+        <td>1/1</td>
+        <td>OK</td>
+        </tr>
+        </tbody>
+        </table>
+        <p><a href="images/guidellm-980k-latency-comparison.svg"><img
+        src="images/guidellm-980k-latency-comparison.svg"
+        alt="GuideLLM 980K latency comparison" /></a></p>
+        <h2 id="gpu-utilization-interpretation">GPU utilization
+        interpretation</h2>
+        <p>The GPU drop is workload-stage dependent:</p>
+        <ul>
+        <li>In the 2K concurrent custom test, GPU0 averaged only 16.8%
+        while GPU1-3 averaged about 98%. The same test had 30.3s median
+        TTFT and 40.1s median latency because requests queued behind
+        <code>max_num_seqs=1</code>.</li>
+        <li>In the 512K and 980K single-request prefill tests, all four
+        GPUs averaged around 96-99%, and TTFT dominated the end-to-end
+        latency.</li>
+        <li>In the GuideLLM 980K run, GPU0-GPU3 averaged 97.6%, 97.8%,
+        97.8%, and 97.7% respectively during the monitored request.</li>
+        <li>Therefore, the GPU0 drop is useful evidence of
+        rank/scheduler imbalance in short/concurrent work, but it is not
+        the primary root cause of the multi-minute no-response
+        behavior.</li>
+        </ul>
+        <table>
+        <thead>
+        <tr class="header">
+        <th>Case</th>
+        <th>GPU0 mean %</th>
+        <th>GPU1 mean %</th>
+        <th>GPU2 mean %</th>
+        <th>GPU3 mean %</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr class="odd">
+        <td>2K c4/r8</td>
+        <td>16.8</td>
+        <td>98.6</td>
+        <td>97.9</td>
+        <td>98.7</td>
+        </tr>
+        <tr class="even">
+        <td>128K c1</td>
+        <td>75.5</td>
+        <td>91.7</td>
+        <td>91.6</td>
+        <td>91.7</td>
+        </tr>
+        <tr class="odd">
+        <td>512K c1</td>
+        <td>96.5</td>
+        <td>98.8</td>
+        <td>98.8</td>
+        <td>98.8</td>
+        </tr>
+        <tr class="even">
+        <td>980K c1</td>
+        <td>99.1</td>
+        <td>99.4</td>
+        <td>99.4</td>
+        <td>99.4</td>
+        </tr>
+        </tbody>
+        </table>
+        <table>
+        <colgroup>
+        <col style="width: 20%" />
+        <col style="width: 20%" />
+        <col style="width: 20%" />
+        <col style="width: 20%" />
+        <col style="width: 20%" />
+        </colgroup>
+        <thead>
+        <tr class="header">
+        <th>GuideLLM case</th>
+        <th>GPU0 mean %</th>
+        <th>GPU1 mean %</th>
+        <th>GPU2 mean %</th>
+        <th>GPU3 mean %</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr class="odd">
+        <td>GuideLLM 980K c1 max32</td>
+        <td>97.6</td>
+        <td>97.8</td>
+        <td>97.8</td>
+        <td>97.7</td>
+        </tr>
+        </tbody>
+        </table>
+        <p><a href="images/gpu-utilization-by-case.svg"><img
+        src="images/gpu-utilization-by-case.svg"
+        alt="GPU utilization by benchmark case" /></a></p>
+        <h2 id="startup-parameter-findings">Startup-parameter
+        findings</h2>
+        <table>
+        <colgroup>
+        <col style="width: 25%" />
+        <col style="width: 25%" />
+        <col style="width: 25%" />
+        <col style="width: 25%" />
+        </colgroup>
+        <thead>
+        <tr class="header">
+        <th>Profile</th>
+        <th>Startup/API result</th>
+        <th>KV cache evidence</th>
+        <th>Operational interpretation</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr class="odd">
+        <td><code>gmu=0.90</code>, <code>seq=4</code>,
+        <code>bt=65536</code></td>
+        <td>Failed startup</td>
+        <td>Available KV cache memory <code>-1.49 GiB</code>;
+        <code>No available memory for the cache blocks</code></td>
+        <td>Destructive startup boundary</td>
+        </tr>
+        <tr class="even">
+        <td><code>gmu=0.95</code>, <code>seq=1</code>,
+        <code>bt=32768</code></td>
+        <td>Ready and validated</td>
+        <td>GPU KV cache <code>308,112</code> tokens; estimated 1.01M
+        concurrency <code>1.22x</code></td>
+        <td>Recommended profile</td>
+        </tr>
+        <tr class="odd">
+        <td><code>gmu=0.95</code>, <code>seq=1</code>,
+        <code>bt=65536</code></td>
+        <td>Ready but poor KV</td>
+        <td>GPU KV cache <code>90,128</code> tokens; estimated 1.01M
+        concurrency <code>0.36x</code></td>
+        <td>Not useful for 1M requests</td>
+        </tr>
+        <tr class="even">
+        <td><code>gmu=0.98</code>, <code>seq=1</code>,
+        <code>bt=32768</code></td>
+        <td>Ready, then crashed on 512K</td>
+        <td>GPU KV cache <code>366,800</code> tokens; estimated 1.01M
+        concurrency <code>1.45x</code>; runtime OOM</td>
+        <td>Destructive runtime boundary</td>
+        </tr>
+        </tbody>
+        </table>
+        <p><a href="images/kv-capacity-by-startup-params.svg"><img
+        src="images/kv-capacity-by-startup-params.svg"
+        alt="KV capacity by startup parameters" /></a></p>
+        <p><a href="images/destructive-gmu98-512k.svg"><img
+        src="images/destructive-gmu98-512k.svg"
+        alt="Destructive gmu98 512K failure" /></a></p>
+        <h2 id="destructive-evidence">Destructive evidence</h2>
+        <p>The <code>gpu_memory_utilization=0.98</code> run is the
+        clearest destructive runtime parameter:</p>
+        <pre class="text"><code>(Worker_TP1 pid=510) (Worker_TP3 pid=512) ERROR 06-10 13:01:40 [multiproc_executor.py:932] torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 256.00 MiB. GPU 0 has a total capacity of 44.39 GiB of which 151.31 MiB is free. Including non-PyTorch memory, this process has 44.24 GiB memory in use. Of the allocated memory 43.37 GiB is allocated by PyTorch, and 37.70 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)</code></pre>
+        <p>After this error the vLLM worker processes shut down and
+        <code>/health</code> returned HTTP 503. The client-side timing
+        from that run is intentionally not counted as successful
+        performance because <code>output_chars_total=0</code> and the
+        server was unhealthy.</p>
+        <p>Earlier destructive startup evidence also exists: the higher
+        sequence/batch baseline with
+        <code>gpu_memory_utilization=0.90</code>,
+        <code>max_num_seqs=4</code>, and
+        <code>max_num_batched_tokens=65536</code> failed KV-cache
+        initialization with
+        <code>Available KV cache memory: -1.49 GiB</code>.</p>
+        <h2 id="host-evidence">Host evidence</h2>
+        <p>The host had no NVMe devices in this redeployed VM, so model
+        cache, temporary files, logs, and results were placed under
+        root-backed <code>/mnt/bench-root</code>.</p>
+        <pre class="text"><code>## gpu
+Wed Jun 10 11:38:05 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 580.159.04             Driver Version: 580.159.04     CUDA Version: 13.0     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA L40S                    On  |   00000000:8D:00.0 Off |                    0 |
+| N/A   30C    P8             34W /  350W |       0MiB /  46068MiB |      0%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+|   1  NVIDIA L40S                    On  |   00000000:91:00.0 Off |                    0 |
+| N/A   31C    P8             36W /  350W |       0MiB /  46068MiB |      0%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+|   2  NVIDIA L40S                    On  |   00000000:AB:00.0 Off |                    0 |
+| N/A   31C    P8             35W /  350W |       0MiB /  46068MiB |      0%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+|   3  NVIDIA L40S                    On  |   00000000:AF:00.0 Off |                    0 |
+| N/A   31C    P8             35W /  350W |       0MiB /  46068MiB |      0%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+## nvidia-smi topo -m
+    GPU0    GPU1    GPU2    GPU3    CPU Affinity    NUMA Affinity   GPU NUMA ID
+GPU0     X  PHB SYS SYS 0-63    0       N/A
+GPU1    PHB  X  SYS SYS 0-63    0       N/A
+GPU2    SYS SYS  X  PHB 64-127  1       N/A
+GPU3    SYS SYS PHB  X  64-127  1       N/A
+
+Legend:
+
+  X    = Self
+  SYS  = Connection traversing PCIe as well as the SMP interconnect between NUMA nodes (e.g., QPI/UPI)
+  NODE = Connection traversing PCIe as well as the interconnect between PCIe Host Bridges within a NUMA node
+  PHB  = Connection traversing PCIe as well as a PCIe Host Bridge (typically the CPU)
+  PXB  = Connection traversing multiple PCIe bridges (without traversing the PCIe Host Bridge)
+  PIX  = Connection traversing at most a single PCIe bridge
+  NV#  = Connection traversing a bonded set of # NVLinks</code></pre>
+        <pre class="text"><code>## storage
+NAME    TYPE  SIZE FSTYPE  MOUNTPOINTS MODEL SERIAL
+vda     disk  1.3T                           boot-disk
+├─vda1  part  1.2T ext4    /                 
+├─vda14 part    4M                           
+├─vda15 part  106M vfat    /boot/efi         
+└─vda16 part  913M ext4    /boot             
+vdb     disk    1M iso9660                   
+Filesystem     Type      Size  Used Avail Use% Mounted on
+tmpfs          tmpfs      76G  2.0M   76G   1% /run
+/dev/vda1      ext4      1.3T   17G  1.2T   2% /
+tmpfs          tmpfs     378G     0  378G   0% /dev/shm
+tmpfs          tmpfs     5.0M     0  5.0M   0% /run/lock
+/dev/vda16     ext4      881M  258M  562M  32% /boot
+/dev/vda15     vfat      105M  6.2M   99M   6% /boot/efi
+cloud-metadata virtiofs  756G   16K  756G   1% /mnt/cloud-metadata
+tmpfs          tmpfs      76G   16K   76G   1% /run/user/1001
+cloud-metadata on /mnt/cloud-metadata type virtiofs (ro,relatime)</code></pre>
+        <h2 id="risks-and-next-steps">Risks and next steps</h2>
+        <ul>
+        <li>The model’s native config/tokenizer position limit is
+        262,144 tokens. The 1M service profile was operationally tested,
+        but it is an override profile, not proof that model quality is
+        guaranteed at 1M.</li>
+        <li>For customer-facing summary workflows, prefer
+        chunked/application-level summarization unless near-1M direct
+        prompts are truly required.</li>
+        <li>If direct 1M prompts must be supported, keep
+        <code>gpu_memory_utilization</code> below the destructive
+        headroom boundary, cap concurrency explicitly, and expose
+        progress/streaming indicators because TTFT can be several
+        minutes.</li>
+        <li>Further tuning could test
+        <code>gpu_memory_utilization=0.96</code> or CPU offload, but
+        <code>0.98</code> should be treated as a failure boundary on
+        this 4 x L40S host.</li>
+        </ul>
+        <h2 id="source-artifacts">Source artifacts</h2>
+        <ul>
+        <li>Full audit log:
+        <code>steps/steps-2026.06.10.19.35.md</code></li>
+        <li>Raw command output:
+        <code>steps/files/steps-2026-06-10-19-35/</code></li>
+        <li>Packaged benchmark data:
+        <code>solution/files/solution-2026-06-10-19-35/round13-results/qwen35-round13-results.tgz</code></li>
+        <li>Local extracted benchmark data:
+        <code>solution/files/solution-2026-06-10-19-35/round13-results/qwen35-round13/</code></li>
+        <li>Model references:
+        <code>https://huggingface.co/RedHatAI/Qwen3.5-122B-A10B-FP8-dynamic</code></li>
+        </ul>
+      </article>
+    </div>
+      </main>
+
+  <footer>
+    <p>
+      Licensed under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank"
+        rel="noopener">CC-BY-NC-SA 4.0</a>
+      &nbsp;·&nbsp;
+      <a href="https://github.com/wangzheng422/docker_env" target="_blank" rel="noopener">wangzheng422/docker_env</a>
+    </p>
+  </footer>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: false, theme: 'dark' });
+
+    const SITE_BUILD_ID = 'fbe91b569ae8';
+    const SITE_HOME_URL = '../../../../../index.html';
+
+    const getBuildIdFromHtml = (html) => {
+      const match = String(html).match(/<meta[^>]+name=["']site-build-id["'][^>]+content=["']([^"']+)["']/i)
+        || String(html).match(/<meta[^>]+content=["']([^"']+)["'][^>]+name=["']site-build-id["']/i);
+      return match ? match[1] : '';
+    };
+
+    const checkForSiteUpdate = async () => {
+      if (!SITE_BUILD_ID || window.location.protocol === 'file:') return;
+      try {
+        const probeUrl = new URL(SITE_HOME_URL || './index.html', window.location.href);
+        probeUrl.searchParams.set('site_cache_probe', Date.now().toString());
+        const response = await fetch(probeUrl.toString(), { cache: 'no-store' });
+        if (!response.ok) return;
+        const latestBuildId = getBuildIdFromHtml(await response.text());
+        if (!latestBuildId || latestBuildId === SITE_BUILD_ID) return;
+        if (sessionStorage.getItem('site-build-refresh') === latestBuildId) return;
+        sessionStorage.setItem('site-build-refresh', latestBuildId);
+        const freshUrl = new URL(window.location.href);
+        freshUrl.searchParams.set('v', latestBuildId);
+        window.location.replace(freshUrl.toString());
+      } catch (error) {
+        // Network errors should not block reading the current page.
+      }
+    };
+
+    const versionedLocalUrl = (rawUrl) => {
+      if (!rawUrl || /^(https?:)?\/\//i.test(rawUrl) || /^(data|blob|mailto):/i.test(rawUrl)) return rawUrl;
+      const url = new URL(rawUrl, window.location.href);
+      if (url.searchParams.has('v')) return rawUrl;
+      url.searchParams.set('v', SITE_BUILD_ID);
+      return url.toString();
+    };
+
+    const cacheBustPageAssets = () => {
+      document.querySelectorAll('img[src], video[src], audio[src], source[src]').forEach((node) => {
+        const src = node.getAttribute('src');
+        const versioned = versionedLocalUrl(src);
+        if (versioned !== src) node.setAttribute('src', versioned);
+      });
+    };
+
+    const updateReadingProgress = () => {
+      const progress = document.querySelector('.reading-progress');
+      if (!progress) return;
+      const scrollable = document.documentElement.scrollHeight - window.innerHeight;
+      const ratio = scrollable > 0 ? window.scrollY / scrollable : 0;
+      progress.style.transform = 'scaleX(' + Math.min(1, Math.max(0, ratio)) + ')';
+    };
+
+    const topicFor = (text, href) => {
+      const haystack = (text + ' ' + href).toLowerCase();
+      if (/developers\.redhat\.com|redhatquickcourses|github\.com\/redhatquickcourses/.test(haystack)) return 'Red Hat';
+      if (/ai|llm|gpu|vllm|llama|model|rhaiis/.test(haystack)) return 'AI';
+      if (/network|ovn|bgp|dns|egress|ingress|metallb|nic|route/.test(haystack)) return 'Network';
+      if (/cert|tls|sso|keycloak|rhbk|security|compliance/.test(haystack)) return 'Security';
+      if (/perf|profile|throttling|heap|debug/.test(haystack)) return 'Performance';
+      if (/install|ipi|upi|sno|disconnected|bootstrap/.test(haystack)) return 'Install';
+      if (/rhel|coreos|rhcos|kernel|rpm|ostree/.test(haystack)) return 'RHEL';
+      if (/backup|storage|nfs|odf|ocs|ceph|dr/.test(haystack)) return 'Storage';
+      if (/pipeline|gitops|ansible|aap|rhdh|devops/.test(haystack)) return 'DevOps';
+      return 'OpenShift';
+    };
+
+    const yearFor = (text, href) => {
+      const match = (text + ' ' + href).match(/20\d{2}/);
+      return match ? match[0] : 'Notes';
+    };
+
+    const importantExternal = (href) =>
+      /developers\.redhat\.com|redhatquickcourses\.github\.io/i.test(href);
+
+    const titleForLink = (link) => {
+      const href = link.getAttribute('href') || '';
+      const directText = link.textContent.trim().replace(/\s+/g, ' ');
+      if (!/^https?:\/\//.test(directText)) return directText;
+      const parentItem = link.closest('ul')?.parentElement;
+      if (parentItem) {
+        const clone = parentItem.cloneNode(true);
+        clone.querySelectorAll('ul').forEach((nested) => nested.remove());
+        const parentText = clone.textContent.trim().replace(/\s+/g, ' ');
+        if (parentText) {
+          return parentText;
+        }
+      }
+      return directText;
+    };
+
+    const escapeHtml = (value) => String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+
+    const enhanceHome = () => {
+      if (!document.body.classList.contains('page-index')) return;
+      const source = document.querySelector('.home-source');
+      const grid = document.getElementById('note-grid');
+      const stats = document.getElementById('console-stats');
+      const externalPanel = document.getElementById('external-panel');
+      const topicStrip = document.getElementById('topic-strip');
+      const search = document.getElementById('console-search');
+      if (!source || !grid || !stats || !externalPanel || !topicStrip || !search) return;
+
+      const seen = new Set();
+      const links = Array.from(source.querySelectorAll('a[href]'))
+        .map((link) => {
+          const href = link.getAttribute('href') || '';
+          const text = titleForLink(link);
+          return { text, href, topic: topicFor(text, href), year: yearFor(text, href) };
+        });
+      const notes = links
+        .filter((note) => note.text && !note.href.startsWith('http') && !seen.has(note.href) && seen.add(note.href));
+      const externalLinks = links
+        .filter((note) => note.text && importantExternal(note.href));
+
+      const topics = ['All', ...Array.from(new Set(notes.map((note) => note.topic))).sort()];
+      let activeTopic = 'All';
+
+      const renderStats = () => {
+        const years = notes.map((note) => note.year).filter((year) => year.length === 4 && /^\d{4}/.test(year));
+        const latest = years.length ? Math.max(...years.map(Number)) : 'N/A';
+        const oldest = years.length ? Math.min(...years.map(Number)) : 'N/A';
+        stats.innerHTML = [
+          ['Notes', notes.length],
+          ['Resources', externalLinks.length],
+          ['Topics', topics.length - 1],
+          ['Latest', latest],
+        ].map(([label, value]) => '<div class="stat-tile"><span>' + label + '</span><strong>' + value + '</strong></div>').join('');
+        const signal = document.getElementById('signal-count');
+        if (signal) signal.textContent = notes.length + ' links indexed';
+      };
+
+      const renderExternal = () => {
+        externalPanel.innerHTML =
+          '<div class="section-heading"><span>Published / Learning</span><strong>Red Hat resources</strong></div>' +
+          '<div class="external-grid">' +
+          externalLinks.map((note) =>
+            '<a class="resource-card" href="' + escapeHtml(note.href) + '" target="_blank" rel="noopener">' +
+            '<span class="note-meta"><span>' + escapeHtml(note.year) + '</span><span>' + escapeHtml(note.topic) + '</span></span>' +
+            '<strong>' + escapeHtml(note.text) + '</strong>' +
+            '<small>' + escapeHtml(note.href) + '</small>' +
+            '</a>'
+          ).join('') +
+          '</div>';
+      };
+
+      const renderTopics = () => {
+        topicStrip.innerHTML = topics.map((topic) => '<button class="topic-chip' + (topic === activeTopic ? ' active' : '') + '" type="button" data-topic="' + escapeHtml(topic) + '">' + escapeHtml(topic) + '</button>').join('');
+        topicStrip.querySelectorAll('button').forEach((button) => {
+          button.addEventListener('click', () => {
+            activeTopic = button.dataset.topic || 'All';
+            renderTopics();
+            renderCards();
+          });
+        });
+      };
+
+      const renderCards = () => {
+        const query = search.value.trim().toLowerCase();
+        const filtered = notes.filter((note) => {
+          const topicMatch = activeTopic === 'All' || note.topic === activeTopic;
+          const queryMatch = !query || (note.text + ' ' + note.href + ' ' + note.topic + ' ' + note.year).toLowerCase().includes(query);
+          return topicMatch && queryMatch;
+        });
+        grid.innerHTML = filtered.map((note) =>
+          '<a class="note-card" href="' + escapeHtml(note.href) + '">' +
+          '<span class="note-meta"><span>' + escapeHtml(note.year) + '</span><span>' + escapeHtml(note.topic) + '</span></span>' +
+          '<strong>' + escapeHtml(note.text) + '</strong>' +
+          '<small>' + escapeHtml(note.href) + '</small>' +
+          '</a>'
+        ).join('') || '<p class="empty-state">No matching notes.</p>';
+      };
+
+      const drawMap = () => {
+        const canvas = document.getElementById('knowledge-canvas');
+        if (!(canvas instanceof HTMLCanvasElement)) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        const width = canvas.width;
+        const height = canvas.height;
+        const nodes = notes.slice(0, 44).map((note, index) => {
+          const angle = (index / 44) * Math.PI * 2;
+          const ring = 90 + (index % 5) * 22;
+          return {
+            x: width / 2 + Math.cos(angle) * ring,
+            y: height / 2 + Math.sin(angle) * ring * 0.72,
+            topic: note.topic,
+          };
+        });
+        ctx.clearRect(0, 0, width, height);
+        ctx.strokeStyle = 'rgba(88, 166, 255, 0.14)';
+        ctx.lineWidth = 1;
+        nodes.forEach((node, index) => {
+          const next = nodes[(index + 7) % nodes.length];
+          ctx.beginPath();
+          ctx.moveTo(node.x, node.y);
+          ctx.lineTo(next.x, next.y);
+          ctx.stroke();
+        });
+        const palette = {
+          AI: '#a371f7',
+          Network: '#39d0d8',
+          Security: '#ff7b72',
+          Performance: '#f2cc60',
+          Install: '#7ee787',
+          RHEL: '#ff7b72',
+          Storage: '#d2a8ff',
+          DevOps: '#ffa657',
+          OpenShift: '#58a6ff',
+        };
+        nodes.forEach((node) => {
+          ctx.fillStyle = palette[node.topic] || '#58a6ff';
+          ctx.beginPath();
+          ctx.arc(node.x, node.y, 3.4, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      };
+
+      search.addEventListener('input', renderCards);
+      renderStats();
+      renderExternal();
+      renderTopics();
+      renderCards();
+      drawMap();
+      document.body.classList.add('home-enhanced');
+    };
+
+    const enhanceCodeBlocks = () => {
+      document.querySelectorAll('pre').forEach((pre) => {
+        if (pre.classList.contains('mermaid') || pre.querySelector('.copy-code')) return;
+        const button = document.createElement('button');
+        button.className = 'copy-code';
+        button.type = 'button';
+        button.textContent = 'Copy';
+        button.addEventListener('click', async () => {
+          await navigator.clipboard.writeText(pre.textContent || '');
+          button.textContent = 'Copied';
+          setTimeout(() => { button.textContent = 'Copy'; }, 1200);
+        });
+        pre.appendChild(button);
+      });
+    };
+
+    window.addEventListener('scroll', updateReadingProgress, { passive: true });
+    window.addEventListener('pageshow', (event) => {
+      if (event.persisted) checkForSiteUpdate();
+    });
+    document.addEventListener('DOMContentLoaded', async () => {
+      checkForSiteUpdate();
+      cacheBustPageAssets();
+      updateReadingProgress();
+      enhanceHome();
+      enhanceCodeBlocks();
+      // pandoc 输出 mermaid 为 <pre class="mermaid"><code>...</code></pre>
+      // 需要转成 <div class="mermaid">...</div> 供 mermaid.js 渲染
+      document.querySelectorAll('pre.mermaid').forEach(pre => {
+        const div = document.createElement('div');
+        div.classList.add('mermaid');
+        div.textContent = pre.textContent;
+        pre.replaceWith(div);
+      });
+      // 也处理 <pre><code class="language-mermaid"> 形式（备用）
+      document.querySelectorAll('pre code.language-mermaid').forEach(code => {
+        const div = document.createElement('div');
+        div.classList.add('mermaid');
+        div.textContent = code.textContent;
+        code.closest('pre').replaceWith(div);
+      });
+      await mermaid.run();
+    });
+  </script>
+</body>
+
+</html>

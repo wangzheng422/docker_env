@@ -1,0 +1,1122 @@
+<!DOCTYPE html>
+<html lang="zh" dir="ltr">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="generator" content="pandoc" />
+  <meta name="site-build-id" content="fbe91b569ae8" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <title>KVM Network Performance Tuning | wandering.star notes</title>
+  <meta name="description"
+    content="Wandering field notes on OpenShift, RHEL, AI infrastructure, and platform operations." />
+  <!-- Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-E3FRMDB7L2"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-E3FRMDB7L2');
+  </script>
+  <style>
+  html {
+    color: #1a1a1a;
+    background-color: #fdfdfd;
+  }
+  body {
+    margin: 0 auto;
+    max-width: 36em;
+    padding-left: 50px;
+    padding-right: 50px;
+    padding-top: 50px;
+    padding-bottom: 50px;
+    hyphens: auto;
+    overflow-wrap: break-word;
+    text-rendering: optimizeLegibility;
+    font-kerning: normal;
+  }
+  @media (max-width: 600px) {
+    body {
+      font-size: 0.9em;
+      padding: 12px;
+    }
+    h1 {
+      font-size: 1.8em;
+    }
+  }
+  @media print {
+    html {
+      background-color: white;
+    }
+    body {
+      background-color: transparent;
+      color: black;
+      font-size: 12pt;
+    }
+    p, h2, h3 {
+      orphans: 3;
+      widows: 3;
+    }
+    h2, h3, h4 {
+      page-break-after: avoid;
+    }
+  }
+  p {
+    margin: 1em 0;
+  }
+  a {
+    color: #1a1a1a;
+  }
+  a:visited {
+    color: #1a1a1a;
+  }
+  img {
+    max-width: 100%;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.4em;
+  }
+  h5, h6 {
+    font-size: 1em;
+    font-style: italic;
+  }
+  h6 {
+    font-weight: normal;
+  }
+  ol, ul {
+    padding-left: 1.7em;
+    margin-top: 1em;
+  }
+  li > ol, li > ul {
+    margin-top: 0;
+  }
+  blockquote {
+    margin: 1em 0 1em 1.7em;
+    padding-left: 1em;
+    border-left: 2px solid #e6e6e6;
+    color: #606060;
+  }
+  code {
+    font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+    font-size: 85%;
+    margin: 0;
+    hyphens: manual;
+  }
+  pre {
+    margin: 1em 0;
+    overflow: auto;
+  }
+  pre code {
+    padding: 0;
+    overflow: visible;
+    overflow-wrap: normal;
+  }
+  .sourceCode {
+   background-color: transparent;
+   overflow: visible;
+  }
+  hr {
+    background-color: #1a1a1a;
+    border: none;
+    height: 1px;
+    margin: 1em 0;
+  }
+  table {
+    margin: 1em 0;
+    border-collapse: collapse;
+    width: 100%;
+    overflow-x: auto;
+    display: block;
+    font-variant-numeric: lining-nums tabular-nums;
+  }
+  table caption {
+    margin-bottom: 0.75em;
+  }
+  tbody {
+    margin-top: 0.5em;
+    border-top: 1px solid #1a1a1a;
+    border-bottom: 1px solid #1a1a1a;
+  }
+  th {
+    border-top: 1px solid #1a1a1a;
+    padding: 0.25em 0.5em 0.25em 0.5em;
+  }
+  td {
+    padding: 0.125em 0.5em 0.25em 0.5em;
+  }
+  header {
+    margin-bottom: 4em;
+    text-align: center;
+  }
+  #TOC li {
+    list-style: none;
+  }
+  #TOC ul {
+    padding-left: 1.3em;
+  }
+  #TOC > ul {
+    padding-left: 0;
+  }
+  #TOC a:not(:hover) {
+    text-decoration: none;
+  }
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  div.columns{display: flex; gap: min(4vw, 1.5em);}
+  div.column{flex: auto; overflow-x: auto;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  /* The extra [class] is a hack that increases specificity enough to
+     override a similar rule in reveal.js */
+  ul.task-list[class]{list-style: none;}
+  ul.task-list li input[type="checkbox"] {
+    font-size: inherit;
+    width: 0.8em;
+    margin: 0 0.8em 0.2em -1.6em;
+    vertical-align: middle;
+  }
+  .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  /* CSS for syntax highlighting */
+  pre > code.sourceCode { white-space: pre; position: relative; }
+  pre > code.sourceCode > span { line-height: 1.25; }
+  pre > code.sourceCode > span:empty { height: 1.2em; }
+  .sourceCode { overflow: visible; }
+  code.sourceCode > span { color: inherit; text-decoration: inherit; }
+  div.sourceCode { margin: 1em 0; }
+  pre.sourceCode { margin: 0; }
+  @media screen {
+  div.sourceCode { overflow: auto; }
+  }
+  @media print {
+  pre > code.sourceCode { white-space: pre-wrap; }
+  pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+  }
+  pre.numberSource code
+    { counter-reset: source-line 0; }
+  pre.numberSource code > span
+    { position: relative; left: -4em; counter-increment: source-line; }
+  pre.numberSource code > span > a:first-child::before
+    { content: counter(source-line);
+      position: relative; left: -1em; text-align: right; vertical-align: baseline;
+      border: none; display: inline-block;
+      -webkit-touch-callout: none; -webkit-user-select: none;
+      -khtml-user-select: none; -moz-user-select: none;
+      -ms-user-select: none; user-select: none;
+      padding: 0 4px; width: 4em;
+    }
+  pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+  div.sourceCode
+    { color: #cccccc; background-color: #303030; }
+  @media screen {
+  pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+  }
+  code span.al { color: #ffcfaf; } /* Alert */
+  code span.an { color: #7f9f7f; font-weight: bold; } /* Annotation */
+  code span.at { } /* Attribute */
+  code span.bn { color: #dca3a3; } /* BaseN */
+  code span.bu { } /* BuiltIn */
+  code span.cf { color: #f0dfaf; } /* ControlFlow */
+  code span.ch { color: #dca3a3; } /* Char */
+  code span.cn { color: #dca3a3; font-weight: bold; } /* Constant */
+  code span.co { color: #7f9f7f; } /* Comment */
+  code span.cv { color: #7f9f7f; font-weight: bold; } /* CommentVar */
+  code span.do { color: #7f9f7f; } /* Documentation */
+  code span.dt { color: #dfdfbf; } /* DataType */
+  code span.dv { color: #dcdccc; } /* DecVal */
+  code span.er { color: #c3bf9f; } /* Error */
+  code span.ex { } /* Extension */
+  code span.fl { color: #c0bed1; } /* Float */
+  code span.fu { color: #efef8f; } /* Function */
+  code span.im { } /* Import */
+  code span.in { color: #7f9f7f; font-weight: bold; } /* Information */
+  code span.kw { color: #f0dfaf; } /* Keyword */
+  code span.op { color: #f0efd0; } /* Operator */
+  code span.ot { color: #efef8f; } /* Other */
+  code span.pp { color: #ffcfaf; font-weight: bold; } /* Preprocessor */
+  code span.sc { color: #dca3a3; } /* SpecialChar */
+  code span.ss { color: #cc9393; } /* SpecialString */
+  code span.st { color: #cc9393; } /* String */
+  code span.va { } /* Variable */
+  code span.vs { color: #cc9393; } /* VerbatimString */
+  code span.wa { color: #7f9f7f; font-weight: bold; } /* Warning */
+  </style>
+  <link rel="stylesheet" href="../../../style.css?v=fbe91b569ae8" />
+  </head>
+
+<body class="page-article">
+  <div class="reading-progress" aria-hidden="true"></div>
+  <div class="console-backdrop" aria-hidden="true"></div>
+  <nav class="site-nav">
+    <div class="nav-inner">
+      <a class="nav-brand" href="../../../index.html">wandering.star<span>notes</span></a>
+      <div class="nav-links">
+        <a href="https://github.com/wangzheng422/docker_env" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://www.youtube.com/@wangzheng422" target="_blank" rel="noopener">YouTube</a>
+      </div>
+    </div>
+  </nav>
+
+  <main>
+            <a class="back-link" href="../../../index.html">← Back to Index</a>
+        <div class="article-layout">
+            <aside class="toc-panel">
+        <div class="toc-title">ON THIS PAGE</div>
+        <ul>
+        <li><a href="#kvm-network-performance-tuning"
+        id="toc-kvm-network-performance-tuning">KVM Network Performance
+        Tuning</a>
+        <ul>
+        <li><a href="#overview" id="toc-overview">Overview</a></li>
+        <li><a href="#tuning-results-summary"
+        id="toc-tuning-results-summary">Tuning Results Summary</a>
+        <ul>
+        <li><a href="#iperf3-network-performance"
+        id="toc-iperf3-network-performance">iperf3 Network
+        Performance</a></li>
+        <li><a href="#fio-disk-performance"
+        id="toc-fio-disk-performance">fio Disk Performance</a></li>
+        </ul></li>
+        <li><a href="#detailed-tuning-solutions"
+        id="toc-detailed-tuning-solutions">Detailed Tuning Solutions</a>
+        <ul>
+        <li><a href="#part-1-host-kernel-modules"
+        id="toc-part-1-host-kernel-modules">Part 1: Host Kernel
+        Modules</a></li>
+        <li><a href="#part-2-host-memory-optimization"
+        id="toc-part-2-host-memory-optimization">Part 2: Host Memory
+        Optimization</a></li>
+        <li><a href="#part-3-vm-xml-configuration-optimization"
+        id="toc-part-3-vm-xml-configuration-optimization">Part 3: VM XML
+        Configuration Optimization</a></li>
+        <li><a href="#part-4-host-network-parameter-tuning"
+        id="toc-part-4-host-network-parameter-tuning">Part 4: Host
+        Network Parameter Tuning</a></li>
+        <li><a href="#part-5-guest-os-internal-tuning"
+        id="toc-part-5-guest-os-internal-tuning">Part 5: Guest OS
+        Internal Tuning</a></li>
+        </ul></li>
+        <li><a href="#optimization-impact-breakdown"
+        id="toc-optimization-impact-breakdown">Optimization Impact
+        Breakdown</a></li>
+        <li><a href="#non-applied-optimizations-and-reasons"
+        id="toc-non-applied-optimizations-and-reasons">Non-Applied
+        Optimizations and Reasons</a></li>
+        <li><a
+        href="#analysis-of-why-multi-stream-performance-does-not-reach-100"
+        id="toc-analysis-of-why-multi-stream-performance-does-not-reach-100">Analysis
+        of Why Multi-Stream Performance Does Not Reach 100%</a></li>
+        <li><a
+        href="#complete-optimization-checklist-one-shot-deployment"
+        id="toc-complete-optimization-checklist-one-shot-deployment">Complete
+        Optimization Checklist (One-Shot Deployment)</a>
+        <ul>
+        <li><a href="#host-configuration-script"
+        id="toc-host-configuration-script">Host Configuration
+        Script</a></li>
+        <li><a href="#guest-configuration-script"
+        id="toc-guest-configuration-script">Guest Configuration
+        Script</a></li>
+        </ul></li>
+        <li><a href="#conclusion"
+        id="toc-conclusion">Conclusion</a></li>
+        </ul></li>
+        </ul>
+      </aside>
+            <article class="markdown-body article-shell">
+        <h1 id="kvm-network-performance-tuning">KVM Network Performance
+        Tuning</h1>
+        <h2 id="overview">Overview</h2>
+        <p>This document records a complete solution for achieving
+        near-bare-metal network performance on KVM virtual machines
+        running on AWS c5n.metal instances, through a series of
+        host-level, VM XML configuration, and Guest OS tuning
+        techniques.</p>
+        <p><strong>Key Constraint</strong>: AWS environments do not
+        support SR-IOV / macvtap NIC passthrough. All optimizations are
+        based on virtio-net + NAT bridge mode.</p>
+        <hr />
+        <h2 id="tuning-results-summary">Tuning Results Summary</h2>
+        <h3 id="iperf3-network-performance">iperf3 Network
+        Performance</h3>
+        <table>
+        <colgroup>
+        <col style="width: 21%" />
+        <col style="width: 34%" />
+        <col style="width: 43%" />
+        </colgroup>
+        <thead>
+        <tr class="header">
+        <th>Test Scenario</th>
+        <th>Single-Stream Bandwidth</th>
+        <th>Multi-Stream P=16 Bandwidth</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr class="odd">
+        <td>ec2A bare metal → ec2B</td>
+        <td>4.94 Gbits/sec</td>
+        <td>23.1 Gbits/sec</td>
+        </tr>
+        <tr class="even">
+        <td>KVM Guest baseline → ec2B</td>
+        <td>4.76 Gbits/sec (96.4%)</td>
+        <td>9.24 Gbits/sec (40.0%)</td>
+        </tr>
+        <tr class="odd">
+        <td><strong>KVM Guest optimized → ec2B</strong></td>
+        <td><strong>4.94 Gbits/sec (100%)</strong></td>
+        <td><strong>13.4 Gbits/sec (58.0%)</strong></td>
+        </tr>
+        </tbody>
+        </table>
+        <ul>
+        <li>Single-stream performance: improved from 96.4% to
+        <strong>100%</strong>, completely eliminating virtualization
+        overhead</li>
+        <li>Multi-stream performance: improved from 40.0% to
+        <strong>58.0%</strong>, a 45% improvement</li>
+        </ul>
+        <h3 id="fio-disk-performance">fio Disk Performance</h3>
+        <p>fio performance shows no regression before and after
+        optimization (4k randread/randwrite both within margin of
+        error), confirming that the tuning only affects the network path
+        and does not impact disk I/O.</p>
+        <hr />
+        <h2 id="detailed-tuning-solutions">Detailed Tuning
+        Solutions</h2>
+        <h3 id="part-1-host-kernel-modules">Part 1: Host Kernel
+        Modules</h3>
+        <h4 id="load-vhost-net-module">1. Load vhost-net Module</h4>
+        <div class="sourceCode" id="cb1"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> modprobe vhost_net</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="st">&quot;vhost_net&quot;</span> <span class="kw">|</span> <span class="fu">sudo</span> tee /etc/modules-load.d/vhost-net.conf</span></code></pre></div>
+        <p><strong>Rationale</strong>: vhost-net moves virtio-net packet
+        processing from the QEMU userspace process into kernel-space
+        vhost worker threads, eliminating the context-switch overhead
+        between userspace and kernelspace. This is the most fundamental
+        and impactful step in KVM network performance optimization.</p>
+        <p><strong>Effect</strong>: Enabling this alone can improve
+        network throughput by 20–30%.</p>
+        <h4 id="load-and-disable-bridge-netfilter">2. Load and Disable
+        Bridge Netfilter</h4>
+        <div class="sourceCode" id="cb2"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> modprobe br_netfilter</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> 0 <span class="kw">|</span> <span class="fu">sudo</span> tee /proc/sys/net/bridge/bridge-nf-call-iptables</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> 0 <span class="kw">|</span> <span class="fu">sudo</span> tee /proc/sys/net/bridge/bridge-nf-call-ip6tables</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> 0 <span class="kw">|</span> <span class="fu">sudo</span> tee /proc/sys/net/bridge/bridge-nf-call-arptables</span></code></pre></div>
+        <p>Persistent configuration:</p>
+        <div class="sourceCode" id="cb3"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> <span class="op">&lt;&lt; EOF</span> <span class="kw">|</span> <span class="fu">sudo</span> tee /etc/sysctl.d/99-bridge-nf.conf</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="st">net.bridge.bridge-nf-call-iptables = 0</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="st">net.bridge.bridge-nf-call-ip6tables = 0</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="st">net.bridge.bridge-nf-call-arptables = 0</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="op">EOF</span></span></code></pre></div>
+        <p><strong>Rationale</strong>: By default, the Linux bridge
+        sends all bridged packets through iptables/ip6tables/arptables
+        for filtering, which is unnecessary overhead for KVM NAT
+        scenarios. Disabling this allows packets to be forwarded
+        directly, reducing CPU cycle consumption.</p>
+        <h3 id="part-2-host-memory-optimization">Part 2: Host Memory
+        Optimization</h3>
+        <h4 id="hugepages">3. Hugepages</h4>
+        <div class="sourceCode" id="cb4"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Allocate 8192 × 2MB = 16GB hugepages (must exceed VM memory of 8GB)</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> 8192 <span class="kw">|</span> <span class="fu">sudo</span> tee /proc/sys/vm/nr_hugepages</span></code></pre></div>
+        <p>Persistent configuration:</p>
+        <div class="sourceCode" id="cb5"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="st">&quot;vm.nr_hugepages = 8192&quot;</span> <span class="kw">|</span> <span class="fu">sudo</span> tee /etc/sysctl.d/99-hugepages.conf</span></code></pre></div>
+        <p><strong>Rationale</strong>: Using 2MB hugepages instead of
+        default 4KB pages reduces TLB (Translation Lookaside Buffer)
+        miss rates by hundreds of times. For memory-intensive network
+        packet processing, reducing page table lookup overhead can
+        significantly improve performance.</p>
+        <p><strong>VM XML Configuration</strong>:</p>
+        <div class="sourceCode" id="cb6"><pre
+        class="sourceCode xml"><code class="sourceCode xml"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">memoryBacking</span>&gt;</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  &lt;<span class="kw">hugepages</span>/&gt;</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>&lt;/<span class="kw">memoryBacking</span>&gt;</span></code></pre></div>
+        <h3 id="part-3-vm-xml-configuration-optimization">Part 3: VM XML
+        Configuration Optimization</h3>
+        <h4 id="cpu-pinning-vcpupin">4. CPU Pinning (vcpupin)</h4>
+        <div class="sourceCode" id="cb7"><pre
+        class="sourceCode xml"><code class="sourceCode xml"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">vcpu</span><span class="ot"> placement=</span><span class="st">&#39;static&#39;</span>&gt;8&lt;/<span class="kw">vcpu</span>&gt;</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">cputune</span>&gt;</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  &lt;<span class="kw">vcpupin</span><span class="ot"> vcpu=</span><span class="st">&#39;0&#39;</span><span class="ot"> cpuset=</span><span class="st">&#39;0&#39;</span>/&gt;</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  &lt;<span class="kw">vcpupin</span><span class="ot"> vcpu=</span><span class="st">&#39;1&#39;</span><span class="ot"> cpuset=</span><span class="st">&#39;1&#39;</span>/&gt;</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>  &lt;<span class="kw">vcpupin</span><span class="ot"> vcpu=</span><span class="st">&#39;2&#39;</span><span class="ot"> cpuset=</span><span class="st">&#39;2&#39;</span>/&gt;</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>  &lt;<span class="kw">vcpupin</span><span class="ot"> vcpu=</span><span class="st">&#39;3&#39;</span><span class="ot"> cpuset=</span><span class="st">&#39;3&#39;</span>/&gt;</span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>  &lt;<span class="kw">vcpupin</span><span class="ot"> vcpu=</span><span class="st">&#39;4&#39;</span><span class="ot"> cpuset=</span><span class="st">&#39;4&#39;</span>/&gt;</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>  &lt;<span class="kw">vcpupin</span><span class="ot"> vcpu=</span><span class="st">&#39;5&#39;</span><span class="ot"> cpuset=</span><span class="st">&#39;5&#39;</span>/&gt;</span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>  &lt;<span class="kw">vcpupin</span><span class="ot"> vcpu=</span><span class="st">&#39;6&#39;</span><span class="ot"> cpuset=</span><span class="st">&#39;6&#39;</span>/&gt;</span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>  &lt;<span class="kw">vcpupin</span><span class="ot"> vcpu=</span><span class="st">&#39;7&#39;</span><span class="ot"> cpuset=</span><span class="st">&#39;7&#39;</span>/&gt;</span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>  &lt;<span class="kw">emulatorpin</span><span class="ot"> cpuset=</span><span class="st">&#39;8-9&#39;</span>/&gt;</span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>&lt;/<span class="kw">cputune</span>&gt;</span></code></pre></div>
+        <p><strong>Rationale</strong>:</p>
+        <ul>
+        <li><code>vcpupin</code>: Pins virtual CPUs to specific physical
+        CPU cores, preventing vCPU migration between physical cores
+        which would cause L1/L2 cache invalidations</li>
+        <li><code>emulatorpin</code>: Pins QEMU emulator threads to
+        dedicated physical cores (8–9), preventing emulator threads from
+        competing with vCPUs for CPU resources</li>
+        <li>Has the greatest impact on multi-stream network tests, as
+        multiple network processing threads can execute in parallel
+        without interfering with each other</li>
+        </ul>
+        <h4 id="cpu-host-passthrough-mode">5. CPU host-passthrough
+        Mode</h4>
+        <div class="sourceCode" id="cb8"><pre
+        class="sourceCode xml"><code class="sourceCode xml"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">cpu</span><span class="ot"> mode=</span><span class="st">&#39;host-passthrough&#39;</span><span class="ot"> check=</span><span class="st">&#39;none&#39;</span>&gt;</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  &lt;<span class="kw">topology</span><span class="ot"> sockets=</span><span class="st">&#39;1&#39;</span><span class="ot"> dies=</span><span class="st">&#39;1&#39;</span><span class="ot"> cores=</span><span class="st">&#39;8&#39;</span><span class="ot"> threads=</span><span class="st">&#39;1&#39;</span>/&gt;</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>&lt;/<span class="kw">cpu</span>&gt;</span></code></pre></div>
+        <p><strong>Rationale</strong>:</p>
+        <ul>
+        <li><code>host-passthrough</code>: Exposes all host CPU features
+        (SSE4.2, AVX2, AES-NI, etc.) directly to the Guest, avoiding CPU
+        instruction emulation overhead</li>
+        <li>An explicit CPU topology definition (1 socket × 8 cores)
+        allows the Guest kernel to correctly identify the NUMA topology,
+        optimizing memory access and interrupt distribution</li>
+        </ul>
+        <h4 id="q35-machine-type">6. Q35 Machine Type</h4>
+        <div class="sourceCode" id="cb9"><pre
+        class="sourceCode xml"><code class="sourceCode xml"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">os</span>&gt;</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  &lt;<span class="kw">type</span><span class="ot"> arch=</span><span class="st">&#39;x86_64&#39;</span><span class="ot"> machine=</span><span class="st">&#39;pc-q35-rhel9.4.0&#39;</span>&gt;hvm&lt;/<span class="kw">type</span>&gt;</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>&lt;/<span class="kw">os</span>&gt;</span></code></pre></div>
+        <p><strong>Rationale</strong>: Q35 is a modern PCIe-based
+        virtual chipset. Compared to the legacy i440fx:</p>
+        <ul>
+        <li>Supports native PCIe bus; virtio devices are presented as
+        PCIe devices, reducing bus emulation overhead</li>
+        <li>More efficient interrupt routing (MSI-X)</li>
+        <li>Better IOMMU support</li>
+        </ul>
+        <h4 id="virtio-net-multi-queue-vhost-driver">7. virtio-net
+        Multi-Queue + vhost Driver</h4>
+        <div class="sourceCode" id="cb10"><pre
+        class="sourceCode xml"><code class="sourceCode xml"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">interface</span><span class="ot"> type=</span><span class="st">&#39;network&#39;</span>&gt;</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  &lt;<span class="kw">source</span><span class="ot"> network=</span><span class="st">&#39;default&#39;</span>/&gt;</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>  &lt;<span class="kw">model</span><span class="ot"> type=</span><span class="st">&#39;virtio&#39;</span>/&gt;</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>  &lt;<span class="kw">driver</span><span class="ot"> name=</span><span class="st">&#39;vhost&#39;</span><span class="ot"> queues=</span><span class="st">&#39;8&#39;</span>/&gt;</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>&lt;/<span class="kw">interface</span>&gt;</span></code></pre></div>
+        <p><strong>Rationale</strong>:</p>
+        <ul>
+        <li><code>name='vhost'</code>: Specifies at the XML level that
+        the vhost-net kernel driver should handle network I/O</li>
+        <li><code>queues='8'</code>: Enables multi-queue virtio-net,
+        allowing multiple CPU cores to simultaneously process network
+        send/receive queues</li>
+        <li>Multi-queue is key to improving multi-stream network
+        performance; with a single queue, all network interrupts can
+        only be handled by one CPU</li>
+        </ul>
+        <h4 id="disk-io-optimization">8. Disk I/O Optimization</h4>
+        <div class="sourceCode" id="cb11"><pre
+        class="sourceCode xml"><code class="sourceCode xml"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">disk</span><span class="ot"> type=</span><span class="st">&#39;block&#39;</span><span class="ot"> device=</span><span class="st">&#39;disk&#39;</span>&gt;</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>  &lt;<span class="kw">driver</span><span class="ot"> name=</span><span class="st">&#39;qemu&#39;</span><span class="ot"> type=</span><span class="st">&#39;raw&#39;</span><span class="ot"> cache=</span><span class="st">&#39;none&#39;</span><span class="ot"> io=</span><span class="st">&#39;native&#39;</span>/&gt;</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>  &lt;<span class="kw">source</span><span class="ot"> dev=</span><span class="st">&#39;/dev/nvme1n1&#39;</span>/&gt;</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>  &lt;<span class="kw">target</span><span class="ot"> dev=</span><span class="st">&#39;vda&#39;</span><span class="ot"> bus=</span><span class="st">&#39;virtio&#39;</span>/&gt;</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>&lt;/<span class="kw">disk</span>&gt;</span></code></pre></div>
+        <p><strong>Rationale</strong>:</p>
+        <ul>
+        <li><code>cache='none'</code>: Bypasses the host page cache;
+        Guest I/O goes directly to the block device, avoiding double
+        caching</li>
+        <li><code>io='native'</code>: Uses Linux native asynchronous I/O
+        (AIO), which is more efficient than QEMU’s thread pool mode</li>
+        <li><code>type='raw'</code>: Raw device passthrough with no
+        qcow2 metadata overhead</li>
+        </ul>
+        <h3 id="part-4-host-network-parameter-tuning">Part 4: Host
+        Network Parameter Tuning</h3>
+        <h4 id="kernel-network-buffers">9. Kernel Network Buffers</h4>
+        <div class="sourceCode" id="cb12"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Increase TCP/Socket buffer sizes</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> sysctl <span class="at">-w</span> net.core.rmem_max=16777216      <span class="co"># 16MB</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> sysctl <span class="at">-w</span> net.core.wmem_max=16777216      <span class="co"># 16MB</span></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> sysctl <span class="at">-w</span> net.core.rmem_default=1048576   <span class="co"># 1MB</span></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> sysctl <span class="at">-w</span> net.core.wmem_default=1048576   <span class="co"># 1MB</span></span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a><span class="co"># TCP auto-tuning range</span></span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> sysctl <span class="at">-w</span> net.ipv4.tcp_rmem=<span class="st">&quot;4096 1048576 16777216&quot;</span></span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> sysctl <span class="at">-w</span> net.ipv4.tcp_wmem=<span class="st">&quot;4096 1048576 16777216&quot;</span></span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Network queue depth</span></span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> sysctl <span class="at">-w</span> net.core.netdev_max_backlog=5000</span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> sysctl <span class="at">-w</span> net.core.somaxconn=65535</span></code></pre></div>
+        <p>Persistent configuration:</p>
+        <div class="sourceCode" id="cb13"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> <span class="op">&lt;&lt; EOF</span> <span class="kw">|</span> <span class="fu">sudo</span> tee /etc/sysctl.d/99-net-perf.conf</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="st">net.core.rmem_max = 16777216</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a><span class="st">net.core.wmem_max = 16777216</span></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a><span class="st">net.core.rmem_default = 1048576</span></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a><span class="st">net.core.wmem_default = 1048576</span></span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a><span class="st">net.core.netdev_max_backlog = 5000</span></span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a><span class="st">net.core.somaxconn = 65535</span></span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a><span class="st">net.ipv4.tcp_rmem = 4096 1048576 16777216</span></span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a><span class="st">net.ipv4.tcp_wmem = 4096 1048576 16777216</span></span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a><span class="op">EOF</span></span>
+<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> sysctl <span class="at">-p</span> /etc/sysctl.d/99-net-perf.conf</span></code></pre></div>
+        <p><strong>Rationale</strong>: Default kernel network buffers
+        (typically 128KB–256KB) become a bottleneck in high-bandwidth
+        scenarios. Increasing the buffer sizes allows the TCP window to
+        auto-scale to larger values, fully utilizing high-bandwidth
+        links.</p>
+        <h4 id="virbr0-mtu-adjustment">10. virbr0 MTU Adjustment</h4>
+        <div class="sourceCode" id="cb14"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> ip link set virbr0 mtu 9000</span></code></pre></div>
+        <p><strong>Rationale</strong>: Increasing MTU to 9000 (Jumbo
+        Frame) reduces the number of packets that need to be processed
+        per GB of data by approximately 6x (1500→9000), directly
+        lowering CPU interrupt handling and protocol stack overhead.</p>
+        <h3 id="part-5-guest-os-internal-tuning">Part 5: Guest OS
+        Internal Tuning</h3>
+        <h4 id="enable-multi-queue">11. Enable Multi-Queue</h4>
+        <div class="sourceCode" id="cb15"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> ethtool <span class="at">-L</span> eth0 combined 8</span></code></pre></div>
+        <p><strong>Rationale</strong>: Although 8 queues are defined in
+        the VM XML, they must be activated inside the Guest using
+        ethtool to take effect. Once activated, network interrupts are
+        distributed across multiple CPU cores, enabling true multi-core
+        parallel network processing.</p>
+        <h4 id="guest-mtu-setting">12. Guest MTU Setting</h4>
+        <div class="sourceCode" id="cb16"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> ip link set eth0 mtu 9000</span></code></pre></div>
+        <p><strong>Rationale</strong>: Must match the MTU of the host’s
+        virbr0, otherwise packets larger than 1500 bytes will be
+        fragmented, which would actually decrease performance.</p>
+        <h4 id="guest-kernel-network-parameters">13. Guest Kernel
+        Network Parameters</h4>
+        <div class="sourceCode" id="cb17"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> sysctl <span class="at">-w</span> net.core.rmem_max=16777216</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> sysctl <span class="at">-w</span> net.core.wmem_max=16777216</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> sysctl <span class="at">-w</span> net.core.rmem_default=1048576</span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> sysctl <span class="at">-w</span> net.core.wmem_default=1048576</span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> sysctl <span class="at">-w</span> net.core.netdev_max_backlog=5000</span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> sysctl <span class="at">-w</span> net.core.somaxconn=65535</span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> sysctl <span class="at">-w</span> net.ipv4.tcp_rmem=<span class="st">&quot;4096 1048576 16777216&quot;</span></span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> sysctl <span class="at">-w</span> net.ipv4.tcp_wmem=<span class="st">&quot;4096 1048576 16777216&quot;</span></span></code></pre></div>
+        <p><strong>Rationale</strong>: The Guest kernel has its own
+        independent network parameter space, which must be tuned in sync
+        with the host. Otherwise, small buffers on the Guest side will
+        become the bottleneck.</p>
+        <hr />
+        <h2 id="optimization-impact-breakdown">Optimization Impact
+        Breakdown</h2>
+        <table>
+        <thead>
+        <tr class="header">
+        <th>Optimization</th>
+        <th>Primary Impact</th>
+        <th>Significance</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr class="odd">
+        <td>vhost-net</td>
+        <td>Single/multi-stream throughput</td>
+        <td>★★★★★</td>
+        </tr>
+        <tr class="even">
+        <td>Multi-queue virtio-net</td>
+        <td>Multi-stream throughput</td>
+        <td>★★★★★</td>
+        </tr>
+        <tr class="odd">
+        <td>CPU pinning</td>
+        <td>Multi-stream throughput, latency stability</td>
+        <td>★★★★☆</td>
+        </tr>
+        <tr class="even">
+        <td>Hugepages</td>
+        <td>Overall performance, latency</td>
+        <td>★★★☆☆</td>
+        </tr>
+        <tr class="odd">
+        <td>host-passthrough</td>
+        <td>CPU-intensive processing</td>
+        <td>★★★☆☆</td>
+        </tr>
+        <tr class="even">
+        <td>Bridge NF disabled</td>
+        <td>Throughput</td>
+        <td>★★☆☆☆</td>
+        </tr>
+        <tr class="odd">
+        <td>Kernel network buffers</td>
+        <td>High-bandwidth scenarios</td>
+        <td>★★☆☆☆</td>
+        </tr>
+        <tr class="even">
+        <td>MTU 9000</td>
+        <td>Large-block transfer throughput</td>
+        <td>★★☆☆☆</td>
+        </tr>
+        <tr class="odd">
+        <td>Q35 machine type</td>
+        <td>Interrupt efficiency</td>
+        <td>★☆☆☆☆</td>
+        </tr>
+        <tr class="even">
+        <td>Disk native I/O</td>
+        <td>Disk performance</td>
+        <td>★☆☆☆☆</td>
+        </tr>
+        </tbody>
+        </table>
+        <hr />
+        <h2 id="non-applied-optimizations-and-reasons">Non-Applied
+        Optimizations and Reasons</h2>
+        <table>
+        <colgroup>
+        <col style="width: 27%" />
+        <col style="width: 72%" />
+        </colgroup>
+        <thead>
+        <tr class="header">
+        <th>Item</th>
+        <th>Reason Not Used</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr class="odd">
+        <td>SR-IOV NIC passthrough</td>
+        <td>The ENA NIC on AWS c5n.metal does not support SR-IOV
+        passthrough within KVM</td>
+        </tr>
+        <tr class="even">
+        <td>macvtap passthrough</td>
+        <td>AWS ENA driver does not support macvtap/macvlan mode</td>
+        </tr>
+        <tr class="odd">
+        <td>DPDK (Data Plane Development Kit)</td>
+        <td>Requires dedicated application-layer support; incompatible
+        with iperf3</td>
+        </tr>
+        <tr class="even">
+        <td>AF_XDP</td>
+        <td>Requires application-layer adaptation</td>
+        </tr>
+        <tr class="odd">
+        <td>OVS-DPDK bridge</td>
+        <td>Architecturally heavy and requires application-layer
+        cooperation</td>
+        </tr>
+        </tbody>
+        </table>
+        <hr />
+        <h2
+        id="analysis-of-why-multi-stream-performance-does-not-reach-100">Analysis
+        of Why Multi-Stream Performance Does Not Reach 100%</h2>
+        <p>After optimization, multi-stream performance reaches 58% of
+        bare metal (13.4 vs 23.1 Gbits/sec). The reasons it cannot reach
+        100%:</p>
+        <ol type="1">
+        <li><strong>NAT overhead</strong>: All Guest traffic must pass
+        through virbr0 NAT translation, adding CPU instructions per
+        packet</li>
+        <li><strong>Virtual switch overhead</strong>: virbr0 is a Linux
+        bridge; each packet requires table lookups, forwarding, and
+        address translation</li>
+        <li><strong>Interrupt coalescing efficiency</strong>: virtio-net
+        interrupt coalescing is less efficient than hardware interrupt
+        coalescing on a physical ENA NIC</li>
+        <li><strong>vhost thread scheduling</strong>: vhost worker
+        threads still require management by the kernel scheduler,
+        introducing context switch overhead</li>
+        <li><strong>QEMU control plane</strong>: Although the data plane
+        is handled by vhost, QEMU still participates in some control
+        plane operations</li>
+        </ol>
+        <p>To further close this gap, technologies such as SR-IOV
+        passthrough or DPDK that bypass the kernel network stack would
+        be needed, but these are not available in the current AWS
+        environment.</p>
+        <hr />
+        <h2
+        id="complete-optimization-checklist-one-shot-deployment">Complete
+        Optimization Checklist (One-Shot Deployment)</h2>
+        <h3 id="host-configuration-script">Host Configuration
+        Script</h3>
+        <div class="sourceCode" id="cb18"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="co">#!/bin/bash</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a><span class="co"># host-optimize.sh - KVM host network performance optimization</span></span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a><span class="co"># 1. Load kernel modules</span></span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a><span class="ex">modprobe</span> vhost_net</span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="st">&quot;vhost_net&quot;</span> <span class="op">&gt;</span> /etc/modules-load.d/vhost-net.conf</span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a><span class="co"># 2. Disable bridge netfilter</span></span>
+<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a><span class="ex">modprobe</span> br_netfilter</span>
+<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a><span class="ex">sysctl</span> <span class="at">-w</span> net.bridge.bridge-nf-call-iptables=0</span>
+<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a><span class="ex">sysctl</span> <span class="at">-w</span> net.bridge.bridge-nf-call-ip6tables=0</span>
+<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a><span class="ex">sysctl</span> <span class="at">-w</span> net.bridge.bridge-nf-call-arptables=0</span>
+<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-14"><a href="#cb18-14" aria-hidden="true" tabindex="-1"></a><span class="co"># 3. Configure hugepages (adjust based on VM memory; must be &gt; VM RAM)</span></span>
+<span id="cb18-15"><a href="#cb18-15" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> 8192 <span class="op">&gt;</span> /proc/sys/vm/nr_hugepages</span>
+<span id="cb18-16"><a href="#cb18-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-17"><a href="#cb18-17" aria-hidden="true" tabindex="-1"></a><span class="co"># 4. Network buffer tuning</span></span>
+<span id="cb18-18"><a href="#cb18-18" aria-hidden="true" tabindex="-1"></a><span class="ex">sysctl</span> <span class="at">-w</span> net.core.rmem_max=16777216</span>
+<span id="cb18-19"><a href="#cb18-19" aria-hidden="true" tabindex="-1"></a><span class="ex">sysctl</span> <span class="at">-w</span> net.core.wmem_max=16777216</span>
+<span id="cb18-20"><a href="#cb18-20" aria-hidden="true" tabindex="-1"></a><span class="ex">sysctl</span> <span class="at">-w</span> net.core.rmem_default=1048576</span>
+<span id="cb18-21"><a href="#cb18-21" aria-hidden="true" tabindex="-1"></a><span class="ex">sysctl</span> <span class="at">-w</span> net.core.wmem_default=1048576</span>
+<span id="cb18-22"><a href="#cb18-22" aria-hidden="true" tabindex="-1"></a><span class="ex">sysctl</span> <span class="at">-w</span> net.core.netdev_max_backlog=5000</span>
+<span id="cb18-23"><a href="#cb18-23" aria-hidden="true" tabindex="-1"></a><span class="ex">sysctl</span> <span class="at">-w</span> net.core.somaxconn=65535</span>
+<span id="cb18-24"><a href="#cb18-24" aria-hidden="true" tabindex="-1"></a><span class="ex">sysctl</span> <span class="at">-w</span> net.ipv4.tcp_rmem=<span class="st">&quot;4096 1048576 16777216&quot;</span></span>
+<span id="cb18-25"><a href="#cb18-25" aria-hidden="true" tabindex="-1"></a><span class="ex">sysctl</span> <span class="at">-w</span> net.ipv4.tcp_wmem=<span class="st">&quot;4096 1048576 16777216&quot;</span></span>
+<span id="cb18-26"><a href="#cb18-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-27"><a href="#cb18-27" aria-hidden="true" tabindex="-1"></a><span class="co"># 5. virbr0 MTU</span></span>
+<span id="cb18-28"><a href="#cb18-28" aria-hidden="true" tabindex="-1"></a><span class="ex">ip</span> link set virbr0 mtu 9000</span>
+<span id="cb18-29"><a href="#cb18-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-30"><a href="#cb18-30" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="st">&quot;Host optimization complete.&quot;</span></span></code></pre></div>
+        <h3 id="guest-configuration-script">Guest Configuration
+        Script</h3>
+        <div class="sourceCode" id="cb19"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="co">#!/bin/bash</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a><span class="co"># guest-optimize.sh - KVM Guest network performance optimization</span></span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a><span class="co"># 1. Enable multi-queue (queue count must match VM XML definition)</span></span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a><span class="ex">ethtool</span> <span class="at">-L</span> eth0 combined 8</span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a><span class="co"># 2. MTU (must match host virbr0)</span></span>
+<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a><span class="ex">ip</span> link set eth0 mtu 9000</span>
+<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a><span class="co"># 3. Network buffer tuning</span></span>
+<span id="cb19-11"><a href="#cb19-11" aria-hidden="true" tabindex="-1"></a><span class="ex">sysctl</span> <span class="at">-w</span> net.core.rmem_max=16777216</span>
+<span id="cb19-12"><a href="#cb19-12" aria-hidden="true" tabindex="-1"></a><span class="ex">sysctl</span> <span class="at">-w</span> net.core.wmem_max=16777216</span>
+<span id="cb19-13"><a href="#cb19-13" aria-hidden="true" tabindex="-1"></a><span class="ex">sysctl</span> <span class="at">-w</span> net.core.rmem_default=1048576</span>
+<span id="cb19-14"><a href="#cb19-14" aria-hidden="true" tabindex="-1"></a><span class="ex">sysctl</span> <span class="at">-w</span> net.core.wmem_default=1048576</span>
+<span id="cb19-15"><a href="#cb19-15" aria-hidden="true" tabindex="-1"></a><span class="ex">sysctl</span> <span class="at">-w</span> net.core.netdev_max_backlog=5000</span>
+<span id="cb19-16"><a href="#cb19-16" aria-hidden="true" tabindex="-1"></a><span class="ex">sysctl</span> <span class="at">-w</span> net.core.somaxconn=65535</span>
+<span id="cb19-17"><a href="#cb19-17" aria-hidden="true" tabindex="-1"></a><span class="ex">sysctl</span> <span class="at">-w</span> net.ipv4.tcp_rmem=<span class="st">&quot;4096 1048576 16777216&quot;</span></span>
+<span id="cb19-18"><a href="#cb19-18" aria-hidden="true" tabindex="-1"></a><span class="ex">sysctl</span> <span class="at">-w</span> net.ipv4.tcp_wmem=<span class="st">&quot;4096 1048576 16777216&quot;</span></span>
+<span id="cb19-19"><a href="#cb19-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-20"><a href="#cb19-20" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="st">&quot;Guest optimization complete.&quot;</span></span></code></pre></div>
+        <hr />
+        <h2 id="conclusion">Conclusion</h2>
+        <p>Through 10 tuning measures, without using SR-IOV/macvtap
+        hardware passthrough:</p>
+        <ul>
+        <li><strong>Single-stream network performance</strong>: improved
+        from 96.4% to <strong>100%</strong>, completely eliminating
+        virtualization overhead</li>
+        <li><strong>Multi-stream network performance</strong>: improved
+        from 40.0% to <strong>58.0%</strong>, a 45% improvement</li>
+        <li><strong>Disk I/O performance</strong>: unchanged, no
+        regression</li>
+        </ul>
+        <p>The three most impactful optimizations are: <strong>vhost-net
+        kernel module</strong>, <strong>multi-queue virtio-net</strong>,
+        and <strong>CPU pinning</strong>. These three combined address
+        the core bottlenecks of KVM network virtualization —
+        userspace/kernelspace context switching, single-queue
+        bottlenecks, and CPU cache invalidations.</p>
+        <p>The fundamental reason multi-stream performance cannot reach
+        100% is: under the virtio-net + NAT bridge architecture, each
+        packet must still traverse the complete software path of Guest
+        virtio driver → vhost kernel thread → virbr0 Linux bridge →
+        iptables NAT translation → physical ENA NIC. This is at least 3
+        additional layers of software processing compared to a
+        bare-metal machine sending directly through the ENA NIC. These
+        overheads scale linearly with the number of concurrent streams.
+        To completely eliminate this gap, the only option is to use
+        SR-IOV or macvtap to pass the physical NIC directly to the
+        Guest, bypassing the host’s entire network stack — but AWS ENA
+        NICs do not support these passthrough modes. Therefore, 58% is
+        already close to the theoretical ceiling for the virtio-net NAT
+        architecture in the current environment.</p>
+      </article>
+    </div>
+      </main>
+
+  <footer>
+    <p>
+      Licensed under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank"
+        rel="noopener">CC-BY-NC-SA 4.0</a>
+      &nbsp;·&nbsp;
+      <a href="https://github.com/wangzheng422/docker_env" target="_blank" rel="noopener">wangzheng422/docker_env</a>
+    </p>
+  </footer>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: false, theme: 'dark' });
+
+    const SITE_BUILD_ID = 'fbe91b569ae8';
+    const SITE_HOME_URL = '../../../index.html';
+
+    const getBuildIdFromHtml = (html) => {
+      const match = String(html).match(/<meta[^>]+name=["']site-build-id["'][^>]+content=["']([^"']+)["']/i)
+        || String(html).match(/<meta[^>]+content=["']([^"']+)["'][^>]+name=["']site-build-id["']/i);
+      return match ? match[1] : '';
+    };
+
+    const checkForSiteUpdate = async () => {
+      if (!SITE_BUILD_ID || window.location.protocol === 'file:') return;
+      try {
+        const probeUrl = new URL(SITE_HOME_URL || './index.html', window.location.href);
+        probeUrl.searchParams.set('site_cache_probe', Date.now().toString());
+        const response = await fetch(probeUrl.toString(), { cache: 'no-store' });
+        if (!response.ok) return;
+        const latestBuildId = getBuildIdFromHtml(await response.text());
+        if (!latestBuildId || latestBuildId === SITE_BUILD_ID) return;
+        if (sessionStorage.getItem('site-build-refresh') === latestBuildId) return;
+        sessionStorage.setItem('site-build-refresh', latestBuildId);
+        const freshUrl = new URL(window.location.href);
+        freshUrl.searchParams.set('v', latestBuildId);
+        window.location.replace(freshUrl.toString());
+      } catch (error) {
+        // Network errors should not block reading the current page.
+      }
+    };
+
+    const versionedLocalUrl = (rawUrl) => {
+      if (!rawUrl || /^(https?:)?\/\//i.test(rawUrl) || /^(data|blob|mailto):/i.test(rawUrl)) return rawUrl;
+      const url = new URL(rawUrl, window.location.href);
+      if (url.searchParams.has('v')) return rawUrl;
+      url.searchParams.set('v', SITE_BUILD_ID);
+      return url.toString();
+    };
+
+    const cacheBustPageAssets = () => {
+      document.querySelectorAll('img[src], video[src], audio[src], source[src]').forEach((node) => {
+        const src = node.getAttribute('src');
+        const versioned = versionedLocalUrl(src);
+        if (versioned !== src) node.setAttribute('src', versioned);
+      });
+    };
+
+    const updateReadingProgress = () => {
+      const progress = document.querySelector('.reading-progress');
+      if (!progress) return;
+      const scrollable = document.documentElement.scrollHeight - window.innerHeight;
+      const ratio = scrollable > 0 ? window.scrollY / scrollable : 0;
+      progress.style.transform = 'scaleX(' + Math.min(1, Math.max(0, ratio)) + ')';
+    };
+
+    const topicFor = (text, href) => {
+      const haystack = (text + ' ' + href).toLowerCase();
+      if (/developers\.redhat\.com|redhatquickcourses|github\.com\/redhatquickcourses/.test(haystack)) return 'Red Hat';
+      if (/ai|llm|gpu|vllm|llama|model|rhaiis/.test(haystack)) return 'AI';
+      if (/network|ovn|bgp|dns|egress|ingress|metallb|nic|route/.test(haystack)) return 'Network';
+      if (/cert|tls|sso|keycloak|rhbk|security|compliance/.test(haystack)) return 'Security';
+      if (/perf|profile|throttling|heap|debug/.test(haystack)) return 'Performance';
+      if (/install|ipi|upi|sno|disconnected|bootstrap/.test(haystack)) return 'Install';
+      if (/rhel|coreos|rhcos|kernel|rpm|ostree/.test(haystack)) return 'RHEL';
+      if (/backup|storage|nfs|odf|ocs|ceph|dr/.test(haystack)) return 'Storage';
+      if (/pipeline|gitops|ansible|aap|rhdh|devops/.test(haystack)) return 'DevOps';
+      return 'OpenShift';
+    };
+
+    const yearFor = (text, href) => {
+      const match = (text + ' ' + href).match(/20\d{2}/);
+      return match ? match[0] : 'Notes';
+    };
+
+    const importantExternal = (href) =>
+      /developers\.redhat\.com|redhatquickcourses\.github\.io/i.test(href);
+
+    const titleForLink = (link) => {
+      const href = link.getAttribute('href') || '';
+      const directText = link.textContent.trim().replace(/\s+/g, ' ');
+      if (!/^https?:\/\//.test(directText)) return directText;
+      const parentItem = link.closest('ul')?.parentElement;
+      if (parentItem) {
+        const clone = parentItem.cloneNode(true);
+        clone.querySelectorAll('ul').forEach((nested) => nested.remove());
+        const parentText = clone.textContent.trim().replace(/\s+/g, ' ');
+        if (parentText) {
+          return parentText;
+        }
+      }
+      return directText;
+    };
+
+    const escapeHtml = (value) => String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+
+    const enhanceHome = () => {
+      if (!document.body.classList.contains('page-index')) return;
+      const source = document.querySelector('.home-source');
+      const grid = document.getElementById('note-grid');
+      const stats = document.getElementById('console-stats');
+      const externalPanel = document.getElementById('external-panel');
+      const topicStrip = document.getElementById('topic-strip');
+      const search = document.getElementById('console-search');
+      if (!source || !grid || !stats || !externalPanel || !topicStrip || !search) return;
+
+      const seen = new Set();
+      const links = Array.from(source.querySelectorAll('a[href]'))
+        .map((link) => {
+          const href = link.getAttribute('href') || '';
+          const text = titleForLink(link);
+          return { text, href, topic: topicFor(text, href), year: yearFor(text, href) };
+        });
+      const notes = links
+        .filter((note) => note.text && !note.href.startsWith('http') && !seen.has(note.href) && seen.add(note.href));
+      const externalLinks = links
+        .filter((note) => note.text && importantExternal(note.href));
+
+      const topics = ['All', ...Array.from(new Set(notes.map((note) => note.topic))).sort()];
+      let activeTopic = 'All';
+
+      const renderStats = () => {
+        const years = notes.map((note) => note.year).filter((year) => year.length === 4 && /^\d{4}/.test(year));
+        const latest = years.length ? Math.max(...years.map(Number)) : 'N/A';
+        const oldest = years.length ? Math.min(...years.map(Number)) : 'N/A';
+        stats.innerHTML = [
+          ['Notes', notes.length],
+          ['Resources', externalLinks.length],
+          ['Topics', topics.length - 1],
+          ['Latest', latest],
+        ].map(([label, value]) => '<div class="stat-tile"><span>' + label + '</span><strong>' + value + '</strong></div>').join('');
+        const signal = document.getElementById('signal-count');
+        if (signal) signal.textContent = notes.length + ' links indexed';
+      };
+
+      const renderExternal = () => {
+        externalPanel.innerHTML =
+          '<div class="section-heading"><span>Published / Learning</span><strong>Red Hat resources</strong></div>' +
+          '<div class="external-grid">' +
+          externalLinks.map((note) =>
+            '<a class="resource-card" href="' + escapeHtml(note.href) + '" target="_blank" rel="noopener">' +
+            '<span class="note-meta"><span>' + escapeHtml(note.year) + '</span><span>' + escapeHtml(note.topic) + '</span></span>' +
+            '<strong>' + escapeHtml(note.text) + '</strong>' +
+            '<small>' + escapeHtml(note.href) + '</small>' +
+            '</a>'
+          ).join('') +
+          '</div>';
+      };
+
+      const renderTopics = () => {
+        topicStrip.innerHTML = topics.map((topic) => '<button class="topic-chip' + (topic === activeTopic ? ' active' : '') + '" type="button" data-topic="' + escapeHtml(topic) + '">' + escapeHtml(topic) + '</button>').join('');
+        topicStrip.querySelectorAll('button').forEach((button) => {
+          button.addEventListener('click', () => {
+            activeTopic = button.dataset.topic || 'All';
+            renderTopics();
+            renderCards();
+          });
+        });
+      };
+
+      const renderCards = () => {
+        const query = search.value.trim().toLowerCase();
+        const filtered = notes.filter((note) => {
+          const topicMatch = activeTopic === 'All' || note.topic === activeTopic;
+          const queryMatch = !query || (note.text + ' ' + note.href + ' ' + note.topic + ' ' + note.year).toLowerCase().includes(query);
+          return topicMatch && queryMatch;
+        });
+        grid.innerHTML = filtered.map((note) =>
+          '<a class="note-card" href="' + escapeHtml(note.href) + '">' +
+          '<span class="note-meta"><span>' + escapeHtml(note.year) + '</span><span>' + escapeHtml(note.topic) + '</span></span>' +
+          '<strong>' + escapeHtml(note.text) + '</strong>' +
+          '<small>' + escapeHtml(note.href) + '</small>' +
+          '</a>'
+        ).join('') || '<p class="empty-state">No matching notes.</p>';
+      };
+
+      const drawMap = () => {
+        const canvas = document.getElementById('knowledge-canvas');
+        if (!(canvas instanceof HTMLCanvasElement)) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        const width = canvas.width;
+        const height = canvas.height;
+        const nodes = notes.slice(0, 44).map((note, index) => {
+          const angle = (index / 44) * Math.PI * 2;
+          const ring = 90 + (index % 5) * 22;
+          return {
+            x: width / 2 + Math.cos(angle) * ring,
+            y: height / 2 + Math.sin(angle) * ring * 0.72,
+            topic: note.topic,
+          };
+        });
+        ctx.clearRect(0, 0, width, height);
+        ctx.strokeStyle = 'rgba(88, 166, 255, 0.14)';
+        ctx.lineWidth = 1;
+        nodes.forEach((node, index) => {
+          const next = nodes[(index + 7) % nodes.length];
+          ctx.beginPath();
+          ctx.moveTo(node.x, node.y);
+          ctx.lineTo(next.x, next.y);
+          ctx.stroke();
+        });
+        const palette = {
+          AI: '#a371f7',
+          Network: '#39d0d8',
+          Security: '#ff7b72',
+          Performance: '#f2cc60',
+          Install: '#7ee787',
+          RHEL: '#ff7b72',
+          Storage: '#d2a8ff',
+          DevOps: '#ffa657',
+          OpenShift: '#58a6ff',
+        };
+        nodes.forEach((node) => {
+          ctx.fillStyle = palette[node.topic] || '#58a6ff';
+          ctx.beginPath();
+          ctx.arc(node.x, node.y, 3.4, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      };
+
+      search.addEventListener('input', renderCards);
+      renderStats();
+      renderExternal();
+      renderTopics();
+      renderCards();
+      drawMap();
+      document.body.classList.add('home-enhanced');
+    };
+
+    const enhanceCodeBlocks = () => {
+      document.querySelectorAll('pre').forEach((pre) => {
+        if (pre.classList.contains('mermaid') || pre.querySelector('.copy-code')) return;
+        const button = document.createElement('button');
+        button.className = 'copy-code';
+        button.type = 'button';
+        button.textContent = 'Copy';
+        button.addEventListener('click', async () => {
+          await navigator.clipboard.writeText(pre.textContent || '');
+          button.textContent = 'Copied';
+          setTimeout(() => { button.textContent = 'Copy'; }, 1200);
+        });
+        pre.appendChild(button);
+      });
+    };
+
+    window.addEventListener('scroll', updateReadingProgress, { passive: true });
+    window.addEventListener('pageshow', (event) => {
+      if (event.persisted) checkForSiteUpdate();
+    });
+    document.addEventListener('DOMContentLoaded', async () => {
+      checkForSiteUpdate();
+      cacheBustPageAssets();
+      updateReadingProgress();
+      enhanceHome();
+      enhanceCodeBlocks();
+      // pandoc 输出 mermaid 为 <pre class="mermaid"><code>...</code></pre>
+      // 需要转成 <div class="mermaid">...</div> 供 mermaid.js 渲染
+      document.querySelectorAll('pre.mermaid').forEach(pre => {
+        const div = document.createElement('div');
+        div.classList.add('mermaid');
+        div.textContent = pre.textContent;
+        pre.replaceWith(div);
+      });
+      // 也处理 <pre><code class="language-mermaid"> 形式（备用）
+      document.querySelectorAll('pre code.language-mermaid').forEach(code => {
+        const div = document.createElement('div');
+        div.classList.add('mermaid');
+        div.textContent = code.textContent;
+        code.closest('pre').replaceWith(div);
+      });
+      await mermaid.run();
+    });
+  </script>
+</body>
+
+</html>

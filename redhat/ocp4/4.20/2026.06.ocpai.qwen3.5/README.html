@@ -1,0 +1,1454 @@
+<!DOCTYPE html>
+<html lang="zh" dir="ltr">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="generator" content="pandoc" />
+  <meta name="site-build-id" content="fbe91b569ae8" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <title>RHAIIS 3.4 and Qwen3.5 122B Long-Context Validation Report | wandering.star notes</title>
+  <meta name="description"
+    content="Wandering field notes on OpenShift, RHEL, AI infrastructure, and platform operations." />
+  <!-- Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-E3FRMDB7L2"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-E3FRMDB7L2');
+  </script>
+  <style>
+  html {
+    color: #1a1a1a;
+    background-color: #fdfdfd;
+  }
+  body {
+    margin: 0 auto;
+    max-width: 36em;
+    padding-left: 50px;
+    padding-right: 50px;
+    padding-top: 50px;
+    padding-bottom: 50px;
+    hyphens: auto;
+    overflow-wrap: break-word;
+    text-rendering: optimizeLegibility;
+    font-kerning: normal;
+  }
+  @media (max-width: 600px) {
+    body {
+      font-size: 0.9em;
+      padding: 12px;
+    }
+    h1 {
+      font-size: 1.8em;
+    }
+  }
+  @media print {
+    html {
+      background-color: white;
+    }
+    body {
+      background-color: transparent;
+      color: black;
+      font-size: 12pt;
+    }
+    p, h2, h3 {
+      orphans: 3;
+      widows: 3;
+    }
+    h2, h3, h4 {
+      page-break-after: avoid;
+    }
+  }
+  p {
+    margin: 1em 0;
+  }
+  a {
+    color: #1a1a1a;
+  }
+  a:visited {
+    color: #1a1a1a;
+  }
+  img {
+    max-width: 100%;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.4em;
+  }
+  h5, h6 {
+    font-size: 1em;
+    font-style: italic;
+  }
+  h6 {
+    font-weight: normal;
+  }
+  ol, ul {
+    padding-left: 1.7em;
+    margin-top: 1em;
+  }
+  li > ol, li > ul {
+    margin-top: 0;
+  }
+  blockquote {
+    margin: 1em 0 1em 1.7em;
+    padding-left: 1em;
+    border-left: 2px solid #e6e6e6;
+    color: #606060;
+  }
+  code {
+    font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+    font-size: 85%;
+    margin: 0;
+    hyphens: manual;
+  }
+  pre {
+    margin: 1em 0;
+    overflow: auto;
+  }
+  pre code {
+    padding: 0;
+    overflow: visible;
+    overflow-wrap: normal;
+  }
+  .sourceCode {
+   background-color: transparent;
+   overflow: visible;
+  }
+  hr {
+    background-color: #1a1a1a;
+    border: none;
+    height: 1px;
+    margin: 1em 0;
+  }
+  table {
+    margin: 1em 0;
+    border-collapse: collapse;
+    width: 100%;
+    overflow-x: auto;
+    display: block;
+    font-variant-numeric: lining-nums tabular-nums;
+  }
+  table caption {
+    margin-bottom: 0.75em;
+  }
+  tbody {
+    margin-top: 0.5em;
+    border-top: 1px solid #1a1a1a;
+    border-bottom: 1px solid #1a1a1a;
+  }
+  th {
+    border-top: 1px solid #1a1a1a;
+    padding: 0.25em 0.5em 0.25em 0.5em;
+  }
+  td {
+    padding: 0.125em 0.5em 0.25em 0.5em;
+  }
+  header {
+    margin-bottom: 4em;
+    text-align: center;
+  }
+  #TOC li {
+    list-style: none;
+  }
+  #TOC ul {
+    padding-left: 1.3em;
+  }
+  #TOC > ul {
+    padding-left: 0;
+  }
+  #TOC a:not(:hover) {
+    text-decoration: none;
+  }
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  div.columns{display: flex; gap: min(4vw, 1.5em);}
+  div.column{flex: auto; overflow-x: auto;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  /* The extra [class] is a hack that increases specificity enough to
+     override a similar rule in reveal.js */
+  ul.task-list[class]{list-style: none;}
+  ul.task-list li input[type="checkbox"] {
+    font-size: inherit;
+    width: 0.8em;
+    margin: 0 0.8em 0.2em -1.6em;
+    vertical-align: middle;
+  }
+  .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+  <link rel="stylesheet" href="../../../../style.css?v=fbe91b569ae8" />
+  </head>
+
+<body class="page-article">
+  <div class="reading-progress" aria-hidden="true"></div>
+  <div class="console-backdrop" aria-hidden="true"></div>
+  <nav class="site-nav">
+    <div class="nav-inner">
+      <a class="nav-brand" href="../../../../index.html">wandering.star<span>notes</span></a>
+      <div class="nav-links">
+        <a href="https://github.com/wangzheng422/docker_env" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://www.youtube.com/@wangzheng422" target="_blank" rel="noopener">YouTube</a>
+      </div>
+    </div>
+  </nav>
+
+  <main>
+            <a class="back-link" href="../../../../index.html">← Back to Index</a>
+        <div class="article-layout">
+            <aside class="toc-panel">
+        <div class="toc-title">ON THIS PAGE</div>
+        <ul>
+        <li><a
+        href="#rhaiis-3.4-and-qwen3.5-122b-long-context-validation-report"
+        id="toc-rhaiis-3.4-and-qwen3.5-122b-long-context-validation-report">RHAIIS
+        3.4 and Qwen3.5 122B Long-Context Validation Report</a>
+        <ul>
+        <li><a href="#executive-summary"
+        id="toc-executive-summary">Executive Summary</a></li>
+        <li><a href="#primary-trend-dashboard"
+        id="toc-primary-trend-dashboard">Primary Trend
+        Dashboard</a></li>
+        <li><a href="#test-environment" id="toc-test-environment">Test
+        Environment</a></li>
+        <li><a href="#runtime-parameters-tested"
+        id="toc-runtime-parameters-tested">Runtime Parameters Tested</a>
+        <ul>
+        <li><a href="#common-vllm-settings"
+        id="toc-common-vllm-settings">Common vLLM settings</a></li>
+        <li><a href="#native-262k-baseline"
+        id="toc-native-262k-baseline">Native 262K baseline</a></li>
+        <li><a href="#m-rope-customer-style-configuration"
+        id="toc-m-rope-customer-style-configuration">1M RoPE
+        customer-style configuration</a></li>
+        <li><a href="#startup-parameter-probe"
+        id="toc-startup-parameter-probe">Startup parameter
+        probe</a></li>
+        </ul></li>
+        <li><a href="#benchmark-tools"
+        id="toc-benchmark-tools">Benchmark Tools</a></li>
+        <li><a href="#key-findings" id="toc-key-findings">Key
+        Findings</a>
+        <ul>
+        <li><a href="#native-262k-is-not-a-safe-full-prompt-budget"
+        id="toc-native-262k-is-not-a-safe-full-prompt-budget">1. Native
+        262K is not a safe full-prompt budget</a></li>
+        <li><a
+        href="#native-262k-high-concurrency-reproduces-the-stuck-feeling-symptom"
+        id="toc-native-262k-high-concurrency-reproduces-the-stuck-feeling-symptom">2.
+        Native 262K high concurrency reproduces the stuck-feeling
+        symptom</a></li>
+        <li><a
+        href="#m-rope-can-process-800k-and-900k-inputs-but-service-quality-is-poor"
+        id="toc-m-rope-can-process-800k-and-900k-inputs-but-service-quality-is-poor">3.
+        1M RoPE can process 800K and 900K inputs, but service quality is
+        poor</a></li>
+        <li><a
+        href="#chunked-prefill-is-required-for-the-tested-1m-rope-setup"
+        id="toc-chunked-prefill-is-required-for-the-tested-1m-rope-setup">4.
+        Chunked prefill is required for the tested 1M RoPE
+        setup</a></li>
+        <li><a
+        href="#increasing-max_num_batched_tokens-to-8192-made-the-pain-point-worse"
+        id="toc-increasing-max_num_batched_tokens-to-8192-made-the-pain-point-worse">5.
+        Increasing <code>max_num_batched_tokens</code> to 8192 made the
+        pain point worse</a></li>
+        </ul></li>
+        <li><a href="#recommended-guardrails"
+        id="toc-recommended-guardrails">Recommended Guardrails</a></li>
+        <li><a href="#primary-multi-metric-trend-dashboards"
+        id="toc-primary-multi-metric-trend-dashboards">Primary
+        Multi-Metric Trend Dashboards</a>
+        <ul>
+        <li><a href="#native-262k-combined-dashboard"
+        id="toc-native-262k-combined-dashboard">Native 262K Combined
+        Dashboard</a></li>
+        <li><a href="#m-rope-combined-dashboard"
+        id="toc-m-rope-combined-dashboard">1M RoPE Combined
+        Dashboard</a></li>
+        <li><a href="#startup-parameter-comparison"
+        id="toc-startup-parameter-comparison">Startup Parameter
+        Comparison</a></li>
+        <li><a href="#guidellm-combined-dashboard"
+        id="toc-guidellm-combined-dashboard">GuideLLM Combined
+        Dashboard</a></li>
+        </ul></li>
+        <li><a href="#internal-review-notes"
+        id="toc-internal-review-notes">Internal Review Notes</a></li>
+        <li><a href="#image-manifest" id="toc-image-manifest">Image
+        Manifest</a></li>
+        </ul></li>
+        </ul>
+      </aside>
+            <article class="markdown-body article-shell">
+        <h1
+        id="rhaiis-3.4-and-qwen3.5-122b-long-context-validation-report">RHAIIS
+        3.4 and Qwen3.5 122B Long-Context Validation Report</h1>
+        <table>
+        <colgroup>
+        <col style="width: 50%" />
+        <col style="width: 50%" />
+        </colgroup>
+        <thead>
+        <tr class="header">
+        <th>Field</th>
+        <th>Value</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr class="odd">
+        <td>Date</td>
+        <td>2026-06-04</td>
+        </tr>
+        <tr class="even">
+        <td>Audience</td>
+        <td>Customer discussion and internal Red Hat technical
+        review</td>
+        </tr>
+        <tr class="odd">
+        <td>Platform</td>
+        <td>OpenShift <code>cluster-ml6gl</code></td>
+        </tr>
+        <tr class="even">
+        <td>Runtime</td>
+        <td>Red Hat AI Inference Server / vLLM 3.4</td>
+        </tr>
+        <tr class="odd">
+        <td>Runtime image</td>
+        <td><code>registry.redhat.io/rhaii/vllm-cuda-rhel9:3.4.0-1777444689</code></td>
+        </tr>
+        <tr class="even">
+        <td>Model</td>
+        <td><code>RedHatAI/Qwen3.5-122B-A10B-FP8-dynamic</code></td>
+        </tr>
+        <tr class="odd">
+        <td>Main hardware</td>
+        <td>AWS <code>g6e.12xlarge</code>, 4 x NVIDIA L40S</td>
+        </tr>
+        <tr class="even">
+        <td>Current driver validated</td>
+        <td>NVIDIA <code>580.126.20</code></td>
+        </tr>
+        <tr class="odd">
+        <td>Report package</td>
+        <td>This directory contains this Markdown file and all
+        referenced PNG trend charts under <code>images/</code></td>
+        </tr>
+        </tbody>
+        </table>
+        <h2 id="executive-summary">Executive Summary</h2>
+        <p>The model and runtime can start and serve successfully on the
+        tested 4 x L40S OpenShift node. This is not a simple “the pod
+        cannot run” issue. The important failure mode is long-prefill
+        queueing and service-quality collapse under large-context
+        summarization-style workloads.</p>
+        <p>The native 262K baseline is usable below the exact sequence
+        boundary, but the exact <code>262144</code> random input is not
+        a safe user prompt size. After chat/template/tokenizer overhead,
+        that request became <code>271524 &gt; 262144</code> and was
+        rejected. Near-limit probes showed that 245,760 to 253,000
+        benchmark input tokens can pass, so the practical guidance is to
+        reserve prompt budget for chat template, system prompt,
+        requested output, and tokenizer expansion.</p>
+        <p>The customer-style 1M RoPE configuration can process 800K and
+        900K benchmark inputs, but the service quality is not acceptable
+        for ordinary production summarization SLOs on this hardware. The
+        900K/c1 case had <code>584.29s</code> TTFT and
+        <code>918.35s</code> end-to-end duration, with only
+        <code>0.07 output tok/s</code>.</p>
+        <p>The “service looks alive but inference barely moves” symptom
+        was reproduced. In native 262K supplement tests, 64K/c16 and
+        128K/c16 produced minute-level P99 TTFT while the server logs
+        showed queued requests and very low generation throughput. In
+        the 1M RoPE tests, 262K/c4, 800K, and 900K cases showed the same
+        operational pattern.</p>
+        <p>The current tested startup recommendation for this hardware
+        and workload is conservative: keep
+        <code>--max-num-batched-tokens=4096</code>. Increasing it to
+        <code>8192</code> made the 1M RoPE 262K/c4 pain point worse.</p>
+        <h2 id="primary-trend-dashboard">Primary Trend Dashboard</h2>
+        <p>This overview is the most useful chart for customer
+        discussion. It shows that several bad cases still had 100%
+        request success, while P99 first-token latency and output
+        throughput were already unacceptable.</p>
+        <figure>
+        <img src="images/01-customer-argument-overview-dashboard.png"
+        alt="Customer argument overview" />
+        <figcaption aria-hidden="true">Customer argument
+        overview</figcaption>
+        </figure>
+        <h2 id="test-environment">Test Environment</h2>
+        <table>
+        <colgroup>
+        <col style="width: 50%" />
+        <col style="width: 50%" />
+        </colgroup>
+        <thead>
+        <tr class="header">
+        <th>Item</th>
+        <th>Result</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr class="odd">
+        <td>OpenShift server</td>
+        <td>4.18.21 / Kubernetes v1.31.10</td>
+        </tr>
+        <tr class="even">
+        <td>OpenShift client</td>
+        <td>4.21.16</td>
+        </tr>
+        <tr class="odd">
+        <td>GPU node</td>
+        <td><code>ip-10-0-71-58.us-east-2.compute.internal</code></td>
+        </tr>
+        <tr class="even">
+        <td>Instance type</td>
+        <td>AWS <code>g6e.12xlarge</code></td>
+        </tr>
+        <tr class="odd">
+        <td>GPU</td>
+        <td>4 x NVIDIA L40S</td>
+        </tr>
+        <tr class="even">
+        <td>GPU memory label</td>
+        <td>46068 MiB per GPU</td>
+        </tr>
+        <tr class="odd">
+        <td>GPU capacity / allocatable</td>
+        <td>4 / 4</td>
+        </tr>
+        <tr class="even">
+        <td>NVIDIA driver</td>
+        <td><code>580.126.20</code></td>
+        </tr>
+        <tr class="odd">
+        <td>CUDA runtime label</td>
+        <td><code>13.0</code></td>
+        </tr>
+        <tr class="even">
+        <td>Namespace</td>
+        <td><code>qwen35-rhaiis</code></td>
+        </tr>
+        <tr class="odd">
+        <td>Service account</td>
+        <td><code>rhaiis-vllm</code></td>
+        </tr>
+        <tr class="even">
+        <td>Model cache</td>
+        <td>HostPath
+        <code>/var/lib/rhaiis-model-cache/qwen35-122b-fp8</code></td>
+        </tr>
+        <tr class="odd">
+        <td>Security posture</td>
+        <td>Privileged SCC approved for this validation because of
+        hostPath and GPU runtime requirements</td>
+        </tr>
+        </tbody>
+        </table>
+        <h2 id="runtime-parameters-tested">Runtime Parameters
+        Tested</h2>
+        <h3 id="common-vllm-settings">Common vLLM settings</h3>
+        <table>
+        <thead>
+        <tr class="header">
+        <th>Parameter</th>
+        <th>Value</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr class="odd">
+        <td><code>--model</code></td>
+        <td><code>RedHatAI/Qwen3.5-122B-A10B-FP8-dynamic</code></td>
+        </tr>
+        <tr class="even">
+        <td><code>--served-model-name</code></td>
+        <td><code>RedHatAI/Qwen3.5-122B-A10B-FP8-dynamic</code></td>
+        </tr>
+        <tr class="odd">
+        <td><code>--tensor-parallel-size</code></td>
+        <td><code>4</code></td>
+        </tr>
+        <tr class="even">
+        <td><code>--gpu-memory-utilization</code></td>
+        <td><code>0.90</code> for long-context tests</td>
+        </tr>
+        <tr class="odd">
+        <td><code>--kv-cache-dtype</code></td>
+        <td><code>fp8</code></td>
+        </tr>
+        <tr class="even">
+        <td><code>--enable-prefix-caching</code></td>
+        <td>enabled</td>
+        </tr>
+        <tr class="odd">
+        <td><code>--max-num-batched-tokens</code></td>
+        <td><code>4096</code> default tested setting</td>
+        </tr>
+        <tr class="even">
+        <td><code>--reasoning-parser</code></td>
+        <td><code>qwen3</code></td>
+        </tr>
+        <tr class="odd">
+        <td>Host / port</td>
+        <td><code>0.0.0.0:8000</code></td>
+        </tr>
+        </tbody>
+        </table>
+        <h3 id="native-262k-baseline">Native 262K baseline</h3>
+        <table>
+        <thead>
+        <tr class="header">
+        <th>Parameter</th>
+        <th>Value</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr class="odd">
+        <td>RoPE override</td>
+        <td>none</td>
+        </tr>
+        <tr class="even">
+        <td><code>--max-model-len</code></td>
+        <td><code>262144</code></td>
+        </tr>
+        <tr class="odd">
+        <td>Reported GPU KV cache</td>
+        <td><code>343,744 tokens</code></td>
+        </tr>
+        <tr class="even">
+        <td>Reported max concurrency for full model length</td>
+        <td><code>4.98x</code></td>
+        </tr>
+        </tbody>
+        </table>
+        <h3 id="m-rope-customer-style-configuration">1M RoPE
+        customer-style configuration</h3>
+        <table>
+        <colgroup>
+        <col style="width: 50%" />
+        <col style="width: 50%" />
+        </colgroup>
+        <thead>
+        <tr class="header">
+        <th>Parameter</th>
+        <th>Value</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr class="odd">
+        <td><code>--max-model-len</code></td>
+        <td><code>1010000</code></td>
+        </tr>
+        <tr class="even">
+        <td>Long-length guard</td>
+        <td><code>VLLM_ALLOW_LONG_MAX_MODEL_LEN=1</code></td>
+        </tr>
+        <tr class="odd">
+        <td>RoPE type</td>
+        <td>YaRN</td>
+        </tr>
+        <tr class="even">
+        <td>RoPE factor</td>
+        <td><code>4.0</code></td>
+        </tr>
+        <tr class="odd">
+        <td>Original max position embeddings</td>
+        <td><code>262144</code></td>
+        </tr>
+        <tr class="even">
+        <td><code>rope_theta</code></td>
+        <td><code>10000000</code></td>
+        </tr>
+        <tr class="odd">
+        <td><code>partial_rotary_factor</code></td>
+        <td><code>0.25</code></td>
+        </tr>
+        <tr class="even">
+        <td><code>mrope_interleaved</code></td>
+        <td><code>true</code></td>
+        </tr>
+        <tr class="odd">
+        <td><code>mrope_section</code></td>
+        <td><code>[11, 11, 10]</code></td>
+        </tr>
+        <tr class="even">
+        <td>Reported chunked prefill</td>
+        <td>automatically enabled with
+        <code>max_num_batched_tokens=4096</code></td>
+        </tr>
+        <tr class="odd">
+        <td>Reported GPU KV cache</td>
+        <td><code>326,976 tokens</code></td>
+        </tr>
+        <tr class="even">
+        <td>Reported max concurrency for 1,010,000 tokens</td>
+        <td><code>1.28x</code></td>
+        </tr>
+        </tbody>
+        </table>
+        <h3 id="startup-parameter-probe">Startup parameter probe</h3>
+        <table>
+        <colgroup>
+        <col style="width: 21%" />
+        <col style="width: 28%" />
+        <col style="width: 28%" />
+        <col style="width: 21%" />
+        </colgroup>
+        <thead>
+        <tr class="header">
+        <th>Setting</th>
+        <th style="text-align: right;">GPU KV cache</th>
+        <th style="text-align: right;">Max concurrency for 1,010,000
+        tokens</th>
+        <th>Result</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr class="odd">
+        <td><code>max_num_batched_tokens=4096</code></td>
+        <td style="text-align: right;">326,976 tokens</td>
+        <td style="text-align: right;">1.28x</td>
+        <td>Current tested recommendation</td>
+        </tr>
+        <tr class="even">
+        <td><code>max_num_batched_tokens=8192</code></td>
+        <td style="text-align: right;">310,208 tokens</td>
+        <td style="text-align: right;">1.22x</td>
+        <td>Worse latency and token pace in the 262K/c4 pain point</td>
+        </tr>
+        </tbody>
+        </table>
+        <h2 id="benchmark-tools">Benchmark Tools</h2>
+        <table>
+        <colgroup>
+        <col style="width: 50%" />
+        <col style="width: 50%" />
+        </colgroup>
+        <thead>
+        <tr class="header">
+        <th>Tool</th>
+        <th>Purpose</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr class="odd">
+        <td><code>vllm bench serve</code></td>
+        <td>Main serving benchmark for TTFT, TPOT, ITL, throughput,
+        request success/failure, and long-context stress</td>
+        </tr>
+        <tr class="even">
+        <td>GuideLLM 0.6.0</td>
+        <td>Load-shape corroboration with concurrent and constant
+        profiles</td>
+        </tr>
+        </tbody>
+        </table>
+        <p>The GuideLLM results are used as corroborating evidence, not
+        as a direct apples-to-apples replacement for
+        <code>vllm bench serve</code>, because its workload and latency
+        semantics differ.</p>
+        <h2 id="key-findings">Key Findings</h2>
+        <h3 id="native-262k-is-not-a-safe-full-prompt-budget">1. Native
+        262K is not a safe full-prompt budget</h3>
+        <p>The native 262K deployment started successfully. However,
+        setting the random benchmark input to exactly
+        <code>262144</code> failed before generation, because the
+        effective tokenized request exceeded the configured limit:</p>
+        <table>
+        <thead>
+        <tr class="header">
+        <th>Native 262K exact-boundary case</th>
+        <th>Result</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr class="odd">
+        <td>Input payload requested</td>
+        <td><code>262144</code> random input tokens</td>
+        </tr>
+        <tr class="even">
+        <td>Effective tokenized sequence</td>
+        <td><code>271524</code> tokens</td>
+        </tr>
+        <tr class="odd">
+        <td>Configured max model length</td>
+        <td><code>262144</code></td>
+        </tr>
+        <tr class="even">
+        <td>API result</td>
+        <td>Bad Request</td>
+        </tr>
+        </tbody>
+        </table>
+        <p>Customer-facing interpretation:
+        <code>--max-model-len=262144</code> is the total sequence
+        budget, not a safe prompt payload size. Production workloads
+        must reserve margin for chat template, system prompt, requested
+        output, and tokenizer expansion.</p>
+        <h3
+        id="native-262k-high-concurrency-reproduces-the-stuck-feeling-symptom">2.
+        Native 262K high concurrency reproduces the stuck-feeling
+        symptom</h3>
+        <p>The supplement matrix intentionally expanded the native 262K
+        baseline to c16 and near-limit c4 cases.</p>
+        <table>
+        <colgroup>
+        <col style="width: 9%" />
+        <col style="width: 12%" />
+        <col style="width: 12%" />
+        <col style="width: 12%" />
+        <col style="width: 12%" />
+        <col style="width: 12%" />
+        <col style="width: 12%" />
+        <col style="width: 12%" />
+        </colgroup>
+        <thead>
+        <tr class="header">
+        <th>Scenario</th>
+        <th style="text-align: right;">Input tokens</th>
+        <th style="text-align: right;">Concurrency</th>
+        <th style="text-align: right;">Success / failure</th>
+        <th style="text-align: right;">Mean TTFT</th>
+        <th style="text-align: right;">P99 TTFT</th>
+        <th style="text-align: right;">Mean ITL</th>
+        <th style="text-align: right;">Output tok/s</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr class="odd">
+        <td>native262k-supplement-ctx64k-c16</td>
+        <td style="text-align: right;">65,536</td>
+        <td style="text-align: right;">16</td>
+        <td style="text-align: right;">16 / 0</td>
+        <td style="text-align: right;">139.53s</td>
+        <td style="text-align: right;">249.27s</td>
+        <td style="text-align: right;">477.66ms</td>
+        <td style="text-align: right;">1.88</td>
+        </tr>
+        <tr class="even">
+        <td>native262k-supplement-ctx128k-c16</td>
+        <td style="text-align: right;">131,072</td>
+        <td style="text-align: right;">16</td>
+        <td style="text-align: right;">16 / 0</td>
+        <td style="text-align: right;">279.37s</td>
+        <td style="text-align: right;">517.27s</td>
+        <td style="text-align: right;">476.41ms</td>
+        <td style="text-align: right;">0.89</td>
+        </tr>
+        <tr class="odd">
+        <td>native262k-supplement-ctx196k-c8</td>
+        <td style="text-align: right;">196,608</td>
+        <td style="text-align: right;">8</td>
+        <td style="text-align: right;">8 / 0</td>
+        <td style="text-align: right;">238.58s</td>
+        <td style="text-align: right;">409.01s</td>
+        <td style="text-align: right;">454.01ms</td>
+        <td style="text-align: right;">0.53</td>
+        </tr>
+        <tr class="even">
+        <td>native262k-supplement-ctx240k-c4</td>
+        <td style="text-align: right;">245,760</td>
+        <td style="text-align: right;">4</td>
+        <td style="text-align: right;">4 / 0</td>
+        <td style="text-align: right;">155.87s</td>
+        <td style="text-align: right;">235.55s</td>
+        <td style="text-align: right;">408.69ms</td>
+        <td style="text-align: right;">0.38</td>
+        </tr>
+        <tr class="odd">
+        <td>native262k-supplement-ctx250k-c4</td>
+        <td style="text-align: right;">250,000</td>
+        <td style="text-align: right;">4</td>
+        <td style="text-align: right;">4 / 0</td>
+        <td style="text-align: right;">160.74s</td>
+        <td style="text-align: right;">243.22s</td>
+        <td style="text-align: right;">409.97ms</td>
+        <td style="text-align: right;">0.37</td>
+        </tr>
+        </tbody>
+        </table>
+        <p>Server logs during this run showed the operational signature
+        we were looking for: requests were still running, but the
+        waiting queue grew and generation throughput dropped close to
+        zero in multiple samples.</p>
+        <p>Examples captured during the run:</p>
+        <table>
+        <colgroup>
+        <col style="width: 50%" />
+        <col style="width: 50%" />
+        </colgroup>
+        <thead>
+        <tr class="header">
+        <th>Observed server-side signal</th>
+        <th>Interpretation</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr class="odd">
+        <td><code>Running: 2 reqs, Waiting: 14 reqs, Avg generation throughput: 0.5 tokens/s</code></td>
+        <td>The API server is alive, but requests are queueing and
+        generation progress is very slow</td>
+        </tr>
+        <tr class="even">
+        <td><code>Running: 1 reqs, Waiting: 14 reqs, Avg generation throughput: 0.0 tokens/s</code></td>
+        <td>Client-visible behavior can look stuck even without a pod
+        crash</td>
+        </tr>
+        <tr class="odd">
+        <td><code>Running: 2 reqs, Waiting: 10 reqs, Avg generation throughput: 0.4 tokens/s</code></td>
+        <td>Long-prefill concurrency is the pressure point</td>
+        </tr>
+        </tbody>
+        </table>
+        <h3
+        id="m-rope-can-process-800k-and-900k-inputs-but-service-quality-is-poor">3.
+        1M RoPE can process 800K and 900K inputs, but service quality is
+        poor</h3>
+        <table>
+        <colgroup>
+        <col style="width: 9%" />
+        <col style="width: 12%" />
+        <col style="width: 12%" />
+        <col style="width: 12%" />
+        <col style="width: 12%" />
+        <col style="width: 12%" />
+        <col style="width: 12%" />
+        <col style="width: 12%" />
+        </colgroup>
+        <thead>
+        <tr class="header">
+        <th>Scenario</th>
+        <th style="text-align: right;">Input tokens</th>
+        <th style="text-align: right;">Concurrency</th>
+        <th style="text-align: right;">Success / failure</th>
+        <th style="text-align: right;">Mean TTFT</th>
+        <th style="text-align: right;">P99 TTFT</th>
+        <th style="text-align: right;">Output tok/s</th>
+        <th style="text-align: right;">Benchmark duration</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr class="odd">
+        <td>one-mctx-rope-1010k-ctx262k-c1</td>
+        <td style="text-align: right;">262,144</td>
+        <td style="text-align: right;">1</td>
+        <td style="text-align: right;">1 / 0</td>
+        <td style="text-align: right;">96.89s</td>
+        <td style="text-align: right;">96.89s</td>
+        <td style="text-align: right;">1.71</td>
+        <td style="text-align: right;">149.96s</td>
+        </tr>
+        <tr class="even">
+        <td>one-mctx-rope-1010k-ctx262k-c2</td>
+        <td style="text-align: right;">262,144</td>
+        <td style="text-align: right;">2</td>
+        <td style="text-align: right;">2 / 0</td>
+        <td style="text-align: right;">43.96s</td>
+        <td style="text-align: right;">85.78s</td>
+        <td style="text-align: right;">3.67</td>
+        <td style="text-align: right;">139.68s</td>
+        </tr>
+        <tr class="odd">
+        <td>one-mctx-rope-1010k-ctx262k-c4</td>
+        <td style="text-align: right;">262,144</td>
+        <td style="text-align: right;">4</td>
+        <td style="text-align: right;">4 / 0</td>
+        <td style="text-align: right;">114.14s</td>
+        <td style="text-align: right;">218.18s</td>
+        <td style="text-align: right;">1.88</td>
+        <td style="text-align: right;">271.88s</td>
+        </tr>
+        <tr class="even">
+        <td>one-mctx-rope-1010k-ctx512k-c1</td>
+        <td style="text-align: right;">524,288</td>
+        <td style="text-align: right;">1</td>
+        <td style="text-align: right;">1 / 0</td>
+        <td style="text-align: right;">234.01s</td>
+        <td style="text-align: right;">234.01s</td>
+        <td style="text-align: right;">0.76</td>
+        <td style="text-align: right;">337.48s</td>
+        </tr>
+        <tr class="odd">
+        <td>one-mctx-rope-1010k-ctx512k-c2</td>
+        <td style="text-align: right;">524,288</td>
+        <td style="text-align: right;">2</td>
+        <td style="text-align: right;">2 / 0</td>
+        <td style="text-align: right;">118.29s</td>
+        <td style="text-align: right;">231.58s</td>
+        <td style="text-align: right;">0.76</td>
+        <td style="text-align: right;">335.44s</td>
+        </tr>
+        <tr class="even">
+        <td>one-mctx-rope-1010k-ctx800k-c1</td>
+        <td style="text-align: right;">819,200</td>
+        <td style="text-align: right;">1</td>
+        <td style="text-align: right;">1 / 0</td>
+        <td style="text-align: right;">478.97s</td>
+        <td style="text-align: right;">478.97s</td>
+        <td style="text-align: right;">0.19</td>
+        <td style="text-align: right;">680.74s</td>
+        </tr>
+        <tr class="odd">
+        <td>one-mctx-rope-1010k-ctx800k-c2</td>
+        <td style="text-align: right;">819,200</td>
+        <td style="text-align: right;">2</td>
+        <td style="text-align: right;">2 / 0</td>
+        <td style="text-align: right;">242.53s</td>
+        <td style="text-align: right;">474.73s</td>
+        <td style="text-align: right;">0.19</td>
+        <td style="text-align: right;">680.15s</td>
+        </tr>
+        <tr class="even">
+        <td>one-mctx-rope-1010k-ctx900k-c1</td>
+        <td style="text-align: right;">921,600</td>
+        <td style="text-align: right;">1</td>
+        <td style="text-align: right;">1 / 0</td>
+        <td style="text-align: right;">584.29s</td>
+        <td style="text-align: right;">584.29s</td>
+        <td style="text-align: right;">0.07</td>
+        <td style="text-align: right;">918.35s</td>
+        </tr>
+        </tbody>
+        </table>
+        <p>Customer-facing interpretation: “It can run a 900K input” is
+        true, but it does not imply acceptable service behavior for
+        large-document summarization. On this node, 800K and 900K inputs
+        are stress or boundary cases, not healthy production
+        settings.</p>
+        <h3
+        id="chunked-prefill-is-required-for-the-tested-1m-rope-setup">4.
+        Chunked prefill is required for the tested 1M RoPE setup</h3>
+        <p>The 1M RoPE deployment did not explicitly pass
+        <code>--enable-chunked-prefill</code>, but vLLM enabled it
+        automatically. A controlled test with
+        <code>--no-enable-chunked-prefill</code> entered
+        CrashLoopBackOff.</p>
+        <p>The relevant validation error was:</p>
+        <pre class="text"><code>max_num_batched_tokens (4096) is smaller than max_model_len (1010000)</code></pre>
+        <p>Customer-facing interpretation: chunked prefill is not just
+        an optional tuning knob in this configuration. It is required
+        for the 1M context configuration when
+        <code>max_model_len=1010000</code> and
+        <code>max_num_batched_tokens=4096</code>.</p>
+        <h3
+        id="increasing-max_num_batched_tokens-to-8192-made-the-pain-point-worse">5.
+        Increasing <code>max_num_batched_tokens</code> to 8192 made the
+        pain point worse</h3>
+        <p>The tested representative pain point was 1M RoPE with 262K
+        input, c4 concurrency, and 128 output tokens.</p>
+        <table>
+        <colgroup>
+        <col style="width: 8%" />
+        <col style="width: 11%" />
+        <col style="width: 11%" />
+        <col style="width: 11%" />
+        <col style="width: 11%" />
+        <col style="width: 11%" />
+        <col style="width: 11%" />
+        <col style="width: 11%" />
+        <col style="width: 11%" />
+        </colgroup>
+        <thead>
+        <tr class="header">
+        <th>Parameter setting</th>
+        <th style="text-align: right;">Success / failure</th>
+        <th style="text-align: right;">Mean TTFT</th>
+        <th style="text-align: right;">P99 TTFT</th>
+        <th style="text-align: right;">Mean TPOT</th>
+        <th style="text-align: right;">P99 TPOT</th>
+        <th style="text-align: right;">Mean ITL</th>
+        <th style="text-align: right;">P99 ITL</th>
+        <th style="text-align: right;">Output tok/s</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr class="odd">
+        <td><code>max_num_batched_tokens=4096</code></td>
+        <td style="text-align: right;">4 / 0</td>
+        <td style="text-align: right;">114.14s</td>
+        <td style="text-align: right;">218.18s</td>
+        <td style="text-align: right;">514.73ms</td>
+        <td style="text-align: right;">687.86ms</td>
+        <td style="text-align: right;">521.92ms</td>
+        <td style="text-align: right;">917.66ms</td>
+        <td style="text-align: right;">1.88</td>
+        </tr>
+        <tr class="even">
+        <td><code>max_num_batched_tokens=8192</code></td>
+        <td style="text-align: right;">4 / 0</td>
+        <td style="text-align: right;">205.59s</td>
+        <td style="text-align: right;">311.97s</td>
+        <td style="text-align: right;">1007.01ms</td>
+        <td style="text-align: right;">1982.24ms</td>
+        <td style="text-align: right;">1031.38ms</td>
+        <td style="text-align: right;">2767.14ms</td>
+        <td style="text-align: right;">1.40</td>
+        </tr>
+        </tbody>
+        </table>
+        <p>Recommendation: keep
+        <code>--max-num-batched-tokens=4096</code> as the current tested
+        starting point for this hardware, model, and customer-like
+        workload. This is not claimed to be a global optimum; it is the
+        safer result among the tested 4096 vs 8192 pair.</p>
+        <h2 id="recommended-guardrails">Recommended Guardrails</h2>
+        <table>
+        <colgroup>
+        <col style="width: 50%" />
+        <col style="width: 50%" />
+        </colgroup>
+        <thead>
+        <tr class="header">
+        <th>Area</th>
+        <th>Recommendation</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr class="odd">
+        <td>Native 262K prompt size</td>
+        <td>Do not allow client prompt payloads to consume the full
+        <code>262144</code> budget. Reserve safety margin for template,
+        system prompt, output, and tokenizer expansion.</td>
+        </tr>
+        <tr class="even">
+        <td>Long-document summarization</td>
+        <td>Cap concurrency by prompt length. Short-prompt concurrency
+        results do not predict 64K, 128K, 250K, or 900K behavior.</td>
+        </tr>
+        <tr class="odd">
+        <td>1M RoPE</td>
+        <td>Treat 262K/c4, 512K/c2, 800K, and 900K as stress or boundary
+        conditions unless the SLO accepts minute-level TTFT.</td>
+        </tr>
+        <tr class="even">
+        <td>Chunked prefill</td>
+        <td>Do not disable it for the tested 1M RoPE configuration.</td>
+        </tr>
+        <tr class="odd">
+        <td><code>max_num_batched_tokens</code></td>
+        <td>Start with <code>4096</code> on this node. The tested
+        <code>8192</code> setting was worse for the representative pain
+        point.</td>
+        </tr>
+        <tr class="even">
+        <td>Customer success criteria</td>
+        <td>Do not evaluate only request success rate. Tail TTFT, output
+        throughput, and ITL are required to detect the bad user
+        experience.</td>
+        </tr>
+        </tbody>
+        </table>
+        <h2 id="primary-multi-metric-trend-dashboards">Primary
+        Multi-Metric Trend Dashboards</h2>
+        <h3 id="native-262k-combined-dashboard">Native 262K Combined
+        Dashboard</h3>
+        <figure>
+        <img src="images/02-native262k-combined-dashboard.png"
+        alt="Native 262K combined dashboard" />
+        <figcaption aria-hidden="true">Native 262K combined
+        dashboard</figcaption>
+        </figure>
+        <h3 id="m-rope-combined-dashboard">1M RoPE Combined
+        Dashboard</h3>
+        <figure>
+        <img src="images/03-one-mctx-rope-combined-dashboard.png"
+        alt="1M RoPE combined dashboard" />
+        <figcaption aria-hidden="true">1M RoPE combined
+        dashboard</figcaption>
+        </figure>
+        <h3 id="startup-parameter-comparison">Startup Parameter
+        Comparison</h3>
+        <figure>
+        <img src="images/04-startup-4096-vs-8192-dashboard.png"
+        alt="Startup 4096 vs 8192 dashboard" />
+        <figcaption aria-hidden="true">Startup 4096 vs 8192
+        dashboard</figcaption>
+        </figure>
+        <h3 id="guidellm-combined-dashboard">GuideLLM Combined
+        Dashboard</h3>
+        <figure>
+        <img src="images/05-guidellm-combined-dashboard.png"
+        alt="GuideLLM combined dashboard" />
+        <figcaption aria-hidden="true">GuideLLM combined
+        dashboard</figcaption>
+        </figure>
+        <h2 id="internal-review-notes">Internal Review Notes</h2>
+        <table>
+        <colgroup>
+        <col style="width: 50%" />
+        <col style="width: 50%" />
+        </colgroup>
+        <thead>
+        <tr class="header">
+        <th>Topic</th>
+        <th>Note</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr class="odd">
+        <td>Runtime compatibility</td>
+        <td>Earlier startup attempts failed with an NVIDIA driver too
+        old for the RHAIIS 3.4 CUDA/PyTorch stack. The successful
+        validation used driver <code>580.126.20</code>.</td>
+        </tr>
+        <tr class="even">
+        <td>HostPath security</td>
+        <td>The persistent model cache required a privileged route in
+        this validation because the node path was under
+        <code>/var/lib</code> and needed GPU/runtime access.</td>
+        </tr>
+        <tr class="odd">
+        <td>Scope</td>
+        <td>This report validates
+        <code>RedHatAI/Qwen3.5-122B-A10B-FP8-dynamic</code> on 4 x L40S.
+        Do not automatically generalize the numeric thresholds to larger
+        models or different GPU topology.</td>
+        </tr>
+        <tr class="even">
+        <td>397B customer mentions</td>
+        <td>If the customer discusses a different 397B/1M setup, use
+        this report as evidence about long-context behavior and tuning
+        principles, not as a direct capacity result for that larger
+        model.</td>
+        </tr>
+        <tr class="odd">
+        <td>Current live cluster state after testing</td>
+        <td>The deployment was left on native 262K with
+        <code>--max-model-len=262144</code> and
+        <code>--max-num-batched-tokens=4096</code>.</td>
+        </tr>
+        </tbody>
+        </table>
+        <h2 id="image-manifest">Image Manifest</h2>
+        <p>The following images are included in this standalone
+        package:</p>
+        <table>
+        <colgroup>
+        <col style="width: 50%" />
+        <col style="width: 50%" />
+        </colgroup>
+        <thead>
+        <tr class="header">
+        <th>Image</th>
+        <th>Purpose</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr class="odd">
+        <td><code>images/01-customer-argument-overview-dashboard.png</code></td>
+        <td>Cross-scenario customer-facing overview</td>
+        </tr>
+        <tr class="even">
+        <td><code>images/02-native262k-combined-dashboard.png</code></td>
+        <td>Native 262K multi-metric dashboard</td>
+        </tr>
+        <tr class="odd">
+        <td><code>images/03-one-mctx-rope-combined-dashboard.png</code></td>
+        <td>1M RoPE multi-metric dashboard</td>
+        </tr>
+        <tr class="even">
+        <td><code>images/04-startup-4096-vs-8192-dashboard.png</code></td>
+        <td>Startup parameter comparison</td>
+        </tr>
+        <tr class="odd">
+        <td><code>images/05-guidellm-combined-dashboard.png</code></td>
+        <td>GuideLLM load-shape dashboard</td>
+        </tr>
+        </tbody>
+        </table>
+      </article>
+    </div>
+      </main>
+
+  <footer>
+    <p>
+      Licensed under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank"
+        rel="noopener">CC-BY-NC-SA 4.0</a>
+      &nbsp;·&nbsp;
+      <a href="https://github.com/wangzheng422/docker_env" target="_blank" rel="noopener">wangzheng422/docker_env</a>
+    </p>
+  </footer>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: false, theme: 'dark' });
+
+    const SITE_BUILD_ID = 'fbe91b569ae8';
+    const SITE_HOME_URL = '../../../../index.html';
+
+    const getBuildIdFromHtml = (html) => {
+      const match = String(html).match(/<meta[^>]+name=["']site-build-id["'][^>]+content=["']([^"']+)["']/i)
+        || String(html).match(/<meta[^>]+content=["']([^"']+)["'][^>]+name=["']site-build-id["']/i);
+      return match ? match[1] : '';
+    };
+
+    const checkForSiteUpdate = async () => {
+      if (!SITE_BUILD_ID || window.location.protocol === 'file:') return;
+      try {
+        const probeUrl = new URL(SITE_HOME_URL || './index.html', window.location.href);
+        probeUrl.searchParams.set('site_cache_probe', Date.now().toString());
+        const response = await fetch(probeUrl.toString(), { cache: 'no-store' });
+        if (!response.ok) return;
+        const latestBuildId = getBuildIdFromHtml(await response.text());
+        if (!latestBuildId || latestBuildId === SITE_BUILD_ID) return;
+        if (sessionStorage.getItem('site-build-refresh') === latestBuildId) return;
+        sessionStorage.setItem('site-build-refresh', latestBuildId);
+        const freshUrl = new URL(window.location.href);
+        freshUrl.searchParams.set('v', latestBuildId);
+        window.location.replace(freshUrl.toString());
+      } catch (error) {
+        // Network errors should not block reading the current page.
+      }
+    };
+
+    const versionedLocalUrl = (rawUrl) => {
+      if (!rawUrl || /^(https?:)?\/\//i.test(rawUrl) || /^(data|blob|mailto):/i.test(rawUrl)) return rawUrl;
+      const url = new URL(rawUrl, window.location.href);
+      if (url.searchParams.has('v')) return rawUrl;
+      url.searchParams.set('v', SITE_BUILD_ID);
+      return url.toString();
+    };
+
+    const cacheBustPageAssets = () => {
+      document.querySelectorAll('img[src], video[src], audio[src], source[src]').forEach((node) => {
+        const src = node.getAttribute('src');
+        const versioned = versionedLocalUrl(src);
+        if (versioned !== src) node.setAttribute('src', versioned);
+      });
+    };
+
+    const updateReadingProgress = () => {
+      const progress = document.querySelector('.reading-progress');
+      if (!progress) return;
+      const scrollable = document.documentElement.scrollHeight - window.innerHeight;
+      const ratio = scrollable > 0 ? window.scrollY / scrollable : 0;
+      progress.style.transform = 'scaleX(' + Math.min(1, Math.max(0, ratio)) + ')';
+    };
+
+    const topicFor = (text, href) => {
+      const haystack = (text + ' ' + href).toLowerCase();
+      if (/developers\.redhat\.com|redhatquickcourses|github\.com\/redhatquickcourses/.test(haystack)) return 'Red Hat';
+      if (/ai|llm|gpu|vllm|llama|model|rhaiis/.test(haystack)) return 'AI';
+      if (/network|ovn|bgp|dns|egress|ingress|metallb|nic|route/.test(haystack)) return 'Network';
+      if (/cert|tls|sso|keycloak|rhbk|security|compliance/.test(haystack)) return 'Security';
+      if (/perf|profile|throttling|heap|debug/.test(haystack)) return 'Performance';
+      if (/install|ipi|upi|sno|disconnected|bootstrap/.test(haystack)) return 'Install';
+      if (/rhel|coreos|rhcos|kernel|rpm|ostree/.test(haystack)) return 'RHEL';
+      if (/backup|storage|nfs|odf|ocs|ceph|dr/.test(haystack)) return 'Storage';
+      if (/pipeline|gitops|ansible|aap|rhdh|devops/.test(haystack)) return 'DevOps';
+      return 'OpenShift';
+    };
+
+    const yearFor = (text, href) => {
+      const match = (text + ' ' + href).match(/20\d{2}/);
+      return match ? match[0] : 'Notes';
+    };
+
+    const importantExternal = (href) =>
+      /developers\.redhat\.com|redhatquickcourses\.github\.io/i.test(href);
+
+    const titleForLink = (link) => {
+      const href = link.getAttribute('href') || '';
+      const directText = link.textContent.trim().replace(/\s+/g, ' ');
+      if (!/^https?:\/\//.test(directText)) return directText;
+      const parentItem = link.closest('ul')?.parentElement;
+      if (parentItem) {
+        const clone = parentItem.cloneNode(true);
+        clone.querySelectorAll('ul').forEach((nested) => nested.remove());
+        const parentText = clone.textContent.trim().replace(/\s+/g, ' ');
+        if (parentText) {
+          return parentText;
+        }
+      }
+      return directText;
+    };
+
+    const escapeHtml = (value) => String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+
+    const enhanceHome = () => {
+      if (!document.body.classList.contains('page-index')) return;
+      const source = document.querySelector('.home-source');
+      const grid = document.getElementById('note-grid');
+      const stats = document.getElementById('console-stats');
+      const externalPanel = document.getElementById('external-panel');
+      const topicStrip = document.getElementById('topic-strip');
+      const search = document.getElementById('console-search');
+      if (!source || !grid || !stats || !externalPanel || !topicStrip || !search) return;
+
+      const seen = new Set();
+      const links = Array.from(source.querySelectorAll('a[href]'))
+        .map((link) => {
+          const href = link.getAttribute('href') || '';
+          const text = titleForLink(link);
+          return { text, href, topic: topicFor(text, href), year: yearFor(text, href) };
+        });
+      const notes = links
+        .filter((note) => note.text && !note.href.startsWith('http') && !seen.has(note.href) && seen.add(note.href));
+      const externalLinks = links
+        .filter((note) => note.text && importantExternal(note.href));
+
+      const topics = ['All', ...Array.from(new Set(notes.map((note) => note.topic))).sort()];
+      let activeTopic = 'All';
+
+      const renderStats = () => {
+        const years = notes.map((note) => note.year).filter((year) => year.length === 4 && /^\d{4}/.test(year));
+        const latest = years.length ? Math.max(...years.map(Number)) : 'N/A';
+        const oldest = years.length ? Math.min(...years.map(Number)) : 'N/A';
+        stats.innerHTML = [
+          ['Notes', notes.length],
+          ['Resources', externalLinks.length],
+          ['Topics', topics.length - 1],
+          ['Latest', latest],
+        ].map(([label, value]) => '<div class="stat-tile"><span>' + label + '</span><strong>' + value + '</strong></div>').join('');
+        const signal = document.getElementById('signal-count');
+        if (signal) signal.textContent = notes.length + ' links indexed';
+      };
+
+      const renderExternal = () => {
+        externalPanel.innerHTML =
+          '<div class="section-heading"><span>Published / Learning</span><strong>Red Hat resources</strong></div>' +
+          '<div class="external-grid">' +
+          externalLinks.map((note) =>
+            '<a class="resource-card" href="' + escapeHtml(note.href) + '" target="_blank" rel="noopener">' +
+            '<span class="note-meta"><span>' + escapeHtml(note.year) + '</span><span>' + escapeHtml(note.topic) + '</span></span>' +
+            '<strong>' + escapeHtml(note.text) + '</strong>' +
+            '<small>' + escapeHtml(note.href) + '</small>' +
+            '</a>'
+          ).join('') +
+          '</div>';
+      };
+
+      const renderTopics = () => {
+        topicStrip.innerHTML = topics.map((topic) => '<button class="topic-chip' + (topic === activeTopic ? ' active' : '') + '" type="button" data-topic="' + escapeHtml(topic) + '">' + escapeHtml(topic) + '</button>').join('');
+        topicStrip.querySelectorAll('button').forEach((button) => {
+          button.addEventListener('click', () => {
+            activeTopic = button.dataset.topic || 'All';
+            renderTopics();
+            renderCards();
+          });
+        });
+      };
+
+      const renderCards = () => {
+        const query = search.value.trim().toLowerCase();
+        const filtered = notes.filter((note) => {
+          const topicMatch = activeTopic === 'All' || note.topic === activeTopic;
+          const queryMatch = !query || (note.text + ' ' + note.href + ' ' + note.topic + ' ' + note.year).toLowerCase().includes(query);
+          return topicMatch && queryMatch;
+        });
+        grid.innerHTML = filtered.map((note) =>
+          '<a class="note-card" href="' + escapeHtml(note.href) + '">' +
+          '<span class="note-meta"><span>' + escapeHtml(note.year) + '</span><span>' + escapeHtml(note.topic) + '</span></span>' +
+          '<strong>' + escapeHtml(note.text) + '</strong>' +
+          '<small>' + escapeHtml(note.href) + '</small>' +
+          '</a>'
+        ).join('') || '<p class="empty-state">No matching notes.</p>';
+      };
+
+      const drawMap = () => {
+        const canvas = document.getElementById('knowledge-canvas');
+        if (!(canvas instanceof HTMLCanvasElement)) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        const width = canvas.width;
+        const height = canvas.height;
+        const nodes = notes.slice(0, 44).map((note, index) => {
+          const angle = (index / 44) * Math.PI * 2;
+          const ring = 90 + (index % 5) * 22;
+          return {
+            x: width / 2 + Math.cos(angle) * ring,
+            y: height / 2 + Math.sin(angle) * ring * 0.72,
+            topic: note.topic,
+          };
+        });
+        ctx.clearRect(0, 0, width, height);
+        ctx.strokeStyle = 'rgba(88, 166, 255, 0.14)';
+        ctx.lineWidth = 1;
+        nodes.forEach((node, index) => {
+          const next = nodes[(index + 7) % nodes.length];
+          ctx.beginPath();
+          ctx.moveTo(node.x, node.y);
+          ctx.lineTo(next.x, next.y);
+          ctx.stroke();
+        });
+        const palette = {
+          AI: '#a371f7',
+          Network: '#39d0d8',
+          Security: '#ff7b72',
+          Performance: '#f2cc60',
+          Install: '#7ee787',
+          RHEL: '#ff7b72',
+          Storage: '#d2a8ff',
+          DevOps: '#ffa657',
+          OpenShift: '#58a6ff',
+        };
+        nodes.forEach((node) => {
+          ctx.fillStyle = palette[node.topic] || '#58a6ff';
+          ctx.beginPath();
+          ctx.arc(node.x, node.y, 3.4, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      };
+
+      search.addEventListener('input', renderCards);
+      renderStats();
+      renderExternal();
+      renderTopics();
+      renderCards();
+      drawMap();
+      document.body.classList.add('home-enhanced');
+    };
+
+    const enhanceCodeBlocks = () => {
+      document.querySelectorAll('pre').forEach((pre) => {
+        if (pre.classList.contains('mermaid') || pre.querySelector('.copy-code')) return;
+        const button = document.createElement('button');
+        button.className = 'copy-code';
+        button.type = 'button';
+        button.textContent = 'Copy';
+        button.addEventListener('click', async () => {
+          await navigator.clipboard.writeText(pre.textContent || '');
+          button.textContent = 'Copied';
+          setTimeout(() => { button.textContent = 'Copy'; }, 1200);
+        });
+        pre.appendChild(button);
+      });
+    };
+
+    window.addEventListener('scroll', updateReadingProgress, { passive: true });
+    window.addEventListener('pageshow', (event) => {
+      if (event.persisted) checkForSiteUpdate();
+    });
+    document.addEventListener('DOMContentLoaded', async () => {
+      checkForSiteUpdate();
+      cacheBustPageAssets();
+      updateReadingProgress();
+      enhanceHome();
+      enhanceCodeBlocks();
+      // pandoc 输出 mermaid 为 <pre class="mermaid"><code>...</code></pre>
+      // 需要转成 <div class="mermaid">...</div> 供 mermaid.js 渲染
+      document.querySelectorAll('pre.mermaid').forEach(pre => {
+        const div = document.createElement('div');
+        div.classList.add('mermaid');
+        div.textContent = pre.textContent;
+        pre.replaceWith(div);
+      });
+      // 也处理 <pre><code class="language-mermaid"> 形式（备用）
+      document.querySelectorAll('pre code.language-mermaid').forEach(code => {
+        const div = document.createElement('div');
+        div.classList.add('mermaid');
+        div.textContent = code.textContent;
+        code.closest('pre').replaceWith(div);
+      });
+      await mermaid.run();
+    });
+  </script>
+</body>
+
+</html>

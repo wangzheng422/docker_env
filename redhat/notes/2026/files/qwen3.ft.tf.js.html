@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Qwen3 端侧 Emoji 翻译器</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            max-width: 600px;
+            margin: 40px auto;
+            padding: 20px;
+            line-height: 1.6;
+            background: #f4f7f6;
+        }
+
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        textarea {
+            width: 100%;
+            height: 100px;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-sizing: border-box;
+            font-size: 16px;
+            margin-bottom: 20px;
+        }
+
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: 0.3s;
+        }
+
+        button:disabled {
+            background: #ccc;
+        }
+
+        #status {
+            margin-top: 15px;
+            font-size: 14px;
+            color: #666;
+        }
+
+        #output {
+            margin-top: 25px;
+            padding: 15px;
+            background: #e9ecef;
+            border-radius: 8px;
+            min-height: 40px;
+            font-size: 24px;
+            text-align: center;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            background: #28a745;
+            color: white;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <h2>🚀 Qwen3 Emoji 翻译器</h2>
+        <p>本地推理模式：<span id="gpu-status">检测中...</span></p>
+
+        <textarea id="input" placeholder="输入你想翻译的话，例如：working late at night"></textarea>
+        <button id="btn" disabled>正在初始化模型...</button>
+
+        <div id="status">准备就绪</div>
+        <div id="output">等待输入...</div>
+    </div>
+
+    <script type="module">
+        // 引入 Transformers.js v3 预览版（支持 WebGPU）
+        import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.0-alpha.19';
+
+        // 配置从本地加载模型，禁止请求 Hugging Face Hub
+        env.allowLocalModels = true;
+        env.allowRemoteModels = false;
+        env.localModelPath = './';
+
+        const inputArea = document.getElementById('input');
+        const outputDiv = document.getElementById('output');
+        const btn = document.getElementById('btn');
+        const status = document.getElementById('status');
+        const gpuStatus = document.getElementById('gpu-status');
+
+        let generator;
+
+        // 1. 初始化模型
+        async function init() {
+            try {
+                // 检查 WebGPU 是否可用
+                if (navigator.gpu) {
+                    gpuStatus.innerHTML = '<span class="badge">WebGPU 已启用</span>';
+                } else {
+                    gpuStatus.innerHTML = '<span class="badge" style="background:#dc3545">降级为 CPU 模式</span>';
+                }
+
+                status.innerText = "⏳ 正在加载微调模型 (约 300MB)...";
+
+                // 加载 pipeline，路径指向你存放 ONNX 文件的文件夹
+                // 由于上方设置了 env.localModelPath = './'，此处直接写文件夹名称即可
+                generator = await pipeline('text-generation', 'qwen3-onnx-web', {
+                    device: 'webgpu', // 👈 核心：使用显卡加速
+                });
+
+                btn.innerText = "开始翻译";
+                btn.disabled = false;
+                status.innerText = "✅ 模型加载完成";
+            } catch (e) {
+                status.innerText = "❌ 加载失败: " + e.message;
+                console.error(e);
+            }
+        }
+
+        // 2. 翻译逻辑
+        btn.onclick = async () => {
+            const text = inputArea.value.trim();
+            if (!text) return;
+
+            btn.disabled = true;
+            status.innerText = "🤖 正在思考...";
+            outputDiv.innerText = "";
+
+            // 构造 Prompt，必须与你微调时的格式一致
+            const prompt = `User: Translate to emoji: ${text}\nAssistant: `;
+
+            try {
+                const result = await generator(prompt, {
+                    max_new_tokens: 32,
+                    temperature: 0.5,
+                    do_sample: true,
+                    // 防止 0.6B 模型复读
+                    stopping_criteria: ["\n", "User:", "Assistant:"]
+                });
+
+                // 提取输出（过滤掉 Prompt 部分）
+                let outputText = result[0].generated_text.replace(prompt, "").trim();
+                // 进一步清理可能残留的 Assistant 标记
+                outputText = outputText.split("Assistant:")[0].trim();
+
+                outputDiv.innerText = outputText || "❓ 无法翻译";
+                status.innerText = "✨ 翻译完成";
+            } catch (e) {
+                status.innerText = "❌ 运行出错: " + (e.message || String(e));
+                console.error("生成过程捕获错误：", e);
+            } finally {
+                btn.disabled = false;
+            }
+        };
+
+        init();
+    </script>
+
+</body>
+
+</html>

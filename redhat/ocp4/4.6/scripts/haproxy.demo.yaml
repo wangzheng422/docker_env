@@ -1,0 +1,129 @@
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: demo
+  namespace: demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      demo: wzh
+  template:
+    metadata:
+      labels:
+        demo: wzh
+    spec:
+      restartPolicy: Always
+      containers:
+        - resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+          name: demo
+          env:
+            - name: STATS_PORT
+              value: '19360'
+          imagePullPolicy: IfNotPresent
+          image: registry.redhat.ren:5443/docker.io/tomcat:latest
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: demo
+  namespace: demo
+  labels:
+    demo: wzh
+spec:
+  ports:
+    - name: "8080"
+      protocol: TCP
+      port: 8080
+      targetPort: 8080
+  selector:
+    demo: wzh
+---
+kind: Route
+apiVersion: route.openshift.io/v1
+metadata:
+  name: demo
+  namespace: demo
+  annotations:
+    haproxy.router.openshift.io/external-tcp-port: "18080"
+spec:
+  to:
+    kind: Service
+    name: demo
+  port:
+    targetPort: 8080
+  tls:
+    termination: passthrough
+    insecureEdgeTerminationPolicy: None
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: demo-mysql
+  namespace: demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      demo: wzh-mysql
+  template:
+    metadata:
+      labels:
+        demo: wzh-mysql
+    spec:
+      restartPolicy: Always
+      containers:
+        - resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+          name: demo-mysql
+          env:
+            - name: MYSQL_USER
+              value: 'user'
+            - name: MYSQL_PASSWORD
+              value: 'pass'
+            - name: MYSQL_DATABASE
+              value: 'db'
+          imagePullPolicy: IfNotPresent
+          image: registry.redhat.ren:5443/registry.redhat.io/rhel8/mysql-80
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: demo-mysql
+  namespace: demo
+  labels:
+    demo: wzh-mysql
+spec:
+  ports:
+    - name: "3306"
+      protocol: TCP
+      port: 3306
+      targetPort: 3306
+  selector:
+    demo: wzh-mysql
+---
+kind: Route
+apiVersion: route.openshift.io/v1
+metadata:
+  name: demo-mysql
+  namespace: demo
+  annotations:
+    haproxy.router.openshift.io/external-tcp-port: "13306"
+spec:
+  to:
+    kind: Service
+    name: demo-mysql
+  port:
+    targetPort: 3306
+  tls:
+    termination: passthrough
+    insecureEdgeTerminationPolicy: None
+
+
+

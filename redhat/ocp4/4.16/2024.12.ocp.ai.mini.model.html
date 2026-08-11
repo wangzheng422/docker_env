@@ -1,0 +1,1365 @@
+<!DOCTYPE html>
+<html lang="zh" dir="ltr">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="generator" content="pandoc" />
+  <meta name="site-build-id" content="fbe91b569ae8" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <title>serving mini model on cpu only with ocp ai through vllm | wandering.star notes</title>
+  <meta name="description"
+    content="Wandering field notes on OpenShift, RHEL, AI infrastructure, and platform operations." />
+  <!-- Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-E3FRMDB7L2"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-E3FRMDB7L2');
+  </script>
+  <style>
+  html {
+    color: #1a1a1a;
+    background-color: #fdfdfd;
+  }
+  body {
+    margin: 0 auto;
+    max-width: 36em;
+    padding-left: 50px;
+    padding-right: 50px;
+    padding-top: 50px;
+    padding-bottom: 50px;
+    hyphens: auto;
+    overflow-wrap: break-word;
+    text-rendering: optimizeLegibility;
+    font-kerning: normal;
+  }
+  @media (max-width: 600px) {
+    body {
+      font-size: 0.9em;
+      padding: 12px;
+    }
+    h1 {
+      font-size: 1.8em;
+    }
+  }
+  @media print {
+    html {
+      background-color: white;
+    }
+    body {
+      background-color: transparent;
+      color: black;
+      font-size: 12pt;
+    }
+    p, h2, h3 {
+      orphans: 3;
+      widows: 3;
+    }
+    h2, h3, h4 {
+      page-break-after: avoid;
+    }
+  }
+  p {
+    margin: 1em 0;
+  }
+  a {
+    color: #1a1a1a;
+  }
+  a:visited {
+    color: #1a1a1a;
+  }
+  img {
+    max-width: 100%;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.4em;
+  }
+  h5, h6 {
+    font-size: 1em;
+    font-style: italic;
+  }
+  h6 {
+    font-weight: normal;
+  }
+  ol, ul {
+    padding-left: 1.7em;
+    margin-top: 1em;
+  }
+  li > ol, li > ul {
+    margin-top: 0;
+  }
+  blockquote {
+    margin: 1em 0 1em 1.7em;
+    padding-left: 1em;
+    border-left: 2px solid #e6e6e6;
+    color: #606060;
+  }
+  code {
+    font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+    font-size: 85%;
+    margin: 0;
+    hyphens: manual;
+  }
+  pre {
+    margin: 1em 0;
+    overflow: auto;
+  }
+  pre code {
+    padding: 0;
+    overflow: visible;
+    overflow-wrap: normal;
+  }
+  .sourceCode {
+   background-color: transparent;
+   overflow: visible;
+  }
+  hr {
+    background-color: #1a1a1a;
+    border: none;
+    height: 1px;
+    margin: 1em 0;
+  }
+  table {
+    margin: 1em 0;
+    border-collapse: collapse;
+    width: 100%;
+    overflow-x: auto;
+    display: block;
+    font-variant-numeric: lining-nums tabular-nums;
+  }
+  table caption {
+    margin-bottom: 0.75em;
+  }
+  tbody {
+    margin-top: 0.5em;
+    border-top: 1px solid #1a1a1a;
+    border-bottom: 1px solid #1a1a1a;
+  }
+  th {
+    border-top: 1px solid #1a1a1a;
+    padding: 0.25em 0.5em 0.25em 0.5em;
+  }
+  td {
+    padding: 0.125em 0.5em 0.25em 0.5em;
+  }
+  header {
+    margin-bottom: 4em;
+    text-align: center;
+  }
+  #TOC li {
+    list-style: none;
+  }
+  #TOC ul {
+    padding-left: 1.3em;
+  }
+  #TOC > ul {
+    padding-left: 0;
+  }
+  #TOC a:not(:hover) {
+    text-decoration: none;
+  }
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  div.columns{display: flex; gap: min(4vw, 1.5em);}
+  div.column{flex: auto; overflow-x: auto;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  /* The extra [class] is a hack that increases specificity enough to
+     override a similar rule in reveal.js */
+  ul.task-list[class]{list-style: none;}
+  ul.task-list li input[type="checkbox"] {
+    font-size: inherit;
+    width: 0.8em;
+    margin: 0 0.8em 0.2em -1.6em;
+    vertical-align: middle;
+  }
+  .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  /* CSS for syntax highlighting */
+  pre > code.sourceCode { white-space: pre; position: relative; }
+  pre > code.sourceCode > span { line-height: 1.25; }
+  pre > code.sourceCode > span:empty { height: 1.2em; }
+  .sourceCode { overflow: visible; }
+  code.sourceCode > span { color: inherit; text-decoration: inherit; }
+  div.sourceCode { margin: 1em 0; }
+  pre.sourceCode { margin: 0; }
+  @media screen {
+  div.sourceCode { overflow: auto; }
+  }
+  @media print {
+  pre > code.sourceCode { white-space: pre-wrap; }
+  pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+  }
+  pre.numberSource code
+    { counter-reset: source-line 0; }
+  pre.numberSource code > span
+    { position: relative; left: -4em; counter-increment: source-line; }
+  pre.numberSource code > span > a:first-child::before
+    { content: counter(source-line);
+      position: relative; left: -1em; text-align: right; vertical-align: baseline;
+      border: none; display: inline-block;
+      -webkit-touch-callout: none; -webkit-user-select: none;
+      -khtml-user-select: none; -moz-user-select: none;
+      -ms-user-select: none; user-select: none;
+      padding: 0 4px; width: 4em;
+    }
+  pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+  div.sourceCode
+    { color: #cccccc; background-color: #303030; }
+  @media screen {
+  pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+  }
+  code span.al { color: #ffcfaf; } /* Alert */
+  code span.an { color: #7f9f7f; font-weight: bold; } /* Annotation */
+  code span.at { } /* Attribute */
+  code span.bn { color: #dca3a3; } /* BaseN */
+  code span.bu { } /* BuiltIn */
+  code span.cf { color: #f0dfaf; } /* ControlFlow */
+  code span.ch { color: #dca3a3; } /* Char */
+  code span.cn { color: #dca3a3; font-weight: bold; } /* Constant */
+  code span.co { color: #7f9f7f; } /* Comment */
+  code span.cv { color: #7f9f7f; font-weight: bold; } /* CommentVar */
+  code span.do { color: #7f9f7f; } /* Documentation */
+  code span.dt { color: #dfdfbf; } /* DataType */
+  code span.dv { color: #dcdccc; } /* DecVal */
+  code span.er { color: #c3bf9f; } /* Error */
+  code span.ex { } /* Extension */
+  code span.fl { color: #c0bed1; } /* Float */
+  code span.fu { color: #efef8f; } /* Function */
+  code span.im { } /* Import */
+  code span.in { color: #7f9f7f; font-weight: bold; } /* Information */
+  code span.kw { color: #f0dfaf; } /* Keyword */
+  code span.op { color: #f0efd0; } /* Operator */
+  code span.ot { color: #efef8f; } /* Other */
+  code span.pp { color: #ffcfaf; font-weight: bold; } /* Preprocessor */
+  code span.sc { color: #dca3a3; } /* SpecialChar */
+  code span.ss { color: #cc9393; } /* SpecialString */
+  code span.st { color: #cc9393; } /* String */
+  code span.va { } /* Variable */
+  code span.vs { color: #cc9393; } /* VerbatimString */
+  code span.wa { color: #7f9f7f; font-weight: bold; } /* Warning */
+  </style>
+  <link rel="stylesheet" href="../../../style.css?v=fbe91b569ae8" />
+  </head>
+
+<body class="page-article">
+  <div class="reading-progress" aria-hidden="true"></div>
+  <div class="console-backdrop" aria-hidden="true"></div>
+  <nav class="site-nav">
+    <div class="nav-inner">
+      <a class="nav-brand" href="../../../index.html">wandering.star<span>notes</span></a>
+      <div class="nav-links">
+        <a href="https://github.com/wangzheng422/docker_env" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://www.youtube.com/@wangzheng422" target="_blank" rel="noopener">YouTube</a>
+      </div>
+    </div>
+  </nav>
+
+  <main>
+            <a class="back-link" href="../../../index.html">← Back to Index</a>
+        <div class="article-layout">
+            <aside class="toc-panel">
+        <div class="toc-title">ON THIS PAGE</div>
+        <ul>
+        <li><a
+        href="#serving-mini-model-on-cpu-only-with-ocp-ai-through-vllm"
+        id="toc-serving-mini-model-on-cpu-only-with-ocp-ai-through-vllm">serving
+        mini model on cpu only with ocp ai through vllm</a></li>
+        <li><a href="#deploy-ocp-ai" id="toc-deploy-ocp-ai">deploy ocp
+        ai</a>
+        <ul>
+        <li><a href="#download-model" id="toc-download-model">download
+        model</a></li>
+        <li><a href="#create-minio-image-with-llm-model"
+        id="toc-create-minio-image-with-llm-model">create minio image
+        with llm model</a></li>
+        <li><a href="#deploy-the-minio" id="toc-deploy-the-minio">deploy
+        the minio</a></li>
+        <li><a href="#create-a-serving-runtime"
+        id="toc-create-a-serving-runtime">create a serving
+        runtime</a></li>
+        <li><a href="#create-model-servering"
+        id="toc-create-model-servering">create model servering</a></li>
+        <li><a href="#expose-http-route"
+        id="toc-expose-http-route">expose http route</a></li>
+        <li><a href="#curl-to-testing" id="toc-curl-to-testing">curl to
+        testing</a></li>
+        </ul></li>
+        <li><a href="#ray-to-run-distrubte-training"
+        id="toc-ray-to-run-distrubte-training">ray to run distrubte
+        training</a></li>
+        <li><a href="#debug" id="toc-debug">debug</a></li>
+        <li><a href="#end" id="toc-end">end</a></li>
+        </ul>
+      </aside>
+            <article class="markdown-body article-shell">
+        <blockquote>
+        <p>[!WARNING] working in progress</p>
+        </blockquote>
+        <h1
+        id="serving-mini-model-on-cpu-only-with-ocp-ai-through-vllm">serving
+        mini model on cpu only with ocp ai through vllm</h1>
+        <p>We wants to testing openshift ai, focusing on networking, not
+        focusing on gpu, and we do not have nvidia gpu. So we need a
+        small llm model, and serving it on cpu, and try to expose it
+        using http.</p>
+        <p>We will use DistilGPT-2, it is a very small model, the
+        performance of this model is really bad, but it does not matter,
+        it can produce response at least.</p>
+        <h1 id="deploy-ocp-ai">deploy ocp ai</h1>
+        <p>We will deploy ocp ai, for exposing http, we keep kserve
+        using raw deployment mode. This will not involve the service
+        mesh and serverless, which is useless for my use case.</p>
+        <p>We also need minio for s3, and we</p>
+        <h2 id="download-model">download model</h2>
+        <p>First, we need to download the llm model it self.</p>
+        <div class="sourceCode" id="cb1"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># on vultr</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co"># download the model first</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="ex">dnf</span> install <span class="at">-y</span> conda</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="fu">mkdir</span> <span class="at">-p</span> /data/env/</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="ex">conda</span> create <span class="at">-y</span> <span class="at">-p</span> /data/env/hg_cli python=3.11</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="ex">conda</span> init bash</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="ex">conda</span> activate /data/env/hg_cli</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="co"># conda deactivate</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="co"># python -m pip install --upgrade pip setuptools wheel</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="ex">pip</span> install <span class="at">--upgrade</span> huggingface_hub</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a><span class="co"># for distilbert/distilgpt2</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a><span class="va">VAR_NAME</span><span class="op">=</span>distilbert/distilgpt2</span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a><span class="va">VAR_NAME_FULL</span><span class="op">=</span><span class="va">${VAR_NAME</span><span class="op">//</span><span class="dt">\/</span><span class="op">/</span>-<span class="va">}</span></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="va">$VAR_NAME_FULL</span></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a><span class="co"># THUDM-ChatGLM2-6B</span></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a><span class="fu">mkdir</span> <span class="at">-p</span> /data/huggingface/<span class="va">${VAR_NAME_FULL}</span></span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> /data/huggingface/<span class="va">${VAR_NAME_FULL}</span></span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a><span class="cf">while</span> <span class="fu">true</span><span class="kw">;</span> <span class="cf">do</span></span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a>    <span class="ex">huggingface-cli</span> download <span class="at">--repo-type</span> model <span class="at">--revision</span> main <span class="at">--cache-dir</span> /data/huggingface/cache <span class="at">--local-dir</span> ./ <span class="at">--local-dir-use-symlinks</span> False <span class="at">--exclude</span> <span class="st">&quot;*.pt&quot;</span>  <span class="at">--resume-download</span> <span class="va">${VAR_NAME}</span> </span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="bu">[</span> <span class="va">$?</span> <span class="ot">-eq</span> 0 <span class="bu">]</span><span class="kw">;</span> <span class="cf">then</span></span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a>        <span class="cf">break</span></span>
+<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a>    <span class="cf">fi</span></span>
+<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a>    <span class="fu">sleep</span> 1  <span class="co"># Optional: waits for 1 second before trying again</span></span>
+<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a><span class="cf">done</span></span></code></pre></div>
+        <h2 id="create-minio-image-with-llm-model">create minio image
+        with llm model</h2>
+        <p>We will need a s3 service, which we will use minio to
+        provide. We will embed llm model to the minio image, so after
+        the minio start, the llm is there.</p>
+        <div class="sourceCode" id="cb2"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="co"># create the model image</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="fu">mkdir</span> <span class="at">-p</span> /data/workspace/llm</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> /data/workspace/llm</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="fu">rsync</span> <span class="at">-avz</span> /data/huggingface/<span class="va">${VAR_NAME_FULL}</span>/ /data/workspace/llm/models/</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> <span class="op">&lt;&lt; &#39;EOF&#39;</span> <span class="op">&gt;</span> Dockerfile</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="st">FROM docker.io/minio/minio:RELEASE.2021-06-17T00-10-46Z.hotfix.35a0912ff as minio-examples</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="st">EXPOSE 9000</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="st">ARG MODEL_DIR=/data1/</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a><span class="st">USER root</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a><span class="st">RUN useradd -u 1000 -g 0 modelmesh</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a><span class="st">RUN mkdir -p ${MODEL_DIR}</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a><span class="st">RUN chown -R 1000:0 /data1 &amp;&amp; \</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a><span class="st">    chgrp -R 0 /data1 &amp;&amp; \</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a><span class="st">    chmod -R g=u /data1</span></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a><span class="st"># COPY --chown=1000:0 models ${MODEL_DIR}/models/models</span></span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a><span class="st">COPY models ${MODEL_DIR}/models/models</span></span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a><span class="st">USER 1000</span></span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a><span class="op">EOF</span></span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a><span class="ex">podman</span> build <span class="at">-t</span> quay.io/wangzheng422/qimgs:minio-distilgpt2-v03 <span class="at">-f</span> Dockerfile .</span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a><span class="ex">podman</span> push quay.io/wangzheng422/qimgs:minio-distilgpt2-v03</span></code></pre></div>
+        <h2 id="deploy-the-minio">deploy the minio</h2>
+        <p>We deploy the minio.</p>
+        <div class="sourceCode" id="cb3"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="co"># on helper</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="va">S3_NAME</span><span class="op">=</span><span class="st">&#39;distilgpt2&#39;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="va">S3_NS</span><span class="op">=</span><span class="st">&#39;demo-llm&#39;</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="va">S3_IMAGE</span><span class="op">=</span><span class="st">&#39;quay.io/wangzheng422/qimgs:minio-distilgpt2-v03&#39;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> new-project <span class="va">${S3_NS}</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> label <span class="at">--overwrite</span> ns <span class="va">${S3_NS}</span> <span class="dt">\</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>   pod-security.kubernetes.io/enforce=privileged</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> <span class="op">&lt;&lt; EOF</span> <span class="op">&gt;</span> <span class="va">${BASE_DIR}</span>/data/install/s3-codellama.yaml</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a><span class="st">---</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a><span class="st">apiVersion: v1</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a><span class="st">kind: Service</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a><span class="st">metadata:</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a><span class="st">  name: minio-</span><span class="va">${S3_NAME}</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a><span class="st">spec:</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a><span class="st">  ports:</span></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a><span class="st">    - name: minio-client-port</span></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a><span class="st">      port: 9000</span></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a><span class="st">      protocol: TCP</span></span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a><span class="st">      targetPort: 9000</span></span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a><span class="st">    - name: minio-webui-port</span></span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a><span class="st">      port: 9001</span></span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a><span class="st">      protocol: TCP</span></span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a><span class="st">      targetPort: 9001</span></span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a><span class="st">  selector:</span></span>
+<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a><span class="st">    app: minio-</span><span class="va">${S3_NAME}</span></span>
+<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a><span class="st">---</span></span>
+<span id="cb3-31"><a href="#cb3-31" aria-hidden="true" tabindex="-1"></a><span class="st">apiVersion: route.openshift.io/v1</span></span>
+<span id="cb3-32"><a href="#cb3-32" aria-hidden="true" tabindex="-1"></a><span class="st">kind: Route</span></span>
+<span id="cb3-33"><a href="#cb3-33" aria-hidden="true" tabindex="-1"></a><span class="st">metadata:</span></span>
+<span id="cb3-34"><a href="#cb3-34" aria-hidden="true" tabindex="-1"></a><span class="st">  name: s3-</span><span class="va">${S3_NAME}</span></span>
+<span id="cb3-35"><a href="#cb3-35" aria-hidden="true" tabindex="-1"></a><span class="st">spec:</span></span>
+<span id="cb3-36"><a href="#cb3-36" aria-hidden="true" tabindex="-1"></a><span class="st">  to:</span></span>
+<span id="cb3-37"><a href="#cb3-37" aria-hidden="true" tabindex="-1"></a><span class="st">    kind: Service</span></span>
+<span id="cb3-38"><a href="#cb3-38" aria-hidden="true" tabindex="-1"></a><span class="st">    name: minio-</span><span class="va">${S3_NAME}</span></span>
+<span id="cb3-39"><a href="#cb3-39" aria-hidden="true" tabindex="-1"></a><span class="st">  port:</span></span>
+<span id="cb3-40"><a href="#cb3-40" aria-hidden="true" tabindex="-1"></a><span class="st">    targetPort: 9000</span></span>
+<span id="cb3-41"><a href="#cb3-41" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-42"><a href="#cb3-42" aria-hidden="true" tabindex="-1"></a><span class="st">---</span></span>
+<span id="cb3-43"><a href="#cb3-43" aria-hidden="true" tabindex="-1"></a><span class="st">apiVersion: apps/v1</span></span>
+<span id="cb3-44"><a href="#cb3-44" aria-hidden="true" tabindex="-1"></a><span class="st">kind: Deployment</span></span>
+<span id="cb3-45"><a href="#cb3-45" aria-hidden="true" tabindex="-1"></a><span class="st">metadata:</span></span>
+<span id="cb3-46"><a href="#cb3-46" aria-hidden="true" tabindex="-1"></a><span class="st">  name: minio-</span><span class="va">${S3_NAME}</span></span>
+<span id="cb3-47"><a href="#cb3-47" aria-hidden="true" tabindex="-1"></a><span class="st">  labels:</span></span>
+<span id="cb3-48"><a href="#cb3-48" aria-hidden="true" tabindex="-1"></a><span class="st">    app: minio-</span><span class="va">${S3_NAME}</span></span>
+<span id="cb3-49"><a href="#cb3-49" aria-hidden="true" tabindex="-1"></a><span class="st">spec:</span></span>
+<span id="cb3-50"><a href="#cb3-50" aria-hidden="true" tabindex="-1"></a><span class="st">  replicas: 1</span></span>
+<span id="cb3-51"><a href="#cb3-51" aria-hidden="true" tabindex="-1"></a><span class="st">  selector:</span></span>
+<span id="cb3-52"><a href="#cb3-52" aria-hidden="true" tabindex="-1"></a><span class="st">    matchLabels:</span></span>
+<span id="cb3-53"><a href="#cb3-53" aria-hidden="true" tabindex="-1"></a><span class="st">      app: minio-</span><span class="va">${S3_NAME}</span></span>
+<span id="cb3-54"><a href="#cb3-54" aria-hidden="true" tabindex="-1"></a><span class="st">  template:</span></span>
+<span id="cb3-55"><a href="#cb3-55" aria-hidden="true" tabindex="-1"></a><span class="st">    metadata:</span></span>
+<span id="cb3-56"><a href="#cb3-56" aria-hidden="true" tabindex="-1"></a><span class="st">      labels:</span></span>
+<span id="cb3-57"><a href="#cb3-57" aria-hidden="true" tabindex="-1"></a><span class="st">        app: minio-</span><span class="va">${S3_NAME}</span></span>
+<span id="cb3-58"><a href="#cb3-58" aria-hidden="true" tabindex="-1"></a><span class="st">    spec:</span></span>
+<span id="cb3-59"><a href="#cb3-59" aria-hidden="true" tabindex="-1"></a><span class="st">      containers:</span></span>
+<span id="cb3-60"><a href="#cb3-60" aria-hidden="true" tabindex="-1"></a><span class="st">        - args:</span></span>
+<span id="cb3-61"><a href="#cb3-61" aria-hidden="true" tabindex="-1"></a><span class="st">            - server</span></span>
+<span id="cb3-62"><a href="#cb3-62" aria-hidden="true" tabindex="-1"></a><span class="st">            - /data1</span></span>
+<span id="cb3-63"><a href="#cb3-63" aria-hidden="true" tabindex="-1"></a><span class="st">          env:</span></span>
+<span id="cb3-64"><a href="#cb3-64" aria-hidden="true" tabindex="-1"></a><span class="st">            - name: MINIO_ACCESS_KEY</span></span>
+<span id="cb3-65"><a href="#cb3-65" aria-hidden="true" tabindex="-1"></a><span class="st">              value:  admin</span></span>
+<span id="cb3-66"><a href="#cb3-66" aria-hidden="true" tabindex="-1"></a><span class="st">            - name: MINIO_SECRET_KEY</span></span>
+<span id="cb3-67"><a href="#cb3-67" aria-hidden="true" tabindex="-1"></a><span class="st">              value: password</span></span>
+<span id="cb3-68"><a href="#cb3-68" aria-hidden="true" tabindex="-1"></a><span class="st">          image: </span><span class="va">${S3_IMAGE}</span></span>
+<span id="cb3-69"><a href="#cb3-69" aria-hidden="true" tabindex="-1"></a><span class="st">          imagePullPolicy: IfNotPresent</span></span>
+<span id="cb3-70"><a href="#cb3-70" aria-hidden="true" tabindex="-1"></a><span class="st">          name: minio</span></span>
+<span id="cb3-71"><a href="#cb3-71" aria-hidden="true" tabindex="-1"></a><span class="st">        #   nodeSelector:</span></span>
+<span id="cb3-72"><a href="#cb3-72" aria-hidden="true" tabindex="-1"></a><span class="st">        #     kubernetes.io/hostname: &quot;worker-01-demo&quot;</span></span>
+<span id="cb3-73"><a href="#cb3-73" aria-hidden="true" tabindex="-1"></a><span class="st">          securityContext:</span></span>
+<span id="cb3-74"><a href="#cb3-74" aria-hidden="true" tabindex="-1"></a><span class="st">            allowPrivilegeEscalation: false</span></span>
+<span id="cb3-75"><a href="#cb3-75" aria-hidden="true" tabindex="-1"></a><span class="st">            capabilities:</span></span>
+<span id="cb3-76"><a href="#cb3-76" aria-hidden="true" tabindex="-1"></a><span class="st">                drop:</span></span>
+<span id="cb3-77"><a href="#cb3-77" aria-hidden="true" tabindex="-1"></a><span class="st">                - ALL</span></span>
+<span id="cb3-78"><a href="#cb3-78" aria-hidden="true" tabindex="-1"></a><span class="st">            runAsNonRoot: true</span></span>
+<span id="cb3-79"><a href="#cb3-79" aria-hidden="true" tabindex="-1"></a><span class="st">            seccompProfile:</span></span>
+<span id="cb3-80"><a href="#cb3-80" aria-hidden="true" tabindex="-1"></a><span class="st">                type: RuntimeDefault</span></span>
+<span id="cb3-81"><a href="#cb3-81" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-82"><a href="#cb3-82" aria-hidden="true" tabindex="-1"></a><span class="st">---</span></span>
+<span id="cb3-83"><a href="#cb3-83" aria-hidden="true" tabindex="-1"></a><span class="st">apiVersion: v1</span></span>
+<span id="cb3-84"><a href="#cb3-84" aria-hidden="true" tabindex="-1"></a><span class="st">kind: Secret</span></span>
+<span id="cb3-85"><a href="#cb3-85" aria-hidden="true" tabindex="-1"></a><span class="st">metadata:</span></span>
+<span id="cb3-86"><a href="#cb3-86" aria-hidden="true" tabindex="-1"></a><span class="st">  annotations:</span></span>
+<span id="cb3-87"><a href="#cb3-87" aria-hidden="true" tabindex="-1"></a><span class="st">    serving.kserve.io/s3-endpoint: minio-</span><span class="va">${S3_NAME}</span><span class="st">.</span><span class="va">${S3_NS}</span><span class="st">.svc:9000 # replace with your s3 endpoint e.g minio-service.kubeflow:9000</span></span>
+<span id="cb3-88"><a href="#cb3-88" aria-hidden="true" tabindex="-1"></a><span class="st">    serving.kserve.io/s3-usehttps: &quot;0&quot; # by default 1, if testing with minio you can set to 0</span></span>
+<span id="cb3-89"><a href="#cb3-89" aria-hidden="true" tabindex="-1"></a><span class="st">    serving.kserve.io/s3-region: &quot;us-east-2&quot;</span></span>
+<span id="cb3-90"><a href="#cb3-90" aria-hidden="true" tabindex="-1"></a><span class="st">    serving.kserve.io/s3-useanoncredential: &quot;false&quot; # omitting this is the same as false, if true will ignore provided credential and use anonymous credentials</span></span>
+<span id="cb3-91"><a href="#cb3-91" aria-hidden="true" tabindex="-1"></a><span class="st">  name: storage-config-</span><span class="va">${S3_NAME}</span></span>
+<span id="cb3-92"><a href="#cb3-92" aria-hidden="true" tabindex="-1"></a><span class="st">stringData:</span></span>
+<span id="cb3-93"><a href="#cb3-93" aria-hidden="true" tabindex="-1"></a><span class="st">  &quot;AWS_ACCESS_KEY_ID&quot;: &quot;admin&quot;</span></span>
+<span id="cb3-94"><a href="#cb3-94" aria-hidden="true" tabindex="-1"></a><span class="st">  &quot;AWS_SECRET_ACCESS_KEY&quot;: &quot;password&quot;</span></span>
+<span id="cb3-95"><a href="#cb3-95" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-96"><a href="#cb3-96" aria-hidden="true" tabindex="-1"></a><span class="st">---</span></span>
+<span id="cb3-97"><a href="#cb3-97" aria-hidden="true" tabindex="-1"></a><span class="st">apiVersion: v1</span></span>
+<span id="cb3-98"><a href="#cb3-98" aria-hidden="true" tabindex="-1"></a><span class="st">kind: ServiceAccount</span></span>
+<span id="cb3-99"><a href="#cb3-99" aria-hidden="true" tabindex="-1"></a><span class="st">metadata:</span></span>
+<span id="cb3-100"><a href="#cb3-100" aria-hidden="true" tabindex="-1"></a><span class="st">  name: sa-</span><span class="va">${S3_NAME}</span></span>
+<span id="cb3-101"><a href="#cb3-101" aria-hidden="true" tabindex="-1"></a><span class="st">secrets:</span></span>
+<span id="cb3-102"><a href="#cb3-102" aria-hidden="true" tabindex="-1"></a><span class="st">- name: storage-config-</span><span class="va">${S3_NAME}</span></span>
+<span id="cb3-103"><a href="#cb3-103" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-104"><a href="#cb3-104" aria-hidden="true" tabindex="-1"></a><span class="op">EOF</span></span>
+<span id="cb3-105"><a href="#cb3-105" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-106"><a href="#cb3-106" aria-hidden="true" tabindex="-1"></a><span class="ex">oc</span> apply <span class="at">-n</span> <span class="va">${S3_NS}</span> <span class="at">-f</span> <span class="va">${BASE_DIR}</span>/data/install/s3-codellama.yaml</span>
+<span id="cb3-107"><a href="#cb3-107" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-108"><a href="#cb3-108" aria-hidden="true" tabindex="-1"></a><span class="co"># oc delete -n ${S3_NS} -f ${BASE_DIR}/data/install/s3-codellama.yaml</span></span>
+<span id="cb3-109"><a href="#cb3-109" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-110"><a href="#cb3-110" aria-hidden="true" tabindex="-1"></a><span class="co"># open in browser to check</span></span>
+<span id="cb3-111"><a href="#cb3-111" aria-hidden="true" tabindex="-1"></a><span class="co"># http://s3-codellama-llm-demo.apps.demo-gpu.wzhlab.top/minio/models/</span></span>
+<span id="cb3-112"><a href="#cb3-112" aria-hidden="true" tabindex="-1"></a><span class="co"># http://s3-codellama-llm-demo.apps.demo-gpu.wzhlab.top/minio/models/CodeLlama-13b-Instruct-hf/</span></span>
+<span id="cb3-113"><a href="#cb3-113" aria-hidden="true" tabindex="-1"></a></span></code></pre></div>
+        <h2 id="create-a-serving-runtime">create a serving runtime</h2>
+        <p>We need to create a vllm serving runtime for cpu only. The
+        default one in ocp ai, will only work with nvidia gpu.</p>
+        <p>Here is the reference.</p>
+        <ul>
+        <li>https://github.com/rh-aiservices-bu/llm-on-openshift/blob/main/serving-runtimes/vllm_runtime/vll-runtime-cpu.yaml</li>
+        </ul>
+        <div class="sourceCode" id="cb4"><pre
+        class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">apiVersion</span><span class="kw">:</span><span class="at"> serving.kserve.io/v1alpha1</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="fu">kind</span><span class="kw">:</span><span class="at"> ServingRuntime</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="fu">labels</span><span class="kw">:</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">opendatahub.io/dashboard</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;true&quot;</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="fu">metadata</span><span class="kw">:</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">annotations</span><span class="kw">:</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">openshift.io/display-name</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;vLLM for CPU&quot;</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">name</span><span class="kw">:</span><span class="at"> vllm-runtime-cpu</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a><span class="fu">spec</span><span class="kw">:</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">annotations</span><span class="kw">:</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">prometheus.io/path</span><span class="kw">:</span><span class="at"> /metrics</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">prometheus.io/port</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;8080&quot;</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">builtInAdapter</span><span class="kw">:</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">modelLoadingTimeoutMillis</span><span class="kw">:</span><span class="at"> </span><span class="dv">90000</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">containers</span><span class="kw">:</span></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> </span><span class="fu">args</span><span class="kw">:</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="kw">-</span><span class="at"> --model</span></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="kw">-</span><span class="at"> /mnt/models/</span></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="kw">-</span><span class="at"> --download-dir</span></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="kw">-</span><span class="at"> /models-cache</span></span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="kw">-</span><span class="at"> --port</span></span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="kw">-</span><span class="at"> </span><span class="st">&quot;8080&quot;</span></span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="kw">-</span><span class="at"> --max-model-len</span></span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="kw">-</span><span class="at"> </span><span class="st">&quot;1024&quot;</span></span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">image</span><span class="kw">:</span><span class="at"> quay.io/rh-aiservices-bu/vllm-cpu-openai-ubi9:0.2</span></span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">command</span><span class="kw">:</span></span>
+<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="kw">-</span><span class="at"> python</span></span>
+<span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="kw">-</span><span class="at"> -m</span></span>
+<span id="cb4-29"><a href="#cb4-29" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="kw">-</span><span class="at"> vllm.entrypoints.openai.api_server</span></span>
+<span id="cb4-30"><a href="#cb4-30" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">name</span><span class="kw">:</span><span class="at"> kserve-container</span></span>
+<span id="cb4-31"><a href="#cb4-31" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">ports</span><span class="kw">:</span></span>
+<span id="cb4-32"><a href="#cb4-32" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="kw">-</span><span class="at"> </span><span class="fu">containerPort</span><span class="kw">:</span><span class="at"> </span><span class="dv">8080</span></span>
+<span id="cb4-33"><a href="#cb4-33" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">name</span><span class="kw">:</span><span class="at"> http1</span></span>
+<span id="cb4-34"><a href="#cb4-34" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">protocol</span><span class="kw">:</span><span class="at"> TCP</span></span>
+<span id="cb4-35"><a href="#cb4-35" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">multiModel</span><span class="kw">:</span><span class="at"> </span><span class="ch">false</span></span>
+<span id="cb4-36"><a href="#cb4-36" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">supportedModelFormats</span><span class="kw">:</span></span>
+<span id="cb4-37"><a href="#cb4-37" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> </span><span class="fu">autoSelect</span><span class="kw">:</span><span class="at"> </span><span class="ch">true</span></span>
+<span id="cb4-38"><a href="#cb4-38" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">name</span><span class="kw">:</span><span class="at"> vLLM</span></span></code></pre></div>
+        <h2 id="create-model-servering">create model servering</h2>
+        <p>You can use upstream one, which is based on:</p>
+        <ul>
+        <li>https://github.com/rh-aiservices-bu/llm-on-openshift/blob/main/serving-runtimes/vllm_runtime/vll-runtime-cpu.yaml</li>
+        </ul>
+        <div class="sourceCode" id="cb5"><pre
+        class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">apiVersion</span><span class="kw">:</span><span class="at"> serving.kserve.io/v1alpha1</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="fu">kind</span><span class="kw">:</span><span class="at"> ServingRuntime</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="fu">labels</span><span class="kw">:</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">opendatahub.io/dashboard</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;true&quot;</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="fu">metadata</span><span class="kw">:</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">annotations</span><span class="kw">:</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">openshift.io/display-name</span><span class="kw">:</span><span class="at"> vLLM for CPU</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">name</span><span class="kw">:</span><span class="at"> vllm-runtime-cpu</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a><span class="fu">spec</span><span class="kw">:</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">annotations</span><span class="kw">:</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">prometheus.io/path</span><span class="kw">:</span><span class="at"> /metrics</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">prometheus.io/port</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;8080&quot;</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">builtInAdapter</span><span class="kw">:</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">modelLoadingTimeoutMillis</span><span class="kw">:</span><span class="at"> </span><span class="dv">90000</span></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">containers</span><span class="kw">:</span></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> </span><span class="fu">args</span><span class="kw">:</span></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="kw">-</span><span class="at"> --model</span></span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="kw">-</span><span class="at"> /mnt/models/</span></span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="kw">-</span><span class="at"> --download-dir</span></span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="kw">-</span><span class="at"> /models-cache</span></span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="kw">-</span><span class="at"> --port</span></span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="kw">-</span><span class="at"> </span><span class="st">&quot;8080&quot;</span></span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="kw">-</span><span class="at"> --max-model-len</span></span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="kw">-</span><span class="at"> </span><span class="st">&quot;1024&quot;</span></span>
+<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">image</span><span class="kw">:</span><span class="at"> quay.io/rh-aiservices-bu/vllm-cpu-openai-ubi9:0.2</span></span>
+<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">command</span><span class="kw">:</span></span>
+<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="kw">-</span><span class="at"> python</span></span>
+<span id="cb5-28"><a href="#cb5-28" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="kw">-</span><span class="at"> -m</span></span>
+<span id="cb5-29"><a href="#cb5-29" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="kw">-</span><span class="at"> vllm.entrypoints.openai.api_server</span></span>
+<span id="cb5-30"><a href="#cb5-30" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">name</span><span class="kw">:</span><span class="at"> kserve-container</span></span>
+<span id="cb5-31"><a href="#cb5-31" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">ports</span><span class="kw">:</span></span>
+<span id="cb5-32"><a href="#cb5-32" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="kw">-</span><span class="at"> </span><span class="fu">containerPort</span><span class="kw">:</span><span class="at"> </span><span class="dv">8080</span></span>
+<span id="cb5-33"><a href="#cb5-33" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">name</span><span class="kw">:</span><span class="at"> http1</span></span>
+<span id="cb5-34"><a href="#cb5-34" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">protocol</span><span class="kw">:</span><span class="at"> TCP</span></span>
+<span id="cb5-35"><a href="#cb5-35" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">multiModel</span><span class="kw">:</span><span class="at"> </span><span class="ch">false</span></span>
+<span id="cb5-36"><a href="#cb5-36" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">supportedModelFormats</span><span class="kw">:</span></span>
+<span id="cb5-37"><a href="#cb5-37" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> </span><span class="fu">autoSelect</span><span class="kw">:</span><span class="at"> </span><span class="ch">true</span></span>
+<span id="cb5-38"><a href="#cb5-38" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">name</span><span class="kw">:</span><span class="at"> vLLM</span></span></code></pre></div>
+        <p>Or, you can modify the pre-defined, build-in one, which will
+        use <code>quay.io/modh/vllm:rhoai-2.13-cuda</code> , based
+        on:</p>
+        <ul>
+        <li>https://github.com/red-hat-data-services/vllm/blob/main/Dockerfile</li>
+        </ul>
+        <div class="sourceCode" id="cb6"><pre
+        class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">apiVersion</span><span class="kw">:</span><span class="at"> serving.kserve.io/v1alpha1</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="fu">kind</span><span class="kw">:</span><span class="at"> ServingRuntime</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="fu">metadata</span><span class="kw">:</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">annotations</span><span class="kw">:</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">opendatahub.io/recommended-accelerators</span><span class="kw">:</span><span class="at"> </span><span class="st">&#39;[&quot;nvidia.com/gpu&quot;]&#39;</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">openshift.io/display-name</span><span class="kw">:</span><span class="at"> CPU of vLLM ServingRuntime for KServe</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">labels</span><span class="kw">:</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">opendatahub.io/dashboard</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;true&quot;</span></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">name</span><span class="kw">:</span><span class="at"> vllm-runtime-cpu-ocpai</span></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a><span class="fu">spec</span><span class="kw">:</span></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">annotations</span><span class="kw">:</span></span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">prometheus.io/path</span><span class="kw">:</span><span class="at"> /metrics</span></span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">prometheus.io/port</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;8080&quot;</span></span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">containers</span><span class="kw">:</span></span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> </span><span class="fu">args</span><span class="kw">:</span></span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="kw">-</span><span class="at"> --port=8080</span></span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="kw">-</span><span class="at"> --model=/mnt/models</span></span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="kw">-</span><span class="at"> --served-model-name={{.Name}}</span></span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="kw">-</span><span class="at"> --distributed-executor-backend=mp</span></span>
+<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="kw">-</span><span class="at"> --device cpu</span></span>
+<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">command</span><span class="kw">:</span></span>
+<span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="kw">-</span><span class="at"> python</span></span>
+<span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="kw">-</span><span class="at"> -m</span></span>
+<span id="cb6-24"><a href="#cb6-24" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="kw">-</span><span class="at"> vllm.entrypoints.openai.api_server</span></span>
+<span id="cb6-25"><a href="#cb6-25" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">env</span><span class="kw">:</span></span>
+<span id="cb6-26"><a href="#cb6-26" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="kw">-</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> HF_HOME</span></span>
+<span id="cb6-27"><a href="#cb6-27" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">value</span><span class="kw">:</span><span class="at"> /tmp/hf_home</span></span>
+<span id="cb6-28"><a href="#cb6-28" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">image</span><span class="kw">:</span><span class="at"> quay.io/modh/vllm:rhoai-2.13-cuda</span></span>
+<span id="cb6-29"><a href="#cb6-29" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">name</span><span class="kw">:</span><span class="at"> kserve-container</span></span>
+<span id="cb6-30"><a href="#cb6-30" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">ports</span><span class="kw">:</span></span>
+<span id="cb6-31"><a href="#cb6-31" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="kw">-</span><span class="at"> </span><span class="fu">containerPort</span><span class="kw">:</span><span class="at"> </span><span class="dv">8080</span></span>
+<span id="cb6-32"><a href="#cb6-32" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">protocol</span><span class="kw">:</span><span class="at"> TCP</span></span>
+<span id="cb6-33"><a href="#cb6-33" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">multiModel</span><span class="kw">:</span><span class="at"> </span><span class="ch">false</span></span>
+<span id="cb6-34"><a href="#cb6-34" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">supportedModelFormats</span><span class="kw">:</span></span>
+<span id="cb6-35"><a href="#cb6-35" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> </span><span class="fu">autoSelect</span><span class="kw">:</span><span class="at"> </span><span class="ch">true</span></span>
+<span id="cb6-36"><a href="#cb6-36" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">name</span><span class="kw">:</span><span class="at"> vLLM</span></span></code></pre></div>
+        <h2 id="expose-http-route">expose http route</h2>
+        <p>After create a model servering, it will create pod and
+        service, we expose the service by route.</p>
+        <div class="sourceCode" id="cb7"><pre
+        class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">kind</span><span class="kw">:</span><span class="at"> Route</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="fu">apiVersion</span><span class="kw">:</span><span class="at"> route.openshift.io/v1</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="fu">metadata</span><span class="kw">:</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">name</span><span class="kw">:</span><span class="at"> llm</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="fu">spec</span><span class="kw">:</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">host</span><span class="kw">:</span><span class="at"> llm-wzh-ai-01.apps.demo-01-rhsys.wzhlab.top</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">to</span><span class="kw">:</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">kind</span><span class="kw">:</span><span class="at"> Service</span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">name</span><span class="kw">:</span><span class="at"> distilgpt2-predictor</span></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">weight</span><span class="kw">:</span><span class="at"> </span><span class="dv">100</span></span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">port</span><span class="kw">:</span></span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">targetPort</span><span class="kw">:</span><span class="at"> http1</span></span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">wildcardPolicy</span><span class="kw">:</span><span class="at"> None</span></span></code></pre></div>
+        <h2 id="curl-to-testing">curl to testing</h2>
+        <p>curl to test, we can see, it expose the service using
+        http.</p>
+        <div class="sourceCode" id="cb8"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="ex">curl</span> <span class="at">-v</span> http://llm-wzh-ai-01.apps.demo-01-rhsys.wzhlab.top/v1/chat/completions <span class="dt">\</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>-H <span class="st">&quot;Content-Type: application/json&quot;</span> <span class="dt">\</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>-d <span class="st">&#39;{&quot;model&quot;:&quot;/mnt/models/&quot;,</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="st">     &quot;messages&quot;:</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a><span class="st">        [{&quot;role&quot;:&quot;user&quot;,</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a><span class="st">          &quot;content&quot;:</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a><span class="st">             [{&quot;type&quot;:&quot;text&quot;, &quot;text&quot;:&quot;give me example&quot;</span></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a><span class="st">              }</span></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a><span class="st">             ]</span></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a><span class="st">         }</span></span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a><span class="st">        ]</span></span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a><span class="st">    }&#39;</span></span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a><span class="co"># *   Trying 192.168.50.23:80...</span></span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a><span class="co"># * Connected to llm-wzh-ai-01.apps.demo-01-rhsys.wzhlab.top (192.168.50.23) port 80 (#0)</span></span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a><span class="co"># &gt; POST /v1/chat/completions HTTP/1.1</span></span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a><span class="co"># &gt; Host: llm-wzh-ai-01.apps.demo-01-rhsys.wzhlab.top</span></span>
+<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a><span class="co"># &gt; User-Agent: curl/7.76.1</span></span>
+<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a><span class="co"># &gt; Accept: */*</span></span>
+<span id="cb8-20"><a href="#cb8-20" aria-hidden="true" tabindex="-1"></a><span class="co"># &gt; Content-Type: application/json</span></span>
+<span id="cb8-21"><a href="#cb8-21" aria-hidden="true" tabindex="-1"></a><span class="co"># &gt; Content-Length: 200</span></span>
+<span id="cb8-22"><a href="#cb8-22" aria-hidden="true" tabindex="-1"></a><span class="co"># &gt;</span></span>
+<span id="cb8-23"><a href="#cb8-23" aria-hidden="true" tabindex="-1"></a><span class="co"># * Mark bundle as not supporting multiuse</span></span>
+<span id="cb8-24"><a href="#cb8-24" aria-hidden="true" tabindex="-1"></a><span class="co"># &lt; HTTP/1.1 200 OK</span></span>
+<span id="cb8-25"><a href="#cb8-25" aria-hidden="true" tabindex="-1"></a><span class="co"># &lt; date: Fri, 06 Dec 2024 15:13:25 GMT</span></span>
+<span id="cb8-26"><a href="#cb8-26" aria-hidden="true" tabindex="-1"></a><span class="co"># &lt; server: uvicorn</span></span>
+<span id="cb8-27"><a href="#cb8-27" aria-hidden="true" tabindex="-1"></a><span class="co"># &lt; content-length: 1427</span></span>
+<span id="cb8-28"><a href="#cb8-28" aria-hidden="true" tabindex="-1"></a><span class="co"># &lt; content-type: application/json</span></span>
+<span id="cb8-29"><a href="#cb8-29" aria-hidden="true" tabindex="-1"></a><span class="co"># &lt; set-cookie: fb2e7f517fef0f3147f969b6e5c6592e=ccc239021d83b5fedb39f97374356160; path=/; HttpOnly</span></span>
+<span id="cb8-30"><a href="#cb8-30" aria-hidden="true" tabindex="-1"></a><span class="co"># &lt;</span></span>
+<span id="cb8-31"><a href="#cb8-31" aria-hidden="true" tabindex="-1"></a><span class="co"># {&quot;id&quot;:&quot;cmpl-bd4205e5a732496d928283dc467cf0b5&quot;,&quot;object&quot;:&quot;chat.completion&quot;,&quot;created&quot;:1733498006,&quot;model&quot;:&quot;/mnt/models/&quot;,&quot;choices&quot;:[{&quot;index&quot;:0,&quot;message&quot;:{&quot;role&quot;:&quot;assistant&quot;,&quot;content&quot;:&quot;As a result, we have released a new version of the P-N-A-R-R for Android. This is the first release of P-N-A-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-R-&quot;,&quot;tool_calls&quot;:[]},&quot;logprobs&quot;:null,&quot;finish_reason&quot;:&quot;length&quot;,&quot;stop_reason&quot;:null}],&quot;usage&quot;:{&quot;prompt_tokens&quot;:4,&quot;total_tokens&quot;:1024,&quot;completion_tokens&quot;:1020}}</span></span></code></pre></div>
+        <h1 id="ray-to-run-distrubte-training">ray to run distrubte
+        training</h1>
+        <p>If you want to run llama-factory on multiple nodes, you can
+        use ray, by referencing:</p>
+        <ul>
+        <li>https://docs.ray.io/en/latest/cluster/kubernetes/examples/gpu-training-example.html</li>
+        </ul>
+        <p>It will create an empty ray cluster, and then, submit
+        different rayjob to the cluster.</p>
+        <h1 id="debug">debug</h1>
+        <p>vllm serving runtime, is a docker image indeed.</p>
+        <p><code>A16 1/4gpu</code></p>
+        <div class="sourceCode" id="cb9"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="ex">quay.io/modh/vllm@sha256:3c56d4c2a5a9565e8b07ba17a6624290c4fb39ac9097b99b946326c09a8b40c8</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="ex">quay.io/modh/vllm:rhoai-2.13-cuda</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="co"># https://github.com/red-hat-data-services/vllm/blob/main/Dockerfile</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a><span class="ex">quay.io/modh/vllm:rhoai-2.16-cuda</span></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a><span class="ex">podman</span> run <span class="at">--privileged</span> <span class="at">--gpus</span> all <span class="at">--rm</span> <span class="at">-it</span> <span class="dt">\</span></span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>--entrypoint bash <span class="dt">\</span></span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>quay.io/modh/vllm:rhoai-2.13-cuda</span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a><span class="ex">docker</span> run <span class="at">--gpus</span> all <span class="at">--privileged</span> <span class="at">--rm</span> <span class="at">-it</span> <span class="dt">\</span></span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>-e <span class="st">&#39;HF_HUB_OFFLINE=false&#39;</span> <span class="dt">\</span></span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a>quay.io/modh/vllm:rhoai-2.13-cuda</span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a><span class="ex">docker</span> run <span class="at">--gpus</span> all <span class="at">--privileged</span> <span class="at">--rm</span> <span class="at">-it</span> <span class="dt">\</span></span>
+<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a>-e <span class="st">&#39;HF_HUB_OFFLINE=false&#39;</span> <span class="dt">\</span></span>
+<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a>--entrypoint bash <span class="dt">\</span></span>
+<span id="cb9-20"><a href="#cb9-20" aria-hidden="true" tabindex="-1"></a>quay.io/modh/vllm:rhoai-2.13-cuda</span>
+<span id="cb9-21"><a href="#cb9-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-22"><a href="#cb9-22" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> <span class="at">-m</span> vllm.entrypoints.openai.api_server <span class="at">--device</span><span class="op">=</span>cpu <span class="at">--help</span></span>
+<span id="cb9-23"><a href="#cb9-23" aria-hidden="true" tabindex="-1"></a><span class="ex">usage:</span> api_server.py <span class="pp">[-</span><span class="ss">h</span><span class="pp">]</span> [--host HOST] [--port PORT] [--uvicorn-log-level <span class="dt">{debug</span><span class="op">,</span><span class="dt">info</span><span class="op">,</span><span class="dt">warning</span><span class="op">,</span><span class="dt">error</span><span class="op">,</span><span class="dt">critical</span><span class="op">,</span><span class="dt">trace}</span>] <span class="pp">[--</span><span class="ss">allow</span><span class="pp">-</span><span class="ss">credentials</span><span class="pp">]</span> [--allowed-origins ALLOWED_ORIGINS]</span>
+<span id="cb9-24"><a href="#cb9-24" aria-hidden="true" tabindex="-1"></a>                     <span class="ex">[--allowed-methods</span> ALLOWED_METHODS] [--allowed-headers ALLOWED_HEADERS] [--api-key API_KEY] [--lora-modules LORA_MODULES [LORA_MODULES ...]]</span>
+<span id="cb9-25"><a href="#cb9-25" aria-hidden="true" tabindex="-1"></a>                     <span class="ex">[--prompt-adapters</span> PROMPT_ADAPTERS [PROMPT_ADAPTERS ...]] [--chat-template CHAT_TEMPLATE] [--response-role RESPONSE_ROLE] [--ssl-keyfile SSL_KEYFILE]</span>
+<span id="cb9-26"><a href="#cb9-26" aria-hidden="true" tabindex="-1"></a>                     <span class="ex">[--ssl-certfile</span> SSL_CERTFILE] [--ssl-ca-certs SSL_CA_CERTS] [--ssl-cert-reqs SSL_CERT_REQS] [--root-path ROOT_PATH] [--middleware MIDDLEWARE] <span class="pp">[--</span><span class="ss">return</span><span class="pp">-</span><span class="ss">tokens</span><span class="pp">-</span><span class="ss">as</span><span class="pp">-</span><span class="ss">token</span><span class="pp">-</span><span class="ss">ids</span><span class="pp">]</span></span>
+<span id="cb9-27"><a href="#cb9-27" aria-hidden="true" tabindex="-1"></a>                     <span class="ex">[--disable-frontend-multiprocessing]</span> <span class="pp">[--</span><span class="ss">enable</span><span class="pp">-</span><span class="ss">auto</span><span class="pp">-</span><span class="ss">tool</span><span class="pp">-</span><span class="ss">choice</span><span class="pp">]</span> [--tool-call-parser <span class="dt">{mistral</span><span class="op">,</span><span class="dt">hermes}</span>] [--model MODEL] [--tokenizer TOKENIZER] <span class="pp">[--</span><span class="ss">skip</span><span class="pp">-</span><span class="ss">tokenizer</span><span class="pp">-</span><span class="ss">init</span><span class="pp">]</span></span>
+<span id="cb9-28"><a href="#cb9-28" aria-hidden="true" tabindex="-1"></a>                     <span class="ex">[--revision</span> REVISION] [--code-revision CODE_REVISION] [--tokenizer-revision TOKENIZER_REVISION] [--tokenizer-mode <span class="dt">{auto</span><span class="op">,</span><span class="dt">slow</span><span class="op">,</span><span class="dt">mistral}</span>] <span class="pp">[--</span><span class="ss">trust</span><span class="pp">-</span><span class="ss">remote</span><span class="pp">-</span><span class="ss">code</span><span class="pp">]</span></span>
+<span id="cb9-29"><a href="#cb9-29" aria-hidden="true" tabindex="-1"></a>                     <span class="ex">[--download-dir</span> DOWNLOAD_DIR] [--load-format <span class="dt">{auto</span><span class="op">,</span><span class="dt">pt</span><span class="op">,</span><span class="dt">safetensors</span><span class="op">,</span><span class="dt">npcache</span><span class="op">,</span><span class="dt">dummy</span><span class="op">,</span><span class="dt">tensorizer</span><span class="op">,</span><span class="dt">sharded_state</span><span class="op">,</span><span class="dt">gguf</span><span class="op">,</span><span class="dt">bitsandbytes</span><span class="op">,</span><span class="dt">mistral}</span>] [--config-format <span class="dt">{auto</span><span class="op">,</span><span class="dt">hf</span><span class="op">,</span><span class="dt">mistral}</span>]</span>
+<span id="cb9-30"><a href="#cb9-30" aria-hidden="true" tabindex="-1"></a>                     <span class="ex">[--dtype</span> <span class="dt">{auto</span><span class="op">,</span><span class="dt">half</span><span class="op">,</span><span class="dt">float16</span><span class="op">,</span><span class="dt">bfloat16</span><span class="op">,</span><span class="dt">float</span><span class="op">,</span><span class="dt">float32}</span>] [--kv-cache-dtype <span class="dt">{auto</span><span class="op">,</span><span class="dt">fp8</span><span class="op">,</span><span class="dt">fp8_e5m2</span><span class="op">,</span><span class="dt">fp8_e4m3}</span>] [--quantization-param-path QUANTIZATION_PARAM_PATH]</span>
+<span id="cb9-31"><a href="#cb9-31" aria-hidden="true" tabindex="-1"></a>                     <span class="ex">[--max-model-len</span> MAX_MODEL_LEN] [--guided-decoding-backend <span class="dt">{outlines</span><span class="op">,</span><span class="dt">lm-format-enforcer}</span>] [--distributed-executor-backend <span class="dt">{ray</span><span class="op">,</span><span class="dt">mp}</span>] <span class="pp">[--</span><span class="ss">worker</span><span class="pp">-</span><span class="ss">use</span><span class="pp">-</span><span class="ss">ray</span><span class="pp">]</span></span>
+<span id="cb9-32"><a href="#cb9-32" aria-hidden="true" tabindex="-1"></a>                     <span class="ex">[--pipeline-parallel-size</span> PIPELINE_PARALLEL_SIZE] [--tensor-parallel-size TENSOR_PARALLEL_SIZE] [--max-parallel-loading-workers MAX_PARALLEL_LOADING_WORKERS]</span>
+<span id="cb9-33"><a href="#cb9-33" aria-hidden="true" tabindex="-1"></a>                     <span class="ex">[--ray-workers-use-nsight]</span> [--block-size <span class="dt">{8</span><span class="op">,</span><span class="dt">16</span><span class="op">,</span><span class="dt">32}</span>] <span class="pp">[--</span><span class="ss">enable</span><span class="pp">-</span><span class="ss">prefix</span><span class="pp">-</span><span class="ss">caching</span><span class="pp">]</span> <span class="pp">[--</span><span class="ss">disable</span><span class="pp">-</span><span class="ss">sliding</span><span class="pp">-</span><span class="ss">window</span><span class="pp">]</span> <span class="pp">[--</span><span class="ss">use</span><span class="pp">-</span><span class="ss">v2</span><span class="pp">-</span><span class="ss">block</span><span class="pp">-</span><span class="ss">manager</span><span class="pp">]</span> [--num-lookahead-slots NUM_LOOKAHEAD_SLOTS]</span>
+<span id="cb9-34"><a href="#cb9-34" aria-hidden="true" tabindex="-1"></a>                     <span class="ex">[--seed</span> SEED] [--swap-space SWAP_SPACE] [--cpu-offload-gb CPU_OFFLOAD_GB] [--gpu-memory-utilization GPU_MEMORY_UTILIZATION] [--num-gpu-blocks-override NUM_GPU_BLOCKS_OVERRIDE]</span>
+<span id="cb9-35"><a href="#cb9-35" aria-hidden="true" tabindex="-1"></a>                     <span class="ex">[--max-num-batched-tokens</span> MAX_NUM_BATCHED_TOKENS] [--max-num-seqs MAX_NUM_SEQS] [--max-logprobs MAX_LOGPROBS] <span class="pp">[--</span><span class="ss">disable</span><span class="pp">-</span><span class="ss">log</span><span class="pp">-</span><span class="ss">stats</span><span class="pp">]</span></span>
+<span id="cb9-36"><a href="#cb9-36" aria-hidden="true" tabindex="-1"></a>                     <span class="ex">[--quantization</span> <span class="dt">{aqlm</span><span class="op">,</span><span class="dt">awq</span><span class="op">,</span><span class="dt">deepspeedfp</span><span class="op">,</span><span class="dt">tpu_int8</span><span class="op">,</span><span class="dt">fp8</span><span class="op">,</span><span class="dt">fbgemm_fp8</span><span class="op">,</span><span class="dt">modelopt</span><span class="op">,</span><span class="dt">marlin</span><span class="op">,</span><span class="dt">gguf</span><span class="op">,</span><span class="dt">gptq_marlin_24</span><span class="op">,</span><span class="dt">gptq_marlin</span><span class="op">,</span><span class="dt">awq_marlin</span><span class="op">,</span><span class="dt">gptq</span><span class="op">,</span><span class="dt">compressed-tensors</span><span class="op">,</span><span class="dt">bitsandbytes</span><span class="op">,</span><span class="dt">qqq</span><span class="op">,</span><span class="dt">experts_int8</span><span class="op">,</span><span class="dt">neuron_quant</span><span class="op">,</span><span class="dt">None}</span>]</span>
+<span id="cb9-37"><a href="#cb9-37" aria-hidden="true" tabindex="-1"></a>                     <span class="ex">[--rope-scaling</span> ROPE_SCALING] [--rope-theta ROPE_THETA] <span class="pp">[--</span><span class="ss">enforce</span><span class="pp">-</span><span class="ss">eager</span><span class="pp">]</span> [--max-context-len-to-capture MAX_CONTEXT_LEN_TO_CAPTURE]</span>
+<span id="cb9-38"><a href="#cb9-38" aria-hidden="true" tabindex="-1"></a>                     <span class="ex">[--max-seq-len-to-capture</span> MAX_SEQ_LEN_TO_CAPTURE] <span class="pp">[--</span><span class="ss">disable</span><span class="pp">-</span><span class="ss">custom</span><span class="pp">-</span><span class="ss">all</span><span class="pp">-</span><span class="ss">reduce</span><span class="pp">]</span> [--tokenizer-pool-size TOKENIZER_POOL_SIZE] [--tokenizer-pool-type TOKENIZER_POOL_TYPE]</span>
+<span id="cb9-39"><a href="#cb9-39" aria-hidden="true" tabindex="-1"></a>                     <span class="ex">[--tokenizer-pool-extra-config</span> TOKENIZER_POOL_EXTRA_CONFIG] [--limit-mm-per-prompt LIMIT_MM_PER_PROMPT] [--mm-processor-kwargs MM_PROCESSOR_KWARGS] <span class="pp">[--</span><span class="ss">enable</span><span class="pp">-</span><span class="ss">lora</span><span class="pp">]</span></span>
+<span id="cb9-40"><a href="#cb9-40" aria-hidden="true" tabindex="-1"></a>                     <span class="ex">[--max-loras</span> MAX_LORAS] [--max-lora-rank MAX_LORA_RANK] [--lora-extra-vocab-size LORA_EXTRA_VOCAB_SIZE] [--lora-dtype <span class="dt">{auto</span><span class="op">,</span><span class="dt">float16</span><span class="op">,</span><span class="dt">bfloat16</span><span class="op">,</span><span class="dt">float32}</span>]</span>
+<span id="cb9-41"><a href="#cb9-41" aria-hidden="true" tabindex="-1"></a>                     <span class="ex">[--long-lora-scaling-factors</span> LONG_LORA_SCALING_FACTORS] [--max-cpu-loras MAX_CPU_LORAS] <span class="pp">[--</span><span class="ss">fully</span><span class="pp">-</span><span class="ss">sharded</span><span class="pp">-</span><span class="ss">loras</span><span class="pp">]</span> <span class="pp">[--</span><span class="ss">enable</span><span class="pp">-</span><span class="ss">prompt</span><span class="pp">-</span><span class="ss">adapter</span><span class="pp">]</span></span>
+<span id="cb9-42"><a href="#cb9-42" aria-hidden="true" tabindex="-1"></a>                     <span class="ex">[--max-prompt-adapters</span> MAX_PROMPT_ADAPTERS] [--max-prompt-adapter-token MAX_PROMPT_ADAPTER_TOKEN] [--device <span class="dt">{auto</span><span class="op">,</span><span class="dt">cuda</span><span class="op">,</span><span class="dt">neuron</span><span class="op">,</span><span class="dt">cpu</span><span class="op">,</span><span class="dt">openvino</span><span class="op">,</span><span class="dt">tpu</span><span class="op">,</span><span class="dt">xpu}</span>]</span>
+<span id="cb9-43"><a href="#cb9-43" aria-hidden="true" tabindex="-1"></a>                     <span class="ex">[--num-scheduler-steps</span> NUM_SCHEDULER_STEPS] <span class="pp">[--</span><span class="ss">multi</span><span class="pp">-</span><span class="ss">step</span><span class="pp">-</span><span class="ss">stream</span><span class="pp">-</span><span class="ss">outputs</span><span class="pp">]</span> [--scheduler-delay-factor SCHEDULER_DELAY_FACTOR] [--enable-chunked-prefill <span class="pp">[</span><span class="ss">ENABLE_CHUNKED_PREFILL</span><span class="pp">]</span>]</span>
+<span id="cb9-44"><a href="#cb9-44" aria-hidden="true" tabindex="-1"></a>                     <span class="ex">[--speculative-model</span> SPECULATIVE_MODEL]</span>
+<span id="cb9-45"><a href="#cb9-45" aria-hidden="true" tabindex="-1"></a>                     <span class="ex">[--speculative-model-quantization</span> <span class="dt">{aqlm</span><span class="op">,</span><span class="dt">awq</span><span class="op">,</span><span class="dt">deepspeedfp</span><span class="op">,</span><span class="dt">tpu_int8</span><span class="op">,</span><span class="dt">fp8</span><span class="op">,</span><span class="dt">fbgemm_fp8</span><span class="op">,</span><span class="dt">modelopt</span><span class="op">,</span><span class="dt">marlin</span><span class="op">,</span><span class="dt">gguf</span><span class="op">,</span><span class="dt">gptq_marlin_24</span><span class="op">,</span><span class="dt">gptq_marlin</span><span class="op">,</span><span class="dt">awq_marlin</span><span class="op">,</span><span class="dt">gptq</span><span class="op">,</span><span class="dt">compressed-tensors</span><span class="op">,</span><span class="dt">bitsandbytes</span><span class="op">,</span><span class="dt">qqq</span><span class="op">,</span><span class="dt">experts_int8</span><span class="op">,</span><span class="dt">neuron_quant</span><span class="op">,</span><span class="dt">None}</span>]</span>
+<span id="cb9-46"><a href="#cb9-46" aria-hidden="true" tabindex="-1"></a>                     <span class="ex">[--num-speculative-tokens</span> NUM_SPECULATIVE_TOKENS] [--speculative-draft-tensor-parallel-size SPECULATIVE_DRAFT_TENSOR_PARALLEL_SIZE]</span>
+<span id="cb9-47"><a href="#cb9-47" aria-hidden="true" tabindex="-1"></a>                     <span class="ex">[--speculative-max-model-len</span> SPECULATIVE_MAX_MODEL_LEN] [--speculative-disable-by-batch-size SPECULATIVE_DISABLE_BY_BATCH_SIZE]</span>
+<span id="cb9-48"><a href="#cb9-48" aria-hidden="true" tabindex="-1"></a>                     <span class="ex">[--ngram-prompt-lookup-max</span> NGRAM_PROMPT_LOOKUP_MAX] [--ngram-prompt-lookup-min NGRAM_PROMPT_LOOKUP_MIN]</span>
+<span id="cb9-49"><a href="#cb9-49" aria-hidden="true" tabindex="-1"></a>                     <span class="ex">[--spec-decoding-acceptance-method</span> <span class="dt">{rejection_sampler</span><span class="op">,</span><span class="dt">typical_acceptance_sampler}</span>]</span>
+<span id="cb9-50"><a href="#cb9-50" aria-hidden="true" tabindex="-1"></a>                     <span class="ex">[--typical-acceptance-sampler-posterior-threshold</span> TYPICAL_ACCEPTANCE_SAMPLER_POSTERIOR_THRESHOLD]</span>
+<span id="cb9-51"><a href="#cb9-51" aria-hidden="true" tabindex="-1"></a>                     <span class="ex">[--typical-acceptance-sampler-posterior-alpha</span> TYPICAL_ACCEPTANCE_SAMPLER_POSTERIOR_ALPHA] [--disable-logprobs-during-spec-decoding <span class="pp">[</span><span class="ss">DISABLE_LOGPROBS_DURING_SPEC_DECODING</span><span class="pp">]</span>]</span>
+<span id="cb9-52"><a href="#cb9-52" aria-hidden="true" tabindex="-1"></a>                     <span class="ex">[--model-loader-extra-config</span> MODEL_LOADER_EXTRA_CONFIG] [--ignore-patterns IGNORE_PATTERNS] [--preemption-mode PREEMPTION_MODE]</span>
+<span id="cb9-53"><a href="#cb9-53" aria-hidden="true" tabindex="-1"></a>                     <span class="ex">[--served-model-name</span> SERVED_MODEL_NAME [SERVED_MODEL_NAME ...]] [--qlora-adapter-name-or-path QLORA_ADAPTER_NAME_OR_PATH] [--otlp-traces-endpoint OTLP_TRACES_ENDPOINT]</span>
+<span id="cb9-54"><a href="#cb9-54" aria-hidden="true" tabindex="-1"></a>                     <span class="ex">[--collect-detailed-traces</span> COLLECT_DETAILED_TRACES] <span class="pp">[--</span><span class="ss">disable</span><span class="pp">-</span><span class="ss">async</span><span class="pp">-</span><span class="ss">output</span><span class="pp">-</span><span class="ss">proc</span><span class="pp">]</span> [--override-neuron-config OVERRIDE_NEURON_CONFIG] <span class="pp">[--</span><span class="ss">disable</span><span class="pp">-</span><span class="ss">log</span><span class="pp">-</span><span class="ss">requests</span><span class="pp">]</span></span>
+<span id="cb9-55"><a href="#cb9-55" aria-hidden="true" tabindex="-1"></a>                     <span class="ex">[--max-log-len</span> MAX_LOG_LEN] <span class="pp">[--</span><span class="ss">disable</span><span class="pp">-</span><span class="ss">fastapi</span><span class="pp">-</span><span class="ss">docs</span><span class="pp">]</span></span>
+<span id="cb9-56"><a href="#cb9-56" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-57"><a href="#cb9-57" aria-hidden="true" tabindex="-1"></a><span class="ex">vLLM</span> OpenAI-Compatible RESTful API server.</span>
+<span id="cb9-58"><a href="#cb9-58" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-59"><a href="#cb9-59" aria-hidden="true" tabindex="-1"></a><span class="ex">options:</span></span>
+<span id="cb9-60"><a href="#cb9-60" aria-hidden="true" tabindex="-1"></a>  <span class="ex">-h,</span> <span class="at">--help</span>            show this help message and exit</span>
+<span id="cb9-61"><a href="#cb9-61" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--host</span> HOST           host name</span>
+<span id="cb9-62"><a href="#cb9-62" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--port</span> PORT           port number</span>
+<span id="cb9-63"><a href="#cb9-63" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--uvicorn-log-level</span> <span class="dt">{debug</span><span class="op">,</span><span class="dt">info</span><span class="op">,</span><span class="dt">warning</span><span class="op">,</span><span class="dt">error</span><span class="op">,</span><span class="dt">critical</span><span class="op">,</span><span class="dt">trace}</span></span>
+<span id="cb9-64"><a href="#cb9-64" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">log</span> level for uvicorn</span>
+<span id="cb9-65"><a href="#cb9-65" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--allow-credentials</span>   allow credentials</span>
+<span id="cb9-66"><a href="#cb9-66" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--allowed-origins</span> ALLOWED_ORIGINS</span>
+<span id="cb9-67"><a href="#cb9-67" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">allowed</span> origins</span>
+<span id="cb9-68"><a href="#cb9-68" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--allowed-methods</span> ALLOWED_METHODS</span>
+<span id="cb9-69"><a href="#cb9-69" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">allowed</span> methods</span>
+<span id="cb9-70"><a href="#cb9-70" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--allowed-headers</span> ALLOWED_HEADERS</span>
+<span id="cb9-71"><a href="#cb9-71" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">allowed</span> headers</span>
+<span id="cb9-72"><a href="#cb9-72" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--api-key</span> API_KEY     If provided, the server will require this key to be presented in the header.</span>
+<span id="cb9-73"><a href="#cb9-73" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--lora-modules</span> LORA_MODULES [LORA_MODULES ...]</span>
+<span id="cb9-74"><a href="#cb9-74" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">LoRA</span> module configurations in either <span class="st">&#39;name=path&#39;</span> formator JSON format. Example <span class="er">(</span><span class="ex">old</span> format<span class="kw">)</span><span class="bu">:</span> <span class="st">&#39;name=path&#39;</span> Example <span class="er">(</span><span class="ex">new</span> format<span class="kw">)</span><span class="bu">:</span> <span class="st">&#39;{&quot;name&quot;: &quot;name&quot;, &quot;local_path&quot;: &quot;path&quot;,</span></span>
+<span id="cb9-75"><a href="#cb9-75" aria-hidden="true" tabindex="-1"></a><span class="st">                        &quot;base_model_name&quot;: &quot;id&quot;}&#39;</span></span>
+<span id="cb9-76"><a href="#cb9-76" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--prompt-adapters</span> PROMPT_ADAPTERS [PROMPT_ADAPTERS ...]</span>
+<span id="cb9-77"><a href="#cb9-77" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">Prompt</span> adapter configurations in the format name=path. Multiple adapters can be specified.</span>
+<span id="cb9-78"><a href="#cb9-78" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--chat-template</span> CHAT_TEMPLATE</span>
+<span id="cb9-79"><a href="#cb9-79" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">The</span> file path to the chat template, or the template in single-line form for the specified model</span>
+<span id="cb9-80"><a href="#cb9-80" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--response-role</span> RESPONSE_ROLE</span>
+<span id="cb9-81"><a href="#cb9-81" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">The</span> role name to return if <span class="kw">`</span><span class="ex">request.add_generation_prompt=true</span><span class="kw">`</span>.</span>
+<span id="cb9-82"><a href="#cb9-82" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--ssl-keyfile</span> SSL_KEYFILE</span>
+<span id="cb9-83"><a href="#cb9-83" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">The</span> file path to the SSL key file</span>
+<span id="cb9-84"><a href="#cb9-84" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--ssl-certfile</span> SSL_CERTFILE</span>
+<span id="cb9-85"><a href="#cb9-85" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">The</span> file path to the SSL cert file</span>
+<span id="cb9-86"><a href="#cb9-86" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--ssl-ca-certs</span> SSL_CA_CERTS</span>
+<span id="cb9-87"><a href="#cb9-87" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">The</span> CA certificates file</span>
+<span id="cb9-88"><a href="#cb9-88" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--ssl-cert-reqs</span> SSL_CERT_REQS</span>
+<span id="cb9-89"><a href="#cb9-89" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">Whether</span> client certificate is required <span class="er">(</span><span class="ex">see</span> stdlib ssl module<span class="st">&#39;s)</span></span>
+<span id="cb9-90"><a href="#cb9-90" aria-hidden="true" tabindex="-1"></a><span class="st">  --root-path ROOT_PATH</span></span>
+<span id="cb9-91"><a href="#cb9-91" aria-hidden="true" tabindex="-1"></a><span class="st">                        FastAPI root_path when app is behind a path based routing proxy</span></span>
+<span id="cb9-92"><a href="#cb9-92" aria-hidden="true" tabindex="-1"></a><span class="st">  --middleware MIDDLEWARE</span></span>
+<span id="cb9-93"><a href="#cb9-93" aria-hidden="true" tabindex="-1"></a><span class="st">                        Additional ASGI middleware to apply to the app. We accept multiple --middleware arguments. The value should be an import path. If a function is provided, vLLM will add it</span></span>
+<span id="cb9-94"><a href="#cb9-94" aria-hidden="true" tabindex="-1"></a><span class="st">                        to the server using @app.middleware(&#39;</span>http<span class="st">&#39;). If a class is provided, vLLM will add it to the server using app.add_middleware().</span></span>
+<span id="cb9-95"><a href="#cb9-95" aria-hidden="true" tabindex="-1"></a><span class="st">  --return-tokens-as-token-ids</span></span>
+<span id="cb9-96"><a href="#cb9-96" aria-hidden="true" tabindex="-1"></a><span class="st">                        When --max-logprobs is specified, represents single tokens as strings of the form &#39;</span>token_id:{token_id}<span class="st">&#39; so that tokens that are not JSON-encodable can be identified.</span></span>
+<span id="cb9-97"><a href="#cb9-97" aria-hidden="true" tabindex="-1"></a><span class="st">  --disable-frontend-multiprocessing</span></span>
+<span id="cb9-98"><a href="#cb9-98" aria-hidden="true" tabindex="-1"></a><span class="st">                        If specified, will run the OpenAI frontend server in the same process as the model serving engine.</span></span>
+<span id="cb9-99"><a href="#cb9-99" aria-hidden="true" tabindex="-1"></a><span class="st">  --enable-auto-tool-choice</span></span>
+<span id="cb9-100"><a href="#cb9-100" aria-hidden="true" tabindex="-1"></a><span class="st">                        Enable auto tool choice for supported models. Use --tool-call-parserto specify which parser to use</span></span>
+<span id="cb9-101"><a href="#cb9-101" aria-hidden="true" tabindex="-1"></a><span class="st">  --tool-call-parser {mistral,hermes}</span></span>
+<span id="cb9-102"><a href="#cb9-102" aria-hidden="true" tabindex="-1"></a><span class="st">                        Select the tool call parser depending on the model that you&#39;</span>re using. This is used to parse the model-generated tool call into OpenAI API format. Required for <span class="at">--enable-</span></span>
+<span id="cb9-103"><a href="#cb9-103" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">auto-tool-choice.</span></span>
+<span id="cb9-104"><a href="#cb9-104" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--model</span> MODEL         Name or path of the huggingface model to use.</span>
+<span id="cb9-105"><a href="#cb9-105" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--tokenizer</span> TOKENIZER</span>
+<span id="cb9-106"><a href="#cb9-106" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">Name</span> or path of the huggingface tokenizer to use. If unspecified, model name or path will be used.</span>
+<span id="cb9-107"><a href="#cb9-107" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--skip-tokenizer-init</span></span>
+<span id="cb9-108"><a href="#cb9-108" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">Skip</span> initialization of tokenizer and detokenizer</span>
+<span id="cb9-109"><a href="#cb9-109" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--revision</span> REVISION   The specific model version to use. It can be a branch name, a tag name, or a commit id. If unspecified, will use the default version.</span>
+<span id="cb9-110"><a href="#cb9-110" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--code-revision</span> CODE_REVISION</span>
+<span id="cb9-111"><a href="#cb9-111" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">The</span> specific revision to use for the model code on Hugging Face Hub. It can be a branch name, a tag name, or a commit id. If unspecified, will use the default version.</span>
+<span id="cb9-112"><a href="#cb9-112" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--tokenizer-revision</span> TOKENIZER_REVISION</span>
+<span id="cb9-113"><a href="#cb9-113" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">Revision</span> of the huggingface tokenizer to use. It can be a branch name, a tag name, or a commit id. If unspecified, will use the default version.</span>
+<span id="cb9-114"><a href="#cb9-114" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--tokenizer-mode</span> <span class="dt">{auto</span><span class="op">,</span><span class="dt">slow</span><span class="op">,</span><span class="dt">mistral}</span></span>
+<span id="cb9-115"><a href="#cb9-115" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">The</span> tokenizer mode. <span class="pp">*</span> <span class="st">&quot;auto&quot;</span> will use the fast tokenizer if available. <span class="pp">*</span> <span class="st">&quot;slow&quot;</span> will always use the slow tokenizer. <span class="pp">*</span> <span class="st">&quot;mistral&quot;</span> will always use the <span class="kw">`</span><span class="ex">mistral_common</span><span class="kw">`</span></span>
+<span id="cb9-116"><a href="#cb9-116" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">tokenizer.</span></span>
+<span id="cb9-117"><a href="#cb9-117" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--trust-remote-code</span>   Trust remote code from huggingface.</span>
+<span id="cb9-118"><a href="#cb9-118" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--download-dir</span> DOWNLOAD_DIR</span>
+<span id="cb9-119"><a href="#cb9-119" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">Directory</span> to download and load the weights, default to the default cache dir of huggingface.</span>
+<span id="cb9-120"><a href="#cb9-120" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--load-format</span> <span class="dt">{auto</span><span class="op">,</span><span class="dt">pt</span><span class="op">,</span><span class="dt">safetensors</span><span class="op">,</span><span class="dt">npcache</span><span class="op">,</span><span class="dt">dummy</span><span class="op">,</span><span class="dt">tensorizer</span><span class="op">,</span><span class="dt">sharded_state</span><span class="op">,</span><span class="dt">gguf</span><span class="op">,</span><span class="dt">bitsandbytes</span><span class="op">,</span><span class="dt">mistral}</span></span>
+<span id="cb9-121"><a href="#cb9-121" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">The</span> format of the model weights to load. <span class="pp">*</span> <span class="st">&quot;auto&quot;</span> will try to load the weights in the safetensors format and fall back to the pytorch bin format if safetensors format is</span>
+<span id="cb9-122"><a href="#cb9-122" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">not</span> available. <span class="pp">*</span> <span class="st">&quot;pt&quot;</span> will load the weights in the pytorch bin format. <span class="pp">*</span> <span class="st">&quot;safetensors&quot;</span> will load the weights in the safetensors format. <span class="pp">*</span> <span class="st">&quot;npcache&quot;</span> will load the weights in</span>
+<span id="cb9-123"><a href="#cb9-123" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">pytorch</span> format and store a numpy cache to speed up the loading. <span class="pp">*</span> <span class="st">&quot;dummy&quot;</span> will initialize the weights with random values, which is mainly for profiling. <span class="pp">*</span> <span class="st">&quot;tensorizer&quot;</span> will</span>
+<span id="cb9-124"><a href="#cb9-124" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">load</span> the weights using tensorizer from CoreWeave. See the Tensorize vLLM Model script in the Examples section for more information. <span class="pp">*</span> <span class="st">&quot;bitsandbytes&quot;</span> will load the weights</span>
+<span id="cb9-125"><a href="#cb9-125" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">using</span> bitsandbytes quantization.</span>
+<span id="cb9-126"><a href="#cb9-126" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--config-format</span> <span class="dt">{auto</span><span class="op">,</span><span class="dt">hf</span><span class="op">,</span><span class="dt">mistral}</span></span>
+<span id="cb9-127"><a href="#cb9-127" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">The</span> format of the model config to load. <span class="pp">*</span> <span class="st">&quot;auto&quot;</span> will try to load the config in hf format if available else it will try to load in mistral format</span>
+<span id="cb9-128"><a href="#cb9-128" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--dtype</span> <span class="dt">{auto</span><span class="op">,</span><span class="dt">half</span><span class="op">,</span><span class="dt">float16</span><span class="op">,</span><span class="dt">bfloat16</span><span class="op">,</span><span class="dt">float</span><span class="op">,</span><span class="dt">float32}</span></span>
+<span id="cb9-129"><a href="#cb9-129" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">Data</span> type for model weights and activations. <span class="pp">*</span> <span class="st">&quot;auto&quot;</span> will use FP16 precision for FP32 and FP16 models, and BF16 precision for BF16 models. <span class="pp">*</span> <span class="st">&quot;half&quot;</span> for FP16. Recommended</span>
+<span id="cb9-130"><a href="#cb9-130" aria-hidden="true" tabindex="-1"></a>                        <span class="cf">for</span> AWQ <span class="ex">quantization.</span> <span class="pp">*</span> <span class="st">&quot;float16&quot;</span> is the same as <span class="st">&quot;half&quot;</span>. <span class="pp">*</span> <span class="st">&quot;bfloat16&quot;</span> for a balance between precision and range. <span class="pp">*</span> <span class="st">&quot;float&quot;</span> is shorthand for FP32 precision. <span class="pp">*</span> <span class="st">&quot;float32&quot;</span> for</span>
+<span id="cb9-131"><a href="#cb9-131" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">FP32</span> precision.</span>
+<span id="cb9-132"><a href="#cb9-132" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--kv-cache-dtype</span> <span class="dt">{auto</span><span class="op">,</span><span class="dt">fp8</span><span class="op">,</span><span class="dt">fp8_e5m2</span><span class="op">,</span><span class="dt">fp8_e4m3}</span></span>
+<span id="cb9-133"><a href="#cb9-133" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">Data</span> type for kv cache storage. If <span class="st">&quot;auto&quot;</span>, will use model data type. CUDA 11.8+ supports fp8 <span class="er">(</span><span class="ex">=fp8_e4m3</span><span class="kw">)</span> <span class="ex">and</span> fp8_e5m2. ROCm <span class="er">(</span><span class="ex">AMD</span> GPU<span class="kw">)</span> <span class="ex">supports</span> fp8 <span class="er">(</span><span class="ex">=fp8_e4m3</span><span class="kw">)</span></span>
+<span id="cb9-134"><a href="#cb9-134" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--quantization-param-path</span> QUANTIZATION_PARAM_PATH</span>
+<span id="cb9-135"><a href="#cb9-135" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">Path</span> to the JSON file containing the KV cache scaling factors. This should generally be supplied, when KV cache dtype is FP8. Otherwise, KV cache scaling factors default to</span>
+<span id="cb9-136"><a href="#cb9-136" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">1.0,</span> which may cause accuracy issues. FP8_E5M2 <span class="er">(</span><span class="ex">without</span> scaling<span class="kw">)</span> <span class="ex">is</span> only supported on cuda versiongreater than 11.8. On ROCm <span class="er">(</span><span class="ex">AMD</span> GPU<span class="kw">)</span><span class="ex">,</span> FP8_E4M3 is instead supported for</span>
+<span id="cb9-137"><a href="#cb9-137" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">common</span> inference criteria.</span>
+<span id="cb9-138"><a href="#cb9-138" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--max-model-len</span> MAX_MODEL_LEN</span>
+<span id="cb9-139"><a href="#cb9-139" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">Model</span> context length. If unspecified, will be automatically derived from the model config.</span>
+<span id="cb9-140"><a href="#cb9-140" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--guided-decoding-backend</span> <span class="dt">{outlines</span><span class="op">,</span><span class="dt">lm-format-enforcer}</span></span>
+<span id="cb9-141"><a href="#cb9-141" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">Which</span> engine will be used for guided decoding <span class="er">(</span><span class="ex">JSON</span> schema / regex etc<span class="kw">)</span> <span class="ex">by</span> default. Currently support https://github.com/outlines-dev/outlines and</span>
+<span id="cb9-142"><a href="#cb9-142" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">https://github.com/noamgat/lm-format-enforcer.</span> Can be overridden per request via guided_decoding_backend parameter.</span>
+<span id="cb9-143"><a href="#cb9-143" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--distributed-executor-backend</span> <span class="dt">{ray</span><span class="op">,</span><span class="dt">mp}</span></span>
+<span id="cb9-144"><a href="#cb9-144" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">Backend</span> to use for distributed serving. When more than 1 GPU is used, will be automatically set to <span class="st">&quot;ray&quot;</span> if installed or <span class="st">&quot;mp&quot;</span> <span class="er">(</span><span class="ex">multiprocessing</span><span class="kw">)</span> <span class="ex">otherwise.</span></span>
+<span id="cb9-145"><a href="#cb9-145" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--worker-use-ray</span>      Deprecated, use <span class="at">--distributed-executor-backend</span><span class="op">=</span>ray.</span>
+<span id="cb9-146"><a href="#cb9-146" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--pipeline-parallel-size</span> PIPELINE_PARALLEL_SIZE, <span class="at">-pp</span> PIPELINE_PARALLEL_SIZE</span>
+<span id="cb9-147"><a href="#cb9-147" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">Number</span> of pipeline stages.</span>
+<span id="cb9-148"><a href="#cb9-148" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--tensor-parallel-size</span> TENSOR_PARALLEL_SIZE, <span class="at">-tp</span> TENSOR_PARALLEL_SIZE</span>
+<span id="cb9-149"><a href="#cb9-149" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">Number</span> of tensor parallel replicas.</span>
+<span id="cb9-150"><a href="#cb9-150" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--max-parallel-loading-workers</span> MAX_PARALLEL_LOADING_WORKERS</span>
+<span id="cb9-151"><a href="#cb9-151" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">Load</span> model sequentially in multiple batches, to avoid RAM OOM when using tensor parallel and large models.</span>
+<span id="cb9-152"><a href="#cb9-152" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--ray-workers-use-nsight</span></span>
+<span id="cb9-153"><a href="#cb9-153" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">If</span> specified, use nsight to profile Ray workers.</span>
+<span id="cb9-154"><a href="#cb9-154" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--block-size</span> <span class="dt">{8</span><span class="op">,</span><span class="dt">16</span><span class="op">,</span><span class="dt">32}</span></span>
+<span id="cb9-155"><a href="#cb9-155" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">Token</span> block size for contiguous chunks of tokens. This is ignored on neuron devices and set to max-model-len</span>
+<span id="cb9-156"><a href="#cb9-156" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--enable-prefix-caching</span></span>
+<span id="cb9-157"><a href="#cb9-157" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">Enables</span> automatic prefix caching.</span>
+<span id="cb9-158"><a href="#cb9-158" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--disable-sliding-window</span></span>
+<span id="cb9-159"><a href="#cb9-159" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">Disables</span> sliding window, capping to sliding window size</span>
+<span id="cb9-160"><a href="#cb9-160" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--use-v2-block-manager</span></span>
+<span id="cb9-161"><a href="#cb9-161" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">Use</span> BlockSpaceMangerV2.</span>
+<span id="cb9-162"><a href="#cb9-162" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--num-lookahead-slots</span> NUM_LOOKAHEAD_SLOTS</span>
+<span id="cb9-163"><a href="#cb9-163" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">Experimental</span> scheduling config necessary for speculative decoding. This will be replaced by speculative config in the future<span class="kw">;</span> <span class="ex">it</span> is present to enable correctness tests</span>
+<span id="cb9-164"><a href="#cb9-164" aria-hidden="true" tabindex="-1"></a>                        <span class="cf">until</span> <span class="ex">then.</span></span>
+<span id="cb9-165"><a href="#cb9-165" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--seed</span> SEED           Random seed for operations.</span>
+<span id="cb9-166"><a href="#cb9-166" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--swap-space</span> SWAP_SPACE</span>
+<span id="cb9-167"><a href="#cb9-167" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">CPU</span> swap space size <span class="er">(</span><span class="ex">GiB</span><span class="kw">)</span> <span class="ex">per</span> GPU.</span>
+<span id="cb9-168"><a href="#cb9-168" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--cpu-offload-gb</span> CPU_OFFLOAD_GB</span>
+<span id="cb9-169"><a href="#cb9-169" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">The</span> space in GiB to offload to CPU, per GPU. Default is 0, which means no offloading. Intuitively, this argument can be seen as a virtual way to increase the GPU memory</span>
+<span id="cb9-170"><a href="#cb9-170" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">size.</span> For example, if you have one 24 GB GPU and set this to 10, virtually you can think of it as a 34 GB GPU. Then you can load a 13B model with BF16 weight,which requires</span>
+<span id="cb9-171"><a href="#cb9-171" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">at</span> least 26GB GPU memory. Note that this requires fast CPU-GPU interconnect, as part of the model isloaded from CPU memory to GPU memory on the fly in each model forward</span>
+<span id="cb9-172"><a href="#cb9-172" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">pass.</span></span>
+<span id="cb9-173"><a href="#cb9-173" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--gpu-memory-utilization</span> GPU_MEMORY_UTILIZATION</span>
+<span id="cb9-174"><a href="#cb9-174" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">The</span> fraction of GPU memory to be used for the model executor, which can range from 0 to 1. For example, a value of 0.5 would imply 50% GPU memory utilization. If</span>
+<span id="cb9-175"><a href="#cb9-175" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">unspecified,</span> will use the default value of 0.9.</span>
+<span id="cb9-176"><a href="#cb9-176" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--num-gpu-blocks-override</span> NUM_GPU_BLOCKS_OVERRIDE</span>
+<span id="cb9-177"><a href="#cb9-177" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">If</span> specified, ignore GPU profiling result and use this numberof GPU blocks. Used for testing preemption.</span>
+<span id="cb9-178"><a href="#cb9-178" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--max-num-batched-tokens</span> MAX_NUM_BATCHED_TOKENS</span>
+<span id="cb9-179"><a href="#cb9-179" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">Maximum</span> number of batched tokens per iteration.</span>
+<span id="cb9-180"><a href="#cb9-180" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--max-num-seqs</span> MAX_NUM_SEQS</span>
+<span id="cb9-181"><a href="#cb9-181" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">Maximum</span> number of sequences per iteration.</span>
+<span id="cb9-182"><a href="#cb9-182" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--max-logprobs</span> MAX_LOGPROBS</span>
+<span id="cb9-183"><a href="#cb9-183" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">Max</span> number of log probs to return logprobs is specified in SamplingParams.</span>
+<span id="cb9-184"><a href="#cb9-184" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--disable-log-stats</span>   Disable logging statistics.</span>
+<span id="cb9-185"><a href="#cb9-185" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--quantization</span> <span class="dt">{aqlm</span><span class="op">,</span><span class="dt">awq</span><span class="op">,</span><span class="dt">deepspeedfp</span><span class="op">,</span><span class="dt">tpu_int8</span><span class="op">,</span><span class="dt">fp8</span><span class="op">,</span><span class="dt">fbgemm_fp8</span><span class="op">,</span><span class="dt">modelopt</span><span class="op">,</span><span class="dt">marlin</span><span class="op">,</span><span class="dt">gguf</span><span class="op">,</span><span class="dt">gptq_marlin_24</span><span class="op">,</span><span class="dt">gptq_marlin</span><span class="op">,</span><span class="dt">awq_marlin</span><span class="op">,</span><span class="dt">gptq</span><span class="op">,</span><span class="dt">compressed-tensors</span><span class="op">,</span><span class="dt">bitsandbytes</span><span class="op">,</span><span class="dt">qqq</span><span class="op">,</span><span class="dt">experts_int8</span><span class="op">,</span><span class="dt">neuron_quant</span><span class="op">,</span><span class="dt">None}</span>, <span class="at">-q</span> <span class="dt">{aqlm</span><span class="op">,</span><span class="dt">awq</span><span class="op">,</span><span class="dt">deepspeedfp</span><span class="op">,</span><span class="dt">tpu_int8</span><span class="op">,</span><span class="dt">fp8</span><span class="op">,</span><span class="dt">fbgemm_fp8</span><span class="op">,</span><span class="dt">modelopt</span><span class="op">,</span><span class="dt">marlin</span><span class="op">,</span><span class="dt">gguf</span><span class="op">,</span><span class="dt">gptq_marlin_24</span><span class="op">,</span><span class="dt">gptq_marlin</span><span class="op">,</span><span class="dt">awq_marlin</span><span class="op">,</span><span class="dt">gptq</span><span class="op">,</span><span class="dt">compressed-tensors</span><span class="op">,</span><span class="dt">bitsandbytes</span><span class="op">,</span><span class="dt">qqq</span><span class="op">,</span><span class="dt">experts_int8</span><span class="op">,</span><span class="dt">neuron_quant</span><span class="op">,</span><span class="dt">None}</span></span>
+<span id="cb9-186"><a href="#cb9-186" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">Method</span> used to quantize the weights. If None, we first check the <span class="kw">`</span><span class="ex">quantization_config</span><span class="kw">`</span> attribute in the model config file. If that is None, we assume the model weights are</span>
+<span id="cb9-187"><a href="#cb9-187" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">not</span> quantized and use <span class="kw">`</span><span class="ex">dtype</span><span class="kw">`</span> to determine the data type of the weights.</span>
+<span id="cb9-188"><a href="#cb9-188" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--rope-scaling</span> ROPE_SCALING</span>
+<span id="cb9-189"><a href="#cb9-189" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">RoPE</span> scaling configuration in JSON format. For example, <span class="dt">{</span><span class="st">&quot;type&quot;</span><span class="dt">:</span><span class="st">&quot;dynamic&quot;</span><span class="op">,</span><span class="st">&quot;factor&quot;</span><span class="dt">:2.0}</span></span>
+<span id="cb9-190"><a href="#cb9-190" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--rope-theta</span> ROPE_THETA</span>
+<span id="cb9-191"><a href="#cb9-191" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">RoPE</span> theta. Use with <span class="kw">`</span><span class="ex">rope_scaling</span><span class="kw">`</span>. In some cases, changing the RoPE theta improves the performance of the scaled model.</span>
+<span id="cb9-192"><a href="#cb9-192" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--enforce-eager</span>       Always use eager-mode PyTorch. If False, will use eager mode and CUDA graph in hybrid for maximal performance and flexibility.</span>
+<span id="cb9-193"><a href="#cb9-193" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--max-context-len-to-capture</span> MAX_CONTEXT_LEN_TO_CAPTURE</span>
+<span id="cb9-194"><a href="#cb9-194" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">Maximum</span> context length covered by CUDA graphs. When a sequence has context length larger than this, we fall back to eager mode. <span class="er">(</span><span class="ex">DEPRECATED.</span> Use <span class="at">--max-seq-len-to-capture</span></span>
+<span id="cb9-195"><a href="#cb9-195" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">instead</span><span class="kw">)</span></span>
+<span id="cb9-196"><a href="#cb9-196" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--max-seq-len-to-capture</span> MAX_SEQ_LEN_TO_CAPTURE</span>
+<span id="cb9-197"><a href="#cb9-197" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">Maximum</span> sequence length covered by CUDA graphs. When a sequence has context length larger than this, we fall back to eager mode. Additionally for encoder-decoder models, if</span>
+<span id="cb9-198"><a href="#cb9-198" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">the</span> sequence length of the encoder input is larger than this, we fall back to the eager mode.</span>
+<span id="cb9-199"><a href="#cb9-199" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--disable-custom-all-reduce</span></span>
+<span id="cb9-200"><a href="#cb9-200" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">See</span> ParallelConfig.</span>
+<span id="cb9-201"><a href="#cb9-201" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--tokenizer-pool-size</span> TOKENIZER_POOL_SIZE</span>
+<span id="cb9-202"><a href="#cb9-202" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">Size</span> of tokenizer pool to use for asynchronous tokenization. If 0, will use synchronous tokenization.</span>
+<span id="cb9-203"><a href="#cb9-203" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--tokenizer-pool-type</span> TOKENIZER_POOL_TYPE</span>
+<span id="cb9-204"><a href="#cb9-204" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">Type</span> of tokenizer pool to use for asynchronous tokenization. Ignored if tokenizer_pool_size is 0.</span>
+<span id="cb9-205"><a href="#cb9-205" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--tokenizer-pool-extra-config</span> TOKENIZER_POOL_EXTRA_CONFIG</span>
+<span id="cb9-206"><a href="#cb9-206" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">Extra</span> config for tokenizer pool. This should be a JSON string that will be parsed into a dictionary. Ignored if tokenizer_pool_size is 0.</span>
+<span id="cb9-207"><a href="#cb9-207" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--limit-mm-per-prompt</span> LIMIT_MM_PER_PROMPT</span>
+<span id="cb9-208"><a href="#cb9-208" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">For</span> each multimodal plugin, limit how many input instances to allow for each prompt. Expects a comma-separated list of items, e.g.: <span class="kw">`</span><span class="va">image</span><span class="op">=</span>16,video=2<span class="kw">`</span> <span class="ex">allows</span> a maximum of</span>
+<span id="cb9-209"><a href="#cb9-209" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">16</span> images and 2 videos per prompt. Defaults to 1 for each modality.</span>
+<span id="cb9-210"><a href="#cb9-210" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--mm-processor-kwargs</span> MM_PROCESSOR_KWARGS</span>
+<span id="cb9-211"><a href="#cb9-211" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">Overrides</span> for the multimodal input mapping/processing,e.g., image processor. For example: {<span class="st">&quot;num_crops&quot;</span>: 4}.</span>
+<span id="cb9-212"><a href="#cb9-212" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--enable-lora</span>         If True, enable handling of LoRA adapters.</span>
+<span id="cb9-213"><a href="#cb9-213" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--max-loras</span> MAX_LORAS</span>
+<span id="cb9-214"><a href="#cb9-214" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">Max</span> number of LoRAs in a single batch.</span>
+<span id="cb9-215"><a href="#cb9-215" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--max-lora-rank</span> MAX_LORA_RANK</span>
+<span id="cb9-216"><a href="#cb9-216" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">Max</span> LoRA rank.</span>
+<span id="cb9-217"><a href="#cb9-217" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--lora-extra-vocab-size</span> LORA_EXTRA_VOCAB_SIZE</span>
+<span id="cb9-218"><a href="#cb9-218" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">Maximum</span> size of extra vocabulary that can be present in a LoRA adapter <span class="er">(</span><span class="ex">added</span> to the base model vocabulary<span class="kw">)</span><span class="bu">.</span></span>
+<span id="cb9-219"><a href="#cb9-219" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--lora-dtype</span> <span class="dt">{auto</span><span class="op">,</span><span class="dt">float16</span><span class="op">,</span><span class="dt">bfloat16</span><span class="op">,</span><span class="dt">float32}</span></span>
+<span id="cb9-220"><a href="#cb9-220" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">Data</span> type for LoRA. If auto, will default to base model dtype.</span>
+<span id="cb9-221"><a href="#cb9-221" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--long-lora-scaling-factors</span> LONG_LORA_SCALING_FACTORS</span>
+<span id="cb9-222"><a href="#cb9-222" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">Specify</span> multiple scaling factors <span class="er">(</span><span class="fu">which</span> can be different from base model scaling factor <span class="at">-</span> see eg. Long LoRA<span class="kw">)</span> <span class="ex">to</span> allow for multiple LoRA adapters trained with those scaling</span>
+<span id="cb9-223"><a href="#cb9-223" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">factors</span> to be used at the same time. If not specified, only adapters trained with the base model scaling factor are allowed.</span>
+<span id="cb9-224"><a href="#cb9-224" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--max-cpu-loras</span> MAX_CPU_LORAS</span>
+<span id="cb9-225"><a href="#cb9-225" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">Maximum</span> number of LoRAs to store in CPU memory. Must be <span class="op">&gt;</span>= than max_num_seqs. Defaults to max_num_seqs.</span>
+<span id="cb9-226"><a href="#cb9-226" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--fully-sharded-loras</span></span>
+<span id="cb9-227"><a href="#cb9-227" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">By</span> default, only half of the LoRA computation is sharded with tensor parallelism. Enabling this will use the fully sharded layers. At high sequence length, max rank or</span>
+<span id="cb9-228"><a href="#cb9-228" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">tensor</span> parallel size, this is likely faster.</span>
+<span id="cb9-229"><a href="#cb9-229" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--enable-prompt-adapter</span></span>
+<span id="cb9-230"><a href="#cb9-230" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">If</span> True, enable handling of PromptAdapters.</span>
+<span id="cb9-231"><a href="#cb9-231" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--max-prompt-adapters</span> MAX_PROMPT_ADAPTERS</span>
+<span id="cb9-232"><a href="#cb9-232" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">Max</span> number of PromptAdapters in a batch.</span>
+<span id="cb9-233"><a href="#cb9-233" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--max-prompt-adapter-token</span> MAX_PROMPT_ADAPTER_TOKEN</span>
+<span id="cb9-234"><a href="#cb9-234" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">Max</span> number of PromptAdapters tokens</span>
+<span id="cb9-235"><a href="#cb9-235" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--device</span> <span class="dt">{auto</span><span class="op">,</span><span class="dt">cuda</span><span class="op">,</span><span class="dt">neuron</span><span class="op">,</span><span class="dt">cpu</span><span class="op">,</span><span class="dt">openvino</span><span class="op">,</span><span class="dt">tpu</span><span class="op">,</span><span class="dt">xpu}</span></span>
+<span id="cb9-236"><a href="#cb9-236" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">Device</span> type for vLLM execution.</span>
+<span id="cb9-237"><a href="#cb9-237" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--num-scheduler-steps</span> NUM_SCHEDULER_STEPS</span>
+<span id="cb9-238"><a href="#cb9-238" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">Maximum</span> number of forward steps per scheduler call.</span>
+<span id="cb9-239"><a href="#cb9-239" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--multi-step-stream-outputs</span></span>
+<span id="cb9-240"><a href="#cb9-240" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">If</span> True, then multi-step will stream outputs for every step</span>
+<span id="cb9-241"><a href="#cb9-241" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--scheduler-delay-factor</span> SCHEDULER_DELAY_FACTOR</span>
+<span id="cb9-242"><a href="#cb9-242" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">Apply</span> a delay <span class="er">(</span><span class="ex">of</span> delay factor multiplied by previousprompt latency<span class="kw">)</span> <span class="ex">before</span> scheduling next prompt.</span>
+<span id="cb9-243"><a href="#cb9-243" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--enable-chunked-prefill</span> <span class="pp">[</span><span class="ss">ENABLE_CHUNKED_PREFILL</span><span class="pp">]</span></span>
+<span id="cb9-244"><a href="#cb9-244" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">If</span> set, the prefill requests can be chunked based on the max_num_batched_tokens.</span>
+<span id="cb9-245"><a href="#cb9-245" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--speculative-model</span> SPECULATIVE_MODEL</span>
+<span id="cb9-246"><a href="#cb9-246" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">The</span> name of the draft model to be used in speculative decoding.</span>
+<span id="cb9-247"><a href="#cb9-247" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--speculative-model-quantization</span> <span class="dt">{aqlm</span><span class="op">,</span><span class="dt">awq</span><span class="op">,</span><span class="dt">deepspeedfp</span><span class="op">,</span><span class="dt">tpu_int8</span><span class="op">,</span><span class="dt">fp8</span><span class="op">,</span><span class="dt">fbgemm_fp8</span><span class="op">,</span><span class="dt">modelopt</span><span class="op">,</span><span class="dt">marlin</span><span class="op">,</span><span class="dt">gguf</span><span class="op">,</span><span class="dt">gptq_marlin_24</span><span class="op">,</span><span class="dt">gptq_marlin</span><span class="op">,</span><span class="dt">awq_marlin</span><span class="op">,</span><span class="dt">gptq</span><span class="op">,</span><span class="dt">compressed-tensors</span><span class="op">,</span><span class="dt">bitsandbytes</span><span class="op">,</span><span class="dt">qqq</span><span class="op">,</span><span class="dt">experts_int8</span><span class="op">,</span><span class="dt">neuron_quant</span><span class="op">,</span><span class="dt">None}</span></span>
+<span id="cb9-248"><a href="#cb9-248" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">Method</span> used to quantize the weights of speculative model.If None, we first check the <span class="kw">`</span>quantization_config<span class="kw">`</span> <span class="ex">attribute</span> in the model config file. If that is None, we assume</span>
+<span id="cb9-249"><a href="#cb9-249" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">the</span> model weights are not quantized and use <span class="kw">`</span>dtype<span class="kw">`</span> <span class="ex">to</span> determine the data type of the weights.</span>
+<span id="cb9-250"><a href="#cb9-250" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--num-speculative-tokens</span> NUM_SPECULATIVE_TOKENS</span>
+<span id="cb9-251"><a href="#cb9-251" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">The</span> number of speculative tokens to sample from the draft model in speculative decoding.</span>
+<span id="cb9-252"><a href="#cb9-252" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--speculative-draft-tensor-parallel-size</span> SPECULATIVE_DRAFT_TENSOR_PARALLEL_SIZE, <span class="at">-spec-draft-tp</span> SPECULATIVE_DRAFT_TENSOR_PARALLEL_SIZE</span>
+<span id="cb9-253"><a href="#cb9-253" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">Number</span> of tensor parallel replicas for the draft model in speculative decoding.</span>
+<span id="cb9-254"><a href="#cb9-254" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--speculative-max-model-len</span> SPECULATIVE_MAX_MODEL_LEN</span>
+<span id="cb9-255"><a href="#cb9-255" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">The</span> maximum sequence length supported by the draft model. Sequences over this length will skip speculation.</span>
+<span id="cb9-256"><a href="#cb9-256" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--speculative-disable-by-batch-size</span> SPECULATIVE_DISABLE_BY_BATCH_SIZE</span>
+<span id="cb9-257"><a href="#cb9-257" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">Disable</span> speculative decoding for new incoming requests if the number of enqueue requests is larger than this value.</span>
+<span id="cb9-258"><a href="#cb9-258" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--ngram-prompt-lookup-max</span> NGRAM_PROMPT_LOOKUP_MAX</span>
+<span id="cb9-259"><a href="#cb9-259" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">Max</span> size of window for ngram prompt lookup in speculative decoding.</span>
+<span id="cb9-260"><a href="#cb9-260" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--ngram-prompt-lookup-min</span> NGRAM_PROMPT_LOOKUP_MIN</span>
+<span id="cb9-261"><a href="#cb9-261" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">Min</span> size of window for ngram prompt lookup in speculative decoding.</span>
+<span id="cb9-262"><a href="#cb9-262" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--spec-decoding-acceptance-method</span> <span class="dt">{rejection_sampler</span><span class="op">,</span><span class="dt">typical_acceptance_sampler}</span></span>
+<span id="cb9-263"><a href="#cb9-263" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">Specify</span> the acceptance method to use during draft token verification in speculative decoding. Two types of acceptance routines are supported: 1<span class="er">)</span> <span class="ex">RejectionSampler</span> which does</span>
+<span id="cb9-264"><a href="#cb9-264" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">not</span> allow changing the acceptance rate of draft tokens, 2<span class="er">)</span> <span class="ex">TypicalAcceptanceSampler</span> which is configurable, allowing for a higher acceptance rate at the cost of lower</span>
+<span id="cb9-265"><a href="#cb9-265" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">quality,</span> and vice versa.</span>
+<span id="cb9-266"><a href="#cb9-266" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--typical-acceptance-sampler-posterior-threshold</span> TYPICAL_ACCEPTANCE_SAMPLER_POSTERIOR_THRESHOLD</span>
+<span id="cb9-267"><a href="#cb9-267" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">Set</span> the lower bound threshold for the posterior probability of a token to be accepted. This threshold is used by the TypicalAcceptanceSampler to make sampling decisions</span>
+<span id="cb9-268"><a href="#cb9-268" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">during</span> speculative decoding. Defaults to 0.09</span>
+<span id="cb9-269"><a href="#cb9-269" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--typical-acceptance-sampler-posterior-alpha</span> TYPICAL_ACCEPTANCE_SAMPLER_POSTERIOR_ALPHA</span>
+<span id="cb9-270"><a href="#cb9-270" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">A</span> scaling factor for the entropy-based threshold for token acceptance in the TypicalAcceptanceSampler. Typically defaults to sqrt of <span class="at">--typical-acceptance-sampler-posterior-</span></span>
+<span id="cb9-271"><a href="#cb9-271" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">threshold</span> i.e. 0.3</span>
+<span id="cb9-272"><a href="#cb9-272" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--disable-logprobs-during-spec-decoding</span> <span class="pp">[</span><span class="ss">DISABLE_LOGPROBS_DURING_SPEC_DECODING</span><span class="pp">]</span></span>
+<span id="cb9-273"><a href="#cb9-273" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">If</span> set to True, token log probabilities are not returned during speculative decoding. If set to False, log probabilities are returned according to the settings in</span>
+<span id="cb9-274"><a href="#cb9-274" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">SamplingParams.</span> If not specified, it defaults to True. Disabling log probabilities during speculative decoding reduces latency by skipping logprob calculation in proposal</span>
+<span id="cb9-275"><a href="#cb9-275" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">sampling,</span> target sampling, and after accepted tokens are determined.</span>
+<span id="cb9-276"><a href="#cb9-276" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--model-loader-extra-config</span> MODEL_LOADER_EXTRA_CONFIG</span>
+<span id="cb9-277"><a href="#cb9-277" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">Extra</span> config for model loader. This will be passed to the model loader corresponding to the chosen load_format. This should be a JSON string that will be parsed into a</span>
+<span id="cb9-278"><a href="#cb9-278" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">dictionary.</span></span>
+<span id="cb9-279"><a href="#cb9-279" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--ignore-patterns</span> IGNORE_PATTERNS</span>
+<span id="cb9-280"><a href="#cb9-280" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">The</span> pattern<span class="er">(</span><span class="ex">s</span><span class="kw">)</span> <span class="ex">to</span> ignore when loading the model.Default to <span class="st">&#39;original/**/*&#39;</span> to avoid repeated loading of llama<span class="st">&#39;s checkpoints.</span></span>
+<span id="cb9-281"><a href="#cb9-281" aria-hidden="true" tabindex="-1"></a><span class="st">  --preemption-mode PREEMPTION_MODE</span></span>
+<span id="cb9-282"><a href="#cb9-282" aria-hidden="true" tabindex="-1"></a><span class="st">                        If &#39;</span>recompute<span class="st">&#39;, the engine performs preemption by recomputing; If &#39;</span>swap<span class="st">&#39;, the engine performs preemption by block swapping.</span></span>
+<span id="cb9-283"><a href="#cb9-283" aria-hidden="true" tabindex="-1"></a><span class="st">  --served-model-name SERVED_MODEL_NAME [SERVED_MODEL_NAME ...]</span></span>
+<span id="cb9-284"><a href="#cb9-284" aria-hidden="true" tabindex="-1"></a><span class="st">                        The model name(s) used in the API. If multiple names are provided, the server will respond to any of the provided names. The model name in the model field of a response</span></span>
+<span id="cb9-285"><a href="#cb9-285" aria-hidden="true" tabindex="-1"></a><span class="st">                        will be the first name in this list. If not specified, the model name will be the same as the `--model` argument. Noted that this name(s)will also be used in `model_name`</span></span>
+<span id="cb9-286"><a href="#cb9-286" aria-hidden="true" tabindex="-1"></a><span class="st">                        tag content of prometheus metrics, if multiple names provided, metricstag will take the first one.</span></span>
+<span id="cb9-287"><a href="#cb9-287" aria-hidden="true" tabindex="-1"></a><span class="st">  --qlora-adapter-name-or-path QLORA_ADAPTER_NAME_OR_PATH</span></span>
+<span id="cb9-288"><a href="#cb9-288" aria-hidden="true" tabindex="-1"></a><span class="st">                        Name or path of the QLoRA adapter.</span></span>
+<span id="cb9-289"><a href="#cb9-289" aria-hidden="true" tabindex="-1"></a><span class="st">  --otlp-traces-endpoint OTLP_TRACES_ENDPOINT</span></span>
+<span id="cb9-290"><a href="#cb9-290" aria-hidden="true" tabindex="-1"></a><span class="st">                        Target URL to which OpenTelemetry traces will be sent.</span></span>
+<span id="cb9-291"><a href="#cb9-291" aria-hidden="true" tabindex="-1"></a><span class="st">  --collect-detailed-traces COLLECT_DETAILED_TRACES</span></span>
+<span id="cb9-292"><a href="#cb9-292" aria-hidden="true" tabindex="-1"></a><span class="st">                        Valid choices are model,worker,all. It makes sense to set this only if --otlp-traces-endpoint is set. If set, it will collect detailed traces for the specified modules.</span></span>
+<span id="cb9-293"><a href="#cb9-293" aria-hidden="true" tabindex="-1"></a><span class="st">                        This involves use of possibly costly and or blocking operations and hence might have a performance impact.</span></span>
+<span id="cb9-294"><a href="#cb9-294" aria-hidden="true" tabindex="-1"></a><span class="st">  --disable-async-output-proc</span></span>
+<span id="cb9-295"><a href="#cb9-295" aria-hidden="true" tabindex="-1"></a><span class="st">                        Disable async output processing. This may result in lower performance.</span></span>
+<span id="cb9-296"><a href="#cb9-296" aria-hidden="true" tabindex="-1"></a><span class="st">  --override-neuron-config OVERRIDE_NEURON_CONFIG</span></span>
+<span id="cb9-297"><a href="#cb9-297" aria-hidden="true" tabindex="-1"></a><span class="st">                        override or set neuron device configuration.</span></span>
+<span id="cb9-298"><a href="#cb9-298" aria-hidden="true" tabindex="-1"></a><span class="st">  --disable-log-requests</span></span>
+<span id="cb9-299"><a href="#cb9-299" aria-hidden="true" tabindex="-1"></a><span class="st">                        Disable logging requests.</span></span>
+<span id="cb9-300"><a href="#cb9-300" aria-hidden="true" tabindex="-1"></a><span class="st">  --max-log-len MAX_LOG_LEN</span></span>
+<span id="cb9-301"><a href="#cb9-301" aria-hidden="true" tabindex="-1"></a><span class="st">                        Max number of prompt characters or prompt ID numbers being printed in log. Default: Unlimited</span></span>
+<span id="cb9-302"><a href="#cb9-302" aria-hidden="true" tabindex="-1"></a><span class="st">  --disable-fastapi-docs</span></span>
+<span id="cb9-303"><a href="#cb9-303" aria-hidden="true" tabindex="-1"></a><span class="st">                        Disable FastAPI&#39;</span>s OpenAPI schema, Swagger UI, and ReDoc endpoint</span>
+<span id="cb9-304"><a href="#cb9-304" aria-hidden="true" tabindex="-1"></a></span></code></pre></div>
+        <p>try to run in docker, and simulate the http</p>
+        <div class="sourceCode" id="cb10"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co"># in the docker shell terminal</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> <span class="at">-m</span> vllm.entrypoints.openai.api_server <span class="at">--port</span><span class="op">=</span>8080 <span class="at">--model</span><span class="op">=</span>TinyLlama/TinyLlama-1.1B-Chat-v1.0</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a><span class="co"># in another terminal</span></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a><span class="ex">curl</span> <span class="at">-v</span> http://127.0.0.1:8080/v1/chat/completions <span class="dt">\</span></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>-H <span class="st">&quot;Content-Type: application/json&quot;</span> <span class="dt">\</span></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>-d <span class="st">&#39;{</span></span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a><span class="st">     &quot;model&quot;:&quot;TinyLlama/TinyLlama-1.1B-Chat-v1.0&quot;,</span></span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a><span class="st">     &quot;messages&quot;:[</span></span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a><span class="st">        {</span></span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a><span class="st">          &quot;role&quot;:&quot;user&quot;,</span></span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a><span class="st">          &quot;content&quot;:&quot;give me example&quot;</span></span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a><span class="st">        }</span></span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a><span class="st">     ]</span></span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a><span class="st">    }&#39;</span></span>
+<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a><span class="co"># *   Trying 127.0.0.1:8080...</span></span>
+<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a><span class="co"># * Connected to 127.0.0.1 (127.0.0.1) port 8080 (#0)</span></span>
+<span id="cb10-18"><a href="#cb10-18" aria-hidden="true" tabindex="-1"></a><span class="co"># &gt; POST /v1/chat/completions HTTP/1.1</span></span>
+<span id="cb10-19"><a href="#cb10-19" aria-hidden="true" tabindex="-1"></a><span class="co"># &gt; Host: 127.0.0.1:8080</span></span>
+<span id="cb10-20"><a href="#cb10-20" aria-hidden="true" tabindex="-1"></a><span class="co"># &gt; User-Agent: curl/7.76.1</span></span>
+<span id="cb10-21"><a href="#cb10-21" aria-hidden="true" tabindex="-1"></a><span class="co"># &gt; Accept: */*</span></span>
+<span id="cb10-22"><a href="#cb10-22" aria-hidden="true" tabindex="-1"></a><span class="co"># &gt; Content-Type: application/json</span></span>
+<span id="cb10-23"><a href="#cb10-23" aria-hidden="true" tabindex="-1"></a><span class="co"># &gt; Content-Length: 166</span></span>
+<span id="cb10-24"><a href="#cb10-24" aria-hidden="true" tabindex="-1"></a><span class="co"># &gt;</span></span>
+<span id="cb10-25"><a href="#cb10-25" aria-hidden="true" tabindex="-1"></a><span class="co"># * Mark bundle as not supporting multiuse</span></span>
+<span id="cb10-26"><a href="#cb10-26" aria-hidden="true" tabindex="-1"></a><span class="co"># &lt; HTTP/1.1 200 OK</span></span>
+<span id="cb10-27"><a href="#cb10-27" aria-hidden="true" tabindex="-1"></a><span class="co"># &lt; date: Sun, 08 Dec 2024 05:59:48 GMT</span></span>
+<span id="cb10-28"><a href="#cb10-28" aria-hidden="true" tabindex="-1"></a><span class="co"># &lt; server: uvicorn</span></span>
+<span id="cb10-29"><a href="#cb10-29" aria-hidden="true" tabindex="-1"></a><span class="co"># &lt; content-length: 1309</span></span>
+<span id="cb10-30"><a href="#cb10-30" aria-hidden="true" tabindex="-1"></a><span class="co"># &lt; content-type: application/json</span></span>
+<span id="cb10-31"><a href="#cb10-31" aria-hidden="true" tabindex="-1"></a><span class="co"># &lt;</span></span>
+<span id="cb10-32"><a href="#cb10-32" aria-hidden="true" tabindex="-1"></a><span class="co"># {&quot;id&quot;:&quot;chat-eeca7520eaa94c49b0693e844abfbe29&quot;,&quot;object&quot;:&quot;chat.completion&quot;,&quot;created&quot;:1733637592,&quot;model&quot;:&quot;TinyLlama/TinyLlama-1.1B-Chat-v1.0&quot;,&quot;choices&quot;:[{&quot;index&quot;:0,&quot;message&quot;:{&quot;role&quot;:&quot;assistant&quot;,&quot;content&quot;:&quot;Example:\n\nImagine a world where all food is delivered by drones. In this future, we have the convenience of ordering food for delivery when we&#39;re out and about. The meals are prepared at a centralized location, and the drones transport them to our doorstep, ensuring that our diet is always fresh and healthy. We don&#39;t have to worry about cooking or grocery shopping, as these tasks are now handled automatically. In this world, we have the ability to customize our meals to our individual tastes and preferences, making grocery shopping a thing of the past. We can also communicate with our food delivery service to track their progress and ensure that our orders are on time and fresh.\n\nThis scenario highlights the benefits of a future where food delivery is automated and personalized. It demonstrates how technolo* Connection #0 to host 127.0.0.1 left intact</span></span>
+<span id="cb10-33"><a href="#cb10-33" aria-hidden="true" tabindex="-1"></a><span class="co"># gy has the potential to transform our food supply chain, making it more efficient, convenient, and sustainable.&quot;,&quot;tool_calls&quot;:[]},&quot;logprobs&quot;:null,&quot;finish_reason&quot;:&quot;stop&quot;,&quot;stop_reason&quot;:null}],&quot;usage&quot;:{&quot;prompt_tokens&quot;:20,&quot;total_tokens&quot;:229,&quot;completion_tokens&quot;:209},&quot;prompt_logprobs&quot;:null}</span></span></code></pre></div>
+        <p>if run on cpu only host, it will give the error, this is
+        because nvidia container toolbox is not installed.</p>
+        <pre class="log"><code>WARNING 12-08 04:21:42 _core_ext.py:180] Failed to import from vllm._core_C with ImportError(&#39;libcuda.so.1: cannot open shared object file: No such file or directory&#39;)
+Traceback (most recent call last):
+  File &quot;&lt;frozen runpy&gt;&quot;, line 189, in _run_module_as_main
+  File &quot;&lt;frozen runpy&gt;&quot;, line 112, in _get_module_details
+  File &quot;/opt/vllm/lib64/python3.12/site-packages/vllm/__init__.py&quot;, line 3, in &lt;module&gt;
+    from vllm.engine.arg_utils import AsyncEngineArgs, EngineArgs
+  File &quot;/opt/vllm/lib64/python3.12/site-packages/vllm/engine/arg_utils.py&quot;, line 11, in &lt;module&gt;
+    from vllm.config import (CacheConfig, ConfigFormat, DecodingConfig,
+  File &quot;/opt/vllm/lib64/python3.12/site-packages/vllm/config.py&quot;, line 12, in &lt;module&gt;
+    from vllm.model_executor.layers.quantization import QUANTIZATION_METHODS
+  File &quot;/opt/vllm/lib64/python3.12/site-packages/vllm/model_executor/layers/quantization/__init__.py&quot;, line 3, in &lt;module&gt;
+    from vllm.model_executor.layers.quantization.aqlm import AQLMConfig
+  File &quot;/opt/vllm/lib64/python3.12/site-packages/vllm/model_executor/layers/quantization/aqlm.py&quot;, line 11, in &lt;module&gt;
+    from vllm import _custom_ops as ops
+  File &quot;/opt/vllm/lib64/python3.12/site-packages/vllm/_custom_ops.py&quot;, line 8, in &lt;module&gt;
+    from vllm._core_ext import ScalarType
+  File &quot;/opt/vllm/lib64/python3.12/site-packages/vllm/_core_ext.py&quot;, line 182, in &lt;module&gt;
+    ScalarType = torch.classes._core_C.ScalarType
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File &quot;/opt/vllm/lib64/python3.12/site-packages/torch/_classes.py&quot;, line 13, in __getattr__
+    proxy = torch._C._get_custom_class_python_wrapper(self.name, attr)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+RuntimeError: Tried to instantiate class &#39;_core_C.ScalarType&#39;, but it does not exist! Ensure that it is registered via torch::class_</code></pre>
+        <h1 id="end">end</h1>
+      </article>
+    </div>
+      </main>
+
+  <footer>
+    <p>
+      Licensed under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank"
+        rel="noopener">CC-BY-NC-SA 4.0</a>
+      &nbsp;·&nbsp;
+      <a href="https://github.com/wangzheng422/docker_env" target="_blank" rel="noopener">wangzheng422/docker_env</a>
+    </p>
+  </footer>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: false, theme: 'dark' });
+
+    const SITE_BUILD_ID = 'fbe91b569ae8';
+    const SITE_HOME_URL = '../../../index.html';
+
+    const getBuildIdFromHtml = (html) => {
+      const match = String(html).match(/<meta[^>]+name=["']site-build-id["'][^>]+content=["']([^"']+)["']/i)
+        || String(html).match(/<meta[^>]+content=["']([^"']+)["'][^>]+name=["']site-build-id["']/i);
+      return match ? match[1] : '';
+    };
+
+    const checkForSiteUpdate = async () => {
+      if (!SITE_BUILD_ID || window.location.protocol === 'file:') return;
+      try {
+        const probeUrl = new URL(SITE_HOME_URL || './index.html', window.location.href);
+        probeUrl.searchParams.set('site_cache_probe', Date.now().toString());
+        const response = await fetch(probeUrl.toString(), { cache: 'no-store' });
+        if (!response.ok) return;
+        const latestBuildId = getBuildIdFromHtml(await response.text());
+        if (!latestBuildId || latestBuildId === SITE_BUILD_ID) return;
+        if (sessionStorage.getItem('site-build-refresh') === latestBuildId) return;
+        sessionStorage.setItem('site-build-refresh', latestBuildId);
+        const freshUrl = new URL(window.location.href);
+        freshUrl.searchParams.set('v', latestBuildId);
+        window.location.replace(freshUrl.toString());
+      } catch (error) {
+        // Network errors should not block reading the current page.
+      }
+    };
+
+    const versionedLocalUrl = (rawUrl) => {
+      if (!rawUrl || /^(https?:)?\/\//i.test(rawUrl) || /^(data|blob|mailto):/i.test(rawUrl)) return rawUrl;
+      const url = new URL(rawUrl, window.location.href);
+      if (url.searchParams.has('v')) return rawUrl;
+      url.searchParams.set('v', SITE_BUILD_ID);
+      return url.toString();
+    };
+
+    const cacheBustPageAssets = () => {
+      document.querySelectorAll('img[src], video[src], audio[src], source[src]').forEach((node) => {
+        const src = node.getAttribute('src');
+        const versioned = versionedLocalUrl(src);
+        if (versioned !== src) node.setAttribute('src', versioned);
+      });
+    };
+
+    const updateReadingProgress = () => {
+      const progress = document.querySelector('.reading-progress');
+      if (!progress) return;
+      const scrollable = document.documentElement.scrollHeight - window.innerHeight;
+      const ratio = scrollable > 0 ? window.scrollY / scrollable : 0;
+      progress.style.transform = 'scaleX(' + Math.min(1, Math.max(0, ratio)) + ')';
+    };
+
+    const topicFor = (text, href) => {
+      const haystack = (text + ' ' + href).toLowerCase();
+      if (/developers\.redhat\.com|redhatquickcourses|github\.com\/redhatquickcourses/.test(haystack)) return 'Red Hat';
+      if (/ai|llm|gpu|vllm|llama|model|rhaiis/.test(haystack)) return 'AI';
+      if (/network|ovn|bgp|dns|egress|ingress|metallb|nic|route/.test(haystack)) return 'Network';
+      if (/cert|tls|sso|keycloak|rhbk|security|compliance/.test(haystack)) return 'Security';
+      if (/perf|profile|throttling|heap|debug/.test(haystack)) return 'Performance';
+      if (/install|ipi|upi|sno|disconnected|bootstrap/.test(haystack)) return 'Install';
+      if (/rhel|coreos|rhcos|kernel|rpm|ostree/.test(haystack)) return 'RHEL';
+      if (/backup|storage|nfs|odf|ocs|ceph|dr/.test(haystack)) return 'Storage';
+      if (/pipeline|gitops|ansible|aap|rhdh|devops/.test(haystack)) return 'DevOps';
+      return 'OpenShift';
+    };
+
+    const yearFor = (text, href) => {
+      const match = (text + ' ' + href).match(/20\d{2}/);
+      return match ? match[0] : 'Notes';
+    };
+
+    const importantExternal = (href) =>
+      /developers\.redhat\.com|redhatquickcourses\.github\.io/i.test(href);
+
+    const titleForLink = (link) => {
+      const href = link.getAttribute('href') || '';
+      const directText = link.textContent.trim().replace(/\s+/g, ' ');
+      if (!/^https?:\/\//.test(directText)) return directText;
+      const parentItem = link.closest('ul')?.parentElement;
+      if (parentItem) {
+        const clone = parentItem.cloneNode(true);
+        clone.querySelectorAll('ul').forEach((nested) => nested.remove());
+        const parentText = clone.textContent.trim().replace(/\s+/g, ' ');
+        if (parentText) {
+          return parentText;
+        }
+      }
+      return directText;
+    };
+
+    const escapeHtml = (value) => String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+
+    const enhanceHome = () => {
+      if (!document.body.classList.contains('page-index')) return;
+      const source = document.querySelector('.home-source');
+      const grid = document.getElementById('note-grid');
+      const stats = document.getElementById('console-stats');
+      const externalPanel = document.getElementById('external-panel');
+      const topicStrip = document.getElementById('topic-strip');
+      const search = document.getElementById('console-search');
+      if (!source || !grid || !stats || !externalPanel || !topicStrip || !search) return;
+
+      const seen = new Set();
+      const links = Array.from(source.querySelectorAll('a[href]'))
+        .map((link) => {
+          const href = link.getAttribute('href') || '';
+          const text = titleForLink(link);
+          return { text, href, topic: topicFor(text, href), year: yearFor(text, href) };
+        });
+      const notes = links
+        .filter((note) => note.text && !note.href.startsWith('http') && !seen.has(note.href) && seen.add(note.href));
+      const externalLinks = links
+        .filter((note) => note.text && importantExternal(note.href));
+
+      const topics = ['All', ...Array.from(new Set(notes.map((note) => note.topic))).sort()];
+      let activeTopic = 'All';
+
+      const renderStats = () => {
+        const years = notes.map((note) => note.year).filter((year) => year.length === 4 && /^\d{4}/.test(year));
+        const latest = years.length ? Math.max(...years.map(Number)) : 'N/A';
+        const oldest = years.length ? Math.min(...years.map(Number)) : 'N/A';
+        stats.innerHTML = [
+          ['Notes', notes.length],
+          ['Resources', externalLinks.length],
+          ['Topics', topics.length - 1],
+          ['Latest', latest],
+        ].map(([label, value]) => '<div class="stat-tile"><span>' + label + '</span><strong>' + value + '</strong></div>').join('');
+        const signal = document.getElementById('signal-count');
+        if (signal) signal.textContent = notes.length + ' links indexed';
+      };
+
+      const renderExternal = () => {
+        externalPanel.innerHTML =
+          '<div class="section-heading"><span>Published / Learning</span><strong>Red Hat resources</strong></div>' +
+          '<div class="external-grid">' +
+          externalLinks.map((note) =>
+            '<a class="resource-card" href="' + escapeHtml(note.href) + '" target="_blank" rel="noopener">' +
+            '<span class="note-meta"><span>' + escapeHtml(note.year) + '</span><span>' + escapeHtml(note.topic) + '</span></span>' +
+            '<strong>' + escapeHtml(note.text) + '</strong>' +
+            '<small>' + escapeHtml(note.href) + '</small>' +
+            '</a>'
+          ).join('') +
+          '</div>';
+      };
+
+      const renderTopics = () => {
+        topicStrip.innerHTML = topics.map((topic) => '<button class="topic-chip' + (topic === activeTopic ? ' active' : '') + '" type="button" data-topic="' + escapeHtml(topic) + '">' + escapeHtml(topic) + '</button>').join('');
+        topicStrip.querySelectorAll('button').forEach((button) => {
+          button.addEventListener('click', () => {
+            activeTopic = button.dataset.topic || 'All';
+            renderTopics();
+            renderCards();
+          });
+        });
+      };
+
+      const renderCards = () => {
+        const query = search.value.trim().toLowerCase();
+        const filtered = notes.filter((note) => {
+          const topicMatch = activeTopic === 'All' || note.topic === activeTopic;
+          const queryMatch = !query || (note.text + ' ' + note.href + ' ' + note.topic + ' ' + note.year).toLowerCase().includes(query);
+          return topicMatch && queryMatch;
+        });
+        grid.innerHTML = filtered.map((note) =>
+          '<a class="note-card" href="' + escapeHtml(note.href) + '">' +
+          '<span class="note-meta"><span>' + escapeHtml(note.year) + '</span><span>' + escapeHtml(note.topic) + '</span></span>' +
+          '<strong>' + escapeHtml(note.text) + '</strong>' +
+          '<small>' + escapeHtml(note.href) + '</small>' +
+          '</a>'
+        ).join('') || '<p class="empty-state">No matching notes.</p>';
+      };
+
+      const drawMap = () => {
+        const canvas = document.getElementById('knowledge-canvas');
+        if (!(canvas instanceof HTMLCanvasElement)) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        const width = canvas.width;
+        const height = canvas.height;
+        const nodes = notes.slice(0, 44).map((note, index) => {
+          const angle = (index / 44) * Math.PI * 2;
+          const ring = 90 + (index % 5) * 22;
+          return {
+            x: width / 2 + Math.cos(angle) * ring,
+            y: height / 2 + Math.sin(angle) * ring * 0.72,
+            topic: note.topic,
+          };
+        });
+        ctx.clearRect(0, 0, width, height);
+        ctx.strokeStyle = 'rgba(88, 166, 255, 0.14)';
+        ctx.lineWidth = 1;
+        nodes.forEach((node, index) => {
+          const next = nodes[(index + 7) % nodes.length];
+          ctx.beginPath();
+          ctx.moveTo(node.x, node.y);
+          ctx.lineTo(next.x, next.y);
+          ctx.stroke();
+        });
+        const palette = {
+          AI: '#a371f7',
+          Network: '#39d0d8',
+          Security: '#ff7b72',
+          Performance: '#f2cc60',
+          Install: '#7ee787',
+          RHEL: '#ff7b72',
+          Storage: '#d2a8ff',
+          DevOps: '#ffa657',
+          OpenShift: '#58a6ff',
+        };
+        nodes.forEach((node) => {
+          ctx.fillStyle = palette[node.topic] || '#58a6ff';
+          ctx.beginPath();
+          ctx.arc(node.x, node.y, 3.4, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      };
+
+      search.addEventListener('input', renderCards);
+      renderStats();
+      renderExternal();
+      renderTopics();
+      renderCards();
+      drawMap();
+      document.body.classList.add('home-enhanced');
+    };
+
+    const enhanceCodeBlocks = () => {
+      document.querySelectorAll('pre').forEach((pre) => {
+        if (pre.classList.contains('mermaid') || pre.querySelector('.copy-code')) return;
+        const button = document.createElement('button');
+        button.className = 'copy-code';
+        button.type = 'button';
+        button.textContent = 'Copy';
+        button.addEventListener('click', async () => {
+          await navigator.clipboard.writeText(pre.textContent || '');
+          button.textContent = 'Copied';
+          setTimeout(() => { button.textContent = 'Copy'; }, 1200);
+        });
+        pre.appendChild(button);
+      });
+    };
+
+    window.addEventListener('scroll', updateReadingProgress, { passive: true });
+    window.addEventListener('pageshow', (event) => {
+      if (event.persisted) checkForSiteUpdate();
+    });
+    document.addEventListener('DOMContentLoaded', async () => {
+      checkForSiteUpdate();
+      cacheBustPageAssets();
+      updateReadingProgress();
+      enhanceHome();
+      enhanceCodeBlocks();
+      // pandoc 输出 mermaid 为 <pre class="mermaid"><code>...</code></pre>
+      // 需要转成 <div class="mermaid">...</div> 供 mermaid.js 渲染
+      document.querySelectorAll('pre.mermaid').forEach(pre => {
+        const div = document.createElement('div');
+        div.classList.add('mermaid');
+        div.textContent = pre.textContent;
+        pre.replaceWith(div);
+      });
+      // 也处理 <pre><code class="language-mermaid"> 形式（备用）
+      document.querySelectorAll('pre code.language-mermaid').forEach(code => {
+        const div = document.createElement('div');
+        div.classList.add('mermaid');
+        div.textContent = code.textContent;
+        code.closest('pre').replaceWith(div);
+      });
+      await mermaid.run();
+    });
+  </script>
+</body>
+
+</html>

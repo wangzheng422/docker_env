@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="zh" dir="ltr">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="generator" content="pandoc" />
+  <meta name="site-build-id" content="fbe91b569ae8" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <title>OpenShift 4.12 Kube APIServer Operator 证书轮替逻辑 | wandering.star notes</title>
+  <meta name="description"
+    content="Wandering field notes on OpenShift, RHEL, AI infrastructure, and platform operations." />
+  <!-- Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-E3FRMDB7L2"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-E3FRMDB7L2');
+  </script>
+  <style>
+  html {
+    color: #1a1a1a;
+    background-color: #fdfdfd;
+  }
+  body {
+    margin: 0 auto;
+    max-width: 36em;
+    padding-left: 50px;
+    padding-right: 50px;
+    padding-top: 50px;
+    padding-bottom: 50px;
+    hyphens: auto;
+    overflow-wrap: break-word;
+    text-rendering: optimizeLegibility;
+    font-kerning: normal;
+  }
+  @media (max-width: 600px) {
+    body {
+      font-size: 0.9em;
+      padding: 12px;
+    }
+    h1 {
+      font-size: 1.8em;
+    }
+  }
+  @media print {
+    html {
+      background-color: white;
+    }
+    body {
+      background-color: transparent;
+      color: black;
+      font-size: 12pt;
+    }
+    p, h2, h3 {
+      orphans: 3;
+      widows: 3;
+    }
+    h2, h3, h4 {
+      page-break-after: avoid;
+    }
+  }
+  p {
+    margin: 1em 0;
+  }
+  a {
+    color: #1a1a1a;
+  }
+  a:visited {
+    color: #1a1a1a;
+  }
+  img {
+    max-width: 100%;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.4em;
+  }
+  h5, h6 {
+    font-size: 1em;
+    font-style: italic;
+  }
+  h6 {
+    font-weight: normal;
+  }
+  ol, ul {
+    padding-left: 1.7em;
+    margin-top: 1em;
+  }
+  li > ol, li > ul {
+    margin-top: 0;
+  }
+  blockquote {
+    margin: 1em 0 1em 1.7em;
+    padding-left: 1em;
+    border-left: 2px solid #e6e6e6;
+    color: #606060;
+  }
+  code {
+    font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+    font-size: 85%;
+    margin: 0;
+    hyphens: manual;
+  }
+  pre {
+    margin: 1em 0;
+    overflow: auto;
+  }
+  pre code {
+    padding: 0;
+    overflow: visible;
+    overflow-wrap: normal;
+  }
+  .sourceCode {
+   background-color: transparent;
+   overflow: visible;
+  }
+  hr {
+    background-color: #1a1a1a;
+    border: none;
+    height: 1px;
+    margin: 1em 0;
+  }
+  table {
+    margin: 1em 0;
+    border-collapse: collapse;
+    width: 100%;
+    overflow-x: auto;
+    display: block;
+    font-variant-numeric: lining-nums tabular-nums;
+  }
+  table caption {
+    margin-bottom: 0.75em;
+  }
+  tbody {
+    margin-top: 0.5em;
+    border-top: 1px solid #1a1a1a;
+    border-bottom: 1px solid #1a1a1a;
+  }
+  th {
+    border-top: 1px solid #1a1a1a;
+    padding: 0.25em 0.5em 0.25em 0.5em;
+  }
+  td {
+    padding: 0.125em 0.5em 0.25em 0.5em;
+  }
+  header {
+    margin-bottom: 4em;
+    text-align: center;
+  }
+  #TOC li {
+    list-style: none;
+  }
+  #TOC ul {
+    padding-left: 1.3em;
+  }
+  #TOC > ul {
+    padding-left: 0;
+  }
+  #TOC a:not(:hover) {
+    text-decoration: none;
+  }
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  div.columns{display: flex; gap: min(4vw, 1.5em);}
+  div.column{flex: auto; overflow-x: auto;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  /* The extra [class] is a hack that increases specificity enough to
+     override a similar rule in reveal.js */
+  ul.task-list[class]{list-style: none;}
+  ul.task-list li input[type="checkbox"] {
+    font-size: inherit;
+    width: 0.8em;
+    margin: 0 0.8em 0.2em -1.6em;
+    vertical-align: middle;
+  }
+  .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+  <link rel="stylesheet" href="../../../style.css?v=fbe91b569ae8" />
+  </head>
+
+<body class="page-article">
+  <div class="reading-progress" aria-hidden="true"></div>
+  <div class="console-backdrop" aria-hidden="true"></div>
+  <nav class="site-nav">
+    <div class="nav-inner">
+      <a class="nav-brand" href="../../../index.html">wandering.star<span>notes</span></a>
+      <div class="nav-links">
+        <a href="https://github.com/wangzheng422/docker_env" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://www.youtube.com/@wangzheng422" target="_blank" rel="noopener">YouTube</a>
+      </div>
+    </div>
+  </nav>
+
+  <main>
+            <a class="back-link" href="../../../index.html">← Back to Index</a>
+        <div class="article-layout">
+            <aside class="toc-panel">
+        <div class="toc-title">ON THIS PAGE</div>
+        <ul>
+        <li><a
+        href="#openshift-4.12-kube-apiserver-operator-证书轮替逻辑"
+        id="toc-openshift-4.12-kube-apiserver-operator-证书轮替逻辑">OpenShift
+        4.12 Kube APIServer Operator 证书轮替逻辑</a>
+        <ul>
+        <li><a href="#核心组件" id="toc-核心组件">核心组件</a></li>
+        <li><a href="#与-machine-config-operator-mco-的联动"
+        id="toc-与-machine-config-operator-mco-的联动">与 Machine Config
+        Operator (MCO) 的联动</a></li>
+        <li><a href="#证书轮替流程示例-mermaid-sequence-diagram"
+        id="toc-证书轮替流程示例-mermaid-sequence-diagram">证书轮替流程示例
+        (Mermaid Sequence Diagram)</a></li>
+        </ul></li>
+        </ul>
+      </aside>
+            <article class="markdown-body article-shell">
+        <h1
+        id="openshift-4.12-kube-apiserver-operator-证书轮替逻辑">OpenShift
+        4.12 Kube APIServer Operator 证书轮替逻辑</h1>
+        <p>本文档梳理了 OpenShift 4.12 版本中 <a
+        href="https://github.com/openshift/cluster-kube-apiserver-operator/tree/release-4.12"><code>cluster-kube-apiserver-operator</code></a>
+        中证书轮替的核心逻辑，特别是与 <a
+        href="https://github.com/openshift/machine-config-operator/tree/release-4.12">Machine
+        Config Operator (MCO)</a> 的联动机制。</p>
+        <h2 id="核心组件">核心组件</h2>
+        <p>证书轮替主要涉及以下几个控制器：</p>
+        <ol type="1">
+        <li><strong>CertRotationController
+        (<code>pkg/operator/certrotationcontroller/</code>)</strong>:
+        <ul>
+        <li>使用 <code>library-go/pkg/operator/certrotation</code>
+        库来管理多个证书颁发机构 (CA) 和叶子证书/密钥对。</li>
+        <li>负责轮替各种关键证书，例如：
+        <ul>
+        <li>聚合器代理客户端证书 (<code>aggregator-client</code>) 及其
+        CA (<code>aggregator-client-signer</code>)。</li>
+        <li>Kube APIServer 到 Kubelet 的客户端证书
+        (<code>kubelet-client</code>) 及其 CA
+        (<code>kube-apiserver-to-kubelet-signer</code>)。</li>
+        <li>各种服务端证书：localhost
+        (<code>localhost-serving-cert-certkey</code>)、服务网络
+        (<code>service-network-serving-certkey</code>)、外部/内部负载均衡器
+        (<code>external/internal-loadbalancer-serving-certkey</code>)
+        及其对应的 CA。</li>
+        <li>控制平面组件（KCM, Scheduler）的客户端证书
+        (<code>kube-controller-manager-client-cert-key</code>,
+        <code>kube-scheduler-client-cert-key</code>) 及其 CA
+        (<code>kube-control-plane-signer</code>)。</li>
+        <li>节点系统管理员客户端证书
+        (<code>node-system-admin-client</code>) 及其 CA
+        (<code>node-system-admin-signer</code>)。</li>
+        </ul></li>
+        <li>轮替过程通常涉及：生成新的 CA 或证书/密钥，更新 Operator
+        命名空间 (<code>openshift-kube-apiserver-operator</code>)
+        和/或操作数命名空间 (<code>openshift-kube-apiserver</code>) 中的
+        Secret，以及更新相应的 CA Bundle ConfigMap。</li>
+        <li><strong>与 MCO 交互点</strong>: 将某些 CA Bundle
+        ConfigMap（如
+        <code>kube-apiserver-aggregator-client-ca</code>）和客户端证书
+        Secret（如
+        <code>kube-controller-manager-client-cert-key</code>）写入
+        <code>openshift-config-managed</code> 命名空间。</li>
+        </ul></li>
+        <li><strong>BoundSATokenSignerController
+        (<code>pkg/operator/boundsatokensignercontroller/</code>)</strong>:
+        <ul>
+        <li>专门管理用于签发 Bound Service Account Token 的 RSA
+        密钥对。</li>
+        <li>轮替过程：
+        <ol type="1">
+        <li>在 Operator 命名空间中生成一个新的密钥对，并保存在
+        <code>next-bound-service-account-signing-key</code> Secret
+        中。</li>
+        <li>将新的公钥添加到操作数命名空间中的
+        <code>bound-sa-token-signing-certs</code> ConfigMap。</li>
+        <li>等待确认该 ConfigMap（包含新公钥）已通过 Operator 的
+        Revision 机制分发到所有 Master 节点。</li>
+        <li>确认分发后，将 Operator 命名空间中的
+        <code>next-bound-service-account-signing-key</code> Secret
+        的完整内容（公钥+私钥）复制到操作数命名空间中的
+        <code>bound-service-account-signing-key</code> Secret。</li>
+        </ol></li>
+        <li><strong>与 MCO 交互点</strong>:
+        <code>bound-sa-token-signing-certs</code> ConfigMap 随后会被
+        <code>ResourceSyncController</code> 同步到
+        <code>openshift-config-managed</code> 命名空间。</li>
+        </ul></li>
+        <li><strong>ResourceSyncController
+        (<code>pkg/operator/resourcesynccontroller/</code>)</strong>:
+        <ul>
+        <li>负责在不同命名空间之间同步（复制）特定的 ConfigMap 和 Secret
+        资源。</li>
+        <li><strong>与 MCO 交互的关键</strong>:
+        <ul>
+        <li>将 <code>CertRotationController</code> 和
+        <code>BoundSATokenSignerController</code> 管理的部分 CA
+        Bundle（如 <code>sa-token-signing-certs</code>,
+        <code>bound-sa-token-signing-certs</code>）从
+        <code>openshift-kube-apiserver</code> 同步 <em>到</em>
+        <code>openshift-config-managed</code>。</li>
+        <li>将其他 Operator（如 KCM Operator）管理并放置在
+        <code>openshift-config-managed</code> 中的 CA Bundle（如
+        <code>csr-controller-ca</code>，重命名为
+        <code>kubelet-serving-ca</code>）同步 <em>到</em>
+        <code>openshift-kube-apiserver</code>。</li>
+        <li>将 <code>CertRotationController</code> 放置在
+        <code>openshift-config-managed</code> 中的 CA Bundle（如
+        <code>kube-apiserver-aggregator-client-ca</code>）同步
+        <em>到</em> <code>openshift-kube-apiserver</code>。</li>
+        </ul></li>
+        </ul></li>
+        </ol>
+        <h2 id="与-machine-config-operator-mco-的联动">与 Machine Config
+        Operator (MCO) 的联动</h2>
+        <p>Kube APIServer Operator 与 MCO 的交互是间接的，主要通过
+        <code>openshift-config-managed</code> 命名空间进行：</p>
+        <ol type="1">
+        <li><strong>触发点</strong>: 当
+        <code>CertRotationController</code> 或
+        <code>BoundSATokenSignerController</code>
+        轮替证书/密钥时，相关的 CA Bundle ConfigMap 或客户端证书 Secret
+        会被更新。</li>
+        <li><strong>同步</strong>: <code>ResourceSyncController</code>
+        确保这些更新后的资源（特别是 CA Bundle）被同步到
+        <code>openshift-config-managed</code>
+        命名空间，或者从该命名空间同步到 Kube APIServer
+        的操作数命名空间。</li>
+        <li><strong>MCO 检测</strong>: MCO 会监视
+        <code>openshift-config-managed</code>
+        命名空间中与节点配置相关的资源。当它检测到这些资源（如 CA Bundle
+        ConfigMap）发生变化时，会认为相应的节点配置需要更新。</li>
+        <li><strong>应用配置</strong>: MCO 会为相关的 Machine Config
+        Pool（通常是 <code>master</code> Pool）生成新的
+        MachineConfig，并通过 Machine Config Daemon (MCD)
+        将其应用到池中的每个节点。</li>
+        <li><strong>节点更新</strong>: 节点上的 MCD 应用新的
+        MachineConfig，这可能涉及将更新后的 CA Bundle
+        文件写入节点上的特定路径（例如，<code>/etc/kubernetes/static-pod-resources/configmaps/...</code>），或者更新其他节点级服务的配置。</li>
+        <li><strong>服务生效</strong>:
+        <ul>
+        <li>对于静态 Pod（如 Kube APIServer），kubelet 在检测到挂载的
+        ConfigMap/Secret 发生变化时，可能会重新启动 Pod，使得 Pod
+        内的进程加载新的证书/CA。</li>
+        <li>对于节点上的其他服务，可能需要服务重启或重新加载配置才能使用新的证书/CA。</li>
+        </ul></li>
+        </ol>
+        <h2
+        id="证书轮替流程示例-mermaid-sequence-diagram">证书轮替流程示例
+        (Mermaid Sequence Diagram)</h2>
+        <p>以聚合器客户端证书 (<code>aggregator-client</code>)
+        轮替为例：</p>
+        <pre class="mermaid"><code>sequenceDiagram
+    participant CRC as CertRotationController
+    participant OpNS as openshift-kube-apiserver-operator (NS)
+    participant KASNS as openshift-kube-apiserver (NS)
+    participant OCMNS as openshift-config-managed (NS)
+    participant RSC as ResourceSyncController
+    participant MCO as Machine Config Operator
+    participant MCD as Machine Config Daemon (Node)
+    participant Kubelet as Kubelet (Node)
+    participant KASPod as Kube APIServer Pod
+
+    CRC-&gt;&gt;CRC: 检测到 aggregator-client-signer CA 即将过期
+    CRC-&gt;&gt;OpNS: 生成新的 CA Secret (aggregator-client-signer)
+    CRC-&gt;&gt;OCMNS: 更新 CA Bundle ConfigMap (kube-apiserver-aggregator-client-ca)
+    RSC-&gt;&gt;OCMNS: 检测到 ConfigMap 更新
+    RSC-&gt;&gt;KASNS: 同步 ConfigMap (aggregator-client-ca)
+
+    MCO-&gt;&gt;OCMNS: Watch 检测到 ConfigMap (kube-apiserver-aggregator-client-ca) 变化
+    MCO-&gt;&gt;MCO: 生成新的 Master MachineConfig
+    MCO-&gt;&gt;Node: 应用新的 MachineConfig
+    MCD-&gt;&gt;Node: 更新节点上的 CA Bundle 文件
+
+    CRC-&gt;&gt;CRC: 检测到 aggregator-client 证书即将过期
+    CRC-&gt;&gt;KASNS: 使用新的 CA 签发新的证书/密钥 Secret (aggregator-client)
+
+    Kubelet-&gt;&gt;KASNS: Watch 检测到 Secret (aggregator-client) 变化
+    Kubelet-&gt;&gt;KASPod: 重启 Kube APIServer Pod (或 Pod 内进程重载)
+    KASPod-&gt;&gt;KASPod: 加载并使用新的 aggregator-client 证书/密钥
+    KASPod-&gt;&gt;Node: 使用新的 CA Bundle (aggregator-client-ca) 验证目标服务</code></pre>
+        <p><strong>注意</strong>: 上图简化了部分细节，例如 Operator
+        的状态更新和 Revision 管理。实际流程中，Operator
+        会确保资源在所有节点上达到一致状态后才认为轮替完成。Bound SA
+        Token Signing Key 的轮替涉及更复杂的等待公钥分发的步骤。</p>
+      </article>
+    </div>
+      </main>
+
+  <footer>
+    <p>
+      Licensed under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank"
+        rel="noopener">CC-BY-NC-SA 4.0</a>
+      &nbsp;·&nbsp;
+      <a href="https://github.com/wangzheng422/docker_env" target="_blank" rel="noopener">wangzheng422/docker_env</a>
+    </p>
+  </footer>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: false, theme: 'dark' });
+
+    const SITE_BUILD_ID = 'fbe91b569ae8';
+    const SITE_HOME_URL = '../../../index.html';
+
+    const getBuildIdFromHtml = (html) => {
+      const match = String(html).match(/<meta[^>]+name=["']site-build-id["'][^>]+content=["']([^"']+)["']/i)
+        || String(html).match(/<meta[^>]+content=["']([^"']+)["'][^>]+name=["']site-build-id["']/i);
+      return match ? match[1] : '';
+    };
+
+    const checkForSiteUpdate = async () => {
+      if (!SITE_BUILD_ID || window.location.protocol === 'file:') return;
+      try {
+        const probeUrl = new URL(SITE_HOME_URL || './index.html', window.location.href);
+        probeUrl.searchParams.set('site_cache_probe', Date.now().toString());
+        const response = await fetch(probeUrl.toString(), { cache: 'no-store' });
+        if (!response.ok) return;
+        const latestBuildId = getBuildIdFromHtml(await response.text());
+        if (!latestBuildId || latestBuildId === SITE_BUILD_ID) return;
+        if (sessionStorage.getItem('site-build-refresh') === latestBuildId) return;
+        sessionStorage.setItem('site-build-refresh', latestBuildId);
+        const freshUrl = new URL(window.location.href);
+        freshUrl.searchParams.set('v', latestBuildId);
+        window.location.replace(freshUrl.toString());
+      } catch (error) {
+        // Network errors should not block reading the current page.
+      }
+    };
+
+    const versionedLocalUrl = (rawUrl) => {
+      if (!rawUrl || /^(https?:)?\/\//i.test(rawUrl) || /^(data|blob|mailto):/i.test(rawUrl)) return rawUrl;
+      const url = new URL(rawUrl, window.location.href);
+      if (url.searchParams.has('v')) return rawUrl;
+      url.searchParams.set('v', SITE_BUILD_ID);
+      return url.toString();
+    };
+
+    const cacheBustPageAssets = () => {
+      document.querySelectorAll('img[src], video[src], audio[src], source[src]').forEach((node) => {
+        const src = node.getAttribute('src');
+        const versioned = versionedLocalUrl(src);
+        if (versioned !== src) node.setAttribute('src', versioned);
+      });
+    };
+
+    const updateReadingProgress = () => {
+      const progress = document.querySelector('.reading-progress');
+      if (!progress) return;
+      const scrollable = document.documentElement.scrollHeight - window.innerHeight;
+      const ratio = scrollable > 0 ? window.scrollY / scrollable : 0;
+      progress.style.transform = 'scaleX(' + Math.min(1, Math.max(0, ratio)) + ')';
+    };
+
+    const topicFor = (text, href) => {
+      const haystack = (text + ' ' + href).toLowerCase();
+      if (/developers\.redhat\.com|redhatquickcourses|github\.com\/redhatquickcourses/.test(haystack)) return 'Red Hat';
+      if (/ai|llm|gpu|vllm|llama|model|rhaiis/.test(haystack)) return 'AI';
+      if (/network|ovn|bgp|dns|egress|ingress|metallb|nic|route/.test(haystack)) return 'Network';
+      if (/cert|tls|sso|keycloak|rhbk|security|compliance/.test(haystack)) return 'Security';
+      if (/perf|profile|throttling|heap|debug/.test(haystack)) return 'Performance';
+      if (/install|ipi|upi|sno|disconnected|bootstrap/.test(haystack)) return 'Install';
+      if (/rhel|coreos|rhcos|kernel|rpm|ostree/.test(haystack)) return 'RHEL';
+      if (/backup|storage|nfs|odf|ocs|ceph|dr/.test(haystack)) return 'Storage';
+      if (/pipeline|gitops|ansible|aap|rhdh|devops/.test(haystack)) return 'DevOps';
+      return 'OpenShift';
+    };
+
+    const yearFor = (text, href) => {
+      const match = (text + ' ' + href).match(/20\d{2}/);
+      return match ? match[0] : 'Notes';
+    };
+
+    const importantExternal = (href) =>
+      /developers\.redhat\.com|redhatquickcourses\.github\.io/i.test(href);
+
+    const titleForLink = (link) => {
+      const href = link.getAttribute('href') || '';
+      const directText = link.textContent.trim().replace(/\s+/g, ' ');
+      if (!/^https?:\/\//.test(directText)) return directText;
+      const parentItem = link.closest('ul')?.parentElement;
+      if (parentItem) {
+        const clone = parentItem.cloneNode(true);
+        clone.querySelectorAll('ul').forEach((nested) => nested.remove());
+        const parentText = clone.textContent.trim().replace(/\s+/g, ' ');
+        if (parentText) {
+          return parentText;
+        }
+      }
+      return directText;
+    };
+
+    const escapeHtml = (value) => String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+
+    const enhanceHome = () => {
+      if (!document.body.classList.contains('page-index')) return;
+      const source = document.querySelector('.home-source');
+      const grid = document.getElementById('note-grid');
+      const stats = document.getElementById('console-stats');
+      const externalPanel = document.getElementById('external-panel');
+      const topicStrip = document.getElementById('topic-strip');
+      const search = document.getElementById('console-search');
+      if (!source || !grid || !stats || !externalPanel || !topicStrip || !search) return;
+
+      const seen = new Set();
+      const links = Array.from(source.querySelectorAll('a[href]'))
+        .map((link) => {
+          const href = link.getAttribute('href') || '';
+          const text = titleForLink(link);
+          return { text, href, topic: topicFor(text, href), year: yearFor(text, href) };
+        });
+      const notes = links
+        .filter((note) => note.text && !note.href.startsWith('http') && !seen.has(note.href) && seen.add(note.href));
+      const externalLinks = links
+        .filter((note) => note.text && importantExternal(note.href));
+
+      const topics = ['All', ...Array.from(new Set(notes.map((note) => note.topic))).sort()];
+      let activeTopic = 'All';
+
+      const renderStats = () => {
+        const years = notes.map((note) => note.year).filter((year) => year.length === 4 && /^\d{4}/.test(year));
+        const latest = years.length ? Math.max(...years.map(Number)) : 'N/A';
+        const oldest = years.length ? Math.min(...years.map(Number)) : 'N/A';
+        stats.innerHTML = [
+          ['Notes', notes.length],
+          ['Resources', externalLinks.length],
+          ['Topics', topics.length - 1],
+          ['Latest', latest],
+        ].map(([label, value]) => '<div class="stat-tile"><span>' + label + '</span><strong>' + value + '</strong></div>').join('');
+        const signal = document.getElementById('signal-count');
+        if (signal) signal.textContent = notes.length + ' links indexed';
+      };
+
+      const renderExternal = () => {
+        externalPanel.innerHTML =
+          '<div class="section-heading"><span>Published / Learning</span><strong>Red Hat resources</strong></div>' +
+          '<div class="external-grid">' +
+          externalLinks.map((note) =>
+            '<a class="resource-card" href="' + escapeHtml(note.href) + '" target="_blank" rel="noopener">' +
+            '<span class="note-meta"><span>' + escapeHtml(note.year) + '</span><span>' + escapeHtml(note.topic) + '</span></span>' +
+            '<strong>' + escapeHtml(note.text) + '</strong>' +
+            '<small>' + escapeHtml(note.href) + '</small>' +
+            '</a>'
+          ).join('') +
+          '</div>';
+      };
+
+      const renderTopics = () => {
+        topicStrip.innerHTML = topics.map((topic) => '<button class="topic-chip' + (topic === activeTopic ? ' active' : '') + '" type="button" data-topic="' + escapeHtml(topic) + '">' + escapeHtml(topic) + '</button>').join('');
+        topicStrip.querySelectorAll('button').forEach((button) => {
+          button.addEventListener('click', () => {
+            activeTopic = button.dataset.topic || 'All';
+            renderTopics();
+            renderCards();
+          });
+        });
+      };
+
+      const renderCards = () => {
+        const query = search.value.trim().toLowerCase();
+        const filtered = notes.filter((note) => {
+          const topicMatch = activeTopic === 'All' || note.topic === activeTopic;
+          const queryMatch = !query || (note.text + ' ' + note.href + ' ' + note.topic + ' ' + note.year).toLowerCase().includes(query);
+          return topicMatch && queryMatch;
+        });
+        grid.innerHTML = filtered.map((note) =>
+          '<a class="note-card" href="' + escapeHtml(note.href) + '">' +
+          '<span class="note-meta"><span>' + escapeHtml(note.year) + '</span><span>' + escapeHtml(note.topic) + '</span></span>' +
+          '<strong>' + escapeHtml(note.text) + '</strong>' +
+          '<small>' + escapeHtml(note.href) + '</small>' +
+          '</a>'
+        ).join('') || '<p class="empty-state">No matching notes.</p>';
+      };
+
+      const drawMap = () => {
+        const canvas = document.getElementById('knowledge-canvas');
+        if (!(canvas instanceof HTMLCanvasElement)) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        const width = canvas.width;
+        const height = canvas.height;
+        const nodes = notes.slice(0, 44).map((note, index) => {
+          const angle = (index / 44) * Math.PI * 2;
+          const ring = 90 + (index % 5) * 22;
+          return {
+            x: width / 2 + Math.cos(angle) * ring,
+            y: height / 2 + Math.sin(angle) * ring * 0.72,
+            topic: note.topic,
+          };
+        });
+        ctx.clearRect(0, 0, width, height);
+        ctx.strokeStyle = 'rgba(88, 166, 255, 0.14)';
+        ctx.lineWidth = 1;
+        nodes.forEach((node, index) => {
+          const next = nodes[(index + 7) % nodes.length];
+          ctx.beginPath();
+          ctx.moveTo(node.x, node.y);
+          ctx.lineTo(next.x, next.y);
+          ctx.stroke();
+        });
+        const palette = {
+          AI: '#a371f7',
+          Network: '#39d0d8',
+          Security: '#ff7b72',
+          Performance: '#f2cc60',
+          Install: '#7ee787',
+          RHEL: '#ff7b72',
+          Storage: '#d2a8ff',
+          DevOps: '#ffa657',
+          OpenShift: '#58a6ff',
+        };
+        nodes.forEach((node) => {
+          ctx.fillStyle = palette[node.topic] || '#58a6ff';
+          ctx.beginPath();
+          ctx.arc(node.x, node.y, 3.4, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      };
+
+      search.addEventListener('input', renderCards);
+      renderStats();
+      renderExternal();
+      renderTopics();
+      renderCards();
+      drawMap();
+      document.body.classList.add('home-enhanced');
+    };
+
+    const enhanceCodeBlocks = () => {
+      document.querySelectorAll('pre').forEach((pre) => {
+        if (pre.classList.contains('mermaid') || pre.querySelector('.copy-code')) return;
+        const button = document.createElement('button');
+        button.className = 'copy-code';
+        button.type = 'button';
+        button.textContent = 'Copy';
+        button.addEventListener('click', async () => {
+          await navigator.clipboard.writeText(pre.textContent || '');
+          button.textContent = 'Copied';
+          setTimeout(() => { button.textContent = 'Copy'; }, 1200);
+        });
+        pre.appendChild(button);
+      });
+    };
+
+    window.addEventListener('scroll', updateReadingProgress, { passive: true });
+    window.addEventListener('pageshow', (event) => {
+      if (event.persisted) checkForSiteUpdate();
+    });
+    document.addEventListener('DOMContentLoaded', async () => {
+      checkForSiteUpdate();
+      cacheBustPageAssets();
+      updateReadingProgress();
+      enhanceHome();
+      enhanceCodeBlocks();
+      // pandoc 输出 mermaid 为 <pre class="mermaid"><code>...</code></pre>
+      // 需要转成 <div class="mermaid">...</div> 供 mermaid.js 渲染
+      document.querySelectorAll('pre.mermaid').forEach(pre => {
+        const div = document.createElement('div');
+        div.classList.add('mermaid');
+        div.textContent = pre.textContent;
+        pre.replaceWith(div);
+      });
+      // 也处理 <pre><code class="language-mermaid"> 形式（备用）
+      document.querySelectorAll('pre code.language-mermaid').forEach(code => {
+        const div = document.createElement('div');
+        div.classList.add('mermaid');
+        div.textContent = code.textContent;
+        code.closest('pre').replaceWith(div);
+      });
+      await mermaid.run();
+    });
+  </script>
+</body>
+
+</html>

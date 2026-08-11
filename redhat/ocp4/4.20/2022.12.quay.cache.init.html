@@ -1,0 +1,1055 @@
+<!DOCTYPE html>
+<html lang="zh" dir="ltr">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="generator" content="pandoc" />
+  <meta name="site-build-id" content="fbe91b569ae8" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <title>Quay Proxy Cache Initialization for OpenShift 4.20 | wandering.star notes</title>
+  <meta name="description"
+    content="Wandering field notes on OpenShift, RHEL, AI infrastructure, and platform operations." />
+  <!-- Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-E3FRMDB7L2"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-E3FRMDB7L2');
+  </script>
+  <style>
+  html {
+    color: #1a1a1a;
+    background-color: #fdfdfd;
+  }
+  body {
+    margin: 0 auto;
+    max-width: 36em;
+    padding-left: 50px;
+    padding-right: 50px;
+    padding-top: 50px;
+    padding-bottom: 50px;
+    hyphens: auto;
+    overflow-wrap: break-word;
+    text-rendering: optimizeLegibility;
+    font-kerning: normal;
+  }
+  @media (max-width: 600px) {
+    body {
+      font-size: 0.9em;
+      padding: 12px;
+    }
+    h1 {
+      font-size: 1.8em;
+    }
+  }
+  @media print {
+    html {
+      background-color: white;
+    }
+    body {
+      background-color: transparent;
+      color: black;
+      font-size: 12pt;
+    }
+    p, h2, h3 {
+      orphans: 3;
+      widows: 3;
+    }
+    h2, h3, h4 {
+      page-break-after: avoid;
+    }
+  }
+  p {
+    margin: 1em 0;
+  }
+  a {
+    color: #1a1a1a;
+  }
+  a:visited {
+    color: #1a1a1a;
+  }
+  img {
+    max-width: 100%;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.4em;
+  }
+  h5, h6 {
+    font-size: 1em;
+    font-style: italic;
+  }
+  h6 {
+    font-weight: normal;
+  }
+  ol, ul {
+    padding-left: 1.7em;
+    margin-top: 1em;
+  }
+  li > ol, li > ul {
+    margin-top: 0;
+  }
+  blockquote {
+    margin: 1em 0 1em 1.7em;
+    padding-left: 1em;
+    border-left: 2px solid #e6e6e6;
+    color: #606060;
+  }
+  code {
+    font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+    font-size: 85%;
+    margin: 0;
+    hyphens: manual;
+  }
+  pre {
+    margin: 1em 0;
+    overflow: auto;
+  }
+  pre code {
+    padding: 0;
+    overflow: visible;
+    overflow-wrap: normal;
+  }
+  .sourceCode {
+   background-color: transparent;
+   overflow: visible;
+  }
+  hr {
+    background-color: #1a1a1a;
+    border: none;
+    height: 1px;
+    margin: 1em 0;
+  }
+  table {
+    margin: 1em 0;
+    border-collapse: collapse;
+    width: 100%;
+    overflow-x: auto;
+    display: block;
+    font-variant-numeric: lining-nums tabular-nums;
+  }
+  table caption {
+    margin-bottom: 0.75em;
+  }
+  tbody {
+    margin-top: 0.5em;
+    border-top: 1px solid #1a1a1a;
+    border-bottom: 1px solid #1a1a1a;
+  }
+  th {
+    border-top: 1px solid #1a1a1a;
+    padding: 0.25em 0.5em 0.25em 0.5em;
+  }
+  td {
+    padding: 0.125em 0.5em 0.25em 0.5em;
+  }
+  header {
+    margin-bottom: 4em;
+    text-align: center;
+  }
+  #TOC li {
+    list-style: none;
+  }
+  #TOC ul {
+    padding-left: 1.3em;
+  }
+  #TOC > ul {
+    padding-left: 0;
+  }
+  #TOC a:not(:hover) {
+    text-decoration: none;
+  }
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  div.columns{display: flex; gap: min(4vw, 1.5em);}
+  div.column{flex: auto; overflow-x: auto;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  /* The extra [class] is a hack that increases specificity enough to
+     override a similar rule in reveal.js */
+  ul.task-list[class]{list-style: none;}
+  ul.task-list li input[type="checkbox"] {
+    font-size: inherit;
+    width: 0.8em;
+    margin: 0 0.8em 0.2em -1.6em;
+    vertical-align: middle;
+  }
+  .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  /* CSS for syntax highlighting */
+  pre > code.sourceCode { white-space: pre; position: relative; }
+  pre > code.sourceCode > span { line-height: 1.25; }
+  pre > code.sourceCode > span:empty { height: 1.2em; }
+  .sourceCode { overflow: visible; }
+  code.sourceCode > span { color: inherit; text-decoration: inherit; }
+  div.sourceCode { margin: 1em 0; }
+  pre.sourceCode { margin: 0; }
+  @media screen {
+  div.sourceCode { overflow: auto; }
+  }
+  @media print {
+  pre > code.sourceCode { white-space: pre-wrap; }
+  pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+  }
+  pre.numberSource code
+    { counter-reset: source-line 0; }
+  pre.numberSource code > span
+    { position: relative; left: -4em; counter-increment: source-line; }
+  pre.numberSource code > span > a:first-child::before
+    { content: counter(source-line);
+      position: relative; left: -1em; text-align: right; vertical-align: baseline;
+      border: none; display: inline-block;
+      -webkit-touch-callout: none; -webkit-user-select: none;
+      -khtml-user-select: none; -moz-user-select: none;
+      -ms-user-select: none; user-select: none;
+      padding: 0 4px; width: 4em;
+    }
+  pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+  div.sourceCode
+    { color: #cccccc; background-color: #303030; }
+  @media screen {
+  pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+  }
+  code span.al { color: #ffcfaf; } /* Alert */
+  code span.an { color: #7f9f7f; font-weight: bold; } /* Annotation */
+  code span.at { } /* Attribute */
+  code span.bn { color: #dca3a3; } /* BaseN */
+  code span.bu { } /* BuiltIn */
+  code span.cf { color: #f0dfaf; } /* ControlFlow */
+  code span.ch { color: #dca3a3; } /* Char */
+  code span.cn { color: #dca3a3; font-weight: bold; } /* Constant */
+  code span.co { color: #7f9f7f; } /* Comment */
+  code span.cv { color: #7f9f7f; font-weight: bold; } /* CommentVar */
+  code span.do { color: #7f9f7f; } /* Documentation */
+  code span.dt { color: #dfdfbf; } /* DataType */
+  code span.dv { color: #dcdccc; } /* DecVal */
+  code span.er { color: #c3bf9f; } /* Error */
+  code span.ex { } /* Extension */
+  code span.fl { color: #c0bed1; } /* Float */
+  code span.fu { color: #efef8f; } /* Function */
+  code span.im { } /* Import */
+  code span.in { color: #7f9f7f; font-weight: bold; } /* Information */
+  code span.kw { color: #f0dfaf; } /* Keyword */
+  code span.op { color: #f0efd0; } /* Operator */
+  code span.ot { color: #efef8f; } /* Other */
+  code span.pp { color: #ffcfaf; font-weight: bold; } /* Preprocessor */
+  code span.sc { color: #dca3a3; } /* SpecialChar */
+  code span.ss { color: #cc9393; } /* SpecialString */
+  code span.st { color: #cc9393; } /* String */
+  code span.va { } /* Variable */
+  code span.vs { color: #cc9393; } /* VerbatimString */
+  code span.wa { color: #7f9f7f; font-weight: bold; } /* Warning */
+  </style>
+  <link rel="stylesheet" href="../../../style.css?v=fbe91b569ae8" />
+  </head>
+
+<body class="page-article">
+  <div class="reading-progress" aria-hidden="true"></div>
+  <div class="console-backdrop" aria-hidden="true"></div>
+  <nav class="site-nav">
+    <div class="nav-inner">
+      <a class="nav-brand" href="../../../index.html">wandering.star<span>notes</span></a>
+      <div class="nav-links">
+        <a href="https://github.com/wangzheng422/docker_env" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://www.youtube.com/@wangzheng422" target="_blank" rel="noopener">YouTube</a>
+      </div>
+    </div>
+  </nav>
+
+  <main>
+            <a class="back-link" href="../../../index.html">← Back to Index</a>
+        <div class="article-layout">
+            <aside class="toc-panel">
+        <div class="toc-title">ON THIS PAGE</div>
+        <ul>
+        <li><a
+        href="#quay-proxy-cache-initialization-for-openshift-4.20"
+        id="toc-quay-proxy-cache-initialization-for-openshift-4.20">Quay
+        Proxy Cache Initialization for OpenShift 4.20</a>
+        <ul>
+        <li><a href="#overview" id="toc-overview">Overview</a></li>
+        <li><a href="#architecture"
+        id="toc-architecture">Architecture</a></li>
+        <li><a href="#prerequisites"
+        id="toc-prerequisites">Prerequisites</a></li>
+        <li><a href="#step-1-create-a-quay-api-access-token"
+        id="toc-step-1-create-a-quay-api-access-token">Step 1: Create a
+        Quay API Access Token</a></li>
+        <li><a href="#step-2-create-proxy-cache-organizations"
+        id="toc-step-2-create-proxy-cache-organizations">Step 2: Create
+        Proxy Cache Organizations</a>
+        <ul>
+        <li><a href="#download-the-required-scripts"
+        id="toc-download-the-required-scripts">2.1 — Download the
+        Required Scripts</a></li>
+        <li><a href="#create-the-proxy-cache-organizations"
+        id="toc-create-the-proxy-cache-organizations">2.2 — Create the
+        Proxy Cache Organizations</a></li>
+        <li><a href="#optional-delete-cache-organizations"
+        id="toc-optional-delete-cache-organizations">2.3 — (Optional)
+        Delete Cache Organizations</a></li>
+        <li><a
+        href="#reference-generate-openshift-registry-mirror-configuration"
+        id="toc-reference-generate-openshift-registry-mirror-configuration">2.4
+        — (Reference) Generate OpenShift Registry Mirror
+        Configuration</a></li>
+        </ul></li>
+        <li><a href="#step-3-configure-upstream-registry-credentials"
+        id="toc-step-3-configure-upstream-registry-credentials">Step 3:
+        Configure Upstream Registry Credentials</a>
+        <ul>
+        <li><a href="#define-the-credential-update-function"
+        id="toc-define-the-credential-update-function">3.1 — Define the
+        Credential Update Function</a></li>
+        <li><a
+        href="#extract-credentials-from-the-pull-secret-and-apply"
+        id="toc-extract-credentials-from-the-pull-secret-and-apply">3.2
+        — Extract Credentials from the Pull Secret and Apply</a></li>
+        </ul></li>
+        <li><a href="#step-4-verify-the-proxy-cache"
+        id="toc-step-4-verify-the-proxy-cache">Step 4: Verify the Proxy
+        Cache</a></li>
+        <li><a href="#summary" id="toc-summary">Summary</a></li>
+        </ul></li>
+        </ul>
+      </aside>
+            <article class="markdown-body article-shell">
+        <h1 id="quay-proxy-cache-initialization-for-openshift-4.20">Quay
+        Proxy Cache Initialization for OpenShift 4.20</h1>
+        <h2 id="overview">Overview</h2>
+        <p>OpenShift Container Platform (OCP) relies on container images
+        distributed across multiple upstream registries during both
+        installation and ongoing operations. During a standard OCP 4.20
+        deployment, the cluster pulls images from at least three major
+        sources:</p>
+        <ul>
+        <li><strong><code>quay.io</code></strong> — the primary Red Hat
+        container registry hosting OpenShift release images, operators,
+        and community content</li>
+        <li><strong><code>registry.redhat.io</code></strong> — Red Hat’s
+        authenticated registry for official Red Hat product images</li>
+        <li><strong><code>registry.connect.redhat.com</code></strong> —
+        the Red Hat Connect registry for partner-certified container
+        images</li>
+        </ul>
+        <p>In environments with limited or restricted internet access
+        (air-gapped labs, on-premise data centers, or
+        bandwidth-constrained setups), repeatedly pulling from these
+        upstream registries can be slow, unreliable, or simply
+        impossible. Furthermore, when multiple OpenShift nodes need to
+        pull the same images simultaneously during installation, the
+        redundant upstream requests create unnecessary load on the
+        network.</p>
+        <p><strong>Quay’s Proxy Cache</strong> feature addresses both
+        problems. When configured as a pull-through cache, Quay
+        intercepts an image pull request, fetches the image from the
+        upstream registry on behalf of the client (if not already
+        cached), and stores it locally. All subsequent pull requests for
+        the same image are served directly from the local Quay instance
+        — no upstream traffic needed.</p>
+        <p>This document walks through the complete, step-by-step
+        process of initializing a Quay proxy cache for an OpenShift 4.20
+        lab environment, covering:</p>
+        <ol type="1">
+        <li>Creating a Quay API access token with the necessary
+        organizational permissions</li>
+        <li>Automatically provisioning one cache organization per
+        upstream registry using helper scripts</li>
+        <li>Configuring authenticated pull credentials for Red Hat’s
+        protected registries</li>
+        <li>Verifying the end-to-end setup by pulling images through the
+        proxy</li>
+        </ol>
+        <hr />
+        <h2 id="architecture">Architecture</h2>
+        <p>The Quay instance used in this lab is deployed at
+        <code>mirror.infra.wzhlab.top:8443</code>. For each upstream
+        registry to be proxied, a dedicated Quay
+        <strong>organization</strong> is created following this naming
+        convention:</p>
+        <pre><code>cache_&lt;upstream_registry_hostname_with_dots_replaced_by_underscores&gt;</code></pre>
+        <p>The mapping looks like this:</p>
+        <table>
+        <thead>
+        <tr class="header">
+        <th>Upstream Registry</th>
+        <th>Quay Proxy Cache Organization</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr class="odd">
+        <td><code>quay.io</code></td>
+        <td><code>cache_quay_io</code></td>
+        </tr>
+        <tr class="even">
+        <td><code>registry.redhat.io</code></td>
+        <td><code>cache_registry_redhat_io</code></td>
+        </tr>
+        <tr class="odd">
+        <td><code>registry.connect.redhat.com</code></td>
+        <td><code>cache_registry_connect_redhat_com</code></td>
+        </tr>
+        </tbody>
+        </table>
+        <p>When an OpenShift node or operator pulls an image such
+        as:</p>
+        <pre><code>mirror.infra.wzhlab.top:8443/cache_quay_io/openshift-release-dev/ocp-release:4.20.16-x86_64</code></pre>
+        <p>Quay transparently fetches
+        <code>quay.io/openshift-release-dev/ocp-release:4.20.16-x86_64</code>
+        from the upstream on the first request, stores it in local
+        storage, and returns it to the caller. All subsequent pulls of
+        the same image are served from the local cache without any
+        upstream traffic.</p>
+        <hr />
+        <h2 id="prerequisites">Prerequisites</h2>
+        <p>Before proceeding, ensure the following are available in your
+        environment:</p>
+        <ul>
+        <li>A running <strong>Red Hat Quay</strong> instance (version
+        3.7 or later recommended) reachable at
+        <code>mirror.infra.wzhlab.top:8443</code></li>
+        <li>A Quay <strong>superuser</strong> or organization-admin
+        account (e.g., <code>admin</code>) with permission to create
+        organizations and configure proxy cache settings</li>
+        <li>A <strong>Red Hat pull secret</strong>
+        (<code>pull-secret.json</code>) downloaded from <a
+        href="https://console.redhat.com/openshift/install/pull-secret">https://console.redhat.com/openshift/install/pull-secret</a>,
+        containing base64-encoded credentials for all Red Hat
+        registries</li>
+        <li>The following CLI tools available on the operator
+        workstation: <code>curl</code>, <code>jq</code>,
+        <code>wget</code>, <code>bash</code>, <code>podman</code></li>
+        </ul>
+        <hr />
+        <h2 id="step-1-create-a-quay-api-access-token">Step 1: Create a
+        Quay API Access Token</h2>
+        <p>To automate the creation and configuration of proxy cache
+        organizations via the Quay REST API, an <strong>OAuth
+        application access token</strong> is required. This token is
+        created through the Quay web UI under an organization’s
+        application settings. It must be granted the <strong>Administer
+        Organization</strong> scope so that it can create and configure
+        proxy cache organizations on your behalf.</p>
+        <p>The following screenshots illustrate the complete token
+        creation workflow in the Quay web UI:</p>
+        <p><strong>1.1 — Navigate to your organization’s “Applications”
+        page and create a new OAuth application:</strong></p>
+        <p><img
+        src="imgs/2022.12.quay.cache.init.md/2023-01-04-19-44-35.png" /></p>
+        <p><strong>1.2 — The OAuth Applications list page:</strong></p>
+        <p><img
+        src="imgs/2022.12.quay.cache.init.md/2023-01-04-19-50-24.png" /></p>
+        <p><strong>1.3 — Enter an application name (e.g.,
+        <code>cache-init</code>) and click “Create
+        Application”:</strong></p>
+        <p><img
+        src="imgs/2022.12.quay.cache.init.md/2023-01-04-19-50-48.png" /></p>
+        <p><strong>1.4 — Select “Generate Token” from the application
+        detail page:</strong></p>
+        <p><img
+        src="imgs/2022.12.quay.cache.init.md/2023-01-04-19-51-21.png" /></p>
+        <p><strong>1.5 — Select the required permission scope. Check
+        “Administer Organization” to allow the token to manage
+        organizations and their proxy cache settings:</strong></p>
+        <p><img
+        src="imgs/2022.12.quay.cache.init.md/2023-01-04-19-51-35.png" /></p>
+        <p><strong>1.6 — Click “Authorize Application” to
+        proceed:</strong></p>
+        <p><img
+        src="imgs/2022.12.quay.cache.init.md/2023-01-04-19-52-10.png" /></p>
+        <p><strong>1.7 — Confirm the authorization on the next
+        screen:</strong></p>
+        <p><img
+        src="imgs/2022.12.quay.cache.init.md/2023-01-04-19-52-24.png" /></p>
+        <p><strong>1.8 — The token has been successfully
+        generated:</strong></p>
+        <p><img
+        src="imgs/2022.12.quay.cache.init.md/2023-01-04-19-52-40.png" /></p>
+        <p><strong>1.9 — Copy the full token string. This is the only
+        time it will be displayed:</strong></p>
+        <p><img
+        src="imgs/2022.12.quay.cache.init.md/2023-01-04-19-52-47.png" /></p>
+        <p><img
+        src="imgs/2022.12.quay.cache.init.md/2023-01-04-19-52-55.png" /></p>
+        <p><strong>1.10 — Token creation confirmed. The application now
+        has an active access token:</strong></p>
+        <p><img
+        src="imgs/2022.12.quay.cache.init.md/2023-01-04-19-55-46.png" /></p>
+        <p>The resulting access token for this lab environment is:</p>
+        <pre><code>Access Token: y1pqTUBQJ8PEXwr4AYhFPzJSfwrITYWjCHIvs4me</code></pre>
+        <blockquote>
+        <p><strong>Security Note:</strong> Treat this token as a
+        sensitive credential. Do not commit it to source control. In
+        production environments, store it in a secrets management system
+        such as HashiCorp Vault or an OCP Secret, and rotate it
+        regularly.</p>
+        </blockquote>
+        <hr />
+        <h2 id="step-2-create-proxy-cache-organizations">Step 2: Create
+        Proxy Cache Organizations</h2>
+        <p>With the API token in hand, the next step is to provision one
+        Quay organization per upstream registry. Each organization will
+        be configured as a proxy cache pointing to its corresponding
+        upstream. This process is automated by the
+        <code>quay.cache.repo.sh</code> helper script, which reads a
+        domain list file (<code>mirror.domain.list</code>) and calls the
+        Quay API to create each organization.</p>
+        <h3 id="download-the-required-scripts">2.1 — Download the
+        Required Scripts</h3>
+        <div class="sourceCode" id="cb4"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Create the working directory for OCP4 setup artifacts</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="fu">mkdir</span> <span class="at">-p</span> /data/ocp4</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> /data/ocp4</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Download the list of upstream registry domains to be proxied</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="fu">wget</span> https://raw.githubusercontent.com/wangzheng422/openshift4-shell/ocp-4.20/image-list/mirror.domain.list</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Download the Quay proxy cache organization management script</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="fu">wget</span> https://raw.githubusercontent.com/wangzheng422/openshift4-shell/ocp-4.20/image-list/quay.cache.repo.sh</span></code></pre></div>
+        <h3 id="create-the-proxy-cache-organizations">2.2 — Create the
+        Proxy Cache Organizations</h3>
+        <p>The <code>create</code> subcommand of
+        <code>quay.cache.repo.sh</code> iterates over every domain in
+        <code>mirror.domain.list</code> and creates a corresponding
+        proxy cache organization in Quay via the REST API.</p>
+        <div class="sourceCode" id="cb5"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Set the target Quay instance hostname and the API access token from Step 1</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="va">QUAY_LAB</span><span class="op">=</span>mirror.infra.wzhlab.top:8443</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="va">TOKEN</span><span class="op">=</span>y1pqTUBQJ8PEXwr4AYhFPzJSfwrITYWjCHIvs4me</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Create all proxy cache organizations defined in mirror.domain.list</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> /data/ocp4/</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="fu">bash</span> quay.cache.repo.sh create <span class="va">$QUAY_LAB</span> <span class="va">$TOKEN</span></span></code></pre></div>
+        <p>After this step completes, you should see the newly created
+        organizations (e.g., <code>cache_quay_io</code>,
+        <code>cache_registry_redhat_io</code>) in the Quay web UI. Each
+        organization will have its proxy cache configuration pointing to
+        the corresponding upstream registry.</p>
+        <h3 id="optional-delete-cache-organizations">2.3 — (Optional)
+        Delete Cache Organizations</h3>
+        <p>If you need to tear down and reinitialize the cache
+        organizations, use the <code>delete</code> subcommand. This is
+        useful when troubleshooting or rebuilding a lab environment.</p>
+        <div class="sourceCode" id="cb6"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Remove all proxy cache organizations created by this script (use with caution)</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> /data/ocp4/</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="fu">bash</span> quay.cache.repo.sh delete <span class="va">$QUAY_LAB</span> <span class="va">$TOKEN</span></span></code></pre></div>
+        <h3
+        id="reference-generate-openshift-registry-mirror-configuration">2.4
+        — (Reference) Generate OpenShift Registry Mirror
+        Configuration</h3>
+        <p>The following script generates the
+        <code>ImageContentSourcePolicy</code> or
+        <code>ImageDigestMirrorSet</code> YAML that instructs OpenShift
+        nodes to redirect image pull requests to the local Quay proxy.
+        This step is typically performed as part of the OpenShift
+        cluster configuration and is documented separately. It is listed
+        here for reference:</p>
+        <div class="sourceCode" id="cb7"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Generate the Quay cache registry mirror configuration for the OpenShift cluster</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> /data/ocp4/</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a><span class="fu">wget</span> https://raw.githubusercontent.com/wangzheng422/openshift4-shell/ocp-4.20/image-list/image.registries.conf.quay.sh</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a><span class="fu">bash</span> image.registries.conf.quay.sh <span class="va">$QUAY_LAB</span></span></code></pre></div>
+        <hr />
+        <h2 id="step-3-configure-upstream-registry-credentials">Step 3:
+        Configure Upstream Registry Credentials</h2>
+        <p>While some upstream registries (such as
+        <code>docker.io</code>) permit anonymous image pulls, the core
+        Red Hat registries require valid credentials:</p>
+        <ul>
+        <li><code>registry.redhat.io</code> — requires a Red Hat
+        Customer Portal account or a service account</li>
+        <li><code>registry.connect.redhat.com</code> — requires a Red
+        Hat Connect account</li>
+        <li><code>quay.io</code> — supports anonymous pulls for public
+        images, but authenticated pulls may be needed for
+        rate-limit-sensitive workloads</li>
+        </ul>
+        <p>Without these credentials configured in Quay’s proxy cache
+        settings, Quay will fail to fetch images from the upstream on
+        the client’s behalf, resulting in pull errors during OCP
+        installation and operator deployment.</p>
+        <p>The credentials are already embedded in the pull secret file
+        (<code>pull-secret.json</code>) that was downloaded from the Red
+        Hat console. The script below extracts them automatically for
+        each registry and applies them to the corresponding Quay proxy
+        cache organization via the API.</p>
+        <h3 id="define-the-credential-update-function">3.1 — Define the
+        Credential Update Function</h3>
+        <p>The <code>update_quay_cache_config</code> function performs a
+        two-step API operation for each registry:</p>
+        <ol type="1">
+        <li><strong>DELETE</strong> the existing proxy cache
+        configuration to clear any stale credentials</li>
+        <li><strong>POST</strong> a new proxy cache configuration with
+        the correct upstream hostname and credentials</li>
+        </ol>
+        <div class="sourceCode" id="cb8"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="fu">update_quay_cache_config()</span> <span class="kw">{</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  <span class="va">local_quay</span><span class="op">=</span><span class="va">$1</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>  <span class="va">local_token</span><span class="op">=</span><span class="va">$2</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>  <span class="va">local_registry</span><span class="op">=</span><span class="va">$3</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>  <span class="va">local_username</span><span class="op">=</span><span class="va">$4</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>  <span class="va">local_password</span><span class="op">=</span><span class="va">$5</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Step 1: Remove the existing proxy cache configuration for this organization.</span></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>  <span class="co"># This ensures we start from a clean state before applying new credentials.</span></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a><span class="ex">curl</span> <span class="at">-X</span> <span class="st">&#39;DELETE&#39;</span> <span class="dt">\</span></span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;https://</span><span class="va">$local_quay</span><span class="st">/api/v1/organization/cache_</span><span class="va">${local_registry</span><span class="op">//</span><span class="ss">.</span><span class="op">/</span>_<span class="va">}</span><span class="st">/proxycache&quot;</span> <span class="dt">\</span></span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>  <span class="at">-H</span> <span class="st">&quot;Authorization: Bearer </span><span class="va">$local_token</span><span class="st">&quot;</span> <span class="dt">\</span></span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>  <span class="at">-H</span> <span class="st">&#39;Content-Type: application/json&#39;</span> <span class="kw">|</span> <span class="ex">jq</span></span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Step 2: Create a new proxy cache configuration with the upstream registry</span></span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a>  <span class="co"># hostname and the corresponding authentication credentials.</span></span>
+<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a><span class="ex">curl</span> <span class="at">-X</span> <span class="st">&#39;POST&#39;</span> <span class="dt">\</span></span>
+<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;https://</span><span class="va">$local_quay</span><span class="st">/api/v1/organization/cache_</span><span class="va">${local_registry</span><span class="op">//</span><span class="ss">.</span><span class="op">/</span>_<span class="va">}</span><span class="st">/proxycache&quot;</span> <span class="dt">\</span></span>
+<span id="cb8-20"><a href="#cb8-20" aria-hidden="true" tabindex="-1"></a>  <span class="at">-H</span> <span class="st">&quot;Authorization: Bearer </span><span class="va">$local_token</span><span class="st">&quot;</span> <span class="dt">\</span></span>
+<span id="cb8-21"><a href="#cb8-21" aria-hidden="true" tabindex="-1"></a>  <span class="at">-H</span> <span class="st">&#39;Content-Type: application/json&#39;</span> <span class="dt">\</span></span>
+<span id="cb8-22"><a href="#cb8-22" aria-hidden="true" tabindex="-1"></a>  <span class="at">-d</span> <span class="st">&quot;{</span></span>
+<span id="cb8-23"><a href="#cb8-23" aria-hidden="true" tabindex="-1"></a><span class="st">        </span><span class="dt">\&quot;</span><span class="st">org_name</span><span class="dt">\&quot;</span><span class="st">: </span><span class="dt">\&quot;</span><span class="st">cache_</span><span class="va">${local_registry</span><span class="op">//</span><span class="ss">.</span><span class="op">/</span>_<span class="va">}</span><span class="dt">\&quot;</span><span class="st">,</span></span>
+<span id="cb8-24"><a href="#cb8-24" aria-hidden="true" tabindex="-1"></a><span class="st">        </span><span class="dt">\&quot;</span><span class="st">upstream_registry</span><span class="dt">\&quot;</span><span class="st">: </span><span class="dt">\&quot;</span><span class="va">$local_registry</span><span class="dt">\&quot;</span><span class="st">,</span></span>
+<span id="cb8-25"><a href="#cb8-25" aria-hidden="true" tabindex="-1"></a><span class="st">        </span><span class="dt">\&quot;</span><span class="st">upstream_registry_password</span><span class="dt">\&quot;</span><span class="st">: </span><span class="dt">\&quot;</span><span class="va">$local_password</span><span class="dt">\&quot;</span><span class="st">,</span></span>
+<span id="cb8-26"><a href="#cb8-26" aria-hidden="true" tabindex="-1"></a><span class="st">        </span><span class="dt">\&quot;</span><span class="st">upstream_registry_username</span><span class="dt">\&quot;</span><span class="st">: </span><span class="dt">\&quot;</span><span class="va">$local_username</span><span class="dt">\&quot;</span></span>
+<span id="cb8-27"><a href="#cb8-27" aria-hidden="true" tabindex="-1"></a><span class="st">      }&quot;</span> <span class="kw">|</span> <span class="ex">jq</span></span>
+<span id="cb8-28"><a href="#cb8-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-29"><a href="#cb8-29" aria-hidden="true" tabindex="-1"></a><span class="kw">}</span></span></code></pre></div>
+        <h3 id="extract-credentials-from-the-pull-secret-and-apply">3.2
+        — Extract Credentials from the Pull Secret and Apply</h3>
+        <p>The loop below iterates over each target registry, decodes
+        the base64-encoded <code>auth</code> field from the pull secret
+        JSON, splits it into username and password components, and calls
+        the update function.</p>
+        <div class="sourceCode" id="cb9"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Define the list of upstream registries that require authenticated proxy cache configuration</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="va">registries</span><span class="op">=</span><span class="va">$(</span><span class="fu">cat</span> <span class="op">&lt;&lt; EOF</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="st">quay.io</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a><span class="st">registry.redhat.io</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="st">registry.connect.redhat.com</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a><span class="op">EOF</span></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a><span class="va">)</span></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a><span class="va">QUAY_LAB</span><span class="op">=</span>mirror.infra.wzhlab.top:8443</span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a><span class="va">TOKEN</span><span class="op">=</span>y1pqTUBQJ8PEXwr4AYhFPzJSfwrITYWjCHIvs4me</span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Alternatively, credentials can be specified as literal strings (not recommended for scripted use):</span></span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a><span class="co"># var_username=&quot;&lt;your redhat username&gt;&quot;</span></span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a><span class="co"># var_password=&quot;&lt;your redhat password&gt;&quot;</span></span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a><span class="co"># Iterate over each registry, extract credentials from pull-secret.json,</span></span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a><span class="co"># and apply them to the corresponding Quay proxy cache organization</span></span>
+<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a><span class="cf">while</span> <span class="bu">read</span> <span class="at">-r</span> <span class="va">line</span><span class="kw">;</span> <span class="cf">do</span></span>
+<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="kw">[[</span> <span class="st">&quot;</span><span class="va">$line</span><span class="st">&quot;</span> <span class="ot">=~</span> <span class="op">[^[:</span><span class="va">space</span><span class="op">:]]</span> <span class="kw">]];</span> <span class="cf">then</span></span>
+<span id="cb9-20"><a href="#cb9-20" aria-hidden="true" tabindex="-1"></a>        <span class="bu">echo</span> <span class="va">$line</span></span>
+<span id="cb9-21"><a href="#cb9-21" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Decode the base64-encoded auth string for this registry entry in the pull secret</span></span>
+<span id="cb9-22"><a href="#cb9-22" aria-hidden="true" tabindex="-1"></a>        <span class="va">var_auth</span><span class="op">=</span><span class="va">$(</span><span class="fu">cat</span> <span class="va">$BASE_DIR</span>/data/pull-secret.json <span class="kw">|</span> <span class="ex">jq</span> <span class="at">-r</span> <span class="st">&quot;.auths[</span><span class="dt">\&quot;</span><span class="va">$line</span><span class="dt">\&quot;</span><span class="st">].auth&quot;</span> <span class="kw">|</span> <span class="fu">base64</span> <span class="at">-d</span><span class="va">)</span></span>
+<span id="cb9-23"><a href="#cb9-23" aria-hidden="true" tabindex="-1"></a>        <span class="va">var_username</span><span class="op">=</span><span class="va">$(</span><span class="bu">echo</span> <span class="va">$var_auth</span> <span class="kw">|</span> <span class="fu">cut</span> <span class="at">-d:</span> <span class="at">-f1</span><span class="va">)</span></span>
+<span id="cb9-24"><a href="#cb9-24" aria-hidden="true" tabindex="-1"></a>        <span class="va">var_password</span><span class="op">=</span><span class="va">$(</span><span class="bu">echo</span> <span class="va">$var_auth</span> <span class="kw">|</span> <span class="fu">cut</span> <span class="at">-d:</span> <span class="at">-f2</span><span class="va">)</span></span>
+<span id="cb9-25"><a href="#cb9-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-26"><a href="#cb9-26" aria-hidden="true" tabindex="-1"></a>        <span class="bu">echo</span> <span class="va">$var_auth</span></span>
+<span id="cb9-27"><a href="#cb9-27" aria-hidden="true" tabindex="-1"></a>        <span class="bu">echo</span> <span class="va">$var_username</span></span>
+<span id="cb9-28"><a href="#cb9-28" aria-hidden="true" tabindex="-1"></a>        <span class="bu">echo</span> <span class="va">$var_password</span></span>
+<span id="cb9-29"><a href="#cb9-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-30"><a href="#cb9-30" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Push the extracted credentials to the Quay proxy cache configuration for this registry</span></span>
+<span id="cb9-31"><a href="#cb9-31" aria-hidden="true" tabindex="-1"></a>        <span class="ex">update_quay_cache_config</span> <span class="va">$QUAY_LAB</span> <span class="va">$TOKEN</span> <span class="va">$line</span> <span class="va">$var_username</span> <span class="va">$var_password</span></span>
+<span id="cb9-32"><a href="#cb9-32" aria-hidden="true" tabindex="-1"></a>    <span class="cf">fi</span></span>
+<span id="cb9-33"><a href="#cb9-33" aria-hidden="true" tabindex="-1"></a><span class="cf">done</span> <span class="op">&lt;&lt;&lt;</span> <span class="st">&quot;</span><span class="va">$registries</span><span class="st">&quot;</span></span></code></pre></div>
+        <p>After this step, each Quay proxy cache organization is fully
+        configured with valid upstream credentials. Quay can now
+        authenticate to the upstream registries on behalf of any client
+        pulling through the proxy.</p>
+        <hr />
+        <h2 id="step-4-verify-the-proxy-cache">Step 4: Verify the Proxy
+        Cache</h2>
+        <p>With the proxy cache organizations created and credentials
+        applied, the final step is to validate that image pulls are
+        correctly routed through the local Quay instance and that Quay
+        successfully fetches and caches images from the upstream.</p>
+        <p>The verification flow is:</p>
+        <ol type="1">
+        <li>Authenticate against the local Quay instance with
+        <code>podman login</code></li>
+        <li>Pull a known image using the proxy cache organization
+        path</li>
+        <li>Confirm a successful pull — Quay fetches from upstream on
+        the first pull and caches it for subsequent requests</li>
+        </ol>
+        <div class="sourceCode" id="cb10"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Authenticate against the local Quay instance before pulling</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="ex">podman</span> login mirror.infra.wzhlab.top:8443 <span class="at">-u</span> admin <span class="at">-p</span> redhat..</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Test 1: Pull a general-purpose user image via the quay.io proxy cache</span></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a><span class="co"># This verifies basic pull-through functionality.</span></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Upstream source: quay.io/wangzheng422/debug-pod:alma-9.1</span></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a><span class="ex">podman</span> pull mirror.infra.wzhlab.top:8443/cache_quay_io/wangzheng422/debug-pod:alma-9.1</span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Test 2: Pull an OCP release image by SHA256 digest (immutable, content-addressed reference)</span></span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Useful for verifying that digest-based pulls work correctly through the proxy.</span></span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Upstream source: quay.io/openshift-release-dev/ocp-release@sha256:5e2fb7...</span></span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a><span class="ex">podman</span> pull mirror.infra.wzhlab.top:8443/cache_quay_io/openshift-release-dev/ocp-release@sha256:5e2fb7977a82237e497443e2bb53fd1c196e083fc5095294699399b61ce02746</span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a><span class="co"># Test 3: Pull an OCP release image by tag</span></span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Verifies that tag-based pulls work and that Quay resolves and caches the image correctly.</span></span>
+<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a><span class="co"># Upstream source: quay.io/openshift-release-dev/ocp-release:4.20.16-x86_64</span></span>
+<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a><span class="ex">podman</span> pull mirror.infra.wzhlab.top:8443/cache_quay_io/openshift-release-dev/ocp-release:4.20.16-x86_64</span></code></pre></div>
+        <p>A successful pull for all three test cases confirms that:</p>
+        <ul>
+        <li>The Quay proxy cache organizations are correctly created and
+        enabled</li>
+        <li>Upstream registry credentials are valid and properly
+        configured in Quay</li>
+        <li>The local <code>podman</code> client trusts the Quay
+        instance’s TLS certificate</li>
+        <li>Both tag-based and digest-based pull references work as
+        expected</li>
+        </ul>
+        <p>After the first pull of any given image, Quay stores a local
+        copy in its object storage backend. All subsequent pulls of the
+        same image will be served from this local cache without
+        generating any upstream traffic — which is the core benefit of
+        this proxy cache setup for disconnected or bandwidth-limited
+        OpenShift deployments.</p>
+        <hr />
+        <h2 id="summary">Summary</h2>
+        <p>This document described the complete process for initializing
+        Quay proxy cache organizations for an OpenShift 4.20
+        environment. The four steps are:</p>
+        <table>
+        <colgroup>
+        <col style="width: 50%" />
+        <col style="width: 50%" />
+        </colgroup>
+        <thead>
+        <tr class="header">
+        <th>Step</th>
+        <th>Description</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr class="odd">
+        <td><strong>1. Create API Token</strong></td>
+        <td>Generate a Quay OAuth token with
+        <code>Administer Organization</code> scope via the web UI</td>
+        </tr>
+        <tr class="even">
+        <td><strong>2. Create Organizations</strong></td>
+        <td>Use <code>quay.cache.repo.sh</code> to bulk-provision one
+        proxy cache org per upstream registry</td>
+        </tr>
+        <tr class="odd">
+        <td><strong>3. Configure Credentials</strong></td>
+        <td>Extract credentials from the pull secret and apply them to
+        each org’s proxy cache config</td>
+        </tr>
+        <tr class="even">
+        <td><strong>4. Verify</strong></td>
+        <td>Pull test images through the proxy to confirm end-to-end
+        functionality</td>
+        </tr>
+        </tbody>
+        </table>
+        <p>With this infrastructure in place, OpenShift nodes and
+        operators can pull all required images through the local Quay
+        instance. This eliminates the dependency on external internet
+        connectivity during cluster installation and runtime, and
+        significantly reduces image pull latency in environments where
+        the upstream registries are geographically distant or behind
+        restricted network paths.</p>
+      </article>
+    </div>
+      </main>
+
+  <footer>
+    <p>
+      Licensed under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank"
+        rel="noopener">CC-BY-NC-SA 4.0</a>
+      &nbsp;·&nbsp;
+      <a href="https://github.com/wangzheng422/docker_env" target="_blank" rel="noopener">wangzheng422/docker_env</a>
+    </p>
+  </footer>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: false, theme: 'dark' });
+
+    const SITE_BUILD_ID = 'fbe91b569ae8';
+    const SITE_HOME_URL = '../../../index.html';
+
+    const getBuildIdFromHtml = (html) => {
+      const match = String(html).match(/<meta[^>]+name=["']site-build-id["'][^>]+content=["']([^"']+)["']/i)
+        || String(html).match(/<meta[^>]+content=["']([^"']+)["'][^>]+name=["']site-build-id["']/i);
+      return match ? match[1] : '';
+    };
+
+    const checkForSiteUpdate = async () => {
+      if (!SITE_BUILD_ID || window.location.protocol === 'file:') return;
+      try {
+        const probeUrl = new URL(SITE_HOME_URL || './index.html', window.location.href);
+        probeUrl.searchParams.set('site_cache_probe', Date.now().toString());
+        const response = await fetch(probeUrl.toString(), { cache: 'no-store' });
+        if (!response.ok) return;
+        const latestBuildId = getBuildIdFromHtml(await response.text());
+        if (!latestBuildId || latestBuildId === SITE_BUILD_ID) return;
+        if (sessionStorage.getItem('site-build-refresh') === latestBuildId) return;
+        sessionStorage.setItem('site-build-refresh', latestBuildId);
+        const freshUrl = new URL(window.location.href);
+        freshUrl.searchParams.set('v', latestBuildId);
+        window.location.replace(freshUrl.toString());
+      } catch (error) {
+        // Network errors should not block reading the current page.
+      }
+    };
+
+    const versionedLocalUrl = (rawUrl) => {
+      if (!rawUrl || /^(https?:)?\/\//i.test(rawUrl) || /^(data|blob|mailto):/i.test(rawUrl)) return rawUrl;
+      const url = new URL(rawUrl, window.location.href);
+      if (url.searchParams.has('v')) return rawUrl;
+      url.searchParams.set('v', SITE_BUILD_ID);
+      return url.toString();
+    };
+
+    const cacheBustPageAssets = () => {
+      document.querySelectorAll('img[src], video[src], audio[src], source[src]').forEach((node) => {
+        const src = node.getAttribute('src');
+        const versioned = versionedLocalUrl(src);
+        if (versioned !== src) node.setAttribute('src', versioned);
+      });
+    };
+
+    const updateReadingProgress = () => {
+      const progress = document.querySelector('.reading-progress');
+      if (!progress) return;
+      const scrollable = document.documentElement.scrollHeight - window.innerHeight;
+      const ratio = scrollable > 0 ? window.scrollY / scrollable : 0;
+      progress.style.transform = 'scaleX(' + Math.min(1, Math.max(0, ratio)) + ')';
+    };
+
+    const topicFor = (text, href) => {
+      const haystack = (text + ' ' + href).toLowerCase();
+      if (/developers\.redhat\.com|redhatquickcourses|github\.com\/redhatquickcourses/.test(haystack)) return 'Red Hat';
+      if (/ai|llm|gpu|vllm|llama|model|rhaiis/.test(haystack)) return 'AI';
+      if (/network|ovn|bgp|dns|egress|ingress|metallb|nic|route/.test(haystack)) return 'Network';
+      if (/cert|tls|sso|keycloak|rhbk|security|compliance/.test(haystack)) return 'Security';
+      if (/perf|profile|throttling|heap|debug/.test(haystack)) return 'Performance';
+      if (/install|ipi|upi|sno|disconnected|bootstrap/.test(haystack)) return 'Install';
+      if (/rhel|coreos|rhcos|kernel|rpm|ostree/.test(haystack)) return 'RHEL';
+      if (/backup|storage|nfs|odf|ocs|ceph|dr/.test(haystack)) return 'Storage';
+      if (/pipeline|gitops|ansible|aap|rhdh|devops/.test(haystack)) return 'DevOps';
+      return 'OpenShift';
+    };
+
+    const yearFor = (text, href) => {
+      const match = (text + ' ' + href).match(/20\d{2}/);
+      return match ? match[0] : 'Notes';
+    };
+
+    const importantExternal = (href) =>
+      /developers\.redhat\.com|redhatquickcourses\.github\.io/i.test(href);
+
+    const titleForLink = (link) => {
+      const href = link.getAttribute('href') || '';
+      const directText = link.textContent.trim().replace(/\s+/g, ' ');
+      if (!/^https?:\/\//.test(directText)) return directText;
+      const parentItem = link.closest('ul')?.parentElement;
+      if (parentItem) {
+        const clone = parentItem.cloneNode(true);
+        clone.querySelectorAll('ul').forEach((nested) => nested.remove());
+        const parentText = clone.textContent.trim().replace(/\s+/g, ' ');
+        if (parentText) {
+          return parentText;
+        }
+      }
+      return directText;
+    };
+
+    const escapeHtml = (value) => String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+
+    const enhanceHome = () => {
+      if (!document.body.classList.contains('page-index')) return;
+      const source = document.querySelector('.home-source');
+      const grid = document.getElementById('note-grid');
+      const stats = document.getElementById('console-stats');
+      const externalPanel = document.getElementById('external-panel');
+      const topicStrip = document.getElementById('topic-strip');
+      const search = document.getElementById('console-search');
+      if (!source || !grid || !stats || !externalPanel || !topicStrip || !search) return;
+
+      const seen = new Set();
+      const links = Array.from(source.querySelectorAll('a[href]'))
+        .map((link) => {
+          const href = link.getAttribute('href') || '';
+          const text = titleForLink(link);
+          return { text, href, topic: topicFor(text, href), year: yearFor(text, href) };
+        });
+      const notes = links
+        .filter((note) => note.text && !note.href.startsWith('http') && !seen.has(note.href) && seen.add(note.href));
+      const externalLinks = links
+        .filter((note) => note.text && importantExternal(note.href));
+
+      const topics = ['All', ...Array.from(new Set(notes.map((note) => note.topic))).sort()];
+      let activeTopic = 'All';
+
+      const renderStats = () => {
+        const years = notes.map((note) => note.year).filter((year) => year.length === 4 && /^\d{4}/.test(year));
+        const latest = years.length ? Math.max(...years.map(Number)) : 'N/A';
+        const oldest = years.length ? Math.min(...years.map(Number)) : 'N/A';
+        stats.innerHTML = [
+          ['Notes', notes.length],
+          ['Resources', externalLinks.length],
+          ['Topics', topics.length - 1],
+          ['Latest', latest],
+        ].map(([label, value]) => '<div class="stat-tile"><span>' + label + '</span><strong>' + value + '</strong></div>').join('');
+        const signal = document.getElementById('signal-count');
+        if (signal) signal.textContent = notes.length + ' links indexed';
+      };
+
+      const renderExternal = () => {
+        externalPanel.innerHTML =
+          '<div class="section-heading"><span>Published / Learning</span><strong>Red Hat resources</strong></div>' +
+          '<div class="external-grid">' +
+          externalLinks.map((note) =>
+            '<a class="resource-card" href="' + escapeHtml(note.href) + '" target="_blank" rel="noopener">' +
+            '<span class="note-meta"><span>' + escapeHtml(note.year) + '</span><span>' + escapeHtml(note.topic) + '</span></span>' +
+            '<strong>' + escapeHtml(note.text) + '</strong>' +
+            '<small>' + escapeHtml(note.href) + '</small>' +
+            '</a>'
+          ).join('') +
+          '</div>';
+      };
+
+      const renderTopics = () => {
+        topicStrip.innerHTML = topics.map((topic) => '<button class="topic-chip' + (topic === activeTopic ? ' active' : '') + '" type="button" data-topic="' + escapeHtml(topic) + '">' + escapeHtml(topic) + '</button>').join('');
+        topicStrip.querySelectorAll('button').forEach((button) => {
+          button.addEventListener('click', () => {
+            activeTopic = button.dataset.topic || 'All';
+            renderTopics();
+            renderCards();
+          });
+        });
+      };
+
+      const renderCards = () => {
+        const query = search.value.trim().toLowerCase();
+        const filtered = notes.filter((note) => {
+          const topicMatch = activeTopic === 'All' || note.topic === activeTopic;
+          const queryMatch = !query || (note.text + ' ' + note.href + ' ' + note.topic + ' ' + note.year).toLowerCase().includes(query);
+          return topicMatch && queryMatch;
+        });
+        grid.innerHTML = filtered.map((note) =>
+          '<a class="note-card" href="' + escapeHtml(note.href) + '">' +
+          '<span class="note-meta"><span>' + escapeHtml(note.year) + '</span><span>' + escapeHtml(note.topic) + '</span></span>' +
+          '<strong>' + escapeHtml(note.text) + '</strong>' +
+          '<small>' + escapeHtml(note.href) + '</small>' +
+          '</a>'
+        ).join('') || '<p class="empty-state">No matching notes.</p>';
+      };
+
+      const drawMap = () => {
+        const canvas = document.getElementById('knowledge-canvas');
+        if (!(canvas instanceof HTMLCanvasElement)) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        const width = canvas.width;
+        const height = canvas.height;
+        const nodes = notes.slice(0, 44).map((note, index) => {
+          const angle = (index / 44) * Math.PI * 2;
+          const ring = 90 + (index % 5) * 22;
+          return {
+            x: width / 2 + Math.cos(angle) * ring,
+            y: height / 2 + Math.sin(angle) * ring * 0.72,
+            topic: note.topic,
+          };
+        });
+        ctx.clearRect(0, 0, width, height);
+        ctx.strokeStyle = 'rgba(88, 166, 255, 0.14)';
+        ctx.lineWidth = 1;
+        nodes.forEach((node, index) => {
+          const next = nodes[(index + 7) % nodes.length];
+          ctx.beginPath();
+          ctx.moveTo(node.x, node.y);
+          ctx.lineTo(next.x, next.y);
+          ctx.stroke();
+        });
+        const palette = {
+          AI: '#a371f7',
+          Network: '#39d0d8',
+          Security: '#ff7b72',
+          Performance: '#f2cc60',
+          Install: '#7ee787',
+          RHEL: '#ff7b72',
+          Storage: '#d2a8ff',
+          DevOps: '#ffa657',
+          OpenShift: '#58a6ff',
+        };
+        nodes.forEach((node) => {
+          ctx.fillStyle = palette[node.topic] || '#58a6ff';
+          ctx.beginPath();
+          ctx.arc(node.x, node.y, 3.4, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      };
+
+      search.addEventListener('input', renderCards);
+      renderStats();
+      renderExternal();
+      renderTopics();
+      renderCards();
+      drawMap();
+      document.body.classList.add('home-enhanced');
+    };
+
+    const enhanceCodeBlocks = () => {
+      document.querySelectorAll('pre').forEach((pre) => {
+        if (pre.classList.contains('mermaid') || pre.querySelector('.copy-code')) return;
+        const button = document.createElement('button');
+        button.className = 'copy-code';
+        button.type = 'button';
+        button.textContent = 'Copy';
+        button.addEventListener('click', async () => {
+          await navigator.clipboard.writeText(pre.textContent || '');
+          button.textContent = 'Copied';
+          setTimeout(() => { button.textContent = 'Copy'; }, 1200);
+        });
+        pre.appendChild(button);
+      });
+    };
+
+    window.addEventListener('scroll', updateReadingProgress, { passive: true });
+    window.addEventListener('pageshow', (event) => {
+      if (event.persisted) checkForSiteUpdate();
+    });
+    document.addEventListener('DOMContentLoaded', async () => {
+      checkForSiteUpdate();
+      cacheBustPageAssets();
+      updateReadingProgress();
+      enhanceHome();
+      enhanceCodeBlocks();
+      // pandoc 输出 mermaid 为 <pre class="mermaid"><code>...</code></pre>
+      // 需要转成 <div class="mermaid">...</div> 供 mermaid.js 渲染
+      document.querySelectorAll('pre.mermaid').forEach(pre => {
+        const div = document.createElement('div');
+        div.classList.add('mermaid');
+        div.textContent = pre.textContent;
+        pre.replaceWith(div);
+      });
+      // 也处理 <pre><code class="language-mermaid"> 形式（备用）
+      document.querySelectorAll('pre code.language-mermaid').forEach(code => {
+        const div = document.createElement('div');
+        div.classList.add('mermaid');
+        div.textContent = code.textContent;
+        code.closest('pre').replaceWith(div);
+      });
+      await mermaid.run();
+    });
+  </script>
+</body>
+
+</html>
